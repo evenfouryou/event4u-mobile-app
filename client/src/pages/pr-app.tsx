@@ -896,7 +896,7 @@ export default function PrAppPage() {
               <p className="text-4xl font-bold text-primary">
                 {formatCurrency(wallet.availableForPayout)}
               </p>
-              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
                 <div>
                   <p className="text-xs text-muted-foreground">In attesa</p>
                   <p className="text-lg font-semibold text-amber-400">
@@ -931,7 +931,7 @@ export default function PrAppPage() {
                 Questo Mese
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-2xl font-bold">{wallet.thisMonthReservations}</p>
                 <p className="text-sm text-muted-foreground">Prenotazioni</p>
@@ -1029,7 +1029,7 @@ export default function PrAppPage() {
             Statistiche Commissioni
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-amber-400">
               {formatCurrency(wallet?.pendingEarnings || 0)}
@@ -1266,7 +1266,7 @@ export default function PrAppPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={guestForm.control}
                   name="firstName"

@@ -369,7 +369,7 @@ export default function StaffPage() {
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="firstName">{t("staff.firstName")} *</Label>
           <Input
@@ -408,7 +408,7 @@ export default function StaffPage() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="phone">{t("staff.phone")}</Label>
           <Input
@@ -433,7 +433,7 @@ export default function StaffPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="hourlyRate">{t("staff.hourlyRate")}</Label>
           <Input
@@ -563,7 +563,7 @@ export default function StaffPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{staffList.length}</div>

@@ -764,7 +764,7 @@ export default function UsersPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold" data-testid="text-total-users">{totalUsers}</div>
@@ -1306,7 +1306,7 @@ export default function UsersPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
-          className="grid grid-cols-2 gap-3 mb-6"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6"
         >
           <div className="glass-card p-4">
             <div className="flex items-center gap-3">

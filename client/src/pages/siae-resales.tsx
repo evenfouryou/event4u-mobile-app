@@ -467,7 +467,7 @@ export default function SiaeResalesPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                     <div className="text-xs text-muted-foreground mb-1">Stato</div>
                     {getStatusBadge(selectedResale.status)}
@@ -494,7 +494,7 @@ export default function SiaeResalesPage() {
                       <FileText className="w-4 h-4 text-primary" />
                       <span className="font-medium">Causale Rivendita</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Codice Causale</div>
                         <Badge variant="outline">{getCausaleLabel((selectedResale as any).causaleRivendita)}</Badge>
@@ -522,7 +522,7 @@ export default function SiaeResalesPage() {
                         <Badge className="bg-amber-500/20 text-amber-400">Non Verificato</Badge>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Tipo Documento</div>
                         <span>{getDocumentoLabel((selectedResale as any).venditoreDocumentoTipo)}</span>
@@ -561,7 +561,7 @@ export default function SiaeResalesPage() {
                           <Badge className="bg-amber-500/20 text-amber-400">Non Verificato</Badge>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div>
                           <div className="text-xs text-muted-foreground mb-1">Tipo Documento</div>
                           <span>{getDocumentoLabel((selectedResale as any).acquirenteDocumentoTipo)}</span>
@@ -592,7 +592,7 @@ export default function SiaeResalesPage() {
                         <Badge variant="secondary">Non Eseguito</Badge>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Prezzo Massimo Consentito</div>
                         <span>

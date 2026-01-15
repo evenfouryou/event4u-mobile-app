@@ -978,7 +978,7 @@ export default function CassaBigliettiPage() {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="range-from">Da Numero Progressivo</Label>
                 <Input
@@ -1258,7 +1258,7 @@ export default function CassaBigliettiPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
@@ -1333,7 +1333,7 @@ export default function CassaBigliettiPage() {
               </TabsList>
 
               <TabsContent value="biglietti" className="mt-4">
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <Card data-testid="card-emit-ticket">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -1541,7 +1541,7 @@ export default function CassaBigliettiPage() {
 
                           {isNominative && (
                             <div className="space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <Input
                                   placeholder="Nome *"
                                   value={participantFirstName}
@@ -1719,7 +1719,7 @@ export default function CassaBigliettiPage() {
               </TabsContent>
 
               <TabsContent value="abbonamenti" className="mt-4">
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <Card data-testid="card-create-subscription">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -1760,7 +1760,7 @@ export default function CassaBigliettiPage() {
 
                       {createNewCustomer ? (
                         <div className="space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <Input
                               placeholder="Nome *"
                               value={subFirstName}
@@ -2400,7 +2400,7 @@ export default function CassaBigliettiPage() {
                   {isNominative && (
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground mb-2">Dati Partecipante</p>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Input
                           placeholder="Nome *"
                           value={participantFirstName}
@@ -2631,7 +2631,7 @@ export default function CassaBigliettiPage() {
 
                     {createNewCustomer ? (
                       <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <Input
                             placeholder="Nome *"
                             value={subFirstName}

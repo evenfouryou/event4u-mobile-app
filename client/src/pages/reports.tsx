@@ -622,7 +622,7 @@ export default function Reports() {
           <div className="space-y-6">
             {revenueAnalysis && revenueAnalysis.theoreticalRevenue > 0 && (
               <>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <Card className={`bg-gradient-to-br ${cardColors.theoretical.bg} border-0`}>
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-3 mb-2">
@@ -1054,7 +1054,7 @@ export default function Reports() {
                       </HapticButton>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">{t('reports.start')}</label>
                       <Input
@@ -1185,7 +1185,7 @@ export default function Reports() {
                   </Card>
                 </motion.div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <motion.div variants={staggerItem}>
                     <Card className={`h-full overflow-hidden bg-gradient-to-br ${revenueAnalysis.variance >= 0 ? 'from-green-500/20 to-green-600/10' : 'from-red-500/20 to-red-600/10'} border-0`}>
                       <CardContent className="p-4">

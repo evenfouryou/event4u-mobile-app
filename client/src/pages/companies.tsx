@@ -451,7 +451,7 @@ export default function Companies() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="city"
@@ -509,7 +509,7 @@ export default function Companies() {
                 {/* Sezione Regime Fiscale IVA */}
                 <div className="space-y-4 rounded-lg border p-4">
                   <h4 className="font-medium text-sm">Regime Fiscale IVA (DPR 633/72)</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="regimeFiscale"
@@ -831,7 +831,7 @@ export default function Companies() {
                 )}
               />
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <FormField
                   control={form.control}
                   name="city"

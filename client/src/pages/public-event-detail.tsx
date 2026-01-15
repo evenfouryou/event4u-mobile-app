@@ -659,7 +659,7 @@ function SeatInfoPanel({
                   <h3 className="font-semibold text-foreground">Seat Information</h3>
                   {getStatusBadge(seatDetails.status)}
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-muted-foreground">Row:</span>
                     <span className="ml-2 font-medium text-foreground">{seatDetails.seat.row}</span>
@@ -2687,7 +2687,7 @@ export default function PublicEventDetailPage() {
 
                                 {/* Nominative fields */}
                                 {event.requiresNominative && (
-                                  <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                       <Label className="text-sm font-medium">Nome</Label>
                                       <Input

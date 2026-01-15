@@ -253,7 +253,7 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between gap-2">
@@ -308,7 +308,7 @@ export default function SuperAdminDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export default function SuperAdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
@@ -447,7 +447,7 @@ export default function SuperAdminDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Ricavi per Azienda</CardTitle>
@@ -509,7 +509,7 @@ export default function SuperAdminDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Top Prodotti per Consumo</CardTitle>
@@ -638,7 +638,7 @@ export default function SuperAdminDashboard() {
         animate="visible"
         className="space-y-5 py-4 pb-24"
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatCard
             title="Aziende"
             value={totalCompanies}
@@ -766,7 +766,7 @@ export default function SuperAdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-5 pt-0">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <motion.button
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}

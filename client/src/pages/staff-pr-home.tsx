@@ -409,7 +409,7 @@ export default function StaffPrHome() {
         {/* Stats Grid 2x2 - Cards grandi touch-friendly */}
         <motion.div 
           variants={fadeInUp}
-          className="grid grid-cols-2 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
           <motion.div variants={scaleIn} whileTap={{ scale: 0.97 }}>
             <Card className="glass-card border-white/10 min-h-[140px]">
@@ -480,7 +480,7 @@ export default function StaffPrHome() {
         <motion.div variants={fadeInUp} className="space-y-4">
           <h2 className="text-xl font-semibold">Azioni Rapide</h2>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(isStaff || isPr) && (
               <motion.div variants={scaleIn} whileTap={{ scale: 0.95 }}>
                 <HapticButton 

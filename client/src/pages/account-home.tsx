@@ -153,7 +153,7 @@ export default function AccountHome() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Link href="/acquista">
             <Card className="hover-elevate cursor-pointer h-full">
               <CardContent className="pt-6 flex flex-col items-center gap-3">
@@ -324,7 +324,7 @@ export default function AccountHome() {
       </motion.div>
 
       <motion.div 
-        className="grid grid-cols-2 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
         variants={fadeInUp}
       >
         <Link href="/acquista">

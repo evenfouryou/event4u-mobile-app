@@ -690,7 +690,7 @@ function CheckoutContent() {
             </h2>
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground text-xs">Nome</Label>
                 <p className="text-foreground font-medium" data-testid="text-firstname">{customer.firstName}</p>
@@ -808,7 +808,7 @@ function CheckoutContent() {
                       <div className="h-4 w-24 bg-muted rounded animate-pulse" />
                       <div className="h-12 bg-muted rounded-lg animate-pulse" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <div className="h-4 w-16 bg-muted rounded animate-pulse" />
                         <div className="h-12 bg-muted rounded-lg animate-pulse" />
@@ -1319,7 +1319,7 @@ function DesktopCheckoutContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground text-xs">Nome</Label>
                 <p className="text-foreground font-medium" data-testid="text-firstname-desktop">{customer.firstName}</p>
@@ -1435,7 +1435,7 @@ function DesktopCheckoutContent() {
                       <div className="h-4 w-32 bg-muted rounded animate-pulse" />
                       <div className="h-12 bg-muted rounded-lg animate-pulse" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <div className="h-4 w-20 bg-muted rounded animate-pulse" />
                         <div className="h-12 bg-muted rounded-lg animate-pulse" />

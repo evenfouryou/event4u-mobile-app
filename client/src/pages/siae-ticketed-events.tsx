@@ -721,7 +721,7 @@ export default function SiaeTicketedEventsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{ticketedEvents?.length || 0}</div>
@@ -1078,7 +1078,7 @@ export default function SiaeTicketedEventsPage() {
                   </DialogHeader>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 my-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-4">
                     <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                       <div className="text-xs text-muted-foreground mb-1">Biglietti Venduti</div>
                       <div className="text-2xl font-bold text-[#FFD700]">{ticketedEvent.ticketsSold}</div>
@@ -1099,7 +1099,7 @@ export default function SiaeTicketedEventsPage() {
                   </div>
 
                   {/* Fiscal Info - IVA e ISI */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                       <div className="text-xs text-muted-foreground mb-1">Aliquota IVA</div>
                       <div className="text-xl font-bold flex items-center gap-2">
@@ -1417,7 +1417,7 @@ export default function SiaeTicketedEventsPage() {
                       <Image className="w-4 h-4" />
                       Informazioni Pubbliche
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor={`image-url-${ticketedEvent.id}`}>URL Immagine</Label>
                         <Input
@@ -1509,7 +1509,7 @@ export default function SiaeTicketedEventsPage() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="genreCode"
@@ -1560,7 +1560,7 @@ export default function SiaeTicketedEventsPage() {
 
                 {/* Riepilogo Aliquote Fiscali */}
                 {form.watch("genreCode") && (
-                  <div className="grid grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-muted/30">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-muted/30">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Aliquota IVA</div>
                       <div className="font-semibold">
@@ -1582,7 +1582,7 @@ export default function SiaeTicketedEventsPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="totalCapacity"
@@ -1753,7 +1753,7 @@ export default function SiaeTicketedEventsPage() {
 
                   {showSubscriptionTypeForm ? (
                     <div className="space-y-3 p-3 rounded-md bg-background/50 border">
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                         <div className="col-span-2">
                           <Label className="text-xs">Nome</Label>
                           <Input
@@ -1786,7 +1786,7 @@ export default function SiaeTicketedEventsPage() {
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                         <div className="col-span-2">
                           <Label className="text-xs">Prezzo ({"\u20AC"})</Label>
                           <Input
@@ -1898,7 +1898,7 @@ export default function SiaeTicketedEventsPage() {
                     <Settings className="w-4 h-4" />
                     Informazioni Base
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={sectorForm.control}
                       name="name"
@@ -1937,7 +1937,7 @@ export default function SiaeTicketedEventsPage() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={sectorForm.control}
                       name="capacity"
@@ -1986,7 +1986,7 @@ export default function SiaeTicketedEventsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div
                               onClick={() => field.onChange('INT')}
                               className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -2045,7 +2045,7 @@ export default function SiaeTicketedEventsPage() {
                     <Euro className="w-4 h-4" />
                     Prezzo e IVA
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={sectorForm.control}
                       name="price"
@@ -2198,7 +2198,7 @@ export default function SiaeTicketedEventsPage() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={subscriptionForm.control}
                     name="holderFirstName"
@@ -2226,7 +2226,7 @@ export default function SiaeTicketedEventsPage() {
                     )}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={subscriptionForm.control}
                     name="turnType"
@@ -2262,7 +2262,7 @@ export default function SiaeTicketedEventsPage() {
                     )}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={subscriptionForm.control}
                     name="validFrom"
@@ -2372,7 +2372,7 @@ export default function SiaeTicketedEventsPage() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={subscriptionTypeForm.control}
                     name="turnType"
@@ -2416,7 +2416,7 @@ export default function SiaeTicketedEventsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={subscriptionTypeForm.control}
                     name="price"
@@ -2596,7 +2596,7 @@ export default function SiaeTicketedEventsPage() {
                       </CardHeader>
 
                       <CardContent className="pt-2">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                             <div className="text-xs text-muted-foreground mb-1">Biglietti Venduti</div>
                             <div className="text-2xl font-bold text-[#FFD700]" data-testid={`stat-sold-${ticketedEvent.id}`}>
@@ -2750,7 +2750,7 @@ export default function SiaeTicketedEventsPage() {
                   </CardHeader>
 
                   <CardContent className="pt-2">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                         <div className="text-xs text-muted-foreground mb-1">Biglietti Venduti</div>
                         <div className="text-2xl font-bold text-[#FFD700]" data-testid={`stat-sold-${ticketedEvent.id}`}>
@@ -3094,7 +3094,7 @@ export default function SiaeTicketedEventsPage() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="genreCode"
@@ -3145,7 +3145,7 @@ export default function SiaeTicketedEventsPage() {
 
               {/* Riepilogo Aliquote Fiscali */}
               {form.watch("genreCode") && (
-                <div className="grid grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-muted/30">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-muted/30">
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Aliquota IVA</div>
                     <div className="font-semibold">
@@ -3167,7 +3167,7 @@ export default function SiaeTicketedEventsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="totalCapacity"
@@ -3347,7 +3347,7 @@ export default function SiaeTicketedEventsPage() {
                         data-testid="mobile-input-new-sub-type-name"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Turno</Label>
                         <Select value={newSubTypeTurnType} onValueChange={setNewSubTypeTurnType}>
@@ -3480,7 +3480,7 @@ export default function SiaeTicketedEventsPage() {
                   <Settings className="w-4 h-4" />
                   Informazioni Base
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={sectorForm.control}
                     name="name"
@@ -3519,7 +3519,7 @@ export default function SiaeTicketedEventsPage() {
                     )}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={sectorForm.control}
                     name="capacity"
@@ -3568,7 +3568,7 @@ export default function SiaeTicketedEventsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div
                             onClick={() => field.onChange('INT')}
                             className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -3627,7 +3627,7 @@ export default function SiaeTicketedEventsPage() {
                   <Euro className="w-4 h-4" />
                   Prezzo e IVA
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={sectorForm.control}
                     name="price"

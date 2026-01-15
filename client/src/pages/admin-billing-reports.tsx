@@ -152,7 +152,7 @@ export default function AdminBillingReports() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="dateFrom-desktop">Da</Label>
                 <Input
@@ -212,7 +212,7 @@ export default function AdminBillingReports() {
           renderSkeleton()
         ) : reportData ? (
           <>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card data-testid="card-summary-tickets">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
@@ -278,7 +278,7 @@ export default function AdminBillingReports() {
               </Card>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card data-testid="card-tickets-online">
                 <CardContent className="pt-6">
                   <p className="text-sm text-muted-foreground">Biglietti Online</p>
@@ -314,7 +314,7 @@ export default function AdminBillingReports() {
               </Card>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Card data-testid="card-invoices-stats">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-6">
@@ -457,7 +457,7 @@ export default function AdminBillingReports() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="dateFrom">Da</Label>
               <Input
@@ -517,7 +517,7 @@ export default function AdminBillingReports() {
         renderSkeleton()
       ) : reportData ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <Card data-testid="card-summary-tickets">
               <CardContent className="p-3 sm:pt-6 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3">

@@ -1073,7 +1073,7 @@ export default function SiaeTransmissionsPage() {
 
         {companyId && (
         <>
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.total}</div>
@@ -1818,7 +1818,7 @@ export default function SiaeTransmissionsPage() {
             </DialogHeader>
             {selectedTransmission && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">Tipo</Label>
                     <p className="font-medium">{getTypeLabel(selectedTransmission.transmissionType)}</p>

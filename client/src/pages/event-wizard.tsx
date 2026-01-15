@@ -1583,7 +1583,7 @@ export default function EventWizard() {
                             </Select>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label className="text-base">Prezzo € *</Label>
                               <div className="relative">
@@ -1815,7 +1815,7 @@ export default function EventWizard() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-2">
                               <Label>Tipo Turno</Label>
                               <Select 
@@ -2145,7 +2145,7 @@ export default function EventWizard() {
             <form onSubmit={form.handleSubmit(onSubmit)}>
               {currentStep === 1 && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="name"
@@ -2191,7 +2191,7 @@ export default function EventWizard() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="formatId"
@@ -2337,7 +2337,7 @@ export default function EventWizard() {
 
               {currentStep === 2 && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="startDatetime"
@@ -2408,7 +2408,7 @@ export default function EventWizard() {
 
                   {form.watch('isRecurring') && (
                     <div className="space-y-6 p-4 border rounded-lg bg-muted/30">
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="recurrencePattern"
@@ -2557,7 +2557,7 @@ export default function EventWizard() {
 
               {currentStep === 4 && siaeEnabled && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <Label>Genere Evento (TAB.1 SIAE)</Label>
                       {isLoadingGenres ? (
@@ -2634,7 +2634,7 @@ export default function EventWizard() {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="flex items-center justify-between rounded-lg border p-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-muted">
@@ -2718,7 +2718,7 @@ export default function EventWizard() {
                             </Button>
                           </div>
                           
-                          <div className="grid grid-cols-4 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
                               <Label>Nome Biglietto</Label>
                               <Input
@@ -2793,7 +2793,7 @@ export default function EventWizard() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4 mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                             <div className="space-y-2">
                               <Label>DDP Prevendita (€)</Label>
                               <Input
@@ -2902,7 +2902,7 @@ export default function EventWizard() {
                               </Button>
                             </div>
                             
-                            <div className="grid grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                               <div className="space-y-2">
                                 <Label>Nome *</Label>
                                 <Input
@@ -2986,7 +2986,7 @@ export default function EventWizard() {
                 <div className="space-y-6">
                   <h3 className="text-xl font-semibold">Riepilogo Evento</h3>
                   
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Card className="p-4 space-y-3">
                       <h4 className="font-semibold flex items-center gap-2">
                         <FileText className="h-4 w-4" />
@@ -3074,7 +3074,7 @@ export default function EventWizard() {
 
                   {/* Dettaglio Biglietti e Abbonamenti */}
                   {siaeEnabled && (siaeSectors.length > 0 || siaeSubscriptionTypes.length > 0) && (
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {siaeSectors.length > 0 && (
                         <Card className="p-4 space-y-3">
                           <h4 className="font-semibold flex items-center gap-2">

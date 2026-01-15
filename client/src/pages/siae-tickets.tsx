@@ -530,7 +530,7 @@ export default function SiaeTicketsPage() {
           )}
         />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField
             control={form.control}
             name="participantFirstName"
@@ -671,7 +671,7 @@ export default function SiaeTicketsPage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-[#FFD700]" data-testid="stat-total">{stats.total}</div>
@@ -1263,7 +1263,7 @@ export default function SiaeTicketsPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={springConfig}
-          className="grid grid-cols-4 gap-2"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2"
         >
           <div className="bg-card rounded-xl p-3 text-center border border-border">
             <p className="text-2xl font-bold text-[#FFD700]" data-testid="stat-total">{stats.total}</p>
@@ -1561,7 +1561,7 @@ export default function SiaeTicketsPage() {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="participantFirstName"
@@ -1734,7 +1734,7 @@ export default function SiaeTicketsPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <HapticButton variant="outline" className="h-14">
                 <Eye className="w-5 h-5 mr-2" />
                 Visualizza

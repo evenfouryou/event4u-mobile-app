@@ -395,7 +395,7 @@ export default function PrEventsPage() {
 
   const LoadingSkeleton = () => (
     <div className="space-y-5 px-4 pt-4">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-32 w-full rounded-3xl" />
         ))}
@@ -495,7 +495,7 @@ export default function PrEventsPage() {
             <Skeleton className="h-10 w-48" />
             <Skeleton className="h-10 w-24" />
           </div>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-24" />
             ))}
@@ -533,7 +533,7 @@ export default function PrEventsPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -763,7 +763,7 @@ export default function PrEventsPage() {
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Data</p>
                     <p className="font-medium flex items-center gap-2">
@@ -851,7 +851,7 @@ export default function PrEventsPage() {
           transition={springTransition}
           className="px-4 py-4 space-y-5"
         >
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatsCard
               icon={Calendar}
               value={myEvents.length}

@@ -345,7 +345,7 @@ export default function ScannerHomePage() {
           animate="show"
         >
           <motion.div 
-            className="grid grid-cols-2 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
             variants={staggerItem}
           >
             <Link href="/scanner/history">

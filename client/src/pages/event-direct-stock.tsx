@@ -522,7 +522,7 @@ export default function EventDirectStock() {
           </Card>
         )}
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-teal">{summary?.totalLoaded?.toFixed(2) || '0.00'}</div>

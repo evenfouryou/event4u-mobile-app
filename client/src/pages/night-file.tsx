@@ -678,7 +678,7 @@ function BeverageSection({ eventId }: { eventId: string }) {
                     <p className="font-medium">{item.productName}</p>
                     <p className="font-bold text-rose-400">€{item.totalCost.toFixed(2)}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                     <div className="text-center p-2 rounded-lg bg-white/5">
                       <p className="text-muted-foreground text-xs mb-1">Consumato</p>
                       <p className="font-medium">{item.totalConsumed.toFixed(2)}</p>
@@ -1152,7 +1152,7 @@ function CashFundsSection({ eventId, isAdmin }: { eventId: string; isAdmin: bool
                     )}
                   </div>
                   {(fund.notes || fund.recordedAt) && (
-                    <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-sm">
+                    <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <div>
                         <p className="text-muted-foreground text-xs">Data</p>
                         <p className="text-muted-foreground">
@@ -1169,7 +1169,7 @@ function CashFundsSection({ eventId, isAdmin }: { eventId: string; isAdmin: bool
               ))}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
+            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="text-center p-3 rounded-xl bg-white/5">
                 <p className="text-sm text-muted-foreground">Totale Apertura</p>
                 <p className="text-lg font-bold">€{openingTotal.toFixed(2)}</p>
@@ -1326,7 +1326,7 @@ function CashEntriesSection({ eventId, isAdmin }: { eventId: string; isAdmin: bo
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="entryType">Tipo *</Label>
                     <Select name="entryType" defaultValue={editingEntry?.entryType || "monetary"}>
@@ -1379,7 +1379,7 @@ function CashEntriesSection({ eventId, isAdmin }: { eventId: string; isAdmin: bo
                     data-testid="input-entry-description"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Qtà</Label>
                     <Input
@@ -1522,7 +1522,7 @@ function CashEntriesSection({ eventId, isAdmin }: { eventId: string; isAdmin: bo
             </div>
 
             <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 rounded-xl bg-white/5 text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Banknote className="h-4 w-4 text-muted-foreground" />
@@ -1808,7 +1808,7 @@ function PersonnelSection({ eventId, isAdmin }: { eventId: string; isAdmin: bool
                           data-testid={`input-assignment-role-${assignment.id}`}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <p className="text-muted-foreground text-xs mb-1">Compenso (€)</p>
                           <Input 
@@ -1848,7 +1848,7 @@ function PersonnelSection({ eventId, isAdmin }: { eventId: string; isAdmin: bool
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2 text-sm mt-3 pt-3 border-t border-white/10">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm mt-3 pt-3 border-t border-white/10">
                       <div className="text-center p-2 rounded-lg bg-white/5">
                         <p className="text-muted-foreground text-xs mb-1">Mansione</p>
                         <p className="font-medium truncate">{assignment.role || "-"}</p>
@@ -2224,7 +2224,7 @@ function SummarySection({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatsCard
           title="Incasso Totale"
           value={`€${totalRevenue.toFixed(0)}`}

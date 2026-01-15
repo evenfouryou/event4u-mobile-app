@@ -461,7 +461,7 @@ export default function SchoolBadgeManager() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{landings.length}</div>
@@ -640,7 +640,7 @@ export default function SchoolBadgeManager() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="schoolName"
@@ -729,7 +729,7 @@ export default function SchoolBadgeManager() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="authorizedDomains"
@@ -795,7 +795,7 @@ export default function SchoolBadgeManager() {
                     <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-sm">Termini e Privacy</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="termsText"

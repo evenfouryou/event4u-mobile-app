@@ -526,7 +526,7 @@ export default function PurchaseOrders() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.total}</div>
@@ -719,7 +719,7 @@ export default function PurchaseOrders() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="orderDate"
@@ -869,7 +869,7 @@ export default function PurchaseOrders() {
                               {suggestion.productCode}
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-4 gap-4 mt-2 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
                             <div>
                               <span className="text-muted-foreground">{t('purchaseOrders.stock')}: </span>
                               <span className="font-medium">{suggestion.currentStock}</span>
@@ -1033,7 +1033,7 @@ export default function PurchaseOrders() {
                           </Badge>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                             <span>
@@ -1159,7 +1159,7 @@ export default function PurchaseOrders() {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="orderDate"
@@ -1329,7 +1329,7 @@ export default function PurchaseOrders() {
                           <Badge variant="secondary" className="mt-1 text-xs">
                             {suggestion.productCode}
                           </Badge>
-                          <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-sm">
                             <div>
                               <span className="text-muted-foreground">Stock: </span>
                               <span className="font-medium">{suggestion.currentStock}</span>

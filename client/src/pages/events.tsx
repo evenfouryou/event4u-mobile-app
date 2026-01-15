@@ -500,7 +500,7 @@ export default function Events() {
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card 
             className={`cursor-pointer transition-all ${activeFilter === 'in_corso' ? 'ring-2 ring-teal-500' : 'hover-elevate'}`}
             onClick={() => setActiveFilter('in_corso')}

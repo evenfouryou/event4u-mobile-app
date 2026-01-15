@@ -441,13 +441,13 @@ export default function StaffAppPage() {
       </div>
 
       {loadingStats ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <motion.div variants={cardVariants} initial="hidden" animate="visible" transition={{ delay: 0.1 }}>
             <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-blue-500/20">
               <CardContent className="p-4">
@@ -816,7 +816,7 @@ export default function StaffAppPage() {
               <p className="text-4xl font-bold text-primary">
                 {formatCurrency(wallet?.balance.total || 0)}
               </p>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                 <div>
                   <p className="text-lg font-semibold text-amber-400">
                     {formatCurrency(wallet?.balance.pending || 0)}
@@ -953,7 +953,7 @@ export default function StaffAppPage() {
             Statistiche
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-400">
               {stats?.subordinates.active || 0}
@@ -1160,7 +1160,7 @@ export default function StaffAppPage() {
           </DialogHeader>
           <Form {...createPrForm}>
             <form onSubmit={createPrForm.handleSubmit((data) => createPrMutation.mutate(data))} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={createPrForm.control}
                   name="firstName"
@@ -1189,7 +1189,7 @@ export default function StaffAppPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <FormField
                   control={createPrForm.control}
                   name="phonePrefix"
@@ -1207,7 +1207,7 @@ export default function StaffAppPage() {
                   control={createPrForm.control}
                   name="phone"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Telefono</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-pr-phone" />
@@ -1232,7 +1232,7 @@ export default function StaffAppPage() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={createPrForm.control}
                   name="commissionPercentage"

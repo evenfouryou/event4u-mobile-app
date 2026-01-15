@@ -237,7 +237,7 @@ export default function StationDetail() {
       >
         <div className="py-4 space-y-4 pb-24">
           <Skeleton className="h-20 w-full rounded-2xl" />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Skeleton className="h-24 rounded-2xl" />
             <Skeleton className="h-24 rounded-2xl" />
             <Skeleton className="h-24 rounded-2xl" />
@@ -341,7 +341,7 @@ export default function StationDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card data-testid="card-total-products">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -654,7 +654,7 @@ export default function StationDetail() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...springConfig, delay: 0.05 }}
-          className="grid grid-cols-3 gap-3"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3"
         >
           <Card className="overflow-hidden" data-testid="card-total-products">
             <CardContent className="p-3 text-center">

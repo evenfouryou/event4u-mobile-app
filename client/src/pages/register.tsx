@@ -750,7 +750,7 @@ export default function Register() {
             <CardContent>
               <Form {...gestoreForm}>
                 <form onSubmit={gestoreForm.handleSubmit((data) => gestoreMutation.mutate(data))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField
                       control={gestoreForm.control}
                       name="firstName"
@@ -991,7 +991,7 @@ export default function Register() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="grid grid-cols-2 gap-4"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
                 >
                   <FormField
                     control={gestoreForm.control}
@@ -1274,7 +1274,7 @@ export default function Register() {
           <CardContent>
             <Form {...clienteForm}>
               <form onSubmit={clienteForm.handleSubmit(handleClienteRegister)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField
                     control={clienteForm.control}
                     name="firstName"
@@ -1366,7 +1366,7 @@ export default function Register() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField
                     control={clienteForm.control}
                     name="birthDate"
@@ -1418,7 +1418,7 @@ export default function Register() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField
                     control={clienteForm.control}
                     name="city"
@@ -1595,7 +1595,7 @@ export default function Register() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="grid grid-cols-2 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 <FormField
                   control={clienteForm.control}
@@ -1740,7 +1740,7 @@ export default function Register() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.37 }}
-                className="grid grid-cols-2 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 <FormField
                   control={clienteForm.control}
@@ -1815,7 +1815,7 @@ export default function Register() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.39 }}
-                className="grid grid-cols-2 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 <FormField
                   control={clienteForm.control}

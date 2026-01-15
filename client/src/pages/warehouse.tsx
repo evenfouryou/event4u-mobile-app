@@ -692,7 +692,7 @@ export default function Warehouse() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -867,7 +867,7 @@ export default function Warehouse() {
                 </Select>
 
                 {selectedEventId && (
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -1284,7 +1284,7 @@ export default function Warehouse() {
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-2 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
           <StatsCard title={t('warehouse.products')} value={totalProducts} icon={BoxesIcon} gradient="from-blue-500 to-indigo-600" testId="stat-total-products" />
           <StatsCard title={t('warehouse.totalQuantity')} value={totalQuantity.toFixed(0)} icon={Package} gradient="from-emerald-500 to-teal-600" testId="stat-total-quantity" />
@@ -1699,7 +1699,7 @@ export default function Warehouse() {
                       <X className="h-5 w-5" />
                     </HapticButton>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
                       type="number"
                       step="0.01"
@@ -1741,7 +1741,7 @@ export default function Warehouse() {
             {t('warehouse.addProduct')}
           </HapticButton>
 
-          <div className="grid grid-cols-2 gap-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
             <HapticButton
               variant="outline"
               className="h-14"
@@ -1813,7 +1813,7 @@ export default function Warehouse() {
                       <X className="h-5 w-5" />
                     </HapticButton>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
                       type="number"
                       step="0.01"
@@ -1846,7 +1846,7 @@ export default function Warehouse() {
             {t('warehouse.addProduct')}
           </HapticButton>
 
-          <div className="grid grid-cols-2 gap-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
             <HapticButton
               variant="outline"
               className="h-14"
@@ -1940,7 +1940,7 @@ export default function Warehouse() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                 <HapticButton type="button" variant="outline" className="h-14" onClick={() => setLoadDialogOpen(false)} data-testid="button-cancel-load">
                   {t('common.cancel')}
                 </HapticButton>
@@ -2011,7 +2011,7 @@ export default function Warehouse() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                 <HapticButton type="button" variant="outline" className="h-14" onClick={() => setUnloadDialogOpen(false)} data-testid="button-cancel-unload">
                   {t('common.cancel')}
                 </HapticButton>
@@ -2061,7 +2061,7 @@ export default function Warehouse() {
               data-testid="input-adjust-reason"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
             <HapticButton variant="outline" className="h-14" onClick={() => setAdjustDialogOpen(false)} data-testid="button-cancel-adjust">
               {t('common.cancel')}
             </HapticButton>

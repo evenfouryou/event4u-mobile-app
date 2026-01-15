@@ -449,7 +449,7 @@ export default function AdminBillingOrganizerDetail() {
                           </div>
                           Vendite Online
                         </h4>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
                             control={commissionForm.control}
                             name="channelOnlineType"
@@ -492,7 +492,7 @@ export default function AdminBillingOrganizerDetail() {
                           </div>
                           Biglietteria Fisica
                         </h4>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
                             control={commissionForm.control}
                             name="channelPrintedType"
@@ -535,7 +535,7 @@ export default function AdminBillingOrganizerDetail() {
                           </div>
                           Vendite PR
                         </h4>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
                             control={commissionForm.control}
                             name="channelPrType"
@@ -1079,7 +1079,7 @@ export default function AdminBillingOrganizerDetail() {
                 <CardContent className="p-4 pt-0">
                   {subscription && plan ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <motion.div
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
@@ -1101,7 +1101,7 @@ export default function AdminBillingOrganizerDetail() {
                           </Badge>
                         </motion.div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <motion.div
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
@@ -1189,7 +1189,7 @@ export default function AdminBillingOrganizerDetail() {
                           </div>
                           Vendite Online
                         </h4>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
                             control={commissionForm.control}
                             name="channelOnlineType"
@@ -1243,7 +1243,7 @@ export default function AdminBillingOrganizerDetail() {
                           </div>
                           Biglietteria Fisica
                         </h4>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
                             control={commissionForm.control}
                             name="channelPrintedType"
@@ -1297,7 +1297,7 @@ export default function AdminBillingOrganizerDetail() {
                           </div>
                           Vendite PR
                         </h4>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
                             control={commissionForm.control}
                             name="channelPrType"

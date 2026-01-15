@@ -281,7 +281,7 @@ export default function EventPageEditor() {
               <CardDescription>Configura immagine o video di copertina</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>URL Video (MP4)</Label>
                   <Input placeholder="https://example.com/video.mp4" value={config.heroVideoUrl || ''} onChange={(e) => setConfig({ ...config, heroVideoUrl: e.target.value })} data-testid="input-hero-video" />
@@ -292,7 +292,7 @@ export default function EventPageEditor() {
                   <Input placeholder="https://example.com/image.jpg" value={config.heroImageUrl || ''} onChange={(e) => setConfig({ ...config, heroImageUrl: e.target.value })} data-testid="input-hero-image" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Opacità Overlay (%)</Label>
                   <Input type="number" min="0" max="100" value={config.heroOverlayOpacity || 60} onChange={(e) => setConfig({ ...config, heroOverlayOpacity: Number(e.target.value) })} data-testid="input-overlay-opacity" />
@@ -310,7 +310,7 @@ export default function EventPageEditor() {
               </div>
               <div className="border-t border-white/10 pt-4 mt-4">
                 <h3 className="font-semibold text-white mb-3">Early Bird Countdown</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Data Fine Early Bird</Label>
                     <Input type="datetime-local" value={config.earlyBirdEndDate ? config.earlyBirdEndDate.slice(0, 16) : ''} onChange={(e) => setConfig({ ...config, earlyBirdEndDate: e.target.value })} data-testid="input-early-bird-date" />

@@ -358,7 +358,7 @@ export default function PrMyEventsPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -558,7 +558,7 @@ export default function PrMyEventsPage() {
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Data</p>
                     <p className="font-medium">
@@ -646,7 +646,7 @@ export default function PrMyEventsPage() {
           transition={springTransition}
           className="px-4 py-4 space-y-4"
         >
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <motion.div 
               whileTap={{ scale: 0.95 }}
               className="bg-card/60 backdrop-blur-sm rounded-2xl p-4 border border-border/30"

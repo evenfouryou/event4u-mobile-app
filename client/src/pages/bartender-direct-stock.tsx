@@ -264,7 +264,7 @@ export default function BartenderDirectStock() {
       <div className="p-3 sm:p-4 max-w-lg mx-auto pb-24">
         <Skeleton className="h-12 w-48 mb-6 rounded-xl" />
         <Skeleton className="h-12 w-full mb-4 rounded-xl" />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       </div>
@@ -697,11 +697,11 @@ export default function BartenderDirectStock() {
 
               <TabsContent value="scarica" className="mt-0">
                 {stockLoading ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[1,2,3,4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
                   </div>
                 ) : filteredStock.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {filteredStock.map((stock) => (
                       <motion.div
                         key={stock.productId}
@@ -761,7 +761,7 @@ export default function BartenderDirectStock() {
 
               <TabsContent value="carica" className="mt-0">
                 {filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {filteredProducts.map((product) => {
                       const stockInfo = directStock?.find(s => s.productId === product.id);
                       return (

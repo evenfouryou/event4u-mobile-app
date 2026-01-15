@@ -459,7 +459,7 @@ export default function PrDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3 mb-2">
@@ -522,7 +522,7 @@ export default function PrDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {(isStaff || isPr) && (
             <Button 
               variant="outline" 
@@ -677,7 +677,7 @@ export default function PrDashboard() {
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('common.date')}</p>
                     <p className="font-medium">
@@ -773,7 +773,7 @@ export default function PrDashboard() {
 
         <motion.div 
           variants={fadeInUp}
-          className="grid grid-cols-2 gap-4 px-4"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4"
         >
           <StatCard 
             icon={Calendar} 
@@ -816,7 +816,7 @@ export default function PrDashboard() {
             <h2 className="text-xl font-bold">{t('pr.quickActions')}</h2>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(isStaff || isPr) && (
               <QuickActionCard
                 icon={ListChecks}

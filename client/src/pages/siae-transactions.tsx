@@ -416,7 +416,7 @@ export default function SiaeTransactionsPage() {
         </Card>
 
         {eventId && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
@@ -594,7 +594,7 @@ export default function SiaeTransactionsPage() {
 
             {selectedTransaction && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-muted/30">
                     <div className="text-xs text-muted-foreground mb-1">Stato</div>
                     {getStatusBadge(selectedTransaction.status)}
@@ -669,7 +669,7 @@ export default function SiaeTransactionsPage() {
                 </div>
 
                 {selectedTransaction.totalVat && (
-                  <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                     <div className="p-3 rounded-lg bg-muted/30">
                       <div className="text-xs text-muted-foreground mb-1">IVA</div>
                       <div className="font-medium">€{Number(selectedTransaction.totalVat).toFixed(2)}</div>
@@ -901,7 +901,7 @@ export default function SiaeTransactionsPage() {
       </Card>
 
       {eventId && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <Card className="glass-card">
             <CardContent className="p-4">
               <div className="text-xs text-muted-foreground mb-1">Totale</div>
@@ -1085,7 +1085,7 @@ export default function SiaeTransactionsPage() {
 
           {selectedTransaction && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                   <div className="text-xs text-muted-foreground mb-1">Stato</div>
                   {getStatusBadge(selectedTransaction.status)}
@@ -1160,7 +1160,7 @@ export default function SiaeTransactionsPage() {
               </div>
 
               {selectedTransaction.totalVat && (
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div className="p-3 rounded-lg bg-muted/30">
                     <div className="text-xs text-muted-foreground mb-1">IVA</div>
                     <div className="font-medium">€{Number(selectedTransaction.totalVat).toFixed(2)}</div>

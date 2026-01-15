@@ -494,7 +494,7 @@ export default function LocationDetail() {
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
                         name="name"
@@ -523,7 +523,7 @@ export default function LocationDetail() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
                         name="address"
@@ -559,7 +559,7 @@ export default function LocationDetail() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
                         name="siaeLocationCode"
@@ -628,7 +628,7 @@ export default function LocationDetail() {
                         Informazioni Vetrina Pubblica
                       </h3>
                       
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="heroImageUrl"
@@ -755,7 +755,7 @@ export default function LocationDetail() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {floorPlans.map((fp) => (
                         <Card 
                           key={fp.id} 
@@ -921,7 +921,7 @@ export default function LocationDetail() {
                     {floorPlanWithZones?.zones && floorPlanWithZones.zones.length > 0 && (
                       <div className="mt-6">
                         <h4 className="font-medium mb-3">Zone Configurate</h4>
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                           {floorPlanWithZones.zones.map((zone) => {
                             const Icon = zoneTypeIcons[zone.zoneType] || Square;
                             return (
@@ -1048,7 +1048,7 @@ export default function LocationDetail() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={floorPlanForm.control}
                     name="imageWidth"
@@ -1176,7 +1176,7 @@ export default function LocationDetail() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={zoneForm.control}
                     name="capacity"
@@ -1213,7 +1213,7 @@ export default function LocationDetail() {
                 </div>
 
                 {zoneForm.watch('zoneType') === 'table' && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={zoneForm.control}
                       name="tableNumber"
@@ -1249,7 +1249,7 @@ export default function LocationDetail() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField
                     control={zoneForm.control}
                     name="fillColor"
@@ -1917,7 +1917,7 @@ export default function LocationDetail() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={floorPlanForm.control}
                   name="imageWidth"
@@ -2045,7 +2045,7 @@ export default function LocationDetail() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={zoneForm.control}
                   name="capacity"
@@ -2083,7 +2083,7 @@ export default function LocationDetail() {
               </div>
 
               {zoneForm.watch('zoneType') === 'table' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={zoneForm.control}
                     name="tableNumber"
@@ -2119,7 +2119,7 @@ export default function LocationDetail() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                   control={zoneForm.control}
                   name="fillColor"

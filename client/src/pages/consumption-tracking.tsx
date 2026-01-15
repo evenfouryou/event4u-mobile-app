@@ -454,7 +454,7 @@ export default function ConsumptionTracking() {
               <p className="text-muted-foreground">Caricamento...</p>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
@@ -506,7 +506,7 @@ export default function ConsumptionTracking() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {!urlEventId && (
             <div className="space-y-2">
               <Label>Evento</Label>
@@ -905,7 +905,7 @@ export default function ConsumptionTracking() {
       />
 
       {!urlEventId && !urlStationId && (
-        <div className="px-4 pb-3 grid grid-cols-2 gap-3">
+        <div className="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Evento</Label>
             <Select value={selectedEventId} onValueChange={(v) => { triggerHaptic('light'); setSelectedEventId(v); }}>

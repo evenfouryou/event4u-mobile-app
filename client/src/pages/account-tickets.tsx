@@ -597,7 +597,7 @@ export default function AccountTickets() {
           </TabsList>
 
           <TabsContent value="biglietti">
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
@@ -794,7 +794,7 @@ export default function AccountTickets() {
           </TabsContent>
 
           <TabsContent value="abbonamenti">
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">

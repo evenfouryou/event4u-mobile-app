@@ -261,7 +261,7 @@ function StatsCard({
 function LoadingSkeleton() {
   return (
     <div className="space-y-6 pb-24">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-24 rounded-2xl" />
         ))}
@@ -272,7 +272,7 @@ function LoadingSkeleton() {
           <Skeleton key={i} className="h-11 w-24 rounded-full flex-shrink-0" />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />
         ))}
@@ -368,7 +368,7 @@ export default function Inventory() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -535,7 +535,7 @@ export default function Inventory() {
             </DialogHeader>
             {selectedProduct && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('inventory.code')}</p>
                     <p className="font-medium">{selectedProduct.code}</p>
@@ -595,7 +595,7 @@ export default function Inventory() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={springTransition}
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
         >
           <StatsCard
             title={t('inventory.totalProducts')}
@@ -677,7 +677,7 @@ export default function Inventory() {
           ) : (
             <motion.div 
               key="grid"
-              className="grid grid-cols-2 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
             >
               {filteredProducts.map((product, index) => (
                 <ProductInventoryCard

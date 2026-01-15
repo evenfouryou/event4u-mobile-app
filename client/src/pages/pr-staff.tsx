@@ -345,7 +345,7 @@ export default function PrStaffPage() {
 
         {selectedEventId && (
           <>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-2">
@@ -480,7 +480,7 @@ export default function PrStaffPage() {
                             render={() => (
                               <FormItem>
                                 <FormLabel>{t('pr.permissions')}</FormLabel>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                   {PERMISSION_OPTIONS.map((permission) => (
                                     <FormField
                                       key={permission.value}
@@ -705,7 +705,7 @@ export default function PrStaffPage() {
 
       {selectedEventId && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <Card>
               <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
@@ -840,7 +840,7 @@ export default function PrStaffPage() {
                           render={() => (
                             <FormItem>
                               <FormLabel>Permessi</FormLabel>
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {PERMISSION_OPTIONS.map((permission) => (
                                   <FormField
                                     key={permission.value}

@@ -746,7 +746,7 @@ export default function ScannerScanPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Card>
                 <CardContent className="pt-6 text-center">
                   <div className="text-3xl font-bold text-emerald-500">{successCount}</div>
@@ -1465,7 +1465,7 @@ export default function ScannerScanPage() {
           {/* Scrollable Content: Details */}
           <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 min-h-0">
             {scanResult?.person && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {/* Ticket info */}
                 {scanResult.person.type === 'biglietto' && (
                   <>

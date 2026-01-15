@@ -649,7 +649,7 @@ export default function TemplateBuilder() {
         {/* Toolbox Sidebar */}
         <div className="w-64 border-r bg-card overflow-y-auto">
           <Tabs defaultValue="elements" className="h-full">
-            <TabsList className="w-full grid grid-cols-2">
+            <TabsList className="w-full grid grid-cols-1 sm:grid-cols-2">
               <TabsTrigger value="elements" data-testid="tab-elements">
                 <Layers className="h-4 w-4 mr-2" />
                 Elementi
@@ -976,7 +976,7 @@ export default function TemplateBuilder() {
                   </div>
                 )}
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <Label>X (mm)</Label>
                     <Input
@@ -997,7 +997,7 @@ export default function TemplateBuilder() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <Label>Larghezza (mm)</Label>
                     <Input
@@ -1073,7 +1073,7 @@ export default function TemplateBuilder() {
                       </Select>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <Label>Dimensione</Label>
                         <Input

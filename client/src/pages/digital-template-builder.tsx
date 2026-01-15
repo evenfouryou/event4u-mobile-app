@@ -189,7 +189,7 @@ function DigitalTicketPreview({ config }: { config: TemplateFormData }) {
           {/* Content section - white background like PDF */}
           <div className="p-4">
             {/* Info grid - 2 columns like PDF */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               {(config.showEventDate || config.showEventTime) && (
                 <div className="bg-slate-50 rounded-xl p-3">
                   <p className="text-[10px] uppercase text-slate-500 tracking-wide">Data</p>
@@ -677,7 +677,7 @@ export default function DigitalTemplateBuilder() {
                 </Card>
 
                 <Tabs defaultValue="colors" className="w-full">
-                  <TabsList className="grid grid-cols-4 w-full">
+                  <TabsList className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 w-full">
                     <TabsTrigger value="colors" data-testid="tab-colors">
                       <Palette className="w-4 h-4 mr-2" />
                       Colori
@@ -704,7 +704,7 @@ export default function DigitalTemplateBuilder() {
                           Colori
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="grid grid-cols-2 gap-4">
+                      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="primaryColor"
@@ -1008,7 +1008,7 @@ export default function DigitalTemplateBuilder() {
                         {watchedValues.logoUrl && logoSource !== 'none' && (
                           <>
                             <Separator />
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <FormField
                                 control={form.control}
                                 name="logoPosition"
@@ -1088,7 +1088,7 @@ export default function DigitalTemplateBuilder() {
                           )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="qrPosition"
@@ -1134,7 +1134,7 @@ export default function DigitalTemplateBuilder() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="qrForegroundColor"
@@ -1191,7 +1191,7 @@ export default function DigitalTemplateBuilder() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="showEventName"
@@ -1368,7 +1368,7 @@ export default function DigitalTemplateBuilder() {
                             )}
                           />
 
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <FormField
                               control={form.control}
                               name="titleFontSize"
@@ -1562,7 +1562,7 @@ export default function DigitalTemplateBuilder() {
               </Card>
 
               <Tabs defaultValue="colors" className="w-full">
-                <TabsList className="grid grid-cols-4 w-full">
+                <TabsList className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 w-full">
                   <TabsTrigger value="colors" data-testid="tab-colors">
                     <Palette className="w-4 h-4 mr-1" />
                     <span className="hidden sm:inline">Colori</span>
@@ -2252,7 +2252,7 @@ export default function DigitalTemplateBuilder() {
                           )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="titleFontSize"

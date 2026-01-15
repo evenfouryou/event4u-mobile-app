@@ -311,7 +311,7 @@ export default function OrganizerBilling() {
                   <CardDescription>Stato e informazioni del tuo piano</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                     <div>
                       <p className="text-sm text-muted-foreground">Piano</p>
                       <p className="font-semibold text-lg" data-testid="text-plan-name">{subscriptionData.plan.name}</p>
@@ -398,7 +398,7 @@ export default function OrganizerBilling() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="dateFromDesktop">Da</Label>
                     <Input
@@ -569,7 +569,7 @@ export default function OrganizerBilling() {
               renderSkeleton()
             ) : walletData ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Card
                     className={parseFloat(walletData.wallet.balance) < 0 ? "border-destructive" : ""}
                     data-testid="card-wallet-balance"
@@ -628,7 +628,7 @@ export default function OrganizerBilling() {
                     <CardTitle>Informazioni Wallet</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Valuta</p>
                         <p className="font-medium">{walletData.wallet.currency}</p>
@@ -680,7 +680,7 @@ export default function OrganizerBilling() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="reportDateFromDesktop">Da</Label>
                     <Input
@@ -723,7 +723,7 @@ export default function OrganizerBilling() {
               renderSkeleton()
             ) : reportData ? (
               <>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <Card data-testid="card-report-tickets">
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-3">
@@ -789,7 +789,7 @@ export default function OrganizerBilling() {
                   </Card>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Card data-testid="card-report-online">
                     <CardContent className="pt-6">
                       <p className="text-sm text-muted-foreground">Online</p>
@@ -881,7 +881,7 @@ export default function OrganizerBilling() {
             </DialogHeader>
             {selectedInvoice && (
               <div className="space-y-4">
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Stato</p>
                     {getInvoiceStatusBadge(selectedInvoice.status)}
@@ -997,7 +997,7 @@ export default function OrganizerBilling() {
                 <CardDescription>Stato e informazioni del tuo piano</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                   <div>
                     <p className="text-sm text-muted-foreground">Piano</p>
                     <p className="font-semibold text-lg" data-testid="text-plan-name">{subscriptionData.plan.name}</p>
@@ -1318,7 +1318,7 @@ export default function OrganizerBilling() {
                   <CardTitle>Informazioni Wallet</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Valuta</p>
                       <p className="font-medium">{walletData.wallet.currency}</p>
@@ -1413,7 +1413,7 @@ export default function OrganizerBilling() {
             renderSkeleton()
           ) : reportData ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <Card data-testid="card-report-tickets">
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-3">
@@ -1573,7 +1573,7 @@ export default function OrganizerBilling() {
           </DialogHeader>
           {selectedInvoice && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Stato</p>
                   {getInvoiceStatusBadge(selectedInvoice.status)}

@@ -2515,7 +2515,7 @@ export default function EventHub() {
         </AnimatePresence>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {(userFeatures?.siaeEnabled !== false) && (
             <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('biglietteria')} data-testid="kpi-card-tickets">
               <CardContent className="pt-6">
@@ -4384,7 +4384,7 @@ export default function EventHub() {
                     {selectedSectorForSeats && (
                       <>
                         {/* Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                           <Card data-testid="stat-seats-total">
                             <CardContent className="pt-4 pb-4 text-center">
                               <p className="text-2xl font-bold">{numberedSeatsStats.total}</p>
@@ -4425,7 +4425,7 @@ export default function EventHub() {
                           </CardHeader>
                           <CardContent>
                             <form onSubmit={generateGridForm.handleSubmit(onSubmitGenerateGrid)} className="space-y-4">
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
                                   <Label htmlFor="rows">Numero File (1-50)</Label>
                                   <Input
@@ -9064,7 +9064,7 @@ export default function EventHub() {
           <TabsContent value="guests">
             <div className="space-y-4 sm:space-y-6">
               {e4uStats && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div className="p-3 sm:p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
                     <div className="text-xl sm:text-2xl font-bold text-cyan-400">{e4uStats.lists?.total || guestLists.length}</div>
                     <div className="text-sm text-muted-foreground">Liste Attive</div>
@@ -9200,7 +9200,7 @@ export default function EventHub() {
                 return (
                   <>
                     {(e4uTableTypes.length > 0 || pendingReservations.length > 0) && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                         <div className="p-3 sm:p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
                           <div className="text-xl sm:text-2xl font-bold text-purple-400">{e4uTableTypes.length || tables.length}</div>
                           <div className="text-sm text-muted-foreground">Tipologie Tavoli</div>
@@ -9964,7 +9964,7 @@ export default function EventHub() {
 
           {reportType === 'C2' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 <Card className="bg-background/50">
                   <CardContent className="p-3">
                     <div className="text-xl font-bold">{reportData?.summary?.totalCapacity || 0}</div>

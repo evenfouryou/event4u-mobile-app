@@ -137,7 +137,7 @@ export default function ScannerScannedPage() {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{checkedInPeople?.length || 0}</div>
@@ -297,7 +297,7 @@ export default function ScannerScannedPage() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Tipo</p>
                     <div className="mt-1">{getTypeBadge(selectedPerson.type)}</div>

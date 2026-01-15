@@ -173,7 +173,7 @@ export default function SiaeNameChangesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
@@ -387,7 +387,7 @@ export default function SiaeNameChangesPage() {
             </DialogHeader>
             {selectedRequest && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                     <div className="text-xs text-muted-foreground mb-1">Stato</div>
                     {getStatusBadge(selectedRequest.status)}
@@ -700,7 +700,7 @@ export default function SiaeNameChangesPage() {
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                   <div className="text-xs text-muted-foreground mb-1">Stato</div>
                   {getStatusBadge(selectedRequest.status)}

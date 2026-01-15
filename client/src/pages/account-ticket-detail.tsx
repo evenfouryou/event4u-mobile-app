@@ -470,7 +470,7 @@ export default function AccountTicketDetail() {
                 <CardTitle>Informazioni Biglietto</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Ticket className="w-5 h-5 text-primary" />
@@ -630,7 +630,7 @@ export default function AccountTicketDetail() {
                   <p className="text-sm text-muted-foreground">
                     Scarica l'immagine del biglietto, poi salvala nelle Foto per aggiungerla al Wallet
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Button
                       variant="outline"
                       className="bg-black text-white border-black hover:bg-black/90"
@@ -850,7 +850,7 @@ export default function AccountTicketDetail() {
           >
             <h3 className="text-lg font-semibold text-foreground">Informazioni Biglietto</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Ticket className="w-5 h-5 text-primary" />
@@ -1019,7 +1019,7 @@ export default function AccountTicketDetail() {
                 Scarica l'immagine del biglietto, poi salvala nelle Foto per aggiungerla al Wallet
               </p>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <HapticButton
                   variant="outline"
                   className="min-h-[52px] bg-black text-white border-black rounded-xl text-base font-medium"

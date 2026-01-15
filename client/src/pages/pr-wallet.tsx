@@ -530,7 +530,7 @@ export default function PrWalletPage() {
   const LoadingSkeleton = () => (
     <div className="space-y-4 px-4 pt-4">
       <Skeleton className="h-[180px] w-full rounded-2xl" />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Skeleton className="h-[100px] rounded-2xl" />
         <Skeleton className="h-[100px] rounded-2xl" />
       </div>
@@ -622,7 +622,7 @@ export default function PrWalletPage() {
   );
 
   const StatsCards = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <motion.div
         variants={cardVariants}
         initial="hidden"
@@ -828,7 +828,7 @@ export default function PrWalletPage() {
             <CardContent>
               <Form {...listForm}>
                 <form onSubmit={listForm.handleSubmit((data) => addListEntryMutation.mutate(data))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={listForm.control}
                       name="firstName"
@@ -882,7 +882,7 @@ export default function PrWalletPage() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={listForm.control}
                       name="gender"
@@ -1178,7 +1178,7 @@ export default function PrWalletPage() {
               </CardTitle>
             </CardHeader>
             <CardContent data-testid="stats-lists">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-muted/30 border border-border/30 text-center">
                   <p className="text-2xl font-bold text-foreground">{prStats.lists.total}</p>
                   <p className="text-xs text-muted-foreground">Totale Inseriti</p>
@@ -1207,7 +1207,7 @@ export default function PrWalletPage() {
               </CardTitle>
             </CardHeader>
             <CardContent data-testid="stats-tables">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-muted/30 border border-border/30 text-center">
                   <p className="text-2xl font-bold text-foreground">{prStats.tables.total}</p>
                   <p className="text-xs text-muted-foreground">Totale Richiesti</p>
@@ -1337,7 +1337,7 @@ export default function PrWalletPage() {
               </div>
             ) : customerStats ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                   <div className="p-2 rounded-lg bg-muted/30 text-center">
                     <p className="text-lg font-bold">{customerStats.totalEntries}</p>
                     <p className="text-xs text-muted-foreground">Totale</p>
@@ -1419,7 +1419,7 @@ export default function PrWalletPage() {
                 <p className="text-3xl font-bold text-primary">{prStats?.paidReservations.total}</p>
                 <p className="text-sm text-muted-foreground mt-1">Prenotazioni Completate</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-muted/30 border border-border/30 text-center">
                   <p className="text-lg font-bold text-foreground tabular-nums">
                     {formatCurrency(prStats?.paidReservations.totalAmount || 0)}
@@ -1744,14 +1744,14 @@ export default function PrWalletPage() {
 
         <TabsContent value="dashboard" className="mt-0">
           {isLoading ? (
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <Skeleton key={i} className="h-[120px] rounded-xl" />
               ))}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <Card className="col-span-2 bg-gradient-to-br from-primary/10 to-background border-primary/30">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
@@ -1812,7 +1812,7 @@ export default function PrWalletPage() {
                 </Card>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-4">
@@ -1948,13 +1948,13 @@ export default function PrWalletPage() {
         </TabsContent>
 
         <TabsContent value="liste" className="mt-0">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="col-span-1">
               <EventSelector />
             </div>
           </div>
           {selectedEventId && (
-            <div className="grid grid-cols-2 gap-6 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1965,7 +1965,7 @@ export default function PrWalletPage() {
                 <CardContent>
                   <Form {...listForm}>
                     <form onSubmit={listForm.handleSubmit((data) => addListEntryMutation.mutate(data))} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField
                           control={listForm.control}
                           name="firstName"
@@ -2139,13 +2139,13 @@ export default function PrWalletPage() {
         </TabsContent>
 
         <TabsContent value="tavoli" className="mt-0">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="col-span-1">
               <EventSelector />
             </div>
           </div>
           {selectedEventId && (
-            <div className="grid grid-cols-2 gap-6 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

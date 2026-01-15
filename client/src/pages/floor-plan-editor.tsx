@@ -1090,7 +1090,7 @@ export default function FloorPlanEditor() {
                 <div className="pt-4 border-t border-border space-y-3">
                   <Label className="text-sm font-semibold">Gestione Posti</Label>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <Label htmlFor="seat-rows" className="text-xs text-muted-foreground">File</Label>
                       <Input
@@ -1303,7 +1303,7 @@ export default function FloorPlanEditor() {
                   data-testid="input-seat-label"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="seat-row">Fila</Label>
                   <Input

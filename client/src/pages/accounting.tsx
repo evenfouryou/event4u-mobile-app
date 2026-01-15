@@ -178,7 +178,7 @@ export default function Accounting() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -234,7 +234,7 @@ export default function Accounting() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="space-y-4">
-          <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+          <TabsList className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 w-full max-w-2xl">
             <TabsTrigger value="fixed-costs" className="flex items-center gap-2" data-testid="tab-desktop-fixed-costs">
               <Receipt className="h-4 w-4" />
               {t('accounting.tabs.fixedCosts')}
@@ -290,7 +290,7 @@ export default function Accounting() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={springConfig}
-          className="grid grid-cols-2 gap-3 py-4"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4"
         >
           <MobileStatsCard
             title={t('accounting.stats.fixedCostsPerMonth')}
@@ -781,7 +781,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 data-testid="input-fixed-cost-name"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="category">{t('accounting.fields.categoryRequired')}</Label>
                 <Select name="category" defaultValue={editingCost?.category || "altro"}>
@@ -814,7 +814,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="frequency">{t('accounting.fields.frequencyRequired')}</Label>
                 <Select name="frequency" defaultValue={editingCost?.frequency || "monthly"}>
@@ -844,7 +844,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="validFrom">{t('accounting.fields.validFrom')}</Label>
                 <Input
@@ -1102,7 +1102,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 data-testid="input-extra-cost-name"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="category">{t('accounting.fields.categoryRequired')}</Label>
                 <Select name="category" defaultValue={editingCost?.category || "altro"}>
@@ -1400,7 +1400,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 data-testid="input-maintenance-description"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="type">{t('accounting.fields.typeRequired')}</Label>
                 <Select name="type" defaultValue={editingMaintenance?.type || "ordinaria"}>
@@ -1428,7 +1428,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="locationId">{t('accounting.fields.location')}</Label>
                 <Select name="locationId" defaultValue={editingMaintenance?.locationId || "_none"}>
@@ -1457,7 +1457,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="scheduledDate">{t('accounting.fields.scheduledDate')}</Label>
                 <Input
@@ -1689,7 +1689,7 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
             <DialogTitle>{editingDocument ? "Modifica Documento" : "Nuovo Documento"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo *</Label>
                 <Select name="type" defaultValue={editingDocument?.type || "fattura"}>
@@ -1720,7 +1720,7 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="documentNumber">N. Documento</Label>
                 <Input
@@ -1746,7 +1746,7 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="issueDate">Data Emissione</Label>
                 <Input
@@ -1994,7 +1994,7 @@ function DesktopFixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
               <Label htmlFor="name">Nome *</Label>
               <Input id="name" name="name" defaultValue={editingCost?.name || ""} placeholder="es. Affitto locale" required data-testid="input-desktop-fixed-cost-name" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Categoria *</Label>
                 <Select name="category" defaultValue={editingCost?.category || "altro"}>
@@ -2023,7 +2023,7 @@ function DesktopFixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="amount">Importo (€) *</Label>
                 <Input id="amount" name="amount" type="number" step="0.01" defaultValue={editingCost?.amount || ""} placeholder="0.00" required data-testid="input-desktop-fixed-cost-amount" />
@@ -2235,7 +2235,7 @@ function DesktopExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
               <Label htmlFor="name">Nome *</Label>
               <Input id="name" name="name" defaultValue={editingCost?.name || ""} placeholder="es. DJ Fee" required data-testid="input-desktop-extra-cost-name" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Categoria *</Label>
                 <Select name="category" defaultValue={editingCost?.category || "altro"}>
@@ -2480,7 +2480,7 @@ function DesktopMaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
               <Label htmlFor="description">Descrizione</Label>
               <Textarea id="description" name="description" defaultValue={editingMaintenance?.description || ""} placeholder="Descrizione intervento" data-testid="input-desktop-maintenance-description" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo *</Label>
                 <Select name="type" defaultValue={editingMaintenance?.type || "ordinaria"}>
@@ -2504,7 +2504,7 @@ function DesktopMaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="locationId">Location</Label>
                 <Select name="locationId" defaultValue={editingMaintenance?.locationId || "_none"}>
@@ -2520,7 +2520,7 @@ function DesktopMaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 <Input id="amount" name="amount" type="number" step="0.01" defaultValue={editingMaintenance?.amount || ""} placeholder="0.00" data-testid="input-desktop-maintenance-amount" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="scheduledDate">Data Prevista</Label>
                 <Input id="scheduledDate" name="scheduledDate" type="date" defaultValue={editingMaintenance?.scheduledDate ? format(new Date(editingMaintenance.scheduledDate), "yyyy-MM-dd") : ""} data-testid="input-desktop-maintenance-scheduled-date" />
@@ -2723,7 +2723,7 @@ function DesktopDocumentsSection({ isAdmin }: { isAdmin: boolean }) {
             <DialogTitle>{editingDocument ? "Modifica Documento" : "Nuovo Documento"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo *</Label>
                 <Select name="type" defaultValue={editingDocument?.type || "fattura"}>
@@ -2750,7 +2750,7 @@ function DesktopDocumentsSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="documentNumber">N. Documento</Label>
                 <Input id="documentNumber" name="documentNumber" defaultValue={editingDocument?.documentNumber || ""} placeholder="es. FT-001" data-testid="input-desktop-document-number" />
@@ -2760,7 +2760,7 @@ function DesktopDocumentsSection({ isAdmin }: { isAdmin: boolean }) {
                 <Input id="amount" name="amount" type="number" step="0.01" defaultValue={editingDocument?.amount || ""} placeholder="0.00" data-testid="input-desktop-document-amount" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="issueDate">Data Emissione</Label>
                 <Input id="issueDate" name="issueDate" type="date" defaultValue={editingDocument?.issueDate ? format(new Date(editingDocument.issueDate), "yyyy-MM-dd") : ""} data-testid="input-desktop-document-issue-date" />

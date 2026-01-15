@@ -400,7 +400,7 @@ export default function PrTablesPage() {
 
         {selectedEventId && (
           <>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold">{stats.total}</div>
@@ -613,7 +613,7 @@ export default function PrTablesPage() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={tableForm.control}
                     name="capacity"
@@ -825,7 +825,7 @@ export default function PrTablesPage() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={bookingForm.control}
                     name="customerPhone"
@@ -905,7 +905,7 @@ export default function PrTablesPage() {
       >
         <div className="space-y-4 py-4 pb-24">
           <Skeleton className="h-16 rounded-2xl" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-24 rounded-2xl" />
             ))}
@@ -977,7 +977,7 @@ export default function PrTablesPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={springTransition}
-              className="grid grid-cols-2 gap-3"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             >
               {[
                 { label: t('pr.total'), value: stats.total, color: "text-foreground", bgColor: "bg-muted/50" },
@@ -1306,7 +1306,7 @@ export default function PrTablesPage() {
               )}
             />
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={tableForm.control}
                 name="capacity"
@@ -1567,7 +1567,7 @@ export default function PrTablesPage() {
               )}
             />
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={bookingForm.control}
                 name="customerPhone"

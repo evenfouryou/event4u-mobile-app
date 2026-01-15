@@ -205,7 +205,7 @@ export default function BundlesAdminPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nome</Label>
                   <Input
@@ -243,7 +243,7 @@ export default function BundlesAdminPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Prezzo Bundle (€)</Label>
                   <Input
@@ -269,7 +269,7 @@ export default function BundlesAdminPage() {
               </div>
 
               {formData.type === "group_discount" && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Min. Persone</Label>
                     <Input
@@ -291,7 +291,7 @@ export default function BundlesAdminPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Valido dal</Label>
                   <Input

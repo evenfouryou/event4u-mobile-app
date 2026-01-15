@@ -204,7 +204,7 @@ export default function Landing() {
                 <Card className="glass-card p-8 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-teal-500/10 pointer-events-none" />
                   <CardContent className="p-0 relative z-10">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {features.map((feature, index) => (
                         <motion.div
                           key={index}

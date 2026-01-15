@@ -444,7 +444,7 @@ export default function PrManagement() {
 
   const content = (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between gap-2">
@@ -557,7 +557,7 @@ export default function PrManagement() {
                             </Badge>
                           )}
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="flex items-center gap-1.5 text-muted-foreground">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate">{pr.phone}</span>
@@ -881,7 +881,7 @@ export default function PrManagement() {
                 existingUserId: selectedExistingUser?.id,
               })
             )} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={createForm.control}
                   name="firstName"
@@ -909,7 +909,7 @@ export default function PrManagement() {
                   )}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <FormField
                   control={createForm.control}
                   name="phonePrefix"

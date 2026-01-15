@@ -284,7 +284,7 @@ export default function StaffPrEventPanel() {
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="firstName"
@@ -350,7 +350,7 @@ export default function StaffPrEventPanel() {
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -571,7 +571,7 @@ export default function StaffPrEventPanel() {
                 <CardDescription>Riepilogo delle tue performance per questo evento</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <div className="text-center p-6 rounded-lg bg-teal-500/10">
                     <Users className="h-8 w-8 text-teal-400 mx-auto mb-2" />
                     <p className="text-3xl font-bold" data-testid="stat-desktop-entries">-</p>
@@ -701,7 +701,7 @@ export default function StaffPrEventPanel() {
                             </FormItem>
                           )}
                         />
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="firstName"

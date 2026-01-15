@@ -673,7 +673,7 @@ export default function E4uScannerPage() {
                   </div>
                 </div>
                 {selectedScan.person && (
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
                     <div>
                       <p className="text-sm text-muted-foreground">Nome</p>
                       <p className="font-medium">{selectedScan.person.firstName} {selectedScan.person.lastName}</p>
@@ -924,7 +924,7 @@ export default function E4uScannerPage() {
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       {scanResult.person.phone && (
                         <div className="bg-muted/30 rounded-xl p-3">
                           <span className="text-muted-foreground text-xs block mb-1">Telefono</span>

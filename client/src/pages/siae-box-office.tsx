@@ -295,7 +295,7 @@ export default function SiaeBoxOfficePage() {
               <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-2" />
             </div>
             
-            <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-border">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-border">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs mb-1">
                   <Ticket className="w-3 h-3" />
@@ -434,7 +434,7 @@ export default function SiaeBoxOfficePage() {
           </TabsList>
 
           <TabsContent value="siae" className="space-y-6">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
@@ -599,7 +599,7 @@ export default function SiaeBoxOfficePage() {
           </TabsContent>
 
           <TabsContent value="cashier" className="space-y-6">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
@@ -808,7 +808,7 @@ export default function SiaeBoxOfficePage() {
             </DialogHeader>
             {selectedSession && (
               <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-muted/30 rounded-lg p-4 text-center">
                     <div className="text-muted-foreground text-sm mb-1">Contante Atteso</div>
                     <div className="text-2xl font-bold text-[#FFD700]">€{Number(selectedSession.cashTotal || 0).toFixed(2)}</div>
@@ -891,7 +891,7 @@ export default function SiaeBoxOfficePage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-muted/30 rounded-lg p-4 text-center">
                     <div className="text-muted-foreground text-sm mb-2">Stato</div>
                     {getStatusBadge(selectedSession.status)}
@@ -1015,7 +1015,7 @@ export default function SiaeBoxOfficePage() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div className="bg-background/50 rounded-xl p-3 text-center">
                     <div className="text-muted-foreground text-xs mb-1">Biglietti</div>
                     <div className="text-2xl font-bold">{activeSession.ticketsSold}</div>
@@ -1291,7 +1291,7 @@ export default function SiaeBoxOfficePage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-muted/30 rounded-xl p-4 text-center">
                 <div className="text-muted-foreground text-xs mb-1">Contante Atteso</div>
                 <div className="text-2xl font-bold text-[#FFD700]">€{Number(selectedSession.cashTotal || 0).toFixed(2)}</div>
@@ -1382,7 +1382,7 @@ export default function SiaeBoxOfficePage() {
               </div>
             )}
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-muted/30 rounded-xl p-4 text-center">
                 <div className="text-muted-foreground text-xs mb-2">Stato</div>
                 {getStatusBadge(selectedSession.status)}

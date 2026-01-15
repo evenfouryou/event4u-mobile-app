@@ -416,7 +416,7 @@ export default function Beverage() {
             </DialogHeader>
             {selectedProduct && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Categoria</p>
                     <p className="font-medium">{selectedProduct.category || "N/A"}</p>
@@ -455,7 +455,7 @@ export default function Beverage() {
           </DialogContent>
         </Dialog>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -797,7 +797,7 @@ export default function Beverage() {
                         <p className="text-sm text-muted-foreground">Postazione assegnata</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <HapticButton
                         variant="outline"
                         className="h-auto py-4 flex flex-col items-center gap-2 min-h-[72px]"
@@ -939,7 +939,7 @@ export default function Beverage() {
         contentClassName="pb-24"
       >
         <div className="p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <StatsCard
               title="Prodotti"
               value={products?.length || 0}
@@ -1011,7 +1011,7 @@ export default function Beverage() {
       </AlertDialog>
 
       <div className="p-4 space-y-6">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {productsLoading ? (
             <>
               <Skeleton className="h-24 rounded-2xl" />
@@ -1052,7 +1052,7 @@ export default function Beverage() {
           <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider px-1">
             Azioni Rapide
           </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <QuickActionCard title="Magazzino" icon={Warehouse} href="/warehouse" gradient="from-blue-500 to-indigo-600" delay={0.25} />
             <QuickActionCard title="Prodotti" icon={Package} href="/products" gradient="from-emerald-500 to-teal-600" delay={0.3} />
             <QuickActionCard title="Postazioni" icon={MapPin} href="/stations" gradient="from-violet-500 to-purple-600" delay={0.35} />
@@ -1072,14 +1072,14 @@ export default function Beverage() {
         </div>
 
         {productsLoading ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Skeleton className="h-56 rounded-2xl" />
             <Skeleton className="h-56 rounded-2xl" />
             <Skeleton className="h-56 rounded-2xl" />
             <Skeleton className="h-56 rounded-2xl" />
           </div>
         ) : filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {filteredProducts.map((product, index) => (
               <ProductCard
                 key={product.id}

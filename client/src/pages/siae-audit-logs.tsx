@@ -249,7 +249,7 @@ export default function SiaeAuditLogsPage() {
               <Skeleton className="h-4 w-64 mt-2" />
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <Card key={i}>
                 <CardContent className="pt-6">
@@ -340,7 +340,7 @@ export default function SiaeAuditLogsPage() {
 
         {companyId && (
           <>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold">{stats.total}</div>
@@ -517,7 +517,7 @@ export default function SiaeAuditLogsPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">ID Entità</p>
                     <code className="text-sm bg-muted px-2 py-1 rounded block truncate">
@@ -546,7 +546,7 @@ export default function SiaeAuditLogsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Codice Carta</p>
                     {selectedLog.cardCode ? (
@@ -576,7 +576,7 @@ export default function SiaeAuditLogsPage() {
                 {(selectedLog.oldData || selectedLog.newData) && (
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Modifiche Dati</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {selectedLog.oldData && (
                         <div className="space-y-2">
                           <p className="text-xs text-red-500 font-medium">Dati Precedenti</p>
@@ -964,7 +964,7 @@ export default function SiaeAuditLogsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Tipo Entità</p>
                 <div className="flex items-center gap-2">
@@ -994,7 +994,7 @@ export default function SiaeAuditLogsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Sigillo Fiscale</p>
                 {selectedLog.fiscalSealCode ? (
@@ -1016,7 +1016,7 @@ export default function SiaeAuditLogsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Indirizzo IP</p>
                 <div className="flex items-center gap-2 text-gray-300 text-sm">

@@ -715,7 +715,7 @@ export default function SiaeSystemConfigPage() {
                     <CardDescription>Ragione sociale, P.IVA e contatti</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="businessName"
@@ -774,7 +774,7 @@ export default function SiaeSystemConfigPage() {
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
                         name="businessCity"
@@ -833,7 +833,7 @@ export default function SiaeSystemConfigPage() {
                       />
                     </div>
                     <Separator className="my-4" />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="taxId"
@@ -875,7 +875,7 @@ export default function SiaeSystemConfigPage() {
                       />
                     </div>
                     <Separator className="my-4" />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="pecEmail"
@@ -947,7 +947,7 @@ export default function SiaeSystemConfigPage() {
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
                         name="captchaMinChars"
@@ -1060,7 +1060,7 @@ export default function SiaeSystemConfigPage() {
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="otpDigits"
@@ -1096,7 +1096,7 @@ export default function SiaeSystemConfigPage() {
                         )}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="otpMaxAttempts"
@@ -1181,7 +1181,7 @@ export default function SiaeSystemConfigPage() {
                     <CardDescription>Limiti e regole di vendita</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="maxTicketsPerEvent"
@@ -1282,7 +1282,7 @@ export default function SiaeSystemConfigPage() {
                     <CardDescription>Credenziali e trasmissioni</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="systemCode"
@@ -1321,7 +1321,7 @@ export default function SiaeSystemConfigPage() {
                         )}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="vatNumber"
@@ -1625,7 +1625,7 @@ export default function SiaeSystemConfigPage() {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
                         name="businessProvince"

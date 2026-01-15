@@ -777,7 +777,7 @@ export default function PublicResaleCheckoutPage() {
               </h2>
             </div>
             <div className="p-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground text-xs">Nome</Label>
                   <p className="text-foreground font-medium" data-testid="text-firstname">{customer.firstName}</p>
@@ -891,7 +891,7 @@ export default function PublicResaleCheckoutPage() {
                         <div className="h-4 w-24 bg-muted rounded animate-pulse" />
                         <div className="h-12 bg-muted rounded-lg animate-pulse" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <div className="h-4 w-16 bg-muted rounded animate-pulse" />
                           <div className="h-12 bg-muted rounded-lg animate-pulse" />

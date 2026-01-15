@@ -253,7 +253,7 @@ export default function Personnel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -350,7 +350,7 @@ export default function Personnel() {
   return (
     <MobileAppLayout header={header} contentClassName="pb-24">
       <div className="py-4 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {staffLoading ? (
             <>
               <Skeleton className="h-20 rounded-2xl" />
@@ -615,7 +615,7 @@ function StaffSection({ isAdmin }: { isAdmin: boolean }) {
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">Nome *</Label>
                     <Input
@@ -639,7 +639,7 @@ function StaffSection({ isAdmin }: { isAdmin: boolean }) {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="role">Ruolo *</Label>
                     <Select name="role" defaultValue={editingStaff?.role || "altro"}>
@@ -691,7 +691,7 @@ function StaffSection({ isAdmin }: { isAdmin: boolean }) {
                     data-testid="input-staff-phone"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="hourlyRate">Tariffa/h (€)</Label>
                     <Input
@@ -1074,7 +1074,7 @@ function AssignmentsSection({ isAdmin }: { isAdmin: boolean }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="role">Ruolo</Label>
                     <Input
@@ -1101,7 +1101,7 @@ function AssignmentsSection({ isAdmin }: { isAdmin: boolean }) {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="compensationAmount">Compenso (€)</Label>
                     <Input
@@ -1461,7 +1461,7 @@ function PaymentsSection({ isAdmin }: { isAdmin: boolean }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="amount">Importo (€) *</Label>
                     <Input
@@ -1490,7 +1490,7 @@ function PaymentsSection({ isAdmin }: { isAdmin: boolean }) {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="paymentMethod">Metodo</Label>
                     <Select name="paymentMethod" defaultValue={editingPayment?.paymentMethod || ""}>
@@ -1766,7 +1766,7 @@ function DesktopStaffSection({ isAdmin }: { isAdmin: boolean }) {
             <DialogTitle>{editingStaff ? "Modifica Personale" : "Nuovo Personale"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="firstName">Nome *</Label>
                 <Input id="firstName" name="firstName" defaultValue={editingStaff?.firstName || ""} required data-testid="input-staff-first-name-desktop" />
@@ -1776,7 +1776,7 @@ function DesktopStaffSection({ isAdmin }: { isAdmin: boolean }) {
                 <Input id="lastName" name="lastName" defaultValue={editingStaff?.lastName || ""} required data-testid="input-staff-last-name-desktop" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="role">Ruolo *</Label>
                 <Select name="role" defaultValue={editingStaff?.role || "altro"}>
@@ -1797,7 +1797,7 @@ function DesktopStaffSection({ isAdmin }: { isAdmin: boolean }) {
                 <Input id="fiscalCode" name="fiscalCode" defaultValue={editingStaff?.fiscalCode || ""} maxLength={16} data-testid="input-staff-fiscal-code-desktop" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" defaultValue={editingStaff?.email || ""} data-testid="input-staff-email-desktop" />
@@ -1807,7 +1807,7 @@ function DesktopStaffSection({ isAdmin }: { isAdmin: boolean }) {
                 <Input id="phone" name="phone" type="tel" defaultValue={editingStaff?.phone || ""} data-testid="input-staff-phone-desktop" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="hourlyRate">Tariffa/h (€)</Label>
                 <Input id="hourlyRate" name="hourlyRate" type="number" step="0.01" defaultValue={editingStaff?.hourlyRate || ""} placeholder="0.00" data-testid="input-staff-hourly-rate-desktop" />
@@ -2069,7 +2069,7 @@ function DesktopAssignmentsSection({ isAdmin }: { isAdmin: boolean }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="role">Ruolo</Label>
                 <Input id="role" name="role" defaultValue={editingAssignment?.role || ""} data-testid="input-assignment-role-desktop" />
@@ -2088,7 +2088,7 @@ function DesktopAssignmentsSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="compensationAmount">Compenso (€)</Label>
                 <Input id="compensationAmount" name="compensationAmount" type="number" step="0.01" defaultValue={editingAssignment?.compensationAmount || ""} placeholder="0.00" data-testid="input-assignment-compensation-desktop" />
@@ -2344,7 +2344,7 @@ function DesktopPaymentsSection({ isAdmin }: { isAdmin: boolean }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="amount">Importo (€) *</Label>
                 <Input id="amount" name="amount" type="number" step="0.01" defaultValue={editingPayment?.amount || ""} placeholder="0.00" required data-testid="input-payment-amount-desktop" />
@@ -2361,7 +2361,7 @@ function DesktopPaymentsSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="paymentMethod">Metodo</Label>
                 <Select name="paymentMethod" defaultValue={editingPayment?.paymentMethod || ""}>

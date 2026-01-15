@@ -342,7 +342,7 @@ export default function SiaeActivationCardsPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card data-testid="card-stats-total">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -386,7 +386,7 @@ export default function SiaeActivationCardsPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Card data-testid="card-connection-status">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -483,7 +483,7 @@ export default function SiaeActivationCardsPage() {
             <CardContent>
               {smartCardStatus.cardInserted ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3" data-testid="live-card-data">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="live-card-data">
                     <div className="p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                         <Hash className="w-3 h-3" /> Seriale Carta
@@ -609,7 +609,7 @@ export default function SiaeActivationCardsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                     <Key className="w-3 h-3" /> Tentativi PIN
@@ -1207,7 +1207,7 @@ export default function SiaeActivationCardsPage() {
             <CardContent>
               {smartCardStatus.cardInserted ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3" data-testid="live-card-data">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="live-card-data">
                     <motion.div 
                       className="p-4 rounded-2xl bg-muted/30 min-h-[80px]"
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -1395,7 +1395,7 @@ export default function SiaeActivationCardsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <motion.div 
                     className="p-4 rounded-2xl bg-muted/30"
                     whileTap={{ scale: 0.98 }}
@@ -1470,7 +1470,7 @@ export default function SiaeActivationCardsPage() {
         title="Gestione PIN/PUK"
       >
         <div className="space-y-4 p-4">
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <div className="p-3 rounded-xl bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground mb-1">PIN Rimasti</p>
               <p className={`font-mono font-bold text-lg ${smartCardStatus.pinBlocked ? 'text-red-500' : 'text-foreground'}`}>

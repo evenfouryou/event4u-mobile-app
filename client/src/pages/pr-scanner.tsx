@@ -488,7 +488,7 @@ export default function PrScannerPage() {
                   {lastScan.type === 'booking' && lastScan.data && (
                     <div className="space-y-2">
                       <p className="text-xl font-semibold">{lastScan.data.customerName}</p>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         <div>
                           <span className="text-muted-foreground">Ospiti:</span>
                           <span className="ml-2 font-medium">{lastScan.data.guestCount}</span>
@@ -513,7 +513,7 @@ export default function PrScannerPage() {
                       <p className="text-xl font-semibold">
                         {lastScan.data.firstName} {lastScan.data.lastName}
                       </p>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         {lastScan.data.plusOnes > 0 && (
                           <div>
                             <span className="text-muted-foreground">+1:</span>

@@ -400,7 +400,7 @@ export default function SchoolBadgeScannerPage() {
                   {getStatusBadge()}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Titolare</p>
                     <p className="font-medium">{badgeData.request.firstName} {badgeData.request.lastName}</p>

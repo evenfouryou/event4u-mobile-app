@@ -1076,7 +1076,7 @@ export default function PrinterSettings() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -1614,7 +1614,7 @@ export default function PrinterSettings() {
             </DialogHeader>
             <Form {...modelForm}>
               <form onSubmit={modelForm.handleSubmit(onSubmitModel)} className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField
                     control={modelForm.control}
                     name="vendor"
@@ -1642,7 +1642,7 @@ export default function PrinterSettings() {
                     )}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField
                     control={modelForm.control}
                     name="dpi"
@@ -1985,7 +1985,7 @@ export default function PrinterSettings() {
         <div className="p-4">
           <Form {...modelForm}>
             <form onSubmit={modelForm.handleSubmit(onSubmitModel)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField
                   control={modelForm.control}
                   name="vendor"
@@ -2014,7 +2014,7 @@ export default function PrinterSettings() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField
                   control={modelForm.control}
                   name="dpi"

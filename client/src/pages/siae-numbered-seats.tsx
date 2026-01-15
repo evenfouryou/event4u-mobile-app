@@ -336,7 +336,7 @@ export default function SiaeNumberedSeatsPage() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="rowNumber"
@@ -451,7 +451,7 @@ export default function SiaeNumberedSeatsPage() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmitEdit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="rowNumber"
@@ -587,7 +587,7 @@ export default function SiaeNumberedSeatsPage() {
 
           {selectedSeat && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm text-gray-400">Fila</label>
                   <p className="text-white font-mono text-lg">{selectedSeat.rowNumber}</p>
@@ -598,7 +598,7 @@ export default function SiaeNumberedSeatsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm text-gray-400">Categoria</label>
                   <div className="flex items-center gap-2">
@@ -634,7 +634,7 @@ export default function SiaeNumberedSeatsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
                   <label className="text-gray-400">Creato</label>
                   <p className="text-gray-300">
@@ -735,7 +735,7 @@ export default function SiaeNumberedSeatsPage() {
 
         {selectedSectorId && (
           <>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">

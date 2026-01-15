@@ -325,7 +325,7 @@ export default function PrGuestListsPage() {
       return (
         <div className="container mx-auto p-6 space-y-6">
           <Skeleton className="h-10 w-64" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-24" />
             ))}
@@ -378,7 +378,7 @@ export default function PrGuestListsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Evento</label>
             <Select value={selectedEventId} onValueChange={(val) => {
@@ -432,7 +432,7 @@ export default function PrGuestListsPage() {
 
         {selectedList && (
           <>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
@@ -710,7 +710,7 @@ export default function PrGuestListsPage() {
                 addGuestMutation.mutate(data);
                 setIsAddGuestDialogOpen(false);
               })} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={guestForm.control}
                     name="firstName"
@@ -872,7 +872,7 @@ export default function PrGuestListsPage() {
 
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Cambia Stato</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {['pending', 'confirmed', 'arrived', 'cancelled'].map((status) => {
                       const config = getStatusConfig(status);
                       const Icon = config.icon;
@@ -1060,7 +1060,7 @@ export default function PrGuestListsPage() {
               transition={springTransition}
               className="space-y-4"
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1630,7 +1630,7 @@ export default function PrGuestListsPage() {
 
             <div className="space-y-3">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Cambia Stato</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {['pending', 'confirmed', 'arrived', 'cancelled'].map((status, idx) => {
                   const config = getStatusConfig(status);
                   const Icon = config.icon;

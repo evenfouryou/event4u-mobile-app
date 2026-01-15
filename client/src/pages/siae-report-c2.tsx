@@ -427,7 +427,7 @@ export default function SiaeReportC2() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 no-print">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 no-print">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-2">
@@ -474,7 +474,7 @@ export default function SiaeReportC2() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 no-print">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 no-print">
           <Card className="col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -483,7 +483,7 @@ export default function SiaeReportC2() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
                   <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
@@ -522,7 +522,7 @@ export default function SiaeReportC2() {
               <CardTitle className="text-base">Dati Locale</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-muted-foreground">Codice BA:</span>
                   <span className="ml-2 font-medium">{quadroA.codiceLocale}</span>
@@ -718,7 +718,7 @@ export default function SiaeReportC2() {
             </DialogHeader>
             {selectedSubscription && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Codice</p>
                     <p className="font-mono font-medium">{selectedSubscription.subscriptionCode}</p>
@@ -862,7 +862,7 @@ export default function SiaeReportC2() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
                 <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>

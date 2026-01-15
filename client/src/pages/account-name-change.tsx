@@ -430,7 +430,7 @@ export default function AccountNameChange() {
           <CardContent className="p-6 space-y-6">
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <h3 className="font-semibold text-foreground">{ticket.eventName}</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="w-4 h-4 text-primary" />
                   <span>{format(eventDate, "d MMMM yyyy 'alle' HH:mm", { locale: it })}</span>
@@ -480,7 +480,7 @@ export default function AccountNameChange() {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="newFirstName"
@@ -575,7 +575,7 @@ export default function AccountNameChange() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="newDocumentType"

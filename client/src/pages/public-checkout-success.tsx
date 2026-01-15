@@ -265,7 +265,7 @@ export default function PublicCheckoutSuccessPage() {
           </motion.div>
 
           <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-2 gap-6 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
               <Card className="p-6 flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-teal-500/20 flex items-center justify-center shrink-0">
                   <Mail className="w-7 h-7 text-teal-400" />
@@ -374,7 +374,7 @@ export default function PublicCheckoutSuccessPage() {
                     <p className="text-muted-foreground">{selectedTicket.sectorName}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Data</p>
                     <p className="font-medium">{format(new Date(selectedTicket.eventStart), "d MMMM yyyy", { locale: it })}</p>
