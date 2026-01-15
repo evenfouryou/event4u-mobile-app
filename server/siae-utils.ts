@@ -2083,3 +2083,726 @@ export function parseSiaeResponseFile(content: string): SiaeResponseParseResult 
   
   return result;
 }
+
+// ==================== VALIDAZIONE PREVENTIVA SIAE ====================
+
+/**
+ * Risultato validazione prerequisiti SIAE
+ */
+export interface SiaePrerequisiteValidation {
+  isReady: boolean;
+  score: number; // 0-100
+  errors: SiaeValidationError[];
+  warnings: SiaeValidationWarning[];
+  checklist: SiaeChecklistItem[];
+}
+
+export interface SiaeValidationError {
+  code: string;
+  field: string;
+  category: 'titolare' | 'evento' | 'genere' | 'settori' | 'biglietti' | 'trasmissione';
+  message: string;
+  resolution: string;
+  siaeErrorCode?: string;
+}
+
+export interface SiaeValidationWarning {
+  code: string;
+  field: string;
+  category: 'titolare' | 'evento' | 'genere' | 'settori' | 'biglietti' | 'trasmissione';
+  message: string;
+  suggestion: string;
+}
+
+export interface SiaeChecklistItem {
+  category: 'titolare' | 'evento' | 'genere' | 'settori' | 'biglietti' | 'trasmissione';
+  field: string;
+  label: string;
+  status: 'ok' | 'warning' | 'error' | 'missing';
+  value?: string | number | null;
+  required: boolean;
+}
+
+/**
+ * Dati necessari per validazione prerequisiti
+ */
+export interface SiaePrerequisiteData {
+  // Titolare (Company)
+  company: {
+    id: string;
+    name: string;
+    taxId?: string | null;
+    fiscalCode?: string | null;
+    regimeFiscale?: string | null;
+  };
+  // Evento SIAE
+  ticketedEvent: {
+    id: string;
+    siaeLocationCode?: string | null;
+    genreCode: string;
+    taxType: string;
+    entertainmentIncidence?: number | null;
+    organizerType?: string | null;
+    author?: string | null;
+    performer?: string | null;
+    filmNationality?: string | null;
+    totalCapacity: number;
+  };
+  // Dati evento base
+  event: {
+    id: string;
+    name: string;
+    startDatetime?: Date | string | null;
+    endDatetime?: Date | string | null;
+  };
+  // Settori
+  sectors?: Array<{
+    id: string;
+    orderCode?: string | null;
+    capacity?: number | null;
+  }>;
+  // Configurazione sistema
+  systemConfig?: {
+    systemCode?: string | null;
+  } | null;
+  // Smart Card EFFF (opzionale)
+  smartCardData?: {
+    systemId?: string;
+    partnerCodFis?: string;
+    partnerName?: string;
+  } | null;
+  // Stato bridge
+  bridgeConnected?: boolean;
+}
+
+/**
+ * Regole di validazione per tipo genere SIAE
+ */
+interface GenreValidationRules {
+  requiresAuthor: boolean;
+  requiresPerformer: boolean;
+  requiresFilmNationality: boolean;
+  mustBeIntrattenimento: boolean;
+  mustBeSpettacolo: boolean;
+  defaultVatRate: number;
+  description: string;
+}
+
+/**
+ * Ottiene le regole di validazione per un codice genere
+ */
+function getGenreValidationRules(genreCode: string): GenreValidationRules {
+  const code = parseInt(genreCode, 10);
+  
+  // Cinema (01-04): richiede NazionalitaFilm
+  if (code >= 1 && code <= 4) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: true,
+      mustBeIntrattenimento: false,
+      mustBeSpettacolo: true,
+      defaultVatRate: code === 4 ? 10 : 22,
+      description: 'Cinema'
+    };
+  }
+  
+  // Sport (05-29): nessun campo aggiuntivo
+  if (code >= 5 && code <= 29) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: false,
+      mustBeSpettacolo: true,
+      defaultVatRate: 22,
+      description: 'Sport'
+    };
+  }
+  
+  // Giochi/Casinò (30-40): Intrattenimento obbligatorio
+  if (code >= 30 && code <= 40) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: true,
+      mustBeSpettacolo: false,
+      defaultVatRate: 22,
+      description: 'Giochi/Intrattenimento'
+    };
+  }
+  
+  // Musei/Gallerie (41-44)
+  if (code >= 41 && code <= 44) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: false,
+      mustBeSpettacolo: true,
+      defaultVatRate: 22,
+      description: 'Musei/Gallerie'
+    };
+  }
+  
+  // Teatro/Concerti (45-59): richiede Autore e Esecutore
+  if (code >= 45 && code <= 59) {
+    return {
+      requiresAuthor: true,
+      requiresPerformer: true,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: false,
+      mustBeSpettacolo: true,
+      defaultVatRate: 10,
+      description: 'Teatro/Concerti'
+    };
+  }
+  
+  // Ballo/Discoteca (60-69): Intrattenimento obbligatorio
+  if (code >= 60 && code <= 69) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: true,
+      mustBeSpettacolo: false,
+      defaultVatRate: 22,
+      description: 'Ballo/Discoteca'
+    };
+  }
+  
+  // Fiere/Mostre (70-74): Intrattenimento
+  if (code >= 70 && code <= 74) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: true,
+      mustBeSpettacolo: false,
+      defaultVatRate: 22,
+      description: 'Fiere/Mostre'
+    };
+  }
+  
+  // Circo/Spettacoli viaggianti (75-78): Spettacolo
+  if (code >= 75 && code <= 78) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: false,
+      mustBeSpettacolo: true,
+      defaultVatRate: 10,
+      description: 'Circo/Spettacoli viaggianti'
+    };
+  }
+  
+  // Luna park/Attrazioni (79-89): Intrattenimento
+  if (code >= 79 && code <= 89) {
+    return {
+      requiresAuthor: false,
+      requiresPerformer: false,
+      requiresFilmNationality: false,
+      mustBeIntrattenimento: true,
+      mustBeSpettacolo: false,
+      defaultVatRate: 22,
+      description: 'Attrazioni/Parchi'
+    };
+  }
+  
+  // Altro (90-99): generalmente Spettacolo
+  return {
+    requiresAuthor: false,
+    requiresPerformer: false,
+    requiresFilmNationality: false,
+    mustBeIntrattenimento: false,
+    mustBeSpettacolo: false,
+    defaultVatRate: 22,
+    description: 'Altro'
+  };
+}
+
+/**
+ * Valida Codice Fiscale italiano (16 caratteri alfanumerici)
+ */
+function validateCodiceFiscale(cf: string): { valid: boolean; error?: string } {
+  if (!cf) return { valid: false, error: 'Codice Fiscale mancante' };
+  
+  const cleaned = cf.toUpperCase().trim();
+  
+  // P.IVA: 11 cifre
+  if (/^\d{11}$/.test(cleaned)) {
+    return { valid: true };
+  }
+  
+  // Codice Fiscale: 16 caratteri alfanumerici
+  if (/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(cleaned)) {
+    return { valid: true };
+  }
+  
+  if (cleaned.length === 16 && /^[A-Z0-9]{16}$/.test(cleaned)) {
+    return { valid: true }; // Formato accettabile
+  }
+  
+  return { 
+    valid: false, 
+    error: `Formato non valido (${cleaned.length} caratteri). Atteso: P.IVA 11 cifre o CF 16 caratteri` 
+  };
+}
+
+/**
+ * Valida Codice Locale SIAE (13 caratteri)
+ */
+function validateCodiceLocale(code: string | null | undefined): { valid: boolean; error?: string; normalized?: string } {
+  if (!code) {
+    return { valid: false, error: 'Codice Locale SIAE mancante' };
+  }
+  
+  const cleaned = code.trim();
+  
+  // Deve essere esattamente 13 caratteri (o meno, verrà padded)
+  if (cleaned.length > 13) {
+    return { valid: false, error: `Troppo lungo (${cleaned.length} caratteri). Massimo 13` };
+  }
+  
+  // Normalizza a 13 caratteri con zeri a sinistra
+  const normalized = cleaned.padStart(13, '0');
+  
+  // Deve contenere solo cifre
+  if (!/^\d{13}$/.test(normalized)) {
+    return { valid: false, error: 'Deve contenere solo cifre' };
+  }
+  
+  // Non può essere tutto zeri
+  if (normalized === '0000000000000') {
+    return { valid: false, error: 'Codice Locale non configurato (tutto zeri)' };
+  }
+  
+  return { valid: true, normalized };
+}
+
+/**
+ * Valida Codice Sistema SIAE (8 caratteri)
+ */
+function validateSystemCode(code: string | null | undefined): { valid: boolean; error?: string } {
+  if (!code) {
+    return { valid: false, error: 'Codice Sistema mancante' };
+  }
+  
+  if (code.length !== 8) {
+    return { valid: false, error: `Deve essere esattamente 8 caratteri (attuale: ${code.length})` };
+  }
+  
+  // Pattern valido: Pxxxxxxx (test) o 0xxxxxxx (produzione)
+  if (!/^[A-Z0-9]{8}$/i.test(code)) {
+    return { valid: false, error: 'Deve contenere solo caratteri alfanumerici' };
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * VALIDAZIONE PREVENTIVA COMPLETA SIAE
+ * 
+ * Verifica TUTTI i requisiti PRIMA della generazione XML per prevenire
+ * errori di trasmissione. Restituisce lista dettagliata di errori/warning
+ * con istruzioni per risolverli.
+ */
+export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): SiaePrerequisiteValidation {
+  const errors: SiaeValidationError[] = [];
+  const warnings: SiaeValidationWarning[] = [];
+  const checklist: SiaeChecklistItem[] = [];
+  
+  // Risolvi codice sistema (priorità: Smart Card > config > default)
+  const systemCode = data.smartCardData?.systemId || data.systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  
+  // Risolvi CF Titolare (priorità: Smart Card > company.taxId > company.fiscalCode)
+  const cfTitolare = data.smartCardData?.partnerCodFis || data.company.taxId || data.company.fiscalCode || '';
+  
+  // Risolvi denominazione (priorità: Smart Card > company.name)
+  const denominazione = data.smartCardData?.partnerName || data.company.name || '';
+  
+  // ==================== VALIDAZIONI TITOLARE ====================
+  
+  // 1. Codice Sistema (8 caratteri)
+  const sysCodeValidation = validateSystemCode(systemCode);
+  checklist.push({
+    category: 'titolare',
+    field: 'systemCode',
+    label: 'Codice Sistema SIAE',
+    status: sysCodeValidation.valid ? 'ok' : 'error',
+    value: systemCode,
+    required: true
+  });
+  if (!sysCodeValidation.valid) {
+    errors.push({
+      code: 'SYSTEM_CODE_INVALID',
+      field: 'systemCode',
+      category: 'titolare',
+      message: sysCodeValidation.error || 'Codice Sistema non valido',
+      resolution: 'Configurare codice sistema a 8 caratteri nelle impostazioni SIAE o connettere Smart Card',
+      siaeErrorCode: '0600'
+    });
+  }
+  
+  // 2. Codice Fiscale Titolare
+  const cfValidation = validateCodiceFiscale(cfTitolare);
+  checklist.push({
+    category: 'titolare',
+    field: 'taxId',
+    label: 'Codice Fiscale / P.IVA Titolare',
+    status: cfValidation.valid ? 'ok' : 'error',
+    value: cfTitolare || null,
+    required: true
+  });
+  if (!cfValidation.valid) {
+    errors.push({
+      code: 'TAX_ID_INVALID',
+      field: 'taxId',
+      category: 'titolare',
+      message: cfValidation.error || 'Codice Fiscale/P.IVA non valido',
+      resolution: 'Inserire P.IVA (11 cifre) o Codice Fiscale (16 caratteri) nelle impostazioni azienda',
+      siaeErrorCode: '2606'
+    });
+  }
+  
+  // 3. Denominazione Titolare
+  checklist.push({
+    category: 'titolare',
+    field: 'businessName',
+    label: 'Denominazione Titolare',
+    status: denominazione ? 'ok' : 'error',
+    value: denominazione || null,
+    required: true
+  });
+  if (!denominazione) {
+    errors.push({
+      code: 'BUSINESS_NAME_MISSING',
+      field: 'businessName',
+      category: 'titolare',
+      message: 'Denominazione azienda mancante',
+      resolution: 'Inserire nome azienda nelle impostazioni',
+      siaeErrorCode: '2606'
+    });
+  }
+  
+  // 4. Bridge connesso (warning se non connesso)
+  checklist.push({
+    category: 'trasmissione',
+    field: 'bridgeConnected',
+    label: 'Smart Card Bridge',
+    status: data.bridgeConnected ? 'ok' : 'warning',
+    value: data.bridgeConnected ? 'Connesso' : 'Non connesso',
+    required: false
+  });
+  if (!data.bridgeConnected) {
+    warnings.push({
+      code: 'BRIDGE_NOT_CONNECTED',
+      field: 'bridgeConnected',
+      category: 'trasmissione',
+      message: 'Smart Card Bridge non connesso',
+      suggestion: 'Connettere il bridge per firma digitale automatica dei report'
+    });
+  }
+  
+  // ==================== VALIDAZIONI EVENTO ====================
+  
+  // 5. Codice Locale SIAE (13 caratteri)
+  const localeValidation = validateCodiceLocale(data.ticketedEvent.siaeLocationCode);
+  checklist.push({
+    category: 'evento',
+    field: 'siaeLocationCode',
+    label: 'Codice Locale SIAE',
+    status: localeValidation.valid ? 'ok' : 'error',
+    value: localeValidation.normalized || data.ticketedEvent.siaeLocationCode || null,
+    required: true
+  });
+  if (!localeValidation.valid) {
+    errors.push({
+      code: 'LOCATION_CODE_INVALID',
+      field: 'siaeLocationCode',
+      category: 'evento',
+      message: localeValidation.error || 'Codice Locale SIAE non valido',
+      resolution: 'Inserire il codice locale SIAE (13 cifre) nella configurazione evento bigliettato',
+      siaeErrorCode: '40605'
+    });
+  }
+  
+  // 6. Tipo Genere (2 cifre, 01-99)
+  const genreCode = data.ticketedEvent.genreCode;
+  const genreNum = parseInt(genreCode, 10);
+  const genreValid = !isNaN(genreNum) && genreNum >= 1 && genreNum <= 99;
+  checklist.push({
+    category: 'evento',
+    field: 'genreCode',
+    label: 'Tipo Genere SIAE (TAB.1)',
+    status: genreValid ? 'ok' : 'error',
+    value: genreCode,
+    required: true
+  });
+  if (!genreValid) {
+    errors.push({
+      code: 'GENRE_CODE_INVALID',
+      field: 'genreCode',
+      category: 'evento',
+      message: `Codice genere "${genreCode}" non valido. Deve essere 01-99`,
+      resolution: 'Selezionare un genere valido dalla tabella TAB.1 SIAE',
+      siaeErrorCode: '2101'
+    });
+  }
+  
+  // 7. Data/Ora Evento
+  const eventDate = data.event.startDatetime;
+  const hasValidDate = eventDate && !isNaN(new Date(eventDate).getTime());
+  checklist.push({
+    category: 'evento',
+    field: 'startDatetime',
+    label: 'Data/Ora Evento',
+    status: hasValidDate ? 'ok' : 'error',
+    value: hasValidDate ? new Date(eventDate).toLocaleString('it-IT') : null,
+    required: true
+  });
+  if (!hasValidDate) {
+    errors.push({
+      code: 'EVENT_DATE_INVALID',
+      field: 'startDatetime',
+      category: 'evento',
+      message: 'Data/Ora evento mancante o non valida',
+      resolution: 'Configurare data e ora di inizio evento',
+      siaeErrorCode: '0603'
+    });
+  }
+  
+  // 8. Capienza totale
+  const capacity = data.ticketedEvent.totalCapacity;
+  checklist.push({
+    category: 'evento',
+    field: 'totalCapacity',
+    label: 'Capienza Totale',
+    status: capacity > 0 ? 'ok' : 'error',
+    value: capacity,
+    required: true
+  });
+  if (capacity <= 0) {
+    errors.push({
+      code: 'CAPACITY_INVALID',
+      field: 'totalCapacity',
+      category: 'evento',
+      message: 'Capienza totale deve essere maggiore di 0',
+      resolution: 'Configurare la capienza totale dell\'evento'
+    });
+  }
+  
+  // ==================== VALIDAZIONI PER TIPO GENERE ====================
+  
+  if (genreValid) {
+    const rules = getGenreValidationRules(genreCode);
+    
+    // Descrizione categoria genere
+    checklist.push({
+      category: 'genere',
+      field: 'genreCategory',
+      label: 'Categoria Genere',
+      status: 'ok',
+      value: rules.description,
+      required: false
+    });
+    
+    // Tax Type coerenza
+    const taxType = data.ticketedEvent.taxType;
+    if (rules.mustBeIntrattenimento && taxType !== 'I') {
+      errors.push({
+        code: 'TAX_TYPE_MISMATCH',
+        field: 'taxType',
+        category: 'genere',
+        message: `Genere ${genreCode} (${rules.description}) richiede Tax Type = Intrattenimento (I), ma è impostato "${taxType}"`,
+        resolution: 'Modificare Tax Type a "I" (Intrattenimento) per questo genere'
+      });
+      checklist.push({
+        category: 'genere',
+        field: 'taxType',
+        label: 'Tipo Imposta',
+        status: 'error',
+        value: taxType,
+        required: true
+      });
+    } else if (rules.mustBeSpettacolo && taxType !== 'S') {
+      warnings.push({
+        code: 'TAX_TYPE_MISMATCH_WARN',
+        field: 'taxType',
+        category: 'genere',
+        message: `Genere ${genreCode} (${rules.description}) tipicamente usa Tax Type = Spettacolo (S)`,
+        suggestion: 'Verificare se il Tax Type è corretto per questo evento'
+      });
+      checklist.push({
+        category: 'genere',
+        field: 'taxType',
+        label: 'Tipo Imposta',
+        status: 'warning',
+        value: taxType,
+        required: true
+      });
+    } else {
+      checklist.push({
+        category: 'genere',
+        field: 'taxType',
+        label: 'Tipo Imposta',
+        status: 'ok',
+        value: taxType === 'I' ? 'Intrattenimento' : 'Spettacolo',
+        required: true
+      });
+    }
+    
+    // Incidenza Intrattenimento (obbligatoria se I)
+    if (taxType === 'I') {
+      const incidence = data.ticketedEvent.entertainmentIncidence;
+      const incidenceValid = incidence !== null && incidence !== undefined && incidence >= 0 && incidence <= 100;
+      checklist.push({
+        category: 'genere',
+        field: 'entertainmentIncidence',
+        label: 'Incidenza Intrattenimento',
+        status: incidenceValid ? 'ok' : 'error',
+        value: incidence !== null && incidence !== undefined ? `${incidence}%` : null,
+        required: true
+      });
+      if (!incidenceValid) {
+        errors.push({
+          code: 'ENTERTAINMENT_INCIDENCE_MISSING',
+          field: 'entertainmentIncidence',
+          category: 'genere',
+          message: 'Incidenza Intrattenimento obbligatoria per Tax Type = I',
+          resolution: 'Impostare percentuale incidenza intrattenimento (0-100%)'
+        });
+      }
+    }
+    
+    // Autore (obbligatorio per Teatro/Concerti 45-59)
+    if (rules.requiresAuthor) {
+      const author = data.ticketedEvent.author;
+      checklist.push({
+        category: 'genere',
+        field: 'author',
+        label: 'Autore Opera',
+        status: author ? 'ok' : 'error',
+        value: author || null,
+        required: true
+      });
+      if (!author) {
+        errors.push({
+          code: 'AUTHOR_REQUIRED',
+          field: 'author',
+          category: 'genere',
+          message: `Autore obbligatorio per genere ${genreCode} (${rules.description})`,
+          resolution: 'Inserire il nome dell\'autore dell\'opera nella configurazione evento SIAE'
+        });
+      }
+    }
+    
+    // Esecutore/Artista (obbligatorio per Teatro/Concerti 45-59)
+    if (rules.requiresPerformer) {
+      const performer = data.ticketedEvent.performer;
+      checklist.push({
+        category: 'genere',
+        field: 'performer',
+        label: 'Esecutore/Artista',
+        status: performer ? 'ok' : 'error',
+        value: performer || null,
+        required: true
+      });
+      if (!performer) {
+        errors.push({
+          code: 'PERFORMER_REQUIRED',
+          field: 'performer',
+          category: 'genere',
+          message: `Esecutore/Artista obbligatorio per genere ${genreCode} (${rules.description})`,
+          resolution: 'Inserire il nome dell\'artista/interprete nella configurazione evento SIAE'
+        });
+      }
+    }
+    
+    // NazionalitaFilm (obbligatorio per Cinema 01-04)
+    if (rules.requiresFilmNationality) {
+      const nationality = data.ticketedEvent.filmNationality;
+      const natValid = nationality && /^[A-Z]{2}$/i.test(nationality);
+      checklist.push({
+        category: 'genere',
+        field: 'filmNationality',
+        label: 'Nazionalità Film (ISO)',
+        status: natValid ? 'ok' : 'error',
+        value: nationality || null,
+        required: true
+      });
+      if (!natValid) {
+        errors.push({
+          code: 'FILM_NATIONALITY_REQUIRED',
+          field: 'filmNationality',
+          category: 'genere',
+          message: `Nazionalità film obbligatoria per genere ${genreCode} (Cinema). Usare codice ISO 2 lettere (IT, US, FR...)`,
+          resolution: 'Inserire il codice nazionalità ISO 3166 del film'
+        });
+      }
+    }
+  }
+  
+  // ==================== VALIDAZIONI SETTORI ====================
+  
+  const sectors = data.sectors || [];
+  checklist.push({
+    category: 'settori',
+    field: 'sectorsCount',
+    label: 'Settori Configurati',
+    status: sectors.length > 0 ? 'ok' : 'warning',
+    value: sectors.length,
+    required: false
+  });
+  
+  if (sectors.length === 0) {
+    warnings.push({
+      code: 'NO_SECTORS',
+      field: 'sectors',
+      category: 'settori',
+      message: 'Nessun settore configurato',
+      suggestion: 'Verrà usato settore default "UN" (Unico). Configurare settori per report più precisi.'
+    });
+  } else {
+    // Verifica ogni settore
+    for (const sector of sectors) {
+      if (!sector.orderCode || !/^[A-Z0-9]{2}$/i.test(sector.orderCode)) {
+        warnings.push({
+          code: 'SECTOR_CODE_INVALID',
+          field: 'orderCode',
+          category: 'settori',
+          message: `Settore "${sector.id}" ha codice ordine non valido: "${sector.orderCode}"`,
+          suggestion: 'Usare codice 2 caratteri alfanumerici (es: UN, PL, A1)'
+        });
+      }
+      if (!sector.capacity || sector.capacity <= 0) {
+        warnings.push({
+          code: 'SECTOR_CAPACITY_INVALID',
+          field: 'capacity',
+          category: 'settori',
+          message: `Settore "${sector.orderCode || sector.id}" ha capienza non valida`,
+          suggestion: 'Configurare capienza settore > 0'
+        });
+      }
+    }
+  }
+  
+  // ==================== CALCOLO SCORE ====================
+  
+  // Pesi: errori = -20 punti, warning = -5 punti
+  // Base = 100, minimo = 0
+  const baseScore = 100;
+  const errorPenalty = errors.length * 20;
+  const warningPenalty = warnings.length * 5;
+  const score = Math.max(0, Math.min(100, baseScore - errorPenalty - warningPenalty));
+  
+  return {
+    isReady: errors.length === 0,
+    score,
+    errors,
+    warnings,
+    checklist
+  };
+}
