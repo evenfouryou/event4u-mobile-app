@@ -4581,6 +4581,7 @@ router.post("/api/public/account/resale", async (req, res) => {
         ticketedEventId: siaeTickets.ticketedEventId,
         customerId: siaeTickets.customerId,
         ticketPrice: siaeTickets.ticketPrice,
+        grossAmount: siaeTickets.grossAmount,
         allowsResale: siaeTicketedEvents.allowsResale,
         eventStart: events.startDatetime,
       })
@@ -4617,7 +4618,8 @@ router.post("/api/public/account/resale", async (req, res) => {
     }
 
     // Verifica prezzo massimo (no markup allowed by default)
-    const originalPrice = parseFloat(ticket.ticketPrice || '0');
+    // Use ticketPrice with fallback to grossAmount
+    const originalPrice = parseFloat(ticket.ticketPrice || ticket.grossAmount || '0');
     const maxPrice = originalPrice;
 
     if (resalePrice > maxPrice) {
@@ -4640,12 +4642,13 @@ router.post("/api/public/account/resale", async (req, res) => {
     }
 
     // Crea annuncio rivendita
+    const effectiveOriginalPrice = ticket.ticketPrice || ticket.grossAmount || '0';
     const [resale] = await db
       .insert(siaeResales)
       .values({
         originalTicketId: ticketId,
         sellerId: customer.id,
-        originalPrice: ticket.ticketPrice || '0',
+        originalPrice: effectiveOriginalPrice,
         resalePrice: resalePrice.toFixed(2),
         status: 'listed',
         listedAt: new Date(),

@@ -8326,59 +8326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/public/account/name-change - Request ticket name change
-  app.post('/api/public/account/name-change', isAuthenticated, async (req: any, res) => {
-    try {
-      const { ticketId, newFirstName, newLastName } = req.body;
-      const userId = req.user.claims.sub;
-
-      if (!ticketId || !newFirstName || !newLastName) {
-        return res.status(400).json({ message: "Campi obbligatori mancanti" });
-      }
-
-      // Get the ticket to verify ownership
-      const ticketData = await db.query.siaeTickets.findFirst({
-        where: eq(siaeTickets.id, ticketId),
-        with: { customer: true }
-      });
-
-      if (!ticketData) {
-        return res.status(404).json({ message: "Biglietto non trovato" });
-      }
-
-      // Verify user owns this ticket
-      if (ticketData.customerId) {
-        const customer = await db.query.siaeCustomers.findFirst({
-          where: eq(siaeCustomers.id, ticketData.customerId)
-        });
-
-        if (!customer || customer.userId !== userId) {
-          return res.status(403).json({ message: "Non autorizzato a modificare questo biglietto" });
-        }
-      } else {
-        return res.status(403).json({ message: "Biglietto non associato a un cliente" });
-      }
-
-      // Create a name change request in siaeNameChanges table
-      const nameChangeRequest = await db.insert(siaeNameChanges).values({
-        originalTicketId: ticketId,
-        requestedById: ticketData.customerId,
-        requestedByType: 'customer',
-        newFirstName,
-        newLastName,
-        status: 'pending'
-      }).returning();
-
-      res.json({ 
-        message: "Richiesta di cambio nominativo inviata con successo",
-        nameChangeId: nameChangeRequest[0].id,
-        status: 'pending'
-      });
-    } catch (error: any) {
-      console.error("Error requesting name change:", error);
-      res.status(500).json({ message: error.message || "Errore nella richiesta di cambio nominativo" });
-    }
-  });
+  // NOTE: /api/public/account/name-change is handled in public-routes.ts with full SIAE compliance
 
   // GET /api/public/cookie-settings - Public endpoint for cookie banner settings
   app.get('/api/public/cookie-settings', async (req, res) => {

@@ -2579,6 +2579,18 @@ export default function EventHub() {
               </TabsTrigger>
             )}
             {(userFeatures?.siaeEnabled !== false) && (
+              <TabsTrigger value="name-changes" data-testid="tab-name-changes">
+                <UserCog className="h-4 w-4 mr-2" />
+                Cambio Nominativo
+              </TabsTrigger>
+            )}
+            {(userFeatures?.siaeEnabled !== false) && (
+              <TabsTrigger value="resales" data-testid="tab-resales">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Rivendita
+              </TabsTrigger>
+            )}
+            {(userFeatures?.siaeEnabled !== false) && (
               <TabsTrigger value="seats" data-testid="tab-seats">
                 <Grid3X3 className="h-4 w-4 mr-2" />
                 Posti
@@ -3184,271 +3196,6 @@ export default function EventHub() {
                       </Card>
                     )}
 
-                    {/* Cambio Nominativo & Rivendita Settings */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Cambio Nominativo & Rivendita</CardTitle>
-                        <CardDescription>
-                          Gestione cambio intestatario e rivendita biglietti (SIAE - Provvedimento 356768/2025)
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        {/* Toggle Cambio Nominativo */}
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <UserCog className="h-5 w-5 text-muted-foreground" />
-                              <span className="font-medium">Cambio Nominativo</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Consenti ai clienti di modificare l'intestatario del biglietto (costo €2,50)
-                            </p>
-                          </div>
-                          <Switch
-                            checked={ticketedEvent?.allowsChangeName ?? false}
-                            onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ allowsChangeName: checked })}
-                            disabled={updateTicketedEventFlagsMutation.isPending}
-                            data-testid="switch-allows-change-name"
-                          />
-                        </div>
-
-                        {/* Auto-Approval Toggle */}
-                        {ticketedEvent?.allowsChangeName && (
-                          <div className="flex items-center justify-between p-3 border rounded-lg bg-background/50 ml-4">
-                            <div className="space-y-1">
-                              <span className="font-medium text-sm">Approvazione Automatica</span>
-                              <p className="text-xs text-muted-foreground">
-                                Processa automaticamente le richieste se il bridge è connesso
-                              </p>
-                            </div>
-                            <Switch
-                              checked={ticketedEvent?.autoApproveNameChanges ?? false}
-                              onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ autoApproveNameChanges: checked })}
-                              disabled={updateTicketedEventFlagsMutation.isPending}
-                              data-testid="switch-auto-approve-name-changes"
-                            />
-                          </div>
-                        )}
-
-                        {/* Sezione Collassabile Cambio Nominativo */}
-                        {ticketedEvent?.allowsChangeName && (
-                          <div className="border rounded-lg overflow-hidden">
-                            <button
-                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
-                              onClick={() => setNameChangesExpanded(!nameChangesExpanded)}
-                              data-testid="button-expand-name-changes"
-                            >
-                              <div className="flex items-center gap-2">
-                                <UserCog className="h-4 w-4" />
-                                <span className="font-medium">Richieste Cambio Nominativo</span>
-                                <Badge variant="secondary">{nameChanges.length}</Badge>
-                              </div>
-                              <ChevronDown className={`h-4 w-4 transition-transform ${nameChangesExpanded ? 'rotate-180' : ''}`} />
-                            </button>
-                            {nameChangesExpanded && (
-                              <div className="border-t p-4">
-                                {nameChanges.length === 0 ? (
-                                  <p className="text-center text-muted-foreground py-4">Nessuna richiesta di cambio nominativo</p>
-                                ) : (
-                                  <div className="space-y-4">
-                                    {nameChanges.map((change: any) => (
-                                      <div key={change.id} className="border rounded-lg p-4 space-y-3" data-testid={`card-name-change-${change.id}`}>
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant={
-                                              change.status === 'completed' ? 'default' :
-                                              change.status === 'rejected' ? 'destructive' : 'secondary'
-                                            }>
-                                              {change.status === 'completed' ? 'Completato' :
-                                               change.status === 'rejected' ? 'Rifiutato' : 'In Attesa'}
-                                            </Badge>
-                                            <span className="text-sm text-muted-foreground">
-                                              {change.createdAt ? format(new Date(change.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
-                                            </span>
-                                          </div>
-                                          {change.status === 'pending' && (
-                                            <div className="flex items-center gap-1">
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="text-green-600 border-green-600 hover:bg-green-50"
-                                                onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'approve' })}
-                                                disabled={processNameChangeMutation.isPending}
-                                                data-testid={`button-approve-name-change-${change.id}`}
-                                              >
-                                                <Check className="h-4 w-4 mr-1" />
-                                                Approva
-                                              </Button>
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="text-red-600 border-red-600 hover:bg-red-50"
-                                                onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'reject' })}
-                                                disabled={processNameChangeMutation.isPending}
-                                                data-testid={`button-reject-name-change-${change.id}`}
-                                              >
-                                                <X className="h-4 w-4 mr-1" />
-                                                Rifiuta
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                          <div className="p-3 border rounded-lg bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
-                                            <div className="flex items-center gap-2 mb-2">
-                                              <Badge variant="destructive" className="text-xs">VECCHIO</Badge>
-                                              <Badge variant="outline" className="text-xs line-through">Annullato</Badge>
-                                            </div>
-                                            <div className="space-y-1 text-sm">
-                                              <p><span className="text-muted-foreground">Intestatario:</span> <span className="font-medium">{change.originalTicket?.participantFirstName} {change.originalTicket?.participantLastName}</span></p>
-                                              <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono line-through">{change.originalTicket?.progressiveNumber || '-'}</span></p>
-                                              <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs line-through">{change.originalTicket?.sigilloFiscale || 'N/D'}</span></p>
-                                            </div>
-                                          </div>
-                                          
-                                          <div className="flex justify-center">
-                                            <div className="flex items-center gap-2 text-muted-foreground">
-                                              <ArrowRight className="h-6 w-6" />
-                                            </div>
-                                          </div>
-                                          
-                                          <div className={`p-3 border rounded-lg ${change.newTicket ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-muted/50 border-dashed'}`}>
-                                            <div className="flex items-center gap-2 mb-2">
-                                              <Badge variant={change.newTicket ? 'default' : 'secondary'} className="text-xs">NUOVO</Badge>
-                                              {change.newTicket && <Badge variant="outline" className="text-xs text-green-600">Valido</Badge>}
-                                            </div>
-                                            {change.newTicket ? (
-                                              <div className="space-y-1 text-sm">
-                                                <p><span className="text-muted-foreground">Intestatario:</span> <span className="font-medium">{change.newFirstName} {change.newLastName}</span></p>
-                                                <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono font-bold">{change.newTicket?.progressiveNumber || '-'}</span></p>
-                                                <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs">{change.newTicket?.sigilloFiscale || 'N/D'}</span></p>
-                                              </div>
-                                            ) : (
-                                              <p className="text-sm text-muted-foreground italic">In attesa di emissione</p>
-                                            )}
-                                          </div>
-                                        </div>
-                                        
-                                        <div className="flex items-center justify-between pt-2 border-t text-sm text-muted-foreground">
-                                          <span>Costo cambio: <span className="font-medium text-foreground">€{Number(change.fee || 0).toFixed(2)}</span></span>
-                                          {change.paidAt && <span>Pagato il {format(new Date(change.paidAt), 'dd/MM/yyyy', { locale: it })}</span>}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <Separator />
-
-                        {/* Toggle Rivendita */}
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Repeat className="h-5 w-5 text-muted-foreground" />
-                              <span className="font-medium">Rivendita Biglietti</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Abilita il circuito ufficiale di rivendita (Art. 1 comma 545 L. 232/2016)
-                            </p>
-                          </div>
-                          <Switch
-                            checked={ticketedEvent?.allowsResale ?? false}
-                            onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ allowsResale: checked })}
-                            disabled={updateTicketedEventFlagsMutation.isPending}
-                            data-testid="switch-allows-resale"
-                          />
-                        </div>
-
-                        {/* Sezione Collassabile Rivendita */}
-                        {ticketedEvent?.allowsResale && (
-                          <div className="border rounded-lg overflow-hidden">
-                            <button
-                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
-                              onClick={() => setResalesExpanded(!resalesExpanded)}
-                              data-testid="button-expand-resales"
-                            >
-                              <div className="flex items-center gap-2">
-                                <ShoppingCart className="h-4 w-4" />
-                                <span className="font-medium">Biglietti in Rivendita</span>
-                                <Badge variant="secondary">{resales.length}</Badge>
-                              </div>
-                              <ChevronDown className={`h-4 w-4 transition-transform ${resalesExpanded ? 'rotate-180' : ''}`} />
-                            </button>
-                            {resalesExpanded && (
-                              <div className="border-t p-4">
-                                {resales.length === 0 ? (
-                                  <p className="text-center text-muted-foreground py-4">Nessun biglietto in rivendita</p>
-                                ) : (
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Data</TableHead>
-                                        <TableHead>Biglietto</TableHead>
-                                        <TableHead>Prezzo Orig.</TableHead>
-                                        <TableHead>Prezzo Riv.</TableHead>
-                                        <TableHead>Causale</TableHead>
-                                        <TableHead>Venditore</TableHead>
-                                        <TableHead>Stato</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {resales.map((resale) => (
-                                        <TableRow key={resale.id} data-testid={`row-resale-${resale.id}`}>
-                                          <TableCell className="text-sm">
-                                            {resale.listedAt ? format(new Date(resale.listedAt), 'dd/MM/yyyy', { locale: it }) : '-'}
-                                          </TableCell>
-                                          <TableCell className="font-mono text-xs">
-                                            {resale.originalTicketId?.substring(0, 8)}...
-                                          </TableCell>
-                                          <TableCell>€{Number(resale.originalPrice || 0).toFixed(2)}</TableCell>
-                                          <TableCell>€{Number(resale.resalePrice || 0).toFixed(2)}</TableCell>
-                                          <TableCell>
-                                            <Badge variant="outline">
-                                              {resale.causaleRivendita === 'IMP' ? 'Impedimento' :
-                                               resale.causaleRivendita === 'RIN' ? 'Rinuncia' :
-                                               resale.causaleRivendita === 'ERR' ? 'Errore' : 'Altro'}
-                                            </Badge>
-                                          </TableCell>
-                                          <TableCell>
-                                            {resale.venditoreVerificato ? (
-                                              <Badge variant="default" className="gap-1">
-                                                <CheckCircle2 className="h-3 w-3" />
-                                                Verificato
-                                              </Badge>
-                                            ) : (
-                                              <Badge variant="secondary">Non verificato</Badge>
-                                            )}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Badge variant={
-                                              resale.status === 'sold' ? 'default' :
-                                              resale.status === 'cancelled' ? 'destructive' :
-                                              resale.status === 'expired' ? 'outline' :
-                                              resale.status === 'rejected' ? 'destructive' : 'secondary'
-                                            }>
-                                              {resale.status === 'sold' ? 'Venduto' :
-                                               resale.status === 'cancelled' ? 'Annullato' :
-                                               resale.status === 'expired' ? 'Scaduto' :
-                                               resale.status === 'listed' ? 'In Vendita' :
-                                               resale.status === 'rejected' ? 'Rifiutato' : resale.status}
-                                            </Badge>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
                   </div>
                 ) : (
                   <Card>
@@ -4169,6 +3916,333 @@ export default function EventHub() {
                 </div>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          {/* Name Changes Tab */}
+          <TabsContent value="name-changes" className="space-y-6">
+            {ticketedEvent ? (
+              <>
+                {/* Settings Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserCog className="h-5 w-5 text-purple-400" />
+                      Impostazioni Cambio Nominativo
+                    </CardTitle>
+                    <CardDescription>
+                      Gestione cambio intestatario biglietti (SIAE - Provvedimento 356768/2025)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Toggle Cambio Nominativo */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <UserCog className="h-5 w-5 text-muted-foreground" />
+                          <span className="font-medium">Abilita Cambio Nominativo</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Consenti ai clienti di modificare l'intestatario del biglietto (costo €2,50)
+                        </p>
+                      </div>
+                      <Switch
+                        checked={ticketedEvent?.allowsChangeName ?? false}
+                        onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ allowsChangeName: checked })}
+                        disabled={updateTicketedEventFlagsMutation.isPending}
+                        data-testid="switch-allows-change-name-tab"
+                      />
+                    </div>
+
+                    {/* Auto-Approval Toggle */}
+                    {ticketedEvent?.allowsChangeName && (
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-background/50 ml-4">
+                        <div className="space-y-1">
+                          <span className="font-medium text-sm">Approvazione Automatica</span>
+                          <p className="text-xs text-muted-foreground">
+                            Processa automaticamente le richieste se il bridge è connesso
+                          </p>
+                        </div>
+                        <Switch
+                          checked={ticketedEvent?.autoApproveNameChanges ?? false}
+                          onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ autoApproveNameChanges: checked })}
+                          disabled={updateTicketedEventFlagsMutation.isPending}
+                          data-testid="switch-auto-approve-name-changes-tab"
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Name Changes List Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserCog className="h-5 w-5" />
+                      Richieste Cambio Nominativo
+                      <Badge variant="secondary">{nameChanges.length}</Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Elenco delle richieste di cambio intestatario
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!ticketedEvent?.allowsChangeName ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <UserCog className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Cambio nominativo non abilitato</p>
+                        <p className="text-sm mt-2">Abilita la funzionalità nelle impostazioni sopra</p>
+                      </div>
+                    ) : nameChanges.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <UserCog className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Nessuna richiesta di cambio nominativo</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {nameChanges.map((change: any) => (
+                          <div key={change.id} className="border rounded-lg p-4 space-y-3" data-testid={`card-name-change-tab-${change.id}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant={
+                                  change.status === 'completed' ? 'default' :
+                                  change.status === 'rejected' ? 'destructive' : 'secondary'
+                                }>
+                                  {change.status === 'completed' ? 'Completato' :
+                                   change.status === 'rejected' ? 'Rifiutato' : 'In Attesa'}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {change.createdAt ? format(new Date(change.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
+                                </span>
+                              </div>
+                              {change.status === 'pending' && (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-green-600 border-green-600 hover:bg-green-50"
+                                    onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'approve' })}
+                                    disabled={processNameChangeMutation.isPending}
+                                    data-testid={`button-approve-name-change-tab-${change.id}`}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Approva
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-600 border-red-600 hover:bg-red-50"
+                                    onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'reject' })}
+                                    disabled={processNameChangeMutation.isPending}
+                                    data-testid={`button-reject-name-change-tab-${change.id}`}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Rifiuta
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                              <div className="p-3 border rounded-lg bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="destructive" className="text-xs">VECCHIO</Badge>
+                                  <Badge variant="outline" className="text-xs line-through">Annullato</Badge>
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                  <p><span className="text-muted-foreground">Intestatario:</span> <span className="font-medium">{change.originalTicket?.participantFirstName} {change.originalTicket?.participantLastName}</span></p>
+                                  <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono line-through">{change.originalTicket?.progressiveNumber || '-'}</span></p>
+                                  <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs line-through">{change.originalTicket?.sigilloFiscale || 'N/D'}</span></p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-center">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <ArrowRight className="h-6 w-6" />
+                                </div>
+                              </div>
+                              
+                              <div className={`p-3 border rounded-lg ${change.newTicket ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-muted/50 border-dashed'}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant={change.newTicket ? 'default' : 'secondary'} className="text-xs">NUOVO</Badge>
+                                  {change.newTicket && <Badge variant="outline" className="text-xs text-green-600">Valido</Badge>}
+                                </div>
+                                {change.newTicket ? (
+                                  <div className="space-y-1 text-sm">
+                                    <p><span className="text-muted-foreground">Intestatario:</span> <span className="font-medium">{change.newFirstName} {change.newLastName}</span></p>
+                                    <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono font-bold">{change.newTicket?.progressiveNumber || '-'}</span></p>
+                                    <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs">{change.newTicket?.sigilloFiscale || 'N/D'}</span></p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground italic">In attesa di emissione</p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-2 border-t text-sm text-muted-foreground">
+                              <span>Costo cambio: <span className="font-medium text-foreground">€{Number(change.fee || 0).toFixed(2)}</span></span>
+                              {change.paidAt && <span>Pagato il {format(new Date(change.paidAt), 'dd/MM/yyyy', { locale: it })}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <UserCog className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Biglietteria SIAE non attiva</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Attiva la biglietteria SIAE per gestire i cambi nominativi.
+                  </p>
+                  <Button onClick={() => setActiveTab('biglietteria')} variant="default">
+                    Vai alla Biglietteria
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Resales Tab */}
+          <TabsContent value="resales" className="space-y-6">
+            {ticketedEvent ? (
+              <>
+                {/* Settings Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <RefreshCw className="h-5 w-5 text-blue-400" />
+                      Impostazioni Rivendita
+                    </CardTitle>
+                    <CardDescription>
+                      Circuito ufficiale di rivendita (Art. 1 comma 545 L. 232/2016)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Toggle Rivendita */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                          <span className="font-medium">Abilita Rivendita Biglietti</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Abilita il circuito ufficiale di rivendita per questo evento
+                        </p>
+                      </div>
+                      <Switch
+                        checked={ticketedEvent?.allowsResale ?? false}
+                        onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ allowsResale: checked })}
+                        disabled={updateTicketedEventFlagsMutation.isPending}
+                        data-testid="switch-allows-resale-tab"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Resales List Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShoppingCart className="h-5 w-5" />
+                      Biglietti in Rivendita
+                      <Badge variant="secondary">{resales.length}</Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Elenco dei biglietti messi in rivendita
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!ticketedEvent?.allowsResale ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <RefreshCw className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Rivendita non abilitata</p>
+                        <p className="text-sm mt-2">Abilita la funzionalità nelle impostazioni sopra</p>
+                      </div>
+                    ) : resales.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <RefreshCw className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Nessun biglietto in rivendita</p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Biglietto</TableHead>
+                            <TableHead>Prezzo Orig.</TableHead>
+                            <TableHead>Prezzo Riv.</TableHead>
+                            <TableHead>Causale</TableHead>
+                            <TableHead>Venditore</TableHead>
+                            <TableHead>Stato</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {resales.map((resale) => (
+                            <TableRow key={resale.id} data-testid={`row-resale-tab-${resale.id}`}>
+                              <TableCell className="text-sm">
+                                {resale.listedAt ? format(new Date(resale.listedAt), 'dd/MM/yyyy', { locale: it }) : '-'}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {resale.originalTicketId?.substring(0, 8)}...
+                              </TableCell>
+                              <TableCell>€{Number(resale.originalPrice || 0).toFixed(2)}</TableCell>
+                              <TableCell>€{Number(resale.resalePrice || 0).toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {resale.causaleRivendita === 'IMP' ? 'Impedimento' :
+                                   resale.causaleRivendita === 'RIN' ? 'Rinuncia' :
+                                   resale.causaleRivendita === 'ERR' ? 'Errore' : 'Altro'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {resale.venditoreVerificato ? (
+                                  <Badge variant="default" className="gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Verificato
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary">Non verificato</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  resale.status === 'sold' ? 'default' :
+                                  resale.status === 'cancelled' ? 'destructive' :
+                                  resale.status === 'expired' ? 'outline' :
+                                  resale.status === 'rejected' ? 'destructive' : 'secondary'
+                                }>
+                                  {resale.status === 'sold' ? 'Venduto' :
+                                   resale.status === 'cancelled' ? 'Annullato' :
+                                   resale.status === 'expired' ? 'Scaduto' :
+                                   resale.status === 'listed' ? 'In Vendita' :
+                                   resale.status === 'rejected' ? 'Rifiutato' : resale.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <RefreshCw className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Biglietteria SIAE non attiva</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Attiva la biglietteria SIAE per gestire la rivendita.
+                  </p>
+                  <Button onClick={() => setActiveTab('biglietteria')} variant="default">
+                    Vai alla Biglietteria
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Seats Tab - Numbered seats management */}
@@ -7350,156 +7424,6 @@ export default function EventHub() {
                       </Card>
                     )}
 
-                    {/* Cambio Nominativo & Rivendita Settings - Mobile */}
-                    <Card className="glass-card">
-                      <CardHeader className="px-4">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <UserCog className="h-5 w-5 text-purple-400" />
-                          Cambio Nominativo & Rivendita
-                        </CardTitle>
-                        <CardDescription>
-                          Gestione cambio intestatario e rivendita (SIAE)
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="px-4 space-y-4">
-                        {/* Toggle Cambio Nominativo */}
-                        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-background/50 border">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <UserCog className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium text-sm">Cambio Nominativo</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Consenti ai clienti di modificare l'intestatario (€2,50)
-                            </p>
-                          </div>
-                          <Switch
-                            checked={ticketedEvent?.allowsChangeName ?? false}
-                            onCheckedChange={(checked) => {
-                              triggerHaptic('light');
-                              updateTicketedEventFlagsMutation.mutate({ allowsChangeName: checked });
-                            }}
-                            disabled={updateTicketedEventFlagsMutation.isPending}
-                            data-testid="switch-allows-change-name-mobile"
-                          />
-                        </div>
-
-                        {/* Sezione Collassabile Cambio Nominativo */}
-                        {ticketedEvent?.allowsChangeName && (
-                          <div className="border rounded-xl overflow-hidden">
-                            <button
-                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
-                              onClick={() => setNameChangesExpanded(!nameChangesExpanded)}
-                              data-testid="button-expand-name-changes-mobile"
-                            >
-                              <div className="flex items-center gap-2">
-                                <UserCog className="h-4 w-4" />
-                                <span className="font-medium text-sm">Richieste Cambio</span>
-                                <Badge variant="secondary">{nameChanges.length}</Badge>
-                              </div>
-                              <ChevronDown className={`h-4 w-4 transition-transform ${nameChangesExpanded ? 'rotate-180' : ''}`} />
-                            </button>
-                            {nameChangesExpanded && (
-                              <div className="border-t p-4">
-                                {nameChanges.length === 0 ? (
-                                  <p className="text-center text-muted-foreground py-4 text-sm">Nessuna richiesta</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {nameChanges.map((change: any) => (
-                                      <div key={change.id} className="p-3 rounded-lg bg-background/50 border text-sm" data-testid={`row-name-change-mobile-${change.id}`}>
-                                        <div className="flex justify-between items-start gap-2">
-                                          <div>
-                                            <div className="font-medium">{change.newFirstName} {change.newLastName}</div>
-                                            <div className="text-xs text-muted-foreground">€{Number(change.feeAmount || 0).toFixed(2)}</div>
-                                          </div>
-                                          <Badge variant={change.status === 'approved' ? 'default' : change.status === 'rejected' ? 'destructive' : 'secondary'}>
-                                            {change.status === 'approved' ? 'Approvato' : change.status === 'rejected' ? 'Rifiutato' : 'In attesa'}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Toggle Rivendita */}
-                        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-background/50 border">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium text-sm">Rivendita Biglietti</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Abilita il circuito ufficiale di rivendita
-                            </p>
-                          </div>
-                          <Switch
-                            checked={ticketedEvent?.allowsResale ?? false}
-                            onCheckedChange={(checked) => {
-                              triggerHaptic('light');
-                              updateTicketedEventFlagsMutation.mutate({ allowsResale: checked });
-                            }}
-                            disabled={updateTicketedEventFlagsMutation.isPending}
-                            data-testid="switch-allows-resale-mobile"
-                          />
-                        </div>
-
-                        {/* Sezione Collassabile Rivendita */}
-                        {ticketedEvent?.allowsResale && (
-                          <div className="border rounded-xl overflow-hidden">
-                            <button
-                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
-                              onClick={() => setResalesExpanded(!resalesExpanded)}
-                              data-testid="button-expand-resales-mobile"
-                            >
-                              <div className="flex items-center gap-2">
-                                <RefreshCw className="h-4 w-4" />
-                                <span className="font-medium text-sm">Biglietti in Rivendita</span>
-                                <Badge variant="secondary">{resales.length}</Badge>
-                              </div>
-                              <ChevronDown className={`h-4 w-4 transition-transform ${resalesExpanded ? 'rotate-180' : ''}`} />
-                            </button>
-                            {resalesExpanded && (
-                              <div className="border-t p-4">
-                                {resales.length === 0 ? (
-                                  <p className="text-center text-muted-foreground py-4 text-sm">Nessun biglietto in rivendita</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {resales.map((resale) => (
-                                      <div key={resale.id} className="p-3 rounded-lg bg-background/50 border text-sm" data-testid={`row-resale-mobile-${resale.id}`}>
-                                        <div className="flex justify-between items-start gap-2">
-                                          <div>
-                                            <div className="font-medium">€{Number(resale.resalePrice || 0).toFixed(2)}</div>
-                                            <div className="text-xs text-muted-foreground">
-                                              Originale: €{Number(resale.originalPrice || 0).toFixed(2)}
-                                            </div>
-                                          </div>
-                                          <Badge 
-                                            variant={
-                                              resale.status === 'sold' ? 'default' :
-                                              resale.status === 'cancelled' ? 'destructive' :
-                                              resale.status === 'expired' ? 'outline' : 'secondary'
-                                            }
-                                          >
-                                            {resale.status === 'sold' ? 'Venduto' :
-                                             resale.status === 'cancelled' ? 'Annullato' :
-                                             resale.status === 'expired' ? 'Scaduto' :
-                                             resale.status === 'listed' ? 'In Vendita' : resale.status}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
                   </>
                 ) : (
                   <>

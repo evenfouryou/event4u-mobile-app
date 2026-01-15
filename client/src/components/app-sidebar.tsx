@@ -343,33 +343,35 @@ export function AppSidebar() {
       }
     );
 
-    // Marketing Module - always visible for gestore
-    menuItems.push(
-      {
-        title: t('nav.marketingDashboard'),
-        icon: Megaphone,
-        url: "/marketing/dashboard",
-        group: t('nav.groups.marketing'),
-      },
-      {
-        title: t('nav.loyaltyProgram'),
-        icon: Gift,
-        url: "/loyalty/admin",
-        group: t('nav.groups.marketing'),
-      },
-      {
-        title: t('nav.referralProgram'),
-        icon: Share2,
-        url: "/referral/admin",
-        group: t('nav.groups.marketing'),
-      },
-      {
-        title: t('nav.productBundles'),
-        icon: PackageOpen,
-        url: "/bundles/admin",
-        group: t('nav.groups.marketing'),
-      }
-    );
+    // Marketing Module - only if enabled for gestore
+    if (userFeatures?.marketingEnabled === true) {
+      menuItems.push(
+        {
+          title: t('nav.marketingDashboard'),
+          icon: Megaphone,
+          url: "/marketing/dashboard",
+          group: t('nav.groups.marketing'),
+        },
+        {
+          title: t('nav.loyaltyProgram'),
+          icon: Gift,
+          url: "/loyalty/admin",
+          group: t('nav.groups.marketing'),
+        },
+        {
+          title: t('nav.referralProgram'),
+          icon: Share2,
+          url: "/referral/admin",
+          group: t('nav.groups.marketing'),
+        },
+        {
+          title: t('nav.productBundles'),
+          icon: PackageOpen,
+          url: "/bundles/admin",
+          group: t('nav.groups.marketing'),
+        }
+      );
+    }
 
     // Cassa Biglietti Module
     if (userFeatures?.cassaBigliettiEnabled === true) {
