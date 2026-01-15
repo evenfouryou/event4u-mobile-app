@@ -3449,6 +3449,7 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
         ticketType: siaeTickets.ticketType,
         ticketTypeCode: siaeTickets.ticketTypeCode,
         ticketPrice: siaeTickets.ticketPrice,
+        grossAmount: siaeTickets.grossAmount,
         participantFirstName: siaeTickets.participantFirstName,
         participantLastName: siaeTickets.participantLastName,
         status: siaeTickets.status,
@@ -3596,8 +3597,12 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
       ? new Date(ticket.emissionDate).toISOString() 
       : null;
 
+    // Ensure ticketPrice always has a valid value (fallback to grossAmount)
+    const effectiveTicketPrice = ticket.ticketPrice || ticket.grossAmount || '0';
+
     res.json({
       ...ticket,
+      ticketPrice: effectiveTicketPrice, // Override with guaranteed value
       emittedAt: emissionDateTime,
       emissionDateTime: emissionDateTime,
       organizerCompany: ticket.organizerCompany || "Organizzatore",
