@@ -4971,10 +4971,16 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     const activeCard = activationCards.find(c => c.status === 'active');
     const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
     
+    // FIX 2026-01-15: Risolvi systemCode UNA VOLTA con resolveSystemCode per coerenza (errori SIAE 0600/0603)
+    const resendCachedEfff = getCachedEfffData();
+    const resendResolvedSystemCode = resolveSystemCode(resendCachedEfff, systemConfig);
+    console.log(`[SIAE-ROUTES] Resend: Resolved systemCode=${resendResolvedSystemCode} (cachedEfff.systemId=${resendCachedEfff?.systemId}, systemConfig.systemCode=${systemConfig?.systemCode})`);
+    
     // Import and use the generateRcaXml function
     const { generateRcaXml, SiaeEventForLog } = await import('./siae-utils');
     
     // Prepare event data for RCA generation with Sostituzione="S"
+    // FIX 2026-01-15: Usa resendResolvedSystemCode invece di ticketedEvent.systemCode o default
     const eventForLog: SiaeEventForLog = {
       id: ticketedEvent.id,
       eventId: ticketedEvent.eventId,
@@ -4983,7 +4989,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       genreCode: ticketedEvent.genreCode || '60',
       tipoTassazione: ticketedEvent.tipoTassazione || 'I',
       entertainmentIncidence: ticketedEvent.entertainmentIncidence || 50,
-      systemCode: ticketedEvent.systemCode || 'EVENT4U1',
+      systemCode: resendResolvedSystemCode, // FIX: Usa codice risolto
       siaeLocationCode: ticketedEvent.siaeLocationCode || '0000000000000',
       organizerType: ticketedEvent.organizerType || 'G',
       businessName: systemConfig?.businessName || company?.name || 'N/D',
@@ -4995,7 +5001,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       eventForLog,
       company?.name || 'N/D',
       taxId,
-      activeCard?.systemId || 'EVENT4U1',
+      resendResolvedSystemCode, // FIX: Usa codice risolto
       nextProgressivo,
       true // isSubstitution = true -> Sostituzione="S"
     );
@@ -5037,10 +5043,10 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
-      // Validazione pre-trasmissione SIAE
+      // FIX 2026-01-15: Validazione pre-trasmissione con resendResolvedSystemCode
       const preValidation = validatePreTransmission(
         rcaResult.xml,
-        activeCard?.systemId || 'EVENT4U1',
+        resendResolvedSystemCode, // FIX: Usa codice risolto per coerenza
         'rca',
         original.periodDate
       );
@@ -5068,7 +5074,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         totalAmount: rcaResult.totalRevenue.toFixed(2),
         xmlContent: rcaResult.xml,
         transmissionId: newTransmission.id,
-        systemCode: activeCard?.systemId || 'EVENT4U1',
+        systemCode: resendResolvedSystemCode, // FIX: Usa codice risolto
         sequenceNumber: nextProgressivo,
         signWithSmime: true,
         requireSignature: true,
@@ -5097,6 +5103,28 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
 router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const data = insertSiaeTransmissionSchema.parse(req.body);
+    
+    // FIX 2026-01-15: Validazione coerenza systemCode per prevenire errori SIAE 0600/0603
+    // Se fileContent è fornito, deve avere systemCode coerente con il codice risolto
+    if (data.fileContent && typeof data.fileContent === 'string') {
+      const systemConfig = await siaeStorage.getSiaeSystemConfig(data.companyId);
+      const postCachedEfff = getCachedEfffData();
+      const postResolvedSystemCode = resolveSystemCode(postCachedEfff, systemConfig);
+      
+      const systemCodeValidation = validateSystemCodeConsistency(data.fileContent, postResolvedSystemCode);
+      if (!systemCodeValidation.valid) {
+        console.error(`[SIAE-ROUTES] POST transmissions: ${systemCodeValidation.error}`);
+        return res.status(400).json({
+          message: "System code is required for transmission creation",
+          error: systemCodeValidation.error,
+          xmlSystemCode: systemCodeValidation.xmlSystemCode,
+          expectedSystemCode: systemCodeValidation.filenameSystemCode,
+          code: "SYSTEM_CODE_MISMATCH"
+        });
+      }
+      console.log(`[SIAE-ROUTES] POST transmissions: SystemCode validated - XML=${systemCodeValidation.xmlSystemCode}, expected=${postResolvedSystemCode}`);
+    }
+    
     const transmission = await siaeStorage.createSiaeTransmission(data);
     
     const user = req.user as any;
@@ -9850,10 +9878,10 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
-      // Validazione pre-trasmissione SIAE
+      // FIX 2026-01-15: Usa rcaResolvedSystemCode già calcolato per coerenza (errori SIAE 0600/0603)
       const preValidation = validatePreTransmission(
         signedXmlContent || xmlContent,
-        systemCode,
+        rcaResolvedSystemCode, // FIX: Usa codice risolto, non variabile inesistente
         'rca',
         eventDate
       );
@@ -9881,7 +9909,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         totalAmount: reportData.totalRevenue.toFixed(2),
         xmlContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
         transmissionId: transmission.id,
-        systemCode: systemCode, // Codice sistema per nome file conforme Allegato C
+        systemCode: rcaResolvedSystemCode, // FIX: Usa codice risolto per coerenza Allegato C
         signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
         requireSignature: true,
         p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
