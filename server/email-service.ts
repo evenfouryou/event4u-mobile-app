@@ -476,7 +476,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   // SMIMESignML crea la firma S/MIME che include l'allegato
   const useRawXmlForSmime = signWithSmime;
   const effectiveSignatureFormat = useRawXmlForSmime ? null : (isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null));
-  const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat);
+  const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
   
   // Subject conforme a RFC-2822 SIAE (Sezione 1.5.3)
   // FORMATO SUBJECT (completo): RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.01.00

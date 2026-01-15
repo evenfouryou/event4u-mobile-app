@@ -369,6 +369,7 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
         totalAmount: '0.00',
         xmlContent: testXml,
         transmissionId: `DEBUG-${Date.now()}`,
+        systemCode: SIAE_SYSTEM_CODE_DEFAULT, // FIX: systemCode obbligatorio
         signWithSmime: true,
         requireSignature: true,
       });
@@ -5193,6 +5194,13 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
+    // FIX 2026-01-15: Risolvi systemCode UNA VOLTA all'inizio e usalo ovunque
+    // Questo previene errori SIAE 0600/0603 (incoerenza tra nome file, XML e subject email)
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(transmission.companyId);
+    const sendEmailCachedEfff = getCachedEfffData();
+    const resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig);
+    console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (cachedEfff.systemId=${sendEmailCachedEfff?.systemId}, systemConfig.systemCode=${systemConfig?.systemCode})`);
+    
     // CRITICAL FIX: Rigenera SEMPRE l'XML obbligatoriamente per garantire formato corretto
     // LogTransazione causa errore SIAE 40605 "Il riepilogo risulta illegibile"
     let xmlContent = transmission.fileContent;
@@ -5213,7 +5221,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           const baseEvent = await storage.getEvent(ticketedEvent.eventId);
           const allTickets = await siaeStorage.getSiaeTicketsByCompany(transmission.companyId);
           const eventTickets = allTickets.filter(t => t.ticketedEventId === transmission.ticketedEventId);
-          const systemConfig = await siaeStorage.getSiaeSystemConfig(transmission.companyId);
+          // systemConfig già recuperato sopra
           const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(transmission.companyId);
           const activeCard = activationCards.find(c => c.status === 'active');
           const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
@@ -5279,19 +5287,15 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           const rcaProgressivo = rcaTransmissionsForEvent.length + 1;
           console.log(`[SIAE-ROUTES] RCA progressivo per reinvio: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length})`);
           
-          // FIX 2026-01-15: Risolvi systemCode UNA VOLTA con resolveSystemCode per coerenza (errori SIAE 0600/0603)
-          const sendEmailCachedEfff = getCachedEfffData();
-          const sendEmailResolvedSystemCode = resolveSystemCode(sendEmailCachedEfff, systemConfig);
-          console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${sendEmailResolvedSystemCode} (cachedEfff.systemId=${sendEmailCachedEfff?.systemId}, systemConfig.systemCode=${systemConfig?.systemCode})`);
-          
           // Generate RCA XML (RiepilogoControlloAccessi format) con Sostituzione="S"
+          // Usa resolvedSystemCodeForEmail già calcolato all'inizio della funzione
           const rcaResult = generateRCAXml({
             companyId: transmission.companyId,
             eventId: ticketedEvent.id,
             event: eventForLog,
             tickets: ticketsForLog,
             systemConfig: {
-              systemCode: sendEmailResolvedSystemCode, // FIX: Usa codice risolto per coerenza
+              systemCode: resolvedSystemCodeForEmail, // FIX: Usa codice risolto per coerenza
               taxId: taxId,
               businessName: systemConfig?.businessName || companyName,
             },
@@ -5418,16 +5422,14 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const { sendSiaeTransmissionEmail } = await import('./email-service');
     
     // Validazione pre-trasmissione SIAE
-    const transmissionSystemCode = transmission.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-    if (!transmission.systemCode) {
-      console.warn(`[SIAE-ROUTES] Legacy transmission data detected: transmission ${id} has no systemCode, falling back to default ${SIAE_SYSTEM_CODE_DEFAULT}`);
-    }
+    // FIX 2026-01-15: Usa resolvedSystemCodeForEmail (già calcolato all'inizio) invece di transmission.systemCode
+    // Questo garantisce coerenza tra XML rigenerato, nome file allegato e subject email
     const transmissionReportType: 'giornaliero' | 'mensile' | 'rca' = 
       transmission.transmissionType === 'monthly' ? 'mensile' : 
       transmission.transmissionType === 'daily' ? 'giornaliero' : 'rca';
     const preValidation = validatePreTransmission(
       signedXmlContent || xmlContent,
-      transmissionSystemCode,
+      resolvedSystemCodeForEmail,
       transmissionReportType,
       new Date(transmission.periodDate)
     );
@@ -5457,6 +5459,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       totalAmount: transmission.totalAmount || '0',
       xmlContent: signedXmlContent || xmlContent, // Usa xmlContent (potrebbe essere rigenerato)
       transmissionId: transmission.id,
+      systemCode: resolvedSystemCodeForEmail, // FIX 2026-01-15: systemCode obbligatorio per nome file allegato
       p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
       signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
       signWithSmime: true,

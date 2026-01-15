@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero NomeFile="RMG_20260115_P0004010_008.xsi" Data="20260115" DataGenerazione="20260115" OraGenerazione="224922" ProgressivoGenerazione="8" Sostituzione="S">
+    <Titolare>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260115</DataEvento>
+            <OraEvento>1940</OraEvento>
+            <MultiGenere>
+                <TipoGenere>45</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Prova 15/01 ordine posti</Titolo>
+                        <Esecutore>Prova 15/01 ordine posti</Esecutore>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>N0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <Quantita>1</Quantita>
+                    <CorrispettivoLordo>100</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260130</DataEvento>
+            <OraEvento>1600</OraEvento>
+            <MultiGenere>
+                <TipoGenere>19</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Prova abbonamento 15/01</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <Capienza>100</Capienza>
+            </OrdineDiPosto>
+        </Evento>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABO-MKFLUH42-EOC4</CodiceAbbonamento>
+            <Validita>20270115</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="L"/>
+            <CodiceOrdine>A0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>4</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>3</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+    </Organizzatore>
+</RiepilogoGiornaliero>
