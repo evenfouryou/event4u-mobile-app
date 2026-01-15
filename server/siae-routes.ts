@@ -4,7 +4,7 @@ import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTime
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
-import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones, siaeAuditLogs, siaeCustomers } from "@shared/schema";
+import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones, siaeAuditLogs, siaeCustomers, venueFloorPlans, siaeNumberedSeats } from "@shared/schema";
 import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -2399,6 +2399,115 @@ router.delete("/api/siae/event-sectors/:id", requireAuth, requireOrganizer, asyn
       return res.status(404).json({ message: "Settore non trovato" });
     }
     res.json({ message: "Settore eliminato con successo" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== Floor Plan Zone Linking (Organizer) ====================
+
+// Schema for linking a sector to a floor plan zone
+const linkSectorZoneSchema = z.object({
+  floorPlanZoneId: z.string().nullable().optional(), // null to unlink
+});
+
+// PATCH /api/siae/sectors/:id/link-zone - Link sector to floor plan zone
+router.patch("/api/siae/sectors/:id/link-zone", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const data = linkSectorZoneSchema.parse(req.body);
+    
+    // Update the sector's floorPlanZoneId
+    const sector = await siaeStorage.updateSiaeEventSector(req.params.id, {
+      floorPlanZoneId: data.floorPlanZoneId === undefined ? null : data.floorPlanZoneId
+    });
+    
+    if (!sector) {
+      return res.status(404).json({ message: "Settore non trovato" });
+    }
+    
+    res.json(sector);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// GET /api/siae/events/:eventId/floor-plan-data - Get floor plan with zones, sectors, and seats
+router.get("/api/siae/events/:eventId/floor-plan-data", requireAuth, async (req: Request, res: Response) => {
+  try {
+    // Get the ticketed event
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.eventId);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    // Get the base event to find the location
+    const [eventRecord] = await db
+      .select({ locationId: events.locationId })
+      .from(events)
+      .where(eq(events.id, ticketedEvent.eventId));
+    
+    if (!eventRecord || !eventRecord.locationId) {
+      return res.json({ floorPlan: null, zones: [], sectors: [], seats: [] });
+    }
+    
+    // Get the floor plan(s) for this location (prefer default)
+    const floorPlans = await db
+      .select()
+      .from(venueFloorPlans)
+      .where(and(
+        eq(venueFloorPlans.locationId, eventRecord.locationId),
+        eq(venueFloorPlans.isActive, true)
+      ))
+      .orderBy(venueFloorPlans.isDefault)
+      .limit(1);
+    
+    const floorPlan = floorPlans[0] || null;
+    
+    // Get zones for this floor plan
+    const zones = floorPlan 
+      ? await db
+          .select()
+          .from(floorPlanZones)
+          .where(eq(floorPlanZones.floorPlanId, floorPlan.id))
+          .orderBy(floorPlanZones.sortOrder)
+      : [];
+    
+    // Get all sectors for this ticketed event with their zone links
+    const sectors = await db
+      .select()
+      .from(siaeEventSectors)
+      .where(eq(siaeEventSectors.ticketedEventId, req.params.eventId))
+      .orderBy(siaeEventSectors.sortOrder);
+    
+    // Get all numbered seats for this event
+    const seats = await db
+      .select()
+      .from(siaeNumberedSeats)
+      .innerJoin(siaeEventSectors, eq(siaeNumberedSeats.sectorId, siaeEventSectors.id))
+      .where(eq(siaeEventSectors.ticketedEventId, req.params.eventId));
+    
+    // Transform seats to flatten the nested structure and map coordinate field names
+    const flattenedSeats = seats.map(row => ({
+      id: row.siae_numbered_seats.id,
+      sectorId: row.siae_numbered_seats.sectorId,
+      rowNumber: row.siae_numbered_seats.rowNumber,
+      seatNumber: row.siae_numbered_seats.seatNumber,
+      category: row.siae_numbered_seats.category,
+      priceMultiplier: row.siae_numbered_seats.priceMultiplier,
+      status: row.siae_numbered_seats.status,
+      posX: row.siae_numbered_seats.xPosition,
+      posY: row.siae_numbered_seats.yPosition,
+      notes: row.siae_numbered_seats.notes,
+      createdAt: row.siae_numbered_seats.createdAt,
+      updatedAt: row.siae_numbered_seats.updatedAt,
+    }));
+    
+    res.json({
+      floorPlan,
+      zones,
+      sectors,
+      seats: flattenedSeats
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

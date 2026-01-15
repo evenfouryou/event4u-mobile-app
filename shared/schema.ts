@@ -1395,6 +1395,7 @@ export const siaeEventSectors = pgTable("siae_event_sectors", {
   capacity: integer("capacity").notNull(),
   availableSeats: integer("available_seats").notNull(),
   isNumbered: boolean("is_numbered").notNull().default(false), // Posti numerati
+  floorPlanZoneId: varchar("floor_plan_zone_id"), // Collegamento a zona planimetria
   // Prezzi per tipo titolo
   priceIntero: decimal("price_intero", { precision: 10, scale: 2 }).notNull(), // Prezzo intero
   priceRidotto: decimal("price_ridotto", { precision: 10, scale: 2 }),
