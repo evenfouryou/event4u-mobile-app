@@ -3102,6 +3102,7 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
  * @param reportDate - Data del report (per coerenza date)
  * @param denominazione - Denominazione titolare (max 60 char)
  * @param performer - Nome performer/artista (max 100 char)
+ * @param transmissionSystemCode - Codice sistema salvato nella trasmissione (se esiste), usato per verificare coerenza
  * @returns Risultato validazione con errori, warning e dettagli
  */
 export function validatePreTransmission(
@@ -3110,7 +3111,8 @@ export function validatePreTransmission(
   reportType: 'giornaliero' | 'mensile' | 'rca',
   reportDate: Date | string,
   denominazione?: string,
-  performer?: string
+  performer?: string,
+  transmissionSystemCode?: string
 ): PreTransmissionValidationResult {
   const errors: PreTransmissionValidationResult['errors'] = [];
   const warnings: PreTransmissionValidationResult['warnings'] = [];
@@ -3333,7 +3335,20 @@ export function validatePreTransmission(
   
   details.datesCoherent = datesCoherent;
   
-  // ==================== 6. VALIDAZIONE OBBLIGATORIA ELEMENTI ====================
+  // ==================== 6. VALIDAZIONE TRANSMISSION SYSTEM CODE ====================
+  // Confronta il systemCode della trasmissione salvata (se disponibile) con quello risolto ora
+  // Previene l'invio di trasmissioni con codice sistema incoerente nel database
+  if (transmissionSystemCode && transmissionSystemCode !== systemCode) {
+    errors.push({
+      code: 'TRANSMISSION_SYSTEM_CODE_MISMATCH',
+      field: 'systemCode',
+      message: `Il codice sistema salvato nella trasmissione (${transmissionSystemCode}) non corrisponde al codice sistema risolto (${systemCode})`,
+      resolution: 'Aggiornare il record di trasmissione con il codice sistema corretto prima di reinviare',
+      siaeErrorCode: '0600'
+    });
+  }
+  
+  // ==================== 7. VALIDAZIONE OBBLIGATORIA ELEMENTI ====================
   // Verifica elementi obbligatori comuni
   const requiredElements = ['Titolare', 'Denominazione', 'CodiceFiscale'];
   for (const elem of requiredElements) {
@@ -3347,7 +3362,7 @@ export function validatePreTransmission(
     }
   }
   
-  // ==================== 7. VALIDAZIONE ATTRIBUTI GENERAZIONE ====================
+  // ==================== 8. VALIDAZIONE ATTRIBUTI GENERAZIONE ====================
   const requiredAttributes = ['DataGenerazione', 'OraGenerazione', 'ProgressivoGenerazione'];
   for (const attr of requiredAttributes) {
     if (!xml.includes(`${attr}="`)) {
