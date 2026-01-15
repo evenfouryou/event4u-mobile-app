@@ -218,7 +218,7 @@ const activateTicketingSchema = z.object({
   genreCode: z.string().min(1, "Genere evento richiesto"),
   taxType: z.string().min(1),
   totalCapacity: z.number().min(1),
-  maxTicketsPerUser: z.number().min(1),
+  maxTicketsPerUser: z.number().min(1).max(10, "Massimo 10 per normativa SIAE"),
   ivaPreassolta: z.string().default("N"),
   requiresNominative: z.boolean().default(false),
   allowsChangeName: z.boolean().default(false),
@@ -8001,11 +8001,17 @@ export default function EventHub() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Max Biglietti per Utente</FormLabel>
+                                <p className="text-xs text-muted-foreground">Massimo 10 per normativa SIAE</p>
                                 <FormControl>
                                   <Input
                                     type="number"
+                                    min={1}
+                                    max={10}
                                     {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 1;
+                                      field.onChange(Math.min(val, 10));
+                                    }}
                                     data-testid="input-max-tickets"
                                   />
                                 </FormControl>

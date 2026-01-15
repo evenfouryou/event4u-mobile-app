@@ -1464,15 +1464,19 @@ export default function EventWizard() {
 
               <div className="space-y-3">
                 <Label className="text-base font-medium">Max Biglietti per Utente</Label>
+                <p className="text-xs text-muted-foreground">Massimo 10 per normativa SIAE</p>
                 <div className="relative">
                   <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                   <Input
                     type="number"
                     min={1}
-                    max={50}
+                    max={10}
                     className="h-14 text-base pl-12 pr-4"
                     value={siaeMaxTicketsPerUser}
-                    onChange={(e) => setSiaeMaxTicketsPerUser(parseInt(e.target.value) || 10)}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 10;
+                      setSiaeMaxTicketsPerUser(Math.min(val, 10));
+                    }}
                     data-testid="input-max-tickets"
                   />
                 </div>
@@ -2654,13 +2658,17 @@ export default function EventWizard() {
 
                     <div className="space-y-3">
                       <Label>Max Biglietti per Utente</Label>
+                      <p className="text-xs text-muted-foreground">Massimo 10 per normativa SIAE</p>
                       <Input
                         type="number"
                         min={1}
-                        max={50}
+                        max={10}
                         className="h-11"
                         value={siaeMaxTicketsPerUser}
-                        onChange={(e) => setSiaeMaxTicketsPerUser(parseInt(e.target.value) || 10)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 10;
+                          setSiaeMaxTicketsPerUser(Math.min(val, 10));
+                        }}
                         data-testid="input-max-tickets"
                       />
                     </div>

@@ -1608,11 +1608,17 @@ export default function SiaeTicketedEventsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Max Biglietti per Utente</FormLabel>
+                        <p className="text-xs text-muted-foreground">Massimo 10 per normativa SIAE</p>
                         <FormControl>
                           <Input
                             type="number"
+                            min={1}
+                            max={10}
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1;
+                              field.onChange(Math.min(val, 10));
+                            }}
                             data-testid="input-max-tickets"
                           />
                         </FormControl>
@@ -3193,11 +3199,17 @@ export default function SiaeTicketedEventsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Max Biglietti per Utente</FormLabel>
+                      <p className="text-xs text-muted-foreground">Massimo 10 per normativa SIAE</p>
                       <FormControl>
                         <Input
                           type="number"
+                          min={1}
+                          max={10}
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 1;
+                            field.onChange(Math.min(val, 10));
+                          }}
                           data-testid="input-max-tickets"
                         />
                       </FormControl>
