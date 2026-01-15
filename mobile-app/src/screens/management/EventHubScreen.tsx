@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Header } from '../../components';
 
-type TabKey = 'overview' | 'tickets' | 'lists' | 'staff' | 'revenue';
+type TabKey = 'overview' | 'tickets' | 'lists' | 'staff' | 'revenue' | 'name-changes' | 'resales';
 
 interface Tab {
   key: TabKey;
@@ -47,11 +47,48 @@ interface StaffMember {
   checkInTime?: string;
 }
 
+interface SiaeNameChange {
+  id: string;
+  ticketId: string;
+  oldFirstName: string;
+  oldLastName: string;
+  oldCodiceFiscale: string | null;
+  newFirstName: string;
+  newLastName: string;
+  newCodiceFiscale: string | null;
+  status: 'pending' | 'approved' | 'completed' | 'rejected';
+  requestedAt: string;
+  approvedAt: string | null;
+  oldFiscalSeal: string | null;
+  oldProgressiveNumber: number | null;
+  newFiscalSeal: string | null;
+  newProgressiveNumber: number | null;
+}
+
+interface SiaeResale {
+  id: string;
+  ticketId: string;
+  sellerFirstName: string;
+  sellerLastName: string;
+  buyerFirstName: string | null;
+  buyerLastName: string | null;
+  resalePrice: string;
+  status: 'listed' | 'reserved' | 'completed' | 'cancelled';
+  createdAt: string;
+  completedAt: string | null;
+  oldFiscalSeal: string | null;
+  oldProgressiveNumber: number | null;
+  newFiscalSeal: string | null;
+  newProgressiveNumber: number | null;
+}
+
 const { width } = Dimensions.get('window');
 
 const tabs: Tab[] = [
   { key: 'overview', label: 'Overview', icon: 'grid-outline' },
   { key: 'tickets', label: 'Biglietti', icon: 'ticket-outline' },
+  { key: 'name-changes', label: 'Cambi Nom.', icon: 'swap-horizontal-outline' },
+  { key: 'resales', label: 'Rivendite', icon: 'repeat-outline' },
   { key: 'lists', label: 'Liste', icon: 'list-outline' },
   { key: 'staff', label: 'Staff', icon: 'people-outline' },
   { key: 'revenue', label: 'Incassi', icon: 'wallet-outline' },
@@ -62,8 +99,72 @@ export function EventHubScreen() {
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabKey>(route.params?.tab || 'overview');
+  const [nameChanges, setNameChanges] = useState<SiaeNameChange[]>([]);
+  const [resales, setResales] = useState<SiaeResale[]>([]);
+  const [loadingNameChanges, setLoadingNameChanges] = useState(false);
+  const [loadingResales, setLoadingResales] = useState(false);
+  const [errorNameChanges, setErrorNameChanges] = useState<string | null>(null);
+  const [errorResales, setErrorResales] = useState<string | null>(null);
 
   const eventId = route.params?.eventId || '1';
+
+  // Reset data when eventId changes
+  useEffect(() => {
+    setNameChanges([]);
+    setResales([]);
+    setErrorNameChanges(null);
+    setErrorResales(null);
+  }, [eventId]);
+
+  // Fetch name changes
+  useEffect(() => {
+    if (activeTab !== 'name-changes') return;
+    
+    const loadNameChanges = async () => {
+      setLoadingNameChanges(true);
+      setErrorNameChanges(null);
+      try {
+        const response = await fetch(`/api/siae/ticketed-events/${eventId}/name-changes`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setNameChanges(data);
+        } else {
+          setErrorNameChanges('Errore nel caricamento');
+        }
+      } catch (e) {
+        setErrorNameChanges('Errore di connessione');
+      }
+      setLoadingNameChanges(false);
+    };
+    loadNameChanges();
+  }, [activeTab, eventId]);
+
+  // Fetch resales
+  useEffect(() => {
+    if (activeTab !== 'resales') return;
+    
+    const loadResales = async () => {
+      setLoadingResales(true);
+      setErrorResales(null);
+      try {
+        const response = await fetch(`/api/siae/ticketed-events/${eventId}/resales`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setResales(data);
+        } else {
+          setErrorResales('Errore nel caricamento');
+        }
+      } catch (e) {
+        setErrorResales('Errore di connessione');
+      }
+      setLoadingResales(false);
+    };
+    loadResales();
+  }, [activeTab, eventId]);
 
   const eventData = {
     id: eventId,
@@ -115,14 +216,20 @@ export function EventHubScreen() {
       case 'live':
       case 'active':
       case 'checked-in':
+      case 'completed':
         return colors.success;
       case 'confirmed':
+      case 'approved':
         return colors.primary;
       case 'pending':
       case 'break':
+      case 'listed':
+      case 'reserved':
         return colors.warning;
       case 'inactive':
-        return colors.mutedForeground;
+      case 'rejected':
+      case 'cancelled':
+        return colors.destructive;
       default:
         return colors.mutedForeground;
     }
@@ -306,6 +413,202 @@ export function EventHubScreen() {
     </ScrollView>
   );
 
+  const renderNameChangesTab = () => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <Card style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Cambi Nominativo</Text>
+        <View style={styles.summaryStats}>
+          <View style={styles.summaryStat}>
+            <Text style={styles.summaryValue}>{nameChanges.length}</Text>
+            <Text style={styles.summaryLabel}>Totali</Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryStat}>
+            <Text style={[styles.summaryValue, { color: colors.success }]}>
+              {nameChanges.filter(nc => nc.status === 'completed').length}
+            </Text>
+            <Text style={styles.summaryLabel}>Completati</Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryStat}>
+            <Text style={[styles.summaryValue, { color: colors.warning }]}>
+              {nameChanges.filter(nc => nc.status === 'pending').length}
+            </Text>
+            <Text style={styles.summaryLabel}>In Attesa</Text>
+          </View>
+        </View>
+      </Card>
+
+      {loadingNameChanges ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      ) : errorNameChanges ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorNameChanges}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => {
+              setErrorNameChanges(null);
+              setActiveTab('overview');
+              setTimeout(() => setActiveTab('name-changes'), 100);
+            }}
+            style={styles.retryButton}
+          />
+        </Card>
+      ) : nameChanges.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="swap-horizontal-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.emptyText}>Nessun cambio nominativo</Text>
+        </Card>
+      ) : (
+        nameChanges.map((nc) => (
+          <Card key={nc.id} style={styles.trackingCard}>
+            <View style={styles.trackingHeader}>
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(nc.status)}20` }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(nc.status) }]}>
+                  {nc.status === 'completed' ? 'Completato' : nc.status === 'pending' ? 'In Attesa' : nc.status === 'approved' ? 'Approvato' : nc.status === 'rejected' ? 'Rifiutato' : nc.status}
+                </Text>
+              </View>
+              <Text style={styles.trackingDate}>
+                {nc.requestedAt ? new Date(nc.requestedAt).toLocaleDateString('it-IT') : '-'}
+              </Text>
+            </View>
+            
+            <View style={styles.transferRow}>
+              <View style={styles.transferPerson}>
+                <Text style={styles.transferLabel}>VECCHIO</Text>
+                <Text style={styles.transferName}>{nc.oldFirstName} {nc.oldLastName}</Text>
+                {nc.oldFiscalSeal && (
+                  <Text style={styles.fiscalSeal}>Sigillo: {nc.oldFiscalSeal}</Text>
+                )}
+                {nc.oldProgressiveNumber && (
+                  <Text style={styles.progressiveNum}>N° {nc.oldProgressiveNumber}</Text>
+                )}
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+              <View style={styles.transferPerson}>
+                <Text style={styles.transferLabel}>NUOVO</Text>
+                <Text style={styles.transferName}>{nc.newFirstName} {nc.newLastName}</Text>
+                {nc.newFiscalSeal && (
+                  <Text style={styles.fiscalSeal}>Sigillo: {nc.newFiscalSeal}</Text>
+                )}
+                {nc.newProgressiveNumber && (
+                  <Text style={styles.progressiveNum}>N° {nc.newProgressiveNumber}</Text>
+                )}
+              </View>
+            </View>
+          </Card>
+        ))
+      )}
+    </ScrollView>
+  );
+
+  const renderResalesTab = () => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <Card style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Rivendite Biglietti</Text>
+        <View style={styles.summaryStats}>
+          <View style={styles.summaryStat}>
+            <Text style={styles.summaryValue}>{resales.length}</Text>
+            <Text style={styles.summaryLabel}>Totali</Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryStat}>
+            <Text style={[styles.summaryValue, { color: colors.success }]}>
+              {resales.filter(r => r.status === 'completed').length}
+            </Text>
+            <Text style={styles.summaryLabel}>Completate</Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryStat}>
+            <Text style={[styles.summaryValue, { color: colors.warning }]}>
+              {resales.filter(r => r.status === 'listed').length}
+            </Text>
+            <Text style={styles.summaryLabel}>In Vendita</Text>
+          </View>
+        </View>
+      </Card>
+
+      {loadingResales ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      ) : errorResales ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorResales}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => {
+              setErrorResales(null);
+              setActiveTab('overview');
+              setTimeout(() => setActiveTab('resales'), 100);
+            }}
+            style={styles.retryButton}
+          />
+        </Card>
+      ) : resales.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="repeat-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.emptyText}>Nessuna rivendita</Text>
+        </Card>
+      ) : (
+        resales.map((resale) => (
+          <Card key={resale.id} style={styles.trackingCard}>
+            <View style={styles.trackingHeader}>
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(resale.status)}20` }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(resale.status) }]}>
+                  {resale.status === 'completed' ? 'Completata' : resale.status === 'listed' ? 'In Vendita' : resale.status === 'reserved' ? 'Riservata' : resale.status === 'cancelled' ? 'Annullata' : resale.status}
+                </Text>
+              </View>
+              <Text style={styles.resalePrice}>€ {resale.resalePrice}</Text>
+            </View>
+            
+            <View style={styles.transferRow}>
+              <View style={styles.transferPerson}>
+                <Text style={styles.transferLabel}>VENDITORE</Text>
+                <Text style={styles.transferName}>{resale.sellerFirstName} {resale.sellerLastName}</Text>
+                {resale.oldFiscalSeal && (
+                  <Text style={styles.fiscalSeal}>Sigillo: {resale.oldFiscalSeal}</Text>
+                )}
+                {resale.oldProgressiveNumber && (
+                  <Text style={styles.progressiveNum}>N° {resale.oldProgressiveNumber}</Text>
+                )}
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+              <View style={styles.transferPerson}>
+                <Text style={styles.transferLabel}>ACQUIRENTE</Text>
+                {resale.buyerFirstName && resale.buyerLastName ? (
+                  <>
+                    <Text style={styles.transferName}>{resale.buyerFirstName} {resale.buyerLastName}</Text>
+                    {resale.newFiscalSeal && (
+                      <Text style={styles.fiscalSeal}>Sigillo: {resale.newFiscalSeal}</Text>
+                    )}
+                    {resale.newProgressiveNumber && (
+                      <Text style={styles.progressiveNum}>N° {resale.newProgressiveNumber}</Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.transferNamePending}>In attesa...</Text>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.resaleFooter}>
+              <Text style={styles.trackingDate}>
+                {resale.createdAt ? new Date(resale.createdAt).toLocaleDateString('it-IT') : '-'}
+              </Text>
+            </View>
+          </Card>
+        ))
+      )}
+    </ScrollView>
+  );
+
   const renderListsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <Card style={styles.summaryCard}>
@@ -475,6 +778,10 @@ export function EventHubScreen() {
         return renderOverviewTab();
       case 'tickets':
         return renderTicketsTab();
+      case 'name-changes':
+        return renderNameChangesTab();
+      case 'resales':
+        return renderResalesTab();
       case 'lists':
         return renderListsTab();
       case 'staff':
@@ -930,5 +1237,85 @@ const styles = StyleSheet.create({
   paymentDivider: {
     height: 1,
     backgroundColor: colors.border,
+  },
+  trackingCard: {
+    marginBottom: spacing.md,
+  },
+  trackingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  trackingDate: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+  },
+  transferRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  transferPerson: {
+    flex: 1,
+  },
+  transferLabel: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  transferName: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+  },
+  transferNamePending: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+    fontStyle: 'italic',
+  },
+  fiscalSeal: {
+    color: colors.primary,
+    fontSize: fontSize.xs,
+    marginTop: spacing.xs,
+  },
+  progressiveNum: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: colors.mutedForeground,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyText: {
+    color: colors.mutedForeground,
+    marginTop: spacing.md,
+  },
+  errorText: {
+    color: colors.destructive,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: spacing.md,
+  },
+  resalePrice: {
+    color: colors.success,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+  },
+  resaleFooter: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
 });
