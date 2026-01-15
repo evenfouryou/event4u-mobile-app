@@ -42,6 +42,11 @@ Preferred communication style: Simple, everyday language.
 - Error 40605: Field length and required elements validation ensures data completeness
 - All validation errors include SIAE error codes and resolution instructions
 
+**Integration Points**:
+- **Scheduler (server/siae-scheduler.ts)**: validatePreTransmission() integrated in sendDailyReports(), sendMonthlyReports(), sendRCAReports()
+- **Manual Routes (server/siae-routes.ts)**: validatePreTransmission() integrated in resend substitution, send existing transmission, C1 handler, RCA event endpoints
+- All paths block transmission and update status to 'error' with detailed SIAE error codes when validation fails
+
 **Usage Example**:
 ```typescript
 const validation = validatePreTransmission(
