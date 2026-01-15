@@ -3289,7 +3289,7 @@ export function autoCorrectSiaeXml(
   let effectiveGenreCode = genreCode;
   if (!effectiveGenreCode) {
     const tipoGenereMatch = correctedXml.match(/<TipoGenere>([^<]*)<\/TipoGenere>/);
-    effectiveGenreCode = tipoGenereMatch?.[1] || null;
+    effectiveGenreCode = tipoGenereMatch?.[1] || undefined;
   }
   
   // Valida e correggi formato codice genere
