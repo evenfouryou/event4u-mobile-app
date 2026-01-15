@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Dimensions,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Header } from '../../components';
+import { api } from '../../lib/api';
 
 interface StatCard {
   id: string;
@@ -43,45 +45,90 @@ interface ActiveEvent {
   status: 'live' | 'upcoming' | 'ended';
 }
 
-const { width } = Dimensions.get('window');
-
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const numColumns = isLandscape ? 4 : 2;
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalRevenue: 0,
+    ticketsSold: 0,
+    activeEvents: 0,
+    avgTicketPrice: 0,
+  });
+  const [activeEvents, setActiveEvents] = useState<ActiveEvent[]>([]);
+
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const events = await api.get<any[]>('/api/events');
+      
+      const active = events.filter((e: any) => e.status === 'live' || e.status === 'active');
+      const totalRevenue = events.reduce((sum: number, e: any) => sum + (parseFloat(e.actualRevenue || e.revenue || '0')), 0);
+      const ticketsSold = events.reduce((sum: number, e: any) => sum + (e.ticketsSold || 0), 0);
+      
+      setDashboardStats({
+        totalRevenue,
+        ticketsSold,
+        activeEvents: active.length,
+        avgTicketPrice: ticketsSold > 0 ? totalRevenue / ticketsSold : 0,
+      });
+      
+      const formattedEvents: ActiveEvent[] = active.slice(0, 3).map((event: any) => ({
+        id: event.id?.toString() || '',
+        name: event.name || event.title || 'Evento',
+        date: event.date ? new Date(event.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+        time: event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : '',
+        venue: event.venue || event.location || '',
+        ticketsSold: event.ticketsSold || 0,
+        revenue: `€ ${(parseFloat(event.actualRevenue || event.revenue || '0')).toLocaleString('it-IT')}`,
+        status: event.status === 'live' ? 'live' : event.status === 'active' ? 'upcoming' : 'ended',
+      }));
+      
+      setActiveEvents(formattedEvents);
+      setLoading(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Errore caricamento');
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
 
   const stats: StatCard[] = [
     {
       id: '1',
       label: 'Fatturato Totale',
-      value: '€ 45.320',
+      value: `€ ${dashboardStats.totalRevenue.toLocaleString('it-IT')}`,
       icon: 'wallet',
-      trend: 12,
-      trendUp: true,
       color: colors.primary,
     },
     {
       id: '2',
       label: 'Biglietti Venduti',
-      value: '1.247',
+      value: dashboardStats.ticketsSold.toLocaleString('it-IT'),
       icon: 'ticket',
-      trend: 8,
-      trendUp: true,
       color: colors.success,
     },
     {
       id: '3',
       label: 'Eventi Attivi',
-      value: '5',
+      value: dashboardStats.activeEvents.toString(),
       icon: 'calendar',
       color: colors.accent,
     },
     {
       id: '4',
       label: 'Incasso Medio',
-      value: '€ 36,30',
+      value: `€ ${dashboardStats.avgTicketPrice.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: 'trending-up',
-      trend: 3,
-      trendUp: false,
       color: colors.warning,
     },
   ];
@@ -117,39 +164,6 @@ export function DashboardScreen() {
     },
   ];
 
-  const activeEvents: ActiveEvent[] = [
-    {
-      id: '1',
-      name: 'Festival Notte d\'Estate',
-      date: '14 Gen 2026',
-      time: '22:00 - 04:00',
-      venue: 'Arena Milano',
-      ticketsSold: 450,
-      revenue: '€ 13.500',
-      status: 'live',
-    },
-    {
-      id: '2',
-      name: 'Techno Underground',
-      date: '18 Gen 2026',
-      time: '23:00 - 06:00',
-      venue: 'Warehouse Roma',
-      ticketsSold: 320,
-      revenue: '€ 9.600',
-      status: 'upcoming',
-    },
-    {
-      id: '3',
-      name: 'Sunset Party',
-      date: '25 Gen 2026',
-      time: '18:00 - 02:00',
-      venue: 'Beach Club Rimini',
-      ticketsSold: 180,
-      revenue: '€ 5.400',
-      status: 'upcoming',
-    },
-  ];
-
   const getStatusColor = (status: ActiveEvent['status']) => {
     switch (status) {
       case 'live':
@@ -172,8 +186,12 @@ export function DashboardScreen() {
     }
   };
 
+  const cardWidth = isLandscape 
+    ? (width - spacing.lg * 2 - spacing.md * 3) / 4 
+    : (width - spacing.lg * 2 - spacing.md) / 2;
+
   const renderStatCard = ({ item }: { item: StatCard }) => (
-    <Card style={[styles.statCard, { width: (width - spacing.lg * 2 - spacing.md) / 2 }]}>
+    <Card style={[styles.statCard, { width: cardWidth }]}>
       <View style={styles.statHeader}>
         <View style={[styles.statIcon, { backgroundColor: `${item.color}20` }]}>
           <Ionicons name={item.icon as any} size={20} color={item.color} />
@@ -253,6 +271,52 @@ export function DashboardScreen() {
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Header
+          title="Dashboard Gestore"
+          rightAction={
+            <TouchableOpacity data-testid="button-notifications">
+              <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+          }
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Header
+          title="Dashboard Gestore"
+          rightAction={
+            <TouchableOpacity data-testid="button-notifications">
+              <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+          }
+        />
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={loadDashboard}
+            data-testid="button-retry"
+          >
+            <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
+            <Text style={styles.retryButtonText}>Riprova</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Header
@@ -271,10 +335,11 @@ export function DashboardScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Panoramica</Text>
           <FlatList
+            key={numColumns}
             data={stats}
             renderItem={renderStatCard}
             keyExtractor={(item) => item.id}
-            numColumns={2}
+            numColumns={numColumns}
             columnWrapperStyle={styles.statsGrid}
             scrollEnabled={false}
           />
@@ -302,7 +367,14 @@ export function DashboardScreen() {
               <Text style={styles.viewAllText}>Vedi tutti</Text>
             </TouchableOpacity>
           </View>
-          {activeEvents.map(renderEventCard)}
+          {activeEvents.length > 0 ? (
+            activeEvents.map(renderEventCard)
+          ) : (
+            <Card style={styles.emptyCard}>
+              <Ionicons name="calendar-outline" size={32} color={colors.mutedForeground} />
+              <Text style={styles.emptyText}>Nessun evento attivo</Text>
+            </Card>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -310,12 +382,12 @@ export function DashboardScreen() {
             <Text style={styles.chartTitle}>Andamento Vendite</Text>
             <View style={styles.chartPlaceholder}>
               <View style={styles.chartBars}>
-                {[65, 45, 75, 55, 85, 70, 90].map((height, index) => (
+                {[65, 45, 75, 55, 85, 70, 90].map((chartHeight, index) => (
                   <View
                     key={index}
                     style={[
                       styles.chartBar,
-                      { height: height, backgroundColor: index === 6 ? colors.primary : colors.muted },
+                      { height: chartHeight, backgroundColor: index === 6 ? colors.primary : colors.muted },
                     ]}
                   />
                 ))}
@@ -340,6 +412,53 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  errorText: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    textAlign: 'center',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.md,
+  },
+  retryButtonText: {
+    color: colors.primaryForeground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptyText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
   },
   section: {
     marginBottom: spacing.lg,

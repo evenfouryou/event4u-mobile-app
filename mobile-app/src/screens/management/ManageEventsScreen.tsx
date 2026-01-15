@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   FlatList,
   TextInput,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Header } from '../../components';
+import { api } from '../../lib/api';
 
 type EventFilter = 'all' | 'active' | 'upcoming' | 'past';
 
@@ -36,80 +38,63 @@ const filterOptions: { key: EventFilter; label: string; icon: string }[] = [
   { key: 'past', label: 'Passati', icon: 'time-outline' },
 ];
 
+const mapEventStatus = (event: any): 'live' | 'upcoming' | 'past' | 'draft' => {
+  const now = new Date();
+  const eventDate = new Date(event.eventDate || event.date);
+  if (event.status === 'draft') return 'draft';
+  if (eventDate < now) return 'past';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (eventDate >= today && eventDate < tomorrow) return 'live';
+  return 'upcoming';
+};
+
 export function ManageEventsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
   const [activeFilter, setActiveFilter] = useState<EventFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const events: Event[] = [
-    {
-      id: '1',
-      name: 'Festival Notte d\'Estate',
-      date: '14 Gen 2026',
-      time: '22:00 - 04:00',
-      venue: 'Arena Milano',
-      ticketsSold: 450,
-      totalTickets: 500,
-      revenue: '€ 13.500',
-      status: 'live',
-    },
-    {
-      id: '2',
-      name: 'Techno Underground',
-      date: '18 Gen 2026',
-      time: '23:00 - 06:00',
-      venue: 'Warehouse Roma',
-      ticketsSold: 320,
-      totalTickets: 600,
-      revenue: '€ 9.600',
-      status: 'upcoming',
-    },
-    {
-      id: '3',
-      name: 'Sunset Party',
-      date: '25 Gen 2026',
-      time: '18:00 - 02:00',
-      venue: 'Beach Club Rimini',
-      ticketsSold: 180,
-      totalTickets: 400,
-      revenue: '€ 5.400',
-      status: 'upcoming',
-    },
-    {
-      id: '4',
-      name: 'New Year\'s Eve 2026',
-      date: '31 Dic 2025',
-      time: '22:00 - 06:00',
-      venue: 'Club XS Milano',
-      ticketsSold: 800,
-      totalTickets: 800,
-      revenue: '€ 32.000',
-      status: 'past',
-    },
-    {
-      id: '5',
-      name: 'Christmas Special',
-      date: '25 Dic 2025',
-      time: '21:00 - 04:00',
-      venue: 'Discoteca Luna',
-      ticketsSold: 350,
-      totalTickets: 400,
-      revenue: '€ 10.500',
-      status: 'past',
-    },
-    {
-      id: '6',
-      name: 'Valentine\'s Night',
-      date: '14 Feb 2026',
-      time: '21:00 - 03:00',
-      venue: 'Lounge Bar Roma',
-      ticketsSold: 0,
-      totalTickets: 200,
-      revenue: '€ 0',
-      status: 'draft',
-    },
-  ];
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await api.get<any[]>('/api/events');
+
+        const mappedEvents = data.map((e: any) => ({
+          id: e.id,
+          name: e.name,
+          date: new Date(e.eventDate || e.date).toLocaleDateString('it-IT', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          time: e.startTime && e.endTime ? `${e.startTime} - ${e.endTime}` : '',
+          venue: e.venueName || e.location?.name || '',
+          ticketsSold: e.ticketsSold || 0,
+          totalTickets: e.totalCapacity || e.capacity || 0,
+          revenue: `€ ${(e.actualRevenue || e.revenue || 0).toLocaleString('it-IT')}`,
+          status: mapEventStatus(e),
+        }));
+        setEvents(mappedEvents);
+        setLoading(false);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Errore caricamento');
+        setLoading(false);
+      }
+    };
+    loadEvents();
+  }, [reloadKey]);
 
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
@@ -169,6 +154,10 @@ export function ManageEventsScreen() {
     }
   };
 
+  const handleRetry = () => {
+    setReloadKey((prev) => prev + 1);
+  };
+
   const renderFilterPill = ({ item }: { item: typeof filterOptions[0] }) => (
     <TouchableOpacity
       style={[
@@ -195,13 +184,14 @@ export function ManageEventsScreen() {
   );
 
   const renderEventCard = ({ item }: { item: Event }) => {
-    const progress = (item.ticketsSold / item.totalTickets) * 100;
+    const progress = item.totalTickets > 0 ? (item.ticketsSold / item.totalTickets) * 100 : 0;
 
     return (
       <TouchableOpacity
         onPress={() => handleEventPress(item.id)}
         activeOpacity={0.8}
         data-testid={`card-event-${item.id}`}
+        style={isLandscape ? styles.eventCardLandscapeWrapper : undefined}
       >
         <Card style={styles.eventCard} variant="elevated">
           <View style={styles.eventHeader}>
@@ -285,6 +275,39 @@ export function ManageEventsScreen() {
     );
   };
 
+  const renderLoadingState = () => (
+    <View style={styles.loadingState} data-testid="loading-indicator">
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.loadingText}>Caricamento eventi...</Text>
+    </View>
+  );
+
+  const renderErrorState = () => (
+    <View style={styles.errorState} data-testid="error-state">
+      <Ionicons name="alert-circle-outline" size={64} color={colors.destructive} />
+      <Text style={styles.errorTitle}>Errore di caricamento</Text>
+      <Text style={styles.errorText}>{error}</Text>
+      <TouchableOpacity
+        style={styles.retryButton}
+        onPress={handleRetry}
+        data-testid="button-retry"
+      >
+        <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
+        <Text style={styles.retryButtonText}>Riprova</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="calendar-outline" size={64} color={colors.muted} />
+      <Text style={styles.emptyTitle}>Nessun evento trovato</Text>
+      <Text style={styles.emptyText}>
+        Prova a modificare i filtri o crea un nuovo evento
+      </Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <Header
@@ -331,25 +354,26 @@ export function ManageEventsScreen() {
         />
       </View>
 
-      <FlatList
-        data={filteredEvents}
-        renderItem={renderEventCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.eventsList,
-          { paddingBottom: insets.bottom + 80 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color={colors.muted} />
-            <Text style={styles.emptyTitle}>Nessun evento trovato</Text>
-            <Text style={styles.emptyText}>
-              Prova a modificare i filtri o crea un nuovo evento
-            </Text>
-          </View>
-        }
-      />
+      {loading ? (
+        renderLoadingState()
+      ) : error ? (
+        renderErrorState()
+      ) : (
+        <FlatList
+          data={filteredEvents}
+          renderItem={renderEventCard}
+          keyExtractor={(item) => item.id}
+          numColumns={isLandscape ? 2 : 1}
+          key={isLandscape ? 'landscape' : 'portrait'}
+          columnWrapperStyle={isLandscape ? styles.columnWrapper : undefined}
+          contentContainerStyle={[
+            styles.eventsList,
+            { paddingBottom: insets.bottom + 80 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
+        />
+      )}
 
       <TouchableOpacity
         style={[styles.fab, { bottom: insets.bottom + 90 }]}
@@ -418,6 +442,12 @@ const styles = StyleSheet.create({
   },
   eventsList: {
     paddingHorizontal: spacing.lg,
+  },
+  columnWrapper: {
+    gap: spacing.md,
+  },
+  eventCardLandscapeWrapper: {
+    flex: 1,
   },
   eventCard: {
     marginBottom: spacing.md,
@@ -523,6 +553,51 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  loadingText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+    marginTop: spacing.md,
+  },
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  errorTitle: {
+    color: colors.foreground,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    marginTop: spacing.lg,
+  },
+  errorText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  retryButtonText: {
+    color: colors.primaryForeground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
   },
   emptyState: {
     alignItems: 'center',
