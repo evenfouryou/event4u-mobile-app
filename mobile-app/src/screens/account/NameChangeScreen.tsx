@@ -34,17 +34,18 @@ export function NameChangeScreen() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
+  const [codiceFiscale, setCodiceFiscale] = useState('');
 
   const { data: ticket, isLoading } = useQuery({
-    queryKey: ['/api/tickets', ticketId, 'transfer-info'],
-    queryFn: () => api.get<TicketInfo>(`/api/tickets/${ticketId}/transfer-info`),
+    queryKey: ['/api/public/account/tickets', ticketId],
+    queryFn: () => api.get<TicketInfo>(`/api/public/account/tickets/${ticketId}`),
   });
 
   const transferMutation = useMutation({
-    mutationFn: (data: { firstName: string; lastName: string; email: string }) =>
-      api.post(`/api/tickets/${ticketId}/transfer`, data),
+    mutationFn: (data: { ticketId: string; newFirstName: string; newLastName: string; newEmail: string; newCodiceFiscale: string }) =>
+      api.post('/api/public/account/name-change', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
       Alert.alert(
         'Cambio nominativo completato',
         'Il nuovo intestatario riceverà una email con i dettagli del biglietto.',
@@ -75,7 +76,13 @@ export function NameChangeScreen() {
         { text: 'Annulla', style: 'cancel' },
         {
           text: 'Conferma',
-          onPress: () => transferMutation.mutate({ firstName, lastName, email }),
+          onPress: () => transferMutation.mutate({ 
+            ticketId, 
+            newFirstName: firstName, 
+            newLastName: lastName, 
+            newEmail: email, 
+            newCodiceFiscale: codiceFiscale 
+          }),
         },
       ]
     );
@@ -171,6 +178,15 @@ export function NameChangeScreen() {
               placeholder="Ripeti l'indirizzo email"
               keyboardType="email-address"
               autoCapitalize="none"
+            />
+            
+            <Input
+              label="Codice Fiscale"
+              value={codiceFiscale}
+              onChangeText={setCodiceFiscale}
+              placeholder="Codice fiscale del nuovo intestatario"
+              autoCapitalize="characters"
+              maxLength={16}
             />
           </Card>
 

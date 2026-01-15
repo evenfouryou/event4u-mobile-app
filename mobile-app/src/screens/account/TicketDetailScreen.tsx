@@ -24,8 +24,11 @@ interface TicketDetail {
   holderName: string;
   purchaseDate: string;
   price: number;
-  canTransfer: boolean;
+  canNameChange: boolean;
   canResale: boolean;
+  isFromNameChange: boolean;
+  fiscalSealCode: string | null;
+  progressiveNumber: number | null;
 }
 
 type RouteParams = {
@@ -39,8 +42,8 @@ export function TicketDetailScreen() {
   const { ticketId } = route.params;
 
   const { data: ticket, isLoading } = useQuery({
-    queryKey: ['/api/tickets', ticketId],
-    queryFn: () => api.get<TicketDetail>(`/api/tickets/${ticketId}`),
+    queryKey: ['/api/public/account/tickets', ticketId],
+    queryFn: () => api.get<TicketDetail>(`/api/public/account/tickets/${ticketId}`),
   });
 
   const statusColors = {
@@ -149,7 +152,9 @@ export function TicketDetailScreen() {
           
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Intestatario</Text>
-            <Text style={styles.infoValue}>{ticket.holderName}</Text>
+            <Text style={styles.infoValue}>
+              {ticket.isFromNameChange ? 'Dati riservati' : ticket.holderName}
+            </Text>
           </View>
           
           <View style={styles.infoRow}>
@@ -163,9 +168,9 @@ export function TicketDetailScreen() {
           </View>
         </Card>
 
-        {ticket.status === 'valid' && (
+        {ticket.status === 'valid' && !ticket.isFromNameChange && (
           <View style={styles.actions}>
-            {ticket.canTransfer && (
+            {ticket.canNameChange && (
               <Button
                 title="Cambia nominativo"
                 variant="outline"

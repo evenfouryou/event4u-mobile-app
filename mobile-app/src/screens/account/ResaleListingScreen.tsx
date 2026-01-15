@@ -40,11 +40,11 @@ export function ResaleListingScreen() {
   });
 
   const createListingMutation = useMutation({
-    mutationFn: (data: { price: number }) =>
-      api.post(`/api/tickets/${ticketId}/resale`, data),
+    mutationFn: (data: { ticketId: string; resalePrice: number }) =>
+      api.post('/api/public/account/resale', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tickets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/resales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/account/resales'] });
       Alert.alert(
         'Biglietto in vendita',
         'Il tuo biglietto è stato messo in vendita. Riceverai una notifica quando verrà acquistato.',
@@ -77,7 +77,7 @@ export function ResaleListingScreen() {
         { text: 'Annulla', style: 'cancel' },
         {
           text: 'Conferma',
-          onPress: () => createListingMutation.mutate({ price: priceNumber }),
+          onPress: () => createListingMutation.mutate({ ticketId, resalePrice: priceNumber }),
         },
       ]
     );

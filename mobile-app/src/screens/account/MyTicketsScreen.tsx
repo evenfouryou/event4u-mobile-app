@@ -28,8 +28,8 @@ export function MyTicketsScreen() {
   const [filter, setFilter] = useState<FilterType>('all');
 
   const { data: tickets, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['/api/tickets/my-tickets'],
-    queryFn: () => api.get<Ticket[]>('/api/tickets/my-tickets'),
+    queryKey: ['/api/public/account/tickets'],
+    queryFn: () => api.get<Ticket[]>('/api/public/account/tickets'),
   });
 
   const filteredTickets = tickets?.filter(ticket => {
