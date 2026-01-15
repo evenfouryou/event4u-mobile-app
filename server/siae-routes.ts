@@ -5373,6 +5373,9 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     
     // Validazione pre-trasmissione SIAE
     const transmissionSystemCode = transmission.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    if (!transmission.systemCode) {
+      console.warn(`[SIAE-ROUTES] Legacy transmission data detected: transmission ${id} has no systemCode, falling back to default ${SIAE_SYSTEM_CODE_DEFAULT}`);
+    }
     const transmissionReportType: 'giornaliero' | 'mensile' | 'rca' = 
       transmission.transmissionType === 'monthly' ? 'mensile' : 
       transmission.transmissionType === 'daily' ? 'giornaliero' : 'rca';
@@ -7675,7 +7678,7 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const oraEvento = formatSiaeTimeHHMM(eventDate);
   const dataRiepilogo = formatSiaeDateCompact(eventDate);
   
-  const systemEmissionCode = cachedEfff?.systemId || systemConfig?.systemCode || 'EVENT4U1';
+  const systemEmissionCode = resolveSystemCode(cachedEfff, systemConfig);
   
   // CONFORMITÀ DTD: CFTitolareCA richiede codice fiscale 16 caratteri, non P.IVA 11 cifre
   // Priorità: EFFF smart card > systemConfig.taxId (CFTitolare) > company.fiscalCode > taxId (solo se 16 caratteri validi)

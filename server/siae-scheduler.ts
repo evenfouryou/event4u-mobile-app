@@ -6,12 +6,12 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, type RCAParams } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, SIAE_SYSTEM_CODE_DEFAULT, type RCAParams } from './siae-utils';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
 const SIAE_TEST_EMAIL = process.env.SIAE_TEST_EMAIL || 'servertest2@batest.siae.it';
-const SIAE_SYSTEM_CODE = process.env.SIAE_SYSTEM_CODE || 'EVENT4U1'; // Max 8 caratteri
+// FIX 2026-01-15: Rimossa costante SIAE_SYSTEM_CODE locale - usare resolveSystemCode() per coerenza
 const SIAE_VERSION = 'V.01.00';
 
 function log(message: string) {
@@ -198,12 +198,21 @@ function generateXMLContent(reportData: any): string {
     totalRevenue, 
     filteredTickets, 
     progressivo = 1,
-    cachedEfffData = null
+    cachedEfffData = null,
+    resolvedSystemCode = null
   } = reportData;
   
   const now = new Date();
-  // Prefer systemId from Smart Card EFFF, fallback to config
-  const systemCode = cachedEfffData?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
+  // FIX 2026-01-15: Usa resolvedSystemCode se passato (per coerenza con nome file - errori SIAE 0600/0603)
+  // Fallback a calcolo interno se non passato (legacy mode)
+  let systemCode: string;
+  if (resolvedSystemCode) {
+    systemCode = resolvedSystemCode;
+  } else {
+    const siaeConfigForResolve = { systemCode: ticketedEvent.systemCode };
+    systemCode = resolveSystemCode(cachedEfffData, siaeConfigForResolve);
+    console.log(`[SIAE-SCHEDULER] WARNING: generateXMLContent using internal systemCode calculation (legacy mode)`);
+  }
   // Prefer partnerCodFis from EFFF for tax ID
   const taxId = cachedEfffData?.partnerCodFis || company?.taxId || 'XXXXXXXXXXXXXXXX';
   // Prefer partnerName from EFFF > systemConfig.businessName > company.name (fix warning 2606)
@@ -441,10 +450,16 @@ async function sendDailyReports() {
         const reportData = await generateC1ReportData(ticketedEvent, 'giornaliero', yesterday, progressivo);
         // Add EFFF data from Smart Card if available
         const cachedEfff = getCachedEfffData();
-        const xmlContent = generateXMLContent(reportData);
+        
+        // FIX 2026-01-15: Risolvi systemCode UNA VOLTA e passa a generateXMLContent
+        // Questo garantisce coerenza tra XML e nome file (errori SIAE 0600/0603)
+        const siaeConfigForResolve = { systemCode: ticketedEvent.systemCode };
+        const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
+        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, ticketedEvent.systemCode=${ticketedEvent.systemCode})`);
+        
+        // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
+        const xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
 
-        // Prefer systemId from Smart Card EFFF for email subject consistency with XML
-        const systemCode = cachedEfff?.systemId || SIAE_SYSTEM_CODE;
         // RMG = Riepilogo Mensile Giornaliero: usa 'giornaliero' per nome file RMG_YYYY_MM_DD_###.xsi
         let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
@@ -646,10 +661,16 @@ async function sendMonthlyReports() {
         const reportData = await generateC1ReportData(ticketedEvent, 'mensile', previousMonth, progressivo);
         // Add EFFF data from Smart Card if available
         const cachedEfff = getCachedEfffData();
-        const xmlContent = generateXMLContent(reportData);
+        
+        // FIX 2026-01-15: Risolvi systemCode UNA VOLTA e passa a generateXMLContent
+        // Questo garantisce coerenza tra XML e nome file (errori SIAE 0600/0603)
+        const siaeConfigForResolve = { systemCode: ticketedEvent.systemCode };
+        const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
+        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for monthly report (cachedEfff.systemId=${cachedEfff?.systemId}, ticketedEvent.systemCode=${ticketedEvent.systemCode})`);
+        
+        // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
+        const xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
 
-        // Prefer systemId from Smart Card EFFF for email subject consistency with XML
-        const systemCode = cachedEfff?.systemId || SIAE_SYSTEM_CODE;
         // RPM = Riepilogo Periodico Mensile: usa 'mensile' per nome file RPM_YYYY_MM_###.xsi
         let fileName = generateSiaeFileName('mensile', previousMonth, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
@@ -913,13 +934,19 @@ async function sendRCAReports() {
         const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
         const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
         
+        // FIX 2026-01-15: Risolvi systemCode UNA VOLTA per coerenza XML/nome file (errori SIAE 0600/0603)
+        const cachedEfff = getCachedEfffData();
+        const siaeConfigForResolve = { systemCode: siaeConfig?.systemCode };
+        const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
+        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for RCA report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfig?.systemCode})`);
+        
         const rcaParams: RCAParams = {
           companyId: ticketedEvent.companyId,
           eventId: ticketedEvent.id,
           event: eventForLog,
           tickets: ticketsForLog,
           systemConfig: {
-            systemCode: siaeConfig?.systemCode || SIAE_SYSTEM_CODE,
+            systemCode: systemCode, // FIX: Usa systemCode pre-risolto
             taxId: siaeConfig?.taxId || companyTaxId,
             businessName: siaeConfig?.businessName || companyBusinessName,
           },
@@ -939,9 +966,7 @@ async function sendRCAReports() {
         
         const xmlContent = rcaResult.xml;
         
-        // Nome file
-        const cachedEfff = getCachedEfffData();
-        const systemCode = cachedEfff?.systemId || siaeConfig?.systemCode || SIAE_SYSTEM_CODE;
+        // Nome file - usa lo stesso systemCode pre-risolto
         let fileName = generateSiaeFileName('rca', eventDate, progressivo, null, systemCode);
         let fileExtension = '.xsi';
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
@@ -1266,7 +1291,7 @@ export function initSiaeScheduler() {
   log('  - Job chiusura eventi: ogni 5 minuti');
   log('  - Job scadenza rivendite: ogni 5 minuti (1h prima evento)');
   log('  - Job rilascio riservazioni: ogni minuto');
-  log(`  - System Code: ${SIAE_SYSTEM_CODE}`);
+  log(`  - System Code Default: ${SIAE_SYSTEM_CODE_DEFAULT} (usa resolveSystemCode per coerenza)`);
   log(`  - Test Mode: ${SIAE_TEST_MODE}`);
 }
 

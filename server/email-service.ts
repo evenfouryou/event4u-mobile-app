@@ -356,16 +356,17 @@ export async function sendPasswordResetEmail(options: PasswordResetEmailOptions)
 
 import { 
   generateSiaeAttachmentName, 
-  generateSiaeSubject, 
-  SIAE_SYSTEM_CODE_DEFAULT 
+  generateSiaeSubject 
 } from './siae-utils';
-
-const DEFAULT_SYSTEM_CODE = SIAE_SYSTEM_CODE_DEFAULT;
 
 // ==================== File Naming SIAE (Allegato C) ====================
 // generateSiaeAttachmentName: per nome file allegato (formato breve)
 // generateSiaeSubject: per Subject email (formato completo)
 // IMPORTANTE: Sono DUE formati diversi secondo la documentazione SIAE!
+// 
+// CRITICO: systemCode DEVE essere passato esplicitamente dal caller.
+// NON usare fallback silenziosi al DEFAULT_SYSTEM_CODE - questo causa
+// inconsistenze tra nome file, subject email e contenuto XML (errori SIAE 0600/0603)
 
 interface SiaeTransmissionEmailOptions {
   to: string;
@@ -376,7 +377,7 @@ interface SiaeTransmissionEmailOptions {
   totalAmount: string;
   xmlContent: string;
   transmissionId: string;
-  systemCode?: string;
+  systemCode: string;
   sequenceNumber?: number;
   signWithSmime?: boolean; // Per Allegato C SIAE - firma S/MIME con carta attivazione
   requireSignature?: boolean; // Se true, blocca invio se firma S/MIME non disponibile (default: true per RCA)
@@ -412,13 +413,30 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     totalAmount, 
     xmlContent, 
     transmissionId,
-    systemCode = DEFAULT_SYSTEM_CODE,
+    systemCode,
     sequenceNumber = 1,
     signWithSmime = false,
     requireSignature, // undefined = auto (true per RCA, false per altri)
     p7mBase64,
     signatureFormat
   } = options;
+  
+  // VALIDAZIONE CRITICA: systemCode DEVE essere sempre passato esplicitamente
+  // Fallback silenzioso al DEFAULT_SYSTEM_CODE causa errori SIAE 0600/0603
+  // (incoerenza tra nome file, subject email e contenuto XML)
+  if (!systemCode || systemCode.trim() === '') {
+    console.error('[EMAIL-SERVICE] CRITICAL: systemCode non fornito in sendSiaeTransmissionEmail!');
+    console.error('[EMAIL-SERVICE] systemCode DEVE essere passato esplicitamente dal caller.');
+    console.error('[EMAIL-SERVICE] Fallback silenzioso NON è permesso - causa errori SIAE 0600/0603');
+    throw new Error(
+      'SYSTEM_CODE_REQUIRED: Il parametro systemCode è obbligatorio e deve essere passato esplicitamente. ' +
+      'Non è permesso usare fallback silenziosi al codice default - questo causa incoerenze tra ' +
+      'nome file, subject email e contenuto XML, generando errori SIAE 0600/0603.'
+    );
+  }
+  
+  console.log(`[EMAIL-SERVICE] [SIAE-VALIDATION] systemCode=${systemCode} (esplicitamente fornito dal caller)`);
+
   
   // Per RCA (che genera risposta SIAE), la firma è obbligatoria di default
   const mustSign = requireSignature ?? (transmissionType === 'rca');
