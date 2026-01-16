@@ -5127,8 +5127,8 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
-      // FIX 2026-01-15: Validazione pre-trasmissione con resendResolvedSystemCode
-      const preValidation = validatePreTransmission(
+      // FIX 2026-01-15: Validazione pre-trasmissione con resendResolvedSystemCode (async per DTD validator)
+      const preValidation = await validatePreTransmission(
         rcaResult.xml,
         resendResolvedSystemCode, // FIX: Usa codice risolto per coerenza
         'rca',
@@ -5514,13 +5514,13 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     // Import email service
     const { sendSiaeTransmissionEmail } = await import('./email-service');
     
-    // Validazione pre-trasmissione SIAE
+    // Validazione pre-trasmissione SIAE (async per DTD validator)
     // FIX 2026-01-15: Usa resolvedSystemCodeForEmail (già calcolato all'inizio) invece di transmission.systemCode
     // Questo garantisce coerenza tra XML rigenerato, nome file allegato e subject email
     const transmissionReportType: 'giornaliero' | 'mensile' | 'rca' = 
       transmission.transmissionType === 'monthly' ? 'mensile' : 
       transmission.transmissionType === 'daily' ? 'giornaliero' : 'rca';
-    const preValidation = validatePreTransmission(
+    const preValidation = await validatePreTransmission(
       signedXmlContent || xmlContent,
       resolvedSystemCodeForEmail,
       transmissionReportType,
@@ -6180,9 +6180,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // Import and send the email with SIAE-compliant format (Allegato C)
   const { sendSiaeTransmissionEmail } = await import('./email-service');
   
-  // Validazione pre-trasmissione SIAE
+  // Validazione pre-trasmissione SIAE (async per DTD validator)
   const c1ReportType: 'giornaliero' | 'mensile' | 'rca' = isRCA ? 'rca' : (isMonthly ? 'mensile' : 'giornaliero');
-  const preValidation = validatePreTransmission(
+  const preValidation = await validatePreTransmission(
     signedXmlContent || xml,
     effectiveSystemCode,
     c1ReportType,
@@ -10083,8 +10083,8 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
-      // FIX 2026-01-15: Usa rcaResolvedSystemCode già calcolato per coerenza (errori SIAE 0600/0603)
-      const preValidation = validatePreTransmission(
+      // FIX 2026-01-15: Usa rcaResolvedSystemCode già calcolato per coerenza (errori SIAE 0600/0603, async per DTD validator)
+      const preValidation = await validatePreTransmission(
         signedXmlContent || xmlContent,
         rcaResolvedSystemCode, // FIX: Usa codice risolto, non variabile inesistente
         'rca',

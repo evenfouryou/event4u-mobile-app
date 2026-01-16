@@ -836,8 +836,8 @@ async function sendDailyReports() {
         // ============================================================================
 
         // ==================== VALIDAZIONE PRE-TRASMISSIONE COMPLETA ====================
-        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione
-        const preValidation = validatePreTransmission(xmlContent, systemCode, 'giornaliero', yesterday);
+        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione (async per DTD validator)
+        const preValidation = await validatePreTransmission(xmlContent, systemCode, 'giornaliero', yesterday);
         if (!preValidation.canTransmit) {
           log(`ERRORE validazione pre-trasmissione evento ${ticketedEvent.id}: ${preValidation.errors.map(e => e.message).join('; ')}`);
           await siaeStorage.updateSiaeTransmission(transmission.id, {
@@ -1078,8 +1078,8 @@ async function sendMonthlyReports() {
         // ============================================================================
 
         // ==================== VALIDAZIONE PRE-TRASMISSIONE COMPLETA ====================
-        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione mensile
-        const preValidationMonthly = validatePreTransmission(xmlContent, systemCode, 'mensile', previousMonth);
+        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione mensile (async per DTD validator)
+        const preValidationMonthly = await validatePreTransmission(xmlContent, systemCode, 'mensile', previousMonth);
         if (!preValidationMonthly.canTransmit) {
           log(`ERRORE validazione pre-trasmissione mensile evento ${ticketedEvent.id}: ${preValidationMonthly.errors.map(e => e.message).join('; ')}`);
           await siaeStorage.updateSiaeTransmission(transmission.id, {
@@ -1401,8 +1401,8 @@ async function sendRCAReports() {
         // ============================================================================
 
         // ==================== VALIDAZIONE PRE-TRASMISSIONE COMPLETA ====================
-        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione RCA
-        const preValidationRca = validatePreTransmission(xmlContent, systemCode, 'rca', eventDate);
+        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione RCA (async per DTD validator)
+        const preValidationRca = await validatePreTransmission(xmlContent, systemCode, 'rca', eventDate);
         if (!preValidationRca.canTransmit) {
           log(`ERRORE validazione pre-trasmissione RCA evento ${ticketedEvent.id}: ${preValidationRca.errors.map(e => e.message).join('; ')}`);
           await siaeStorage.updateSiaeTransmission(transmission.id, {

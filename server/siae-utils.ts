@@ -3540,7 +3540,7 @@ export function autoCorrectSiaeXml(
  * @param transmissionSystemCode - Codice sistema salvato nella trasmissione (se esiste), usato per verificare coerenza
  * @returns Risultato validazione con errori, warning e dettagli
  */
-export function validatePreTransmission(
+export async function validatePreTransmission(
   xml: string,
   systemCode: string,
   reportType: 'giornaliero' | 'mensile' | 'rca',
@@ -3548,7 +3548,7 @@ export function validatePreTransmission(
   denominazione?: string,
   performer?: string,
   transmissionSystemCode?: string
-): PreTransmissionValidationResult {
+): Promise<PreTransmissionValidationResult> {
   const errors: PreTransmissionValidationResult['errors'] = [];
   const warnings: PreTransmissionValidationResult['warnings'] = [];
   
@@ -3625,6 +3625,48 @@ export function validatePreTransmission(
       field: 'xml',
       message: warning
     });
+  }
+  
+  // ==================== 2b. VALIDAZIONE DTD COMPLETA (FIX 2026-01-16) ====================
+  // Chiamata al nuovo validator DTD che controlla:
+  // - Ordine attributi secondo DTD v0039
+  // - Attributi non validi (es. NomeFile)
+  // - Struttura elementi obbligatori
+  // - Valori attributi (es. Sostituzione: N|S)
+  try {
+    const { validateSiaeXML } = await import('./siae-xml-validator');
+    const dtdValidation = validateSiaeXML(xml);
+    
+    // Aggiungi errori DTD
+    for (const dtdError of dtdValidation.errors) {
+      errors.push({
+        code: dtdError.code,
+        field: dtdError.element || 'xml',
+        message: dtdError.message,
+        resolution: dtdError.expected ? `Valore atteso: ${dtdError.expected}` : undefined,
+        siaeErrorCode: dtdError.code === 'INVALID_ATTRIBUTE' ? '0600' : 
+                       dtdError.code === 'MISSING_ATTRIBUTE' ? '40601' : 
+                       dtdError.code === 'INVALID_ATTRIBUTE_VALUE' ? '40605' : undefined
+      });
+    }
+    
+    // Aggiungi warning DTD
+    for (const dtdWarning of dtdValidation.warnings) {
+      warnings.push({
+        code: dtdWarning.code,
+        field: dtdWarning.element || 'xml',
+        message: dtdWarning.message,
+        suggestion: dtdWarning.expected ? `Valore consigliato: ${dtdWarning.expected}` : undefined
+      });
+    }
+    
+    if (!dtdValidation.valid) {
+      details.xmlValid = false;
+    }
+    
+    console.log(`[SIAE-UTILS] DTD validation result: ${dtdValidation.valid ? 'VALID' : 'INVALID'} (type: ${dtdValidation.reportType}, errors: ${dtdValidation.errors.length}, warnings: ${dtdValidation.warnings.length})`);
+  } catch (dtdError) {
+    console.warn('[SIAE-UTILS] DTD validator import failed, skipping DTD validation:', dtdError);
   }
   
   // ==================== 3. VALIDAZIONE COERENZA CODICE SISTEMA ====================
