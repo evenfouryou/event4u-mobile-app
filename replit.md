@@ -32,6 +32,13 @@ A comprehensive SIAE-compliant ticketing and fiscal management system for Italia
 
 The `validatePreTransmission` function is now async and integrates both simplified validation and full DTD validation before any transmission.
 
+**C1 XML Generation Consolidation (2026-01-16)**: The C1 report generation (RMG/RPM) has been unified into a single `generateC1Xml()` function in `siae-utils.ts`, replacing duplicate implementations across routes and scheduler. Key improvements:
+- TypeScript interfaces: `C1XmlParams`, `C1EventContext`, `C1SectorData`, `C1TicketData`, `C1SubscriptionData` for type safety
+- Single source of truth for XML generation, preventing divergence between routes and scheduler
+- Consistent handling of progressivo, system codes, events, sectors, and subscriptions
+- Helper function `hydrateC1EventContextFromTickets` in routes for data preparation
+- Removed ~302 lines of duplicate code from `siae-routes.ts`
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 
