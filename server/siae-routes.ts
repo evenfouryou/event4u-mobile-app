@@ -341,9 +341,14 @@ function requireOrganizerOrCashier(req: Request, res: Response, next: NextFuncti
 
 // ==================== DEBUG ENDPOINT - Test Email SIAE ====================
 // Endpoint pubblico per testare l'invio email SMTP (solo in development)
+// NOTA: Usa codice sistema test P0004010 per evitare errori SIAE 0600
 router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
   try {
     const { emailTransporter, sendSiaeTransmissionEmail } = await import('./email-service');
+    
+    // FIX 2026-01-16: Usa codice sistema test valido invece di EVENT4U1
+    // P0004010 è un codice test valido (P + 7 cifre)
+    const DEBUG_TEST_SYSTEM_CODE = 'P0004010';
     
     // Test 1: Verifica connessione SMTP
     const smtpStatus = await new Promise<{connected: boolean; error?: string}>((resolve) => {
@@ -368,19 +373,20 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
       const dataRiepilogo = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
       const oraGenerazione = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
       // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
+      // FIX 2026-01-16: Usa codice sistema test P0004010 invece di EVENT4U1
       const testXml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
     <DenominazioneTitolareCA>DEBUG TEST COMPANY</DenominazioneTitolareCA>
-    <CFTitolareCA>DEBUG-TEST-CF00</CFTitolareCA>
-    <CodiceSistemaCA>EVENT4U1</CodiceSistemaCA>
+    <CFTitolareCA>DBGTST00A00A000A</CFTitolareCA>
+    <CodiceSistemaCA>${DEBUG_TEST_SYSTEM_CODE}</CodiceSistemaCA>
     <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>
     <DataGenerazioneRiepilogo>${dataRiepilogo}</DataGenerazioneRiepilogo>
     <OraGenerazioneRiepilogo>${oraGenerazione}</OraGenerazioneRiepilogo>
     <ProgressivoRiepilogo>1</ProgressivoRiepilogo>
   </Titolare>
   <Evento>
-    <CFOrganizzatore>DEBUG-TEST-CF00</CFOrganizzatore>
+    <CFOrganizzatore>DBGTST00A00A000A</CFOrganizzatore>
     <DenominazioneOrganizzatore>DEBUG TEST COMPANY</DenominazioneOrganizzatore>
     <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
     <SpettacoloIntrattenimento>N</SpettacoloIntrattenimento>
@@ -395,7 +401,7 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
     <Esecutore></Esecutore>
     <NazionalitaFilm></NazionalitaFilm>
     <NumOpereRappresentate>1</NumOpereRappresentate>
-    <SistemaEmissione CFTitolare="DEBUG-TEST-CF00" CodiceSistema="EVENT4U1">
+    <SistemaEmissione CFTitolare="DBGTST00A00A000A" CodiceSistema="${DEBUG_TEST_SYSTEM_CODE}">
       <Titoli>
         <CodiceOrdinePosto>A0</CodiceOrdinePosto>
         <Capienza>100</Capienza>
@@ -433,7 +439,7 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
         totalAmount: '0.00',
         xmlContent: testXml,
         transmissionId: `DEBUG-${Date.now()}`,
-        systemCode: SIAE_SYSTEM_CODE_DEFAULT, // FIX: systemCode obbligatorio
+        systemCode: DEBUG_TEST_SYSTEM_CODE, // FIX 2026-01-16: Usa codice test valido
         signWithSmime: true,
         requireSignature: true,
       });
@@ -6411,6 +6417,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
 });
 
 // Test email endpoint for transmission
+// NOTA: Usa codice sistema test P0004010 per evitare errori SIAE 0600
 router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { toEmail, companyId } = req.body;
@@ -6418,6 +6425,10 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     if (!toEmail) {
       return res.status(400).json({ message: "Indirizzo email richiesto" });
     }
+    
+    // FIX 2026-01-16: Usa codice sistema test valido invece di EVENT4U1
+    // P0004010 è un codice test valido (P + 7 cifre)
+    const TEST_SYSTEM_CODE = 'P0004010';
     
     // Get company name
     const company = companyId ? await storage.getCompany(companyId) : null;
@@ -6430,19 +6441,20 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     const oraEvento = formatSiaeTimeHHMM(now);
     
     // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
+    // FIX 2026-01-16: Usa codice sistema test P0004010 invece di EVENT4U1
     const testXml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
     <DenominazioneTitolareCA>${escapeXml(companyName)}</DenominazioneTitolareCA>
-    <CFTitolareCA>TEST00000000000</CFTitolareCA>
-    <CodiceSistemaCA>${SIAE_SYSTEM_CODE_DEFAULT}</CodiceSistemaCA>
+    <CFTitolareCA>TSTSAE00A00A000A</CFTitolareCA>
+    <CodiceSistemaCA>${TEST_SYSTEM_CODE}</CodiceSistemaCA>
     <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>
     <DataGenerazioneRiepilogo>${dataRiepilogo}</DataGenerazioneRiepilogo>
     <OraGenerazioneRiepilogo>${oraGenerazione}</OraGenerazioneRiepilogo>
     <ProgressivoRiepilogo>1</ProgressivoRiepilogo>
   </Titolare>
   <Evento>
-    <CFOrganizzatore>TEST00000000000</CFOrganizzatore>
+    <CFOrganizzatore>TSTSAE00A00A000A</CFOrganizzatore>
     <DenominazioneOrganizzatore>${escapeXml(companyName)}</DenominazioneOrganizzatore>
     <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
     <SpettacoloIntrattenimento>N</SpettacoloIntrattenimento>
@@ -6457,7 +6469,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     <Esecutore></Esecutore>
     <NazionalitaFilm></NazionalitaFilm>
     <NumOpereRappresentate>1</NumOpereRappresentate>
-    <SistemaEmissione CFTitolare="TEST00000000000" CodiceSistema="${SIAE_SYSTEM_CODE_DEFAULT}">
+    <SistemaEmissione CFTitolare="TSTSAE00A00A000A" CodiceSistema="${TEST_SYSTEM_CODE}">
       <Titoli>
         <CodiceOrdinePosto>A0</CodiceOrdinePosto>
         <Capienza>100</Capienza>
@@ -6498,7 +6510,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
       totalAmount: '10.00',
       xmlContent: testXml,
       transmissionId: 'TEST-' + Date.now(),
-      systemCode: SIAE_SYSTEM_CODE_DEFAULT,
+      systemCode: TEST_SYSTEM_CODE, // FIX 2026-01-16: Usa codice test valido
       sequenceNumber: 1,
       signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
       requireSignature: true,
