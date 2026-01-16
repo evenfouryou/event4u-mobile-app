@@ -234,14 +234,20 @@ export default function SiaeReportC1() {
     setIsGeneratingPdf(true);
     
     try {
-      // Cattura l'elemento come immagine ad alta risoluzione
       const canvas = await html2canvas(element, {
-        scale: 2, // Alta risoluzione
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('.print-area') as HTMLElement;
+          if (clonedElement) {
+            clonedElement.style.display = 'block';
+            clonedElement.style.visibility = 'visible';
+          }
+        }
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -252,12 +258,8 @@ export default function SiaeReportC1() {
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
       
-      // Calcola le dimensioni per adattare l'immagine alla pagina A4
-      const ratio = Math.min((pdfWidth - 10) / imgWidth, (pdfHeight - 10) / imgHeight);
-      const scaledWidth = imgWidth * ratio;
-      const scaledHeight = imgHeight * ratio;
-      
-      // Se il contenuto è più alto di una pagina, gestisci le pagine multiple
+      const scaledWidth = pdfWidth - 10;
+      const ratio = scaledWidth / imgWidth;
       const pageHeightPx = (pdfHeight - 10) / ratio;
       const totalPages = Math.ceil(imgHeight / pageHeightPx);
       
@@ -266,7 +268,6 @@ export default function SiaeReportC1() {
           pdf.addPage();
         }
         
-        // Crea un canvas per questa pagina
         const pageCanvas = document.createElement('canvas');
         pageCanvas.width = imgWidth;
         pageCanvas.height = Math.min(pageHeightPx, imgHeight - page * pageHeightPx);
@@ -285,7 +286,8 @@ export default function SiaeReportC1() {
         }
       }
       
-      const filename = `Report_C1_${reportDate}.pdf`;
+      const sanitizedDate = reportDate.replace(/-/g, '');
+      const filename = `Report_C1_${sanitizedDate}.pdf`;
       pdf.save(filename);
     } catch (error) {
       console.error('Errore generazione PDF:', error);
