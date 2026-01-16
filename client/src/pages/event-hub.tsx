@@ -135,6 +135,7 @@ import {
   Palette,
   XCircle,
   Grid3X3,
+  Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -776,6 +777,7 @@ export default function EventHub() {
   // Cambio nominativo / Rivendita collapsible sections
   const [nameChangesExpanded, setNameChangesExpanded] = useState(false);
   const [resalesExpanded, setResalesExpanded] = useState(false);
+  const [resaleSearchQuery, setResaleSearchQuery] = useState("");
 
   // Gestore direct name change dialog state
   const [nameChangeDialogOpen, setNameChangeDialogOpen] = useState(false);
@@ -4205,14 +4207,30 @@ export default function EventHub() {
                 {/* Resales List Card */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShoppingCart className="h-5 w-5" />
-                      Biglietti in Rivendita
-                      <Badge variant="secondary">{resales.length}</Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      Elenco dei biglietti messi in rivendita con tracciamento completo
-                    </CardDescription>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <ShoppingCart className="h-5 w-5" />
+                          Biglietti in Rivendita
+                          <Badge variant="secondary">{resales.length}</Badge>
+                        </CardTitle>
+                        <CardDescription>
+                          Elenco dei biglietti messi in rivendita con tracciamento completo
+                        </CardDescription>
+                      </div>
+                      {ticketedEvent?.allowsResale && resales.length > 0 && (
+                        <div className="relative w-full sm:w-64">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Cerca per nome o progressivo..."
+                            value={resaleSearchQuery}
+                            onChange={(e) => setResaleSearchQuery(e.target.value)}
+                            className="pl-10"
+                            data-testid="input-resale-search"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {!ticketedEvent?.allowsResale ? (
@@ -4228,7 +4246,19 @@ export default function EventHub() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {resales.map((resale: any) => (
+                        {resales
+                          .filter((resale: any) => {
+                            if (!resaleSearchQuery.trim()) return true;
+                            const query = resaleSearchQuery.toLowerCase().trim();
+                            const sellerName = `${resale.seller?.firstName || resale.originalTicket?.participantFirstName || ''} ${resale.seller?.lastName || resale.originalTicket?.participantLastName || ''}`.toLowerCase();
+                            const buyerName = `${resale.buyer?.firstName || resale.newTicket?.participantFirstName || ''} ${resale.buyer?.lastName || resale.newTicket?.participantLastName || ''}`.toLowerCase();
+                            const origProg = String(resale.originalTicket?.progressiveNumber || '').toLowerCase();
+                            const newProg = String(resale.newTicket?.progressiveNumber || '').toLowerCase();
+                            const origSeal = String(resale.originalTicket?.sigilloFiscale || '').toLowerCase();
+                            const newSeal = String(resale.newTicket?.sigilloFiscale || '').toLowerCase();
+                            return sellerName.includes(query) || buyerName.includes(query) || origProg.includes(query) || newProg.includes(query) || origSeal.includes(query) || newSeal.includes(query);
+                          })
+                          .map((resale: any) => (
                           <div key={resale.id} className="border rounded-lg p-4 space-y-3" data-testid={`card-resale-tab-${resale.id}`}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
@@ -4301,8 +4331,22 @@ export default function EventHub() {
                                 {resale.buyer || resale.newTicket ? (
                                   <div className="space-y-1 text-sm">
                                     <p><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{resale.buyer?.firstName || resale.newTicket?.participantFirstName || '-'} {resale.buyer?.lastName || resale.newTicket?.participantLastName || ''}</span></p>
-                                    <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono font-bold">{resale.newTicket?.progressiveNumber || '-'}</span></p>
-                                    <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs">{resale.newTicket?.sigilloFiscale || 'N/D'}</span></p>
+                                    <p className="flex items-center gap-1">
+                                      <span className="text-muted-foreground">Prog.:</span>
+                                      {resale.newTicket?.progressiveNumber ? (
+                                        <Badge variant="default" className="font-mono text-xs px-2 py-0.5">{resale.newTicket.progressiveNumber}</Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground italic">In attesa</span>
+                                      )}
+                                    </p>
+                                    <p className="flex items-center gap-1">
+                                      <span className="text-muted-foreground">Sigillo:</span>
+                                      {resale.newTicket?.sigilloFiscale ? (
+                                        <span className="font-mono text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">{resale.newTicket.sigilloFiscale}</span>
+                                      ) : (
+                                        <span className="text-muted-foreground italic text-xs">In attesa</span>
+                                      )}
+                                    </p>
                                   </div>
                                 ) : (
                                   <p className="text-sm text-muted-foreground italic">In attesa di acquirente</p>
