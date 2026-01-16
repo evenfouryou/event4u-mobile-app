@@ -23,6 +23,15 @@ The core data model links Companies to Users, Locations, Events, Products, and P
 ### SIAE Ticketing Module
 A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations. It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types. The system includes robust auto-correction and pre-transmission validation for SIAE XML, preventing common errors and ensuring consistent system codes across all transmission paths.
 
+**DTD Validator Integration (2026-01-16)**: The pre-transmission validation pipeline now includes a comprehensive DTD validator (`siae-xml-validator.ts`) that validates XML against official SIAE DTD specifications v0039. This validator checks:
+- Report type detection (RMG/RPM/RCA)
+- Required and optional attributes according to DTD
+- Attribute value validation (e.g., Sostituzione: N|S)
+- Required child elements
+- Element order compliance
+
+The `validatePreTransmission` function is now async and integrates both simplified validation and full DTD validation before any transmission.
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 
