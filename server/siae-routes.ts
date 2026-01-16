@@ -8048,7 +8048,7 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   
   // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<RiepilogoControlloAccessi Sostituzione="${sostituzione}">
+<RiepilogoControlloAccessi">
   <Titolare>
     <DenominazioneTitolareCA>${escapeXml(denominazioneTitolare)}</DenominazioneTitolareCA>
     <CFTitolareCA>${escapeXml(cfTitolare)}</CFTitolareCA>
@@ -8517,12 +8517,12 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
   // - RiepilogoMensile con attributo Mese="YYYYMM" per report mensili
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
   
-  // FIX 2026-01-14: Attributo NomeFile obbligatorio (errore SIAE 0600 "Nome del file contenente il riepilogo sbagliato")
-  // Il nome file deve corrispondere esattamente al nome dell'allegato email
-  const nomeFileAttr = nomeFile ? `NomeFile="${escapeXml(nomeFile)}" ` : '';
+  // FIX 2026-01-16: Rimosso attributo NomeFile - NON è nel DTD ufficiale SIAE v0039
+  // Gli attributi validi per RiepilogoGiornaliero/RiepilogoMensile sono solo:
+  // Sostituzione, Data/Mese, DataGenerazione, OraGenerazione, ProgressivoGenerazione
   
   return `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} ${nomeFileAttr}${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressiveGen}" Sostituzione="${sostituzione}">
+<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressiveGen}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>

@@ -409,7 +409,8 @@ function generateC1StyleXml(
   }
   
   const sostituzione = progressivo > 1 ? 'S' : 'N';
-  const nomeFileAttr = nomeFile ? `NomeFile="${escapeXml(nomeFile)}" ` : '';
+  // FIX 2026-01-16: Rimosso attributo NomeFile - NON è nel DTD ufficiale SIAE v0039
+  // Gli attributi validi sono solo: Sostituzione, Data, DataGenerazione, OraGenerazione, ProgressivoGenerazione
   
   const eventDateTime = eventRecord?.startDatetime ? new Date(eventRecord.startDatetime) : reportDate;
   const dataEvento = formatSiaeDateCompact(eventDateTime);
@@ -600,7 +601,7 @@ function generateC1StyleXml(
   const organizerType = 'G';
   
   return `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} ${nomeFileAttr}${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenerazione}" OraGenerazione="${oraGenerazione}" ProgressivoGenerazione="${progressivo}" Sostituzione="${sostituzione}">
+<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenerazione}" OraGenerazione="${oraGenerazione}" ProgressivoGenerazione="${progressivo}">
     <Titolare>
         <Denominazione>${escapeXml(businessName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
