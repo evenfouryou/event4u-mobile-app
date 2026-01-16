@@ -530,14 +530,20 @@ export function generateSiaeAttachmentName(
 }
 
 /**
- * Genera SUBJECT EMAIL conforme Allegato C SIAE (Sezione 1.5.3)
+ * Genera SUBJECT EMAIL conforme Allegato C SIAE
  * 
- * FORMATO SUBJECT (completo): RCA_<AAAA>_<MM>_<GG>_<CodiceSistema8cifre>_<###>_<EST>_V.<XX>.<YY>
- * Esempio: RCA_2008_02_01_00001234_001_XSI_V.01.00
+ * FIX 2026-01-16: Il subject DEVE essere IDENTICO al nome file allegato (senza estensione)
+ * per evitare errore SIAE 0603 "Le date dell'oggetto, del nome file, e del contenuto non sono coerenti"
  * 
- * - Codice Sistema: SEMPRE 8 caratteri con zeri iniziali se numerico
- * - EST = Estensione (XSI per XML, TXT per ASCII)
- * - V.XX.YY = Versione formato (V.01.00)
+ * FORMATO SUBJECT = nome file senza estensione:
+ * - RMG_YYYYMMDD_SSSSSSSS_NNN (giornaliero)
+ * - RPM_YYYYMM_SSSSSSSS_NNN (mensile)
+ * - RCA_YYYYMMDD_SSSSSSSS_NNN (evento)
+ * 
+ * Esempi:
+ * - RMG_20260115_P0004010_012
+ * - RPM_202601_P0004010_009
+ * - RCA_20260115_P0004010_001
  */
 export function generateSiaeSubject(
   reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
@@ -545,34 +551,12 @@ export function generateSiaeSubject(
   progressivo: number,
   systemCode?: string
 ): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const prog = String(progressivo).padStart(3, '0');
-  
-  // Codice sistema: DEVE essere esattamente 8 caratteri
-  // NON fare padding automatico - il codice deve essere corretto alla fonte
-  // Esempio: P0004010 (8 char) è corretto, P004010 (7 char) è errato
-  let sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-  if (sysCode.length !== 8) {
-    console.warn(`[SIAE-UTILS] WARNING: Codice sistema "${sysCode}" ha ${sysCode.length} caratteri invece di 8!`);
-    console.warn(`[SIAE-UTILS] Correggere il codice sistema nella configurazione SIAE o nella smart card.`);
-  }
-  
-  const version = 'V.01.00';
-  const tipo = 'XSI';
-  
-  // Formato Subject completo: XXX_AAAA_MM_GG_SSSSSSSS_###_TTT_V.XX.YY
-  switch (reportType) {
-    case 'mensile':
-      return `RPM_${year}_${month}_${sysCode}_${prog}_${tipo}_${version}`;
-    case 'log':
-    case 'rca':
-      return `RCA_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}`;
-    case 'giornaliero':
-    default:
-      return `RMG_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}`;
-  }
+  // Genera il nome file completo e rimuovi l'estensione
+  // Questo garantisce che subject e nome file siano SEMPRE identici
+  const fullFileName = generateSiaeAttachmentName(reportType, date, progressivo, null, systemCode);
+  // Rimuovi .xsi o .xsi.p7m dall'estensione
+  const subject = fullFileName.replace(/\.xsi(\.p7m)?$/, '');
+  return subject;
 }
 
 /**
