@@ -1,0 +1,266 @@
+ SW registered: https://manage.eventfouryou.com/
+ [DEBUG SC] Fetching initial status via HTTP...
+ [DEBUG SC] ====== SMART CARD CONNECTION START ======
+ [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+ [DEBUG SC] Cookies present: YES
+ [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+ [DEBUG SC] WebSocket created, state: 0
+ [DEBUG SC] HTTP status received: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 346,
+  "cardBalance": 432861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] HTTP - cardSerial: 4130313238343837
+ [DEBUG SC] HTTP - cardCounter: 346
+ [DEBUG SC] HTTP - cardBalance: 432861
+ [DEBUG SC] HTTP - cardKeyId: 129
+ [DEBUG SC] HTTP - cardInserted: true
+ [DEBUG SC] WebSocket OPEN! State: 1
+ [DEBUG SC] Sending get_status request...
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Parsed message type: connection_status
+ [DEBUG SC] Handling bridge/connection status: connection_status Object
+ [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+ [DEBUG SC] Message type: connection_status
+ [DEBUG SC] msg.connected: true
+ [DEBUG SC] msg.bridgeConnected: true
+ [DEBUG SC] isConnected (final): true
+ [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+ [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":true,"cardInserted":true,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":346,"cardBalance":432861,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-16T12:11:13.154Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false,"pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false}
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+ [DEBUG SC] Parsed message type: status
+ [DEBUG SC] Handling status message
+ [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+ [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 346,
+  "cardBalance": 432861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] data.cardSerial: 4130313238343837
+ [DEBUG SC] data.cardCounter: 346
+ [DEBUG SC] data.cardBalance: 432861
+ [DEBUG SC] data.cardKeyId: 129
+ [DEBUG SC] data.cardInserted: true
+ [DEBUG SC] data.readerDetected: undefined
+ [DEBUG SC] data.readerConnected: true
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+ [DEBUG SC] Parsed message type: status
+ [DEBUG SC] Handling status message
+ [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+ [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 346,
+  "cardBalance": 432861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] data.cardSerial: 4130313238343837
+ [DEBUG SC] data.cardCounter: 346
+ [DEBUG SC] data.cardBalance: 432861
+ [DEBUG SC] data.cardKeyId: 129
+ [DEBUG SC] data.cardInserted: true
+ [DEBUG SC] data.readerDetected: undefined
+ [DEBUG SC] data.readerConnected: true
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(0)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+ [DEBUG SC] Parsed message type: ping
+ [DEBUG SC] Ping received, sending pong
+ [DEBUG SC] WebSocket CLOSED: 1006 
+ [DEBUG SC] ====== SMART CARD CONNECTION START ======
+ [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+ [DEBUG SC] Cookies present: YES
+ [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+ [DEBUG SC] WebSocket created, state: 0
+ [DEBUG SC] WebSocket OPEN! State: 1
+ [DEBUG SC] Sending get_status request...
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Parsed message type: connection_status
+ [DEBUG SC] Handling bridge/connection status: connection_status Object
+ [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+ [DEBUG SC] Message type: connection_status
+ [DEBUG SC] msg.connected: true
+ [DEBUG SC] msg.bridgeConnected: true
+ [DEBUG SC] isConnected (final): true
+ [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+ [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":true,"cardInserted":true,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":346,"cardBalance":432861,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-16T12:11:31.967Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false,"pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false}
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+ [DEBUG SC] Parsed message type: status
+ [DEBUG SC] Handling status message
+ [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+ [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 346,
+  "cardBalance": 432861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] data.cardSerial: 4130313238343837
+ [DEBUG SC] data.cardCounter: 346
+ [DEBUG SC] data.cardBalance: 432861
+ [DEBUG SC] data.cardKeyId: 129
+ [DEBUG SC] data.cardInserted: true
+ [DEBUG SC] data.readerDetected: undefined
+ [DEBUG SC] data.readerConnected: true
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+ [DEBUG SC] Parsed message type: status
+ [DEBUG SC] Handling status message
+ [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+ [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 346,
+  "cardBalance": 432861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] data.cardSerial: 4130313238343837
+ [DEBUG SC] data.cardCounter: 346
+ [DEBUG SC] data.cardBalance: 432861
+ [DEBUG SC] data.cardKeyId: 129
+ [DEBUG SC] data.cardInserted: true
+ [DEBUG SC] data.readerDetected: undefined
+ [DEBUG SC] data.readerConnected: true
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+ [DEBUG SC] Parsed message type: ping
+ [DEBUG SC] Ping received, sending pong
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+ [DEBUG SC] Parsed message type: ping
+ [DEBUG SC] Ping received, sending pong
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+ [DEBUG SC] Parsed message type: pong
+ [DEBUG SC] Pong received
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+ [DEBUG SC] Parsed message type: ping
+ [DEBUG SC] Ping received, sending pong
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ [EVENT-HUB] availablePrUsers: Array(1)
+ ReferenceError: ArrowRight is not defined
+    at /assets/index-hSMcv5hg.js:1448:280065
+    at Array.map (<anonymous>)
+    at jbt (/assets/index-hSMcv5hg.js:1448:278735)
+    at TL (/assets/index-hSMcv5hg.js:38:17050)
+    at RF (/assets/index-hSMcv5hg.js:40:3150)
+    at bce (/assets/index-hSMcv5hg.js:40:44967)
+    at Ace (/assets/index-hSMcv5hg.js:40:39894)
+    at w5e (/assets/index-hSMcv5hg.js:40:39817)
+    at PE (/assets/index-hSMcv5hg.js:40:39666)
+    at WF (/assets/index-hSMcv5hg.js:40:36022)
+overrideMethod @ chrome-extension://f…ld/installHook.js:1
+/assets/index-hSMcv5hg.js:38 Uncaught ReferenceError: ArrowRight is not defined
+    at /assets/index-hSMcv5hg.js:1448:280065
+    at Array.map (<anonymous>)
+    at jbt (/assets/index-hSMcv5hg.js:1448:278735)
+    at TL (/assets/index-hSMcv5hg.js:38:17050)
+    at RF (/assets/index-hSMcv5hg.js:40:3150)
+    at bce (/assets/index-hSMcv5hg.js:40:44967)
+    at Ace (/assets/index-hSMcv5hg.js:40:39894)
+    at w5e (/assets/index-hSMcv5hg.js:40:39817)
+    at PE (/assets/index-hSMcv5hg.js:40:39666)
+    at WF (/assets/index-hSMcv5hg.js:40:36022)
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+ [DEBUG SC] Parsed message type: pong
+ [DEBUG SC] Pong received
