@@ -3620,6 +3620,29 @@ export async function validatePreTransmission(
     datesCoherent: false
   };
   
+  // ==================== 0. VALIDAZIONE CODICE SISTEMA (FIX 2026-01-16) ====================
+  // BLOCCO PRIMARIO: Il codice sistema EVENT4U1 NON è registrato presso SIAE e causa errore 0600
+  // Questa validazione deve essere eseguita PRIMA di qualsiasi altra operazione
+  const systemCodeFormatValidation = validateSiaeSystemCode(systemCode);
+  if (!systemCodeFormatValidation.valid) {
+    errors.push({
+      code: 'INVALID_SYSTEM_CODE',
+      field: 'systemCode',
+      message: systemCodeFormatValidation.error || 'Codice sistema non valido',
+      resolution: systemCodeFormatValidation.isDefault 
+        ? 'Configurare il codice sistema SIAE in Impostazioni > SIAE > Configurazione Sistema, oppure collegare una Smart Card attiva tramite Desktop Bridge.'
+        : 'Verificare il formato del codice sistema. Codici test: P + 7 cifre (es: P0004010)',
+      siaeErrorCode: '0600'
+    });
+    // Ritorna subito con errore bloccante - non ha senso continuare con codice non valido
+    return {
+      canTransmit: false,
+      errors,
+      warnings,
+      details
+    };
+  }
+  
   // ==================== 1. VALIDAZIONE ENCODING UTF-8 ====================
   try {
     // Verifica che l'XML sia UTF-8 e non contenga caratteri non-ASCII non escaped
