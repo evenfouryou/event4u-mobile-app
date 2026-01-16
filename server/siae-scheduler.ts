@@ -181,8 +181,15 @@ async function generateC1ReportData(ticketedEvent: any, reportType: 'giornaliero
 }
 
 /**
- * Genera XML in formato RiepilogoControlloAccessi conforme a DTD SIAE
+ * Genera XML in formato conforme a DTD SIAE
+ * FIX 2026-01-16: Supporta tre formati distinti:
+ * - 'giornaliero' -> RiepilogoGiornaliero (RMG) con Data="YYYYMMDD"
+ * - 'mensile' -> RiepilogoMensile (RPM) con Mese="YYYYMM"  
+ * - 'rca' -> RiepilogoControlloAccessi (RCA) - formato legacy per singoli eventi
+ * 
  * Allegato B - Provvedimento Agenzia delle Entrate 04/03/2008
+ * 
+ * @param reportData - Dati del report incluso xmlReportType per selezionare il formato
  */
 function generateXMLContent(reportData: any): string {
   const { 
@@ -198,12 +205,12 @@ function generateXMLContent(reportData: any): string {
     filteredTickets, 
     progressivo = 1,
     cachedEfffData = null,
-    resolvedSystemCode = null
+    resolvedSystemCode = null,
+    xmlReportType = null,
+    nomeFile = null
   } = reportData;
   
   const now = new Date();
-  // FIX 2026-01-15: resolvedSystemCode è OBBLIGATORIO per coerenza con nome file (errori SIAE 0600/0603)
-  // Non permettiamo più fallback legacy - tutti i caller DEVONO passare resolvedSystemCode
   if (!resolvedSystemCode) {
     console.error(`[SIAE-SCHEDULER] CRITICAL: resolvedSystemCode non fornito a generateXMLContent!`);
     console.error(`[SIAE-SCHEDULER] Caller DEVE usare resolveSystemCode() PRIMA di chiamare generateXMLContent`);
@@ -213,48 +220,36 @@ function generateXMLContent(reportData: any): string {
     );
   }
   const systemCode: string = resolvedSystemCode;
-  // Prefer partnerCodFis from EFFF for tax ID
   const taxId = cachedEfffData?.partnerCodFis || company?.taxId || 'XXXXXXXXXXXXXXXX';
-  // Prefer partnerName from EFFF > systemConfig.businessName > company.name (fix warning 2606)
   const businessName = cachedEfffData?.partnerName || ticketedEvent.businessName || company?.name || 'N/A';
   
-  // Date/time in formato SIAE
-  const dataRiepilogo = formatSiaeDateCompact(reportDate);
   const dataGenerazione = formatSiaeDateCompact(now);
   const oraGenerazione = formatSiaeTimeCompact(now);
   
-  // Data e ora evento
+  const effectiveReportType: 'giornaliero' | 'mensile' | 'rca' = xmlReportType || reportType || 'rca';
+  
+  if (effectiveReportType === 'giornaliero' || effectiveReportType === 'mensile') {
+    return generateC1StyleXml(reportData, effectiveReportType, systemCode, taxId, businessName, now, progressivo, nomeFile);
+  }
+  
+  const dataRiepilogo = formatSiaeDateCompact(reportDate);
   const eventDateTime = eventRecord?.startDatetime ? new Date(eventRecord.startDatetime) : reportDate;
   const dataEvento = formatSiaeDateCompact(eventDateTime);
   const oraEvento = formatSiaeTimeHHMM(eventDateTime);
-  
-  // Codice genere SIAE (2 caratteri)
   const tipoGenere = mapGenreToSiae(ticketedEvent.genreCode);
-  
-  // Tipo spettacolo/intrattenimento
   const spettacoloIntrattenimento = getSpettacoloIntrattenimentoCode(ticketedEvent.taxType);
-  
-  // Incidenza intrattenimento (percentuale)
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
-  
-  // Codice locale (13 caratteri, padded con zeri)
   const codiceLocale = (ticketedEvent.siaeLocationCode || '').padStart(13, '0').substring(0, 13);
-  
-  // Converti importo in centesimi (formato SIAE)
   const totalRevenueInCents = Math.round(totalRevenue * 100);
-  const ivaAmount = Math.round(totalRevenueInCents * 0.10); // IVA 10% per spettacoli
-  const netAmount = totalRevenueInCents - ivaAmount;
+  const ivaAmount = Math.round(totalRevenueInCents * 0.10);
   
-  // Calcola capienza totale dai settori
   let capienzaTotale = 0;
   if (sectors && sectors.length > 0) {
     capienzaTotale = sectors.reduce((sum: number, s: any) => sum + (s.capacity || 0), 0);
   } else {
-    capienzaTotale = 100; // Default
+    capienzaTotale = 100;
   }
 
-  // Genera XML conforme a RiepilogoControlloAccessi DTD
-  // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
@@ -284,7 +279,6 @@ function generateXMLContent(reportData: any): string {
     <NumOpereRappresentate>1</NumOpereRappresentate>
     <SistemaEmissione CFTitolare="${escapeXml(taxId)}" CodiceSistema="${escapeXml(systemCode)}">`;
 
-  // Genera sezioni Titoli per ogni settore
   if (sectors && sectors.length > 0) {
     for (const sector of sectors) {
       const sectorTickets = filteredTickets.filter((t: any) => t.sectorId === sector.id);
@@ -321,7 +315,6 @@ function generateXMLContent(reportData: any): string {
       </Titoli>`;
     }
   } else {
-    // Settore default se non ci sono settori definiti
     xml += `
       <Titoli>
         <CodiceOrdinePosto>A0</CodiceOrdinePosto>
@@ -349,7 +342,6 @@ function generateXMLContent(reportData: any): string {
       </Titoli>`;
   }
 
-  // Genera sezione Abbonamenti se presenti
   const subscriptions = reportData.subscriptions || [];
   if (subscriptions.length > 0) {
     const totalSubRevenue = subscriptions.reduce((sum: number, s: any) => sum + (Number(s.price) || 0), 0);
@@ -370,6 +362,256 @@ function generateXMLContent(reportData: any): string {
 </RiepilogoControlloAccessi>`;
   
   return xml;
+}
+
+/**
+ * Genera XML in formato RiepilogoGiornaliero (RMG) o RiepilogoMensile (RPM)
+ * Conforme a DTD SIAE Allegato B - Provvedimento 04/03/2008
+ * FIX 2026-01-16: Estratto per supportare formati RMG/RPM distinti da RCA
+ */
+function generateC1StyleXml(
+  reportData: any,
+  xmlReportType: 'giornaliero' | 'mensile',
+  systemCode: string,
+  taxId: string,
+  businessName: string,
+  now: Date,
+  progressivo: number,
+  nomeFile: string | null
+): string {
+  const { 
+    ticketedEvent, 
+    eventRecord, 
+    sectors, 
+    reportDate, 
+    activeTicketsCount,
+    cancelledTicketsCount,
+    totalRevenue, 
+    filteredTickets,
+    subscriptions = []
+  } = reportData;
+  
+  const isMonthly = xmlReportType === 'mensile';
+  const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
+  
+  const dataGenerazione = formatSiaeDateCompact(now);
+  const oraGenerazione = formatSiaeTimeCompact(now);
+  
+  let periodAttrName: string;
+  let periodAttrValue: string;
+  
+  if (isMonthly) {
+    periodAttrName = 'Mese';
+    periodAttrValue = `${reportDate.getFullYear()}${String(reportDate.getMonth() + 1).padStart(2, '0')}`;
+  } else {
+    periodAttrName = 'Data';
+    periodAttrValue = formatSiaeDateCompact(reportDate);
+  }
+  
+  const sostituzione = progressivo > 1 ? 'S' : 'N';
+  const nomeFileAttr = nomeFile ? `NomeFile="${escapeXml(nomeFile)}" ` : '';
+  
+  const eventDateTime = eventRecord?.startDatetime ? new Date(eventRecord.startDatetime) : reportDate;
+  const dataEvento = formatSiaeDateCompact(eventDateTime);
+  const oraEvento = formatSiaeTimeHHMM(eventDateTime);
+  
+  const tipoGenere = mapGenreToSiae(ticketedEvent.genreCode);
+  const tipoTassazione = ticketedEvent.taxType || 'S';
+  const incidenza = tipoTassazione === 'I' ? (ticketedEvent.entertainmentIncidence ?? 100) : 0;
+  const codiceLocale = (ticketedEvent.siaeLocationCode || '').padStart(13, '0').substring(0, 13);
+  const venueName = ticketedEvent.eventLocation || eventRecord?.locationId || 'Locale';
+  const eventName = eventRecord?.name || ticketedEvent.eventTitle || 'Evento';
+  
+  let capienzaTotale = 0;
+  if (sectors && sectors.length > 0) {
+    capienzaTotale = sectors.reduce((sum: number, s: any) => sum + (s.capacity || 0), 0);
+  } else {
+    capienzaTotale = ticketedEvent.capacity || 100;
+  }
+  
+  let sectorsXml = '';
+  
+  if (sectors && sectors.length > 0) {
+    for (const sector of sectors) {
+      const sectorTickets = filteredTickets.filter((t: any) => t.sectorId === sector.id);
+      const validTickets = sectorTickets.filter((t: any) => 
+        t.status !== 'annullato' && t.status !== 'annullato_rivendita'
+      );
+      
+      if (validTickets.length === 0) continue;
+      
+      const codiceOrdine = normalizeSiaeCodiceOrdine(sector.sectorCode || sector.orderCode);
+      const sectorCapacity = sector.capacity || 100;
+      
+      const corrispettivoLordo = Math.round(validTickets.reduce((sum: number, t: any) => {
+        return sum + (Number(t.ticketPrice) || Number(t.grossAmount) || 0);
+      }, 0) * 100);
+      const ivaCorrispettivo = Math.round(corrispettivoLordo * 0.10);
+      
+      const tipoTitolo = normalizeSiaeTipoTitolo(validTickets[0]?.ticketTypeCode, validTickets[0]?.isComplimentary);
+      
+      const titoliAccessoXml = `
+                <TitoliAccesso>
+                    <TipoTitolo>${escapeXml(tipoTitolo)}</TipoTitolo>
+                    <Quantita>${validTickets.length}</Quantita>
+                    <CorrispettivoLordo>${corrispettivoLordo}</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>${ivaCorrispettivo}</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>`;
+      
+      if (isMonthly) {
+        sectorsXml += `
+            <OrdineDiPosto>
+                <CodiceOrdine>${escapeXml(codiceOrdine)}</CodiceOrdine>
+                <Capienza>${sectorCapacity}</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+      } else {
+        sectorsXml += `
+            <OrdineDiPosto>
+                <CodiceOrdine>${escapeXml(codiceOrdine)}</CodiceOrdine>
+                <Capienza>${sectorCapacity}</Capienza>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+      }
+    }
+  }
+  
+  if (sectorsXml === '') {
+    const validTickets = filteredTickets.filter((t: any) => 
+      t.status !== 'annullato' && t.status !== 'annullato_rivendita'
+    );
+    const corrispettivoLordo = Math.round(validTickets.reduce((sum: number, t: any) => {
+      return sum + (Number(t.ticketPrice) || Number(t.grossAmount) || 0);
+    }, 0) * 100);
+    const ivaCorrispettivo = Math.round(corrispettivoLordo * 0.10);
+    const tipoTitolo = normalizeSiaeTipoTitolo(validTickets[0]?.ticketTypeCode, validTickets[0]?.isComplimentary);
+    
+    const titoliAccessoXml = validTickets.length > 0 ? `
+                <TitoliAccesso>
+                    <TipoTitolo>${escapeXml(tipoTitolo)}</TipoTitolo>
+                    <Quantita>${validTickets.length}</Quantita>
+                    <CorrispettivoLordo>${corrispettivoLordo}</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>${ivaCorrispettivo}</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>` : '';
+    
+    if (isMonthly) {
+      sectorsXml = `
+            <OrdineDiPosto>
+                <CodiceOrdine>${normalizeSiaeCodiceOrdine(null)}</CodiceOrdine>
+                <Capienza>${capienzaTotale}</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+    } else {
+      sectorsXml = `
+            <OrdineDiPosto>
+                <CodiceOrdine>${normalizeSiaeCodiceOrdine(null)}</CodiceOrdine>
+                <Capienza>${capienzaTotale}</Capienza>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+    }
+  }
+  
+  let intrattenimentoXml: string;
+  if (isMonthly) {
+    intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+                <Incidenza>${incidenza}</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>`;
+  } else {
+    if (tipoTassazione === 'I' && incidenza > 0) {
+      intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+                <Incidenza>${incidenza}</Incidenza>
+            </Intrattenimento>`;
+    } else {
+      intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+            </Intrattenimento>`;
+    }
+  }
+  
+  const eventsXml = `
+        <Evento>${intrattenimentoXml}
+            <Locale>
+                <Denominazione>${escapeXml(venueName)}</Denominazione>
+                <CodiceLocale>${escapeXml(codiceLocale)}</CodiceLocale>
+            </Locale>
+            <DataEvento>${dataEvento}</DataEvento>
+            <OraEvento>${oraEvento}</OraEvento>
+            <MultiGenere>
+                <TipoGenere>${escapeXml(tipoGenere)}</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>${escapeXml(eventName)}</Titolo>
+                </TitoliOpere>
+            </MultiGenere>${sectorsXml}
+        </Evento>`;
+  
+  let abbonamentiXml = '';
+  if (subscriptions && subscriptions.length > 0) {
+    for (const sub of subscriptions) {
+      const subCode = sub.subscriptionCode || 'ABB001';
+      const validTo = new Date(sub.validTo || new Date());
+      const validitaStr = formatSiaeDateCompact(validTo);
+      const subTipoTassazione = sub.taxType || 'S';
+      const turno = sub.turnType || 'F';
+      const codiceOrdine = normalizeSiaeCodiceOrdine(sub.sectorCode);
+      const subTipoTitolo = normalizeSiaeTipoTitolo(sub.ticketTypeCode, sub.isComplimentary);
+      const emessiQuantita = sub.status === 'active' ? 1 : 0;
+      const emessiCorrispettivo = Math.round((Number(sub.totalAmount) || 0) * 100);
+      const emessiIva = Math.round((Number(sub.rateoVat) || 0) * 100);
+      const annullatiQuantita = sub.status === 'cancelled' ? 1 : 0;
+      
+      abbonamentiXml += `
+        <Abbonamenti>
+            <CodiceAbbonamento>${escapeXml(subCode)}</CodiceAbbonamento>
+            <Validita>${validitaStr}</Validita>
+            <TipoTassazione valore="${subTipoTassazione}"/>
+            <Turno valore="${turno}"/>
+            <CodiceOrdine>${codiceOrdine}</CodiceOrdine>
+            <TipoTitolo>${subTipoTitolo}</TipoTitolo>
+            <QuantitaEventiAbilitati>${sub.eventsCount || 1}</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>${emessiQuantita}</Quantita>
+                <CorrispettivoLordo>${emessiCorrispettivo}</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>${emessiIva}</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>${annullatiQuantita}</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>`;
+    }
+  }
+  
+  const organizerType = 'G';
+  
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<${rootElement} ${nomeFileAttr}${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenerazione}" OraGenerazione="${oraGenerazione}" ProgressivoGenerazione="${progressivo}" Sostituzione="${sostituzione}">
+    <Titolare>
+        <Denominazione>${escapeXml(businessName)}</Denominazione>
+        <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
+        <SistemaEmissione>${escapeXml(systemCode)}</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>${escapeXml(businessName)}</Denominazione>
+        <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
+        <TipoOrganizzatore valore="${organizerType}"/>${eventsXml}${abbonamentiXml}
+    </Organizzatore>
+</${rootElement}>`;
 }
 
 
@@ -461,8 +703,19 @@ async function sendDailyReports() {
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigDaily?.systemCode})`);
         
-        // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
-        let xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
+        // RMG = Riepilogo Giornaliero: genera nome file PRIMA di generateXMLContent per coerenza
+        let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
+        
+        // FIX 2026-01-16: Passa xmlReportType='giornaliero' e nomeFile per generare RiepilogoGiornaliero
+        // invece di RiepilogoControlloAccessi (previene errori SIAE 0600/0603)
+        // NOTA: fileName già contiene l'estensione .xsi, non aggiungere di nuovo!
+        let xmlContent = generateXMLContent({ 
+          ...reportData, 
+          cachedEfffData: cachedEfff, 
+          resolvedSystemCode: systemCode,
+          xmlReportType: 'giornaliero',
+          nomeFile: fileName
+        });
         
         // AUTO-CORREZIONE PREVENTIVA: Correggi automaticamente errori comuni prima dell'invio
         const autoCorrectionDaily = autoCorrectSiaeXml(xmlContent);
@@ -476,9 +729,6 @@ async function sendDailyReports() {
         if (autoCorrectionDaily.uncorrectableErrors.length > 0) {
           log(`ERRORI NON CORREGGIBILI: ${autoCorrectionDaily.uncorrectableErrors.map(e => e.message).join('; ')}`);
         }
-
-        // RMG = Riepilogo Mensile Giornaliero: usa 'giornaliero' per nome file RMG_YYYY_MM_DD_###.xsi
-        let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
@@ -708,11 +958,19 @@ async function sendMonthlyReports() {
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for monthly report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigMonthly?.systemCode})`);
         
-        // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
-        const xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
-
-        // RPM = Riepilogo Periodico Mensile: usa 'mensile' per nome file RPM_YYYY_MM_###.xsi
+        // RPM = Riepilogo Mensile: genera nome file PRIMA di generateXMLContent per coerenza
         let fileName = generateSiaeFileName('mensile', previousMonth, progressivo, null, systemCode);
+        
+        // FIX 2026-01-16: Passa xmlReportType='mensile' e nomeFile per generare RiepilogoMensile
+        // invece di RiepilogoControlloAccessi (previene errori SIAE 0600/0603)
+        // NOTA: fileName già contiene l'estensione .xsi, non aggiungere di nuovo!
+        const xmlContent = generateXMLContent({ 
+          ...reportData, 
+          cachedEfffData: cachedEfff, 
+          resolvedSystemCode: systemCode,
+          xmlReportType: 'mensile',
+          nomeFile: fileName
+        });
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
