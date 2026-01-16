@@ -8130,7 +8130,7 @@ async function hydrateC1EventContextFromTickets(
     if (!eventDetails) continue;
     
     const location = await storage.getLocation(eventDetails.locationId);
-    const allSectors = await siaeStorage.getSiaeEventSectorsByEvent(ticketedEventId);
+    const allSectors = await siaeStorage.getSiaeEventSectors(ticketedEventId);
     const eventTickets = ticketsByEvent.get(ticketedEventId) || [];
     
     events.push({
