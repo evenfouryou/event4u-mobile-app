@@ -3858,3 +3858,443 @@ export async function validatePreTransmission(
     details
   };
 }
+
+// ==================== C1 XML Generation (Unified) ====================
+
+/**
+ * Parameters for unified C1 XML generation
+ * Supports both daily (RMG) and monthly (RPM) reports
+ */
+export interface C1XmlParams {
+  reportKind: 'giornaliero' | 'mensile';
+  companyId: string;
+  reportDate: Date;
+  resolvedSystemCode: string;
+  progressivo: number;
+  taxId: string;
+  businessName: string;
+  events: C1EventContext[];
+  subscriptions?: C1SubscriptionData[];
+}
+
+/**
+ * Event context with all pre-hydrated data
+ */
+export interface C1EventContext {
+  ticketedEvent: {
+    id: string;
+    companyId: string;
+    eventId: string;
+    siaeLocationCode?: string | null;
+    capacity?: number | null;
+    taxType?: string | null;
+    entertainmentIncidence?: number | null;
+    genreCode?: string | null;
+    genreIncidence?: number | null;
+    author?: string | null;
+    performer?: string | null;
+    organizerType?: string | null;
+  };
+  eventRecord: {
+    id: string;
+    name?: string;
+    startDatetime?: Date | string;
+    locationId?: string;
+  } | null;
+  location?: {
+    name?: string;
+    siaeLocationCode?: string | null;
+  } | null;
+  sectors: C1SectorData[];
+  tickets: C1TicketData[];
+}
+
+/**
+ * Sector data for C1 report
+ */
+export interface C1SectorData {
+  id: string;
+  sectorCode?: string | null;
+  orderCode?: string | null;
+  capacity?: number | null;
+}
+
+/**
+ * Ticket data for C1 report
+ */
+export interface C1TicketData {
+  id: string;
+  ticketedEventId: string;
+  sectorId?: string | null;
+  status: string;
+  ticketTypeCode?: string | null;
+  isComplimentary?: boolean;
+  grossAmount?: string | number | null;
+  prevendita?: string | number | null;
+  vatAmount?: string | number | null;
+  prevenditaVat?: string | number | null;
+  serviceAmount?: string | number | null;
+  cancellationReasonCode?: string | null;
+  cancellationDate?: Date | null;
+}
+
+/**
+ * Subscription data for C1 report
+ */
+export interface C1SubscriptionData {
+  id: string;
+  subscriptionCode: string;
+  ticketedEventId?: string | null;
+  sectorId?: string | null;
+  validTo?: Date | string;
+  createdAt?: Date;
+  taxType?: string | null;
+  turnType?: string | null;
+  ticketTypeCode?: string | null;
+  isComplimentary?: boolean;
+  status: string;
+  totalAmount?: string | number | null;
+  rateoVat?: string | number | null;
+  eventsCount?: number | null;
+}
+
+/**
+ * Result from C1 XML generation
+ */
+export interface C1XmlResult {
+  xml: string;
+  stats: {
+    ticketsCount: number;
+    totalRevenue: number;
+    eventsCount: number;
+    subscriptionsCount: number;
+  };
+}
+
+/**
+ * Generate C1 XML Report (RiepilogoGiornaliero or RiepilogoMensile)
+ * Unified function that replaces both generateC1ReportXml (routes) and generateC1StyleXml (scheduler)
+ * 
+ * Conforme al tracciato SIAE Allegato B - Provvedimento 04/03/2008
+ * Importi in centesimi (interi), struttura con Abbonamenti
+ * 
+ * @param params - All required parameters with pre-hydrated data
+ * @returns XML string and statistics
+ */
+export function generateC1Xml(params: C1XmlParams): C1XmlResult {
+  const {
+    reportKind,
+    companyId,
+    reportDate,
+    resolvedSystemCode,
+    progressivo,
+    taxId,
+    businessName,
+    events,
+    subscriptions = []
+  } = params;
+
+  const isMonthly = reportKind === 'mensile';
+  const now = new Date();
+  const dataGenAttr = formatSiaeDateCompact(now);
+  const oraGen = formatSiaeTimeCompact(now);
+
+  let periodAttrName: string;
+  let periodAttrValue: string;
+
+  if (isMonthly) {
+    periodAttrName = 'Mese';
+    periodAttrValue = `${reportDate.getFullYear()}${String(reportDate.getMonth() + 1).padStart(2, '0')}`;
+  } else {
+    periodAttrName = 'Data';
+    periodAttrValue = formatSiaeDateCompact(reportDate);
+  }
+
+  const sostituzione = progressivo > 1 ? 'S' : 'N';
+  const progressivePadded = String(progressivo).padStart(3, '0');
+
+  if (events.length === 0 && subscriptions.length === 0) {
+    throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto. Il report C1 richiede almeno un evento con biglietti emessi.');
+  }
+
+  let eventsXml = '';
+  const DEFAULT_SECTOR_KEY = '__DEFAULT__';
+  let totalTicketsCount = 0;
+  let totalRevenue = 0;
+
+  for (const eventContext of events) {
+    const { ticketedEvent, eventRecord, location, sectors, tickets } = eventContext;
+    if (!eventRecord) continue;
+
+    const venueName = location?.name || 'N/D';
+    const rawVenueCode = ticketedEvent.siaeLocationCode || location?.siaeLocationCode || '0000000000001';
+    const venueCode = rawVenueCode.replace(/\D/g, '').padStart(13, '0').substring(0, 13);
+
+    const eventDate = new Date(eventRecord.startDatetime || reportDate);
+    const eventDateStr = formatSiaeDateCompact(eventDate);
+    const eventTimeStr = formatSiaeTimeHHMM(eventDate);
+
+    const ticketsBySector: Map<string, C1TicketData[]> = new Map();
+    for (const ticket of tickets) {
+      const sectorKey = ticket.sectorId || DEFAULT_SECTOR_KEY;
+      if (!ticketsBySector.has(sectorKey)) {
+        ticketsBySector.set(sectorKey, []);
+      }
+      ticketsBySector.get(sectorKey)!.push(ticket);
+    }
+
+    let sectorsXml = '';
+    for (const [sectorKey, sectorTickets] of ticketsBySector) {
+      let codiceOrdine = normalizeSiaeCodiceOrdine(null);
+      let capacity = ticketedEvent.capacity || 100;
+
+      if (sectorKey !== DEFAULT_SECTOR_KEY) {
+        const sector = sectors.find(s => s.id === sectorKey);
+        if (sector) {
+          codiceOrdine = normalizeSiaeCodiceOrdine(sector.sectorCode || sector.orderCode);
+          capacity = sector.capacity || capacity;
+        }
+      }
+
+      const ticketsByType: Map<string, C1TicketData[]> = new Map();
+      for (const ticket of sectorTickets) {
+        const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
+        if (tipoTitolo === 'ABB') continue;
+        if (!ticketsByType.has(tipoTitolo)) {
+          ticketsByType.set(tipoTitolo, []);
+        }
+        ticketsByType.get(tipoTitolo)!.push(ticket);
+      }
+
+      let titoliAccessoXml = '';
+      let totalOmaggiIva = 0;
+
+      for (const [tipoTitolo, typeTickets] of ticketsByType) {
+        const validTickets = typeTickets.filter(t =>
+          !isCancelledStatus(t.status) && !t.cancellationReasonCode && !t.cancellationDate
+        );
+
+        if (validTickets.length === 0) continue;
+
+        const quantita = validTickets.length;
+        totalTicketsCount += quantita;
+
+        const corrispettivoLordo = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.grossAmount || '0')), 0));
+        const prevendita = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.prevendita || '0')), 0));
+        const ivaCorrispettivo = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.vatAmount || '0')), 0));
+        const ivaPrevendita = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.prevenditaVat || '0')), 0));
+        const importoPrestazione = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.serviceAmount || '0')), 0));
+
+        totalRevenue += corrispettivoLordo;
+
+        if (tipoTitolo === 'O1') {
+          totalOmaggiIva += ivaCorrispettivo;
+        }
+
+        titoliAccessoXml += `
+                <TitoliAccesso>
+                    <TipoTitolo>${escapeXml(tipoTitolo)}</TipoTitolo>
+                    <Quantita>${quantita}</Quantita>
+                    <CorrispettivoLordo>${corrispettivoLordo}</CorrispettivoLordo>
+                    <Prevendita>${prevendita}</Prevendita>
+                    <IVACorrispettivo>${ivaCorrispettivo}</IVACorrispettivo>
+                    <IVAPrevendita>${ivaPrevendita}</IVAPrevendita>
+                    <ImportoPrestazione>${importoPrestazione}</ImportoPrestazione>
+                </TitoliAccesso>`;
+      }
+
+      if (isMonthly) {
+        sectorsXml += `
+            <OrdineDiPosto>
+                <CodiceOrdine>${escapeXml(codiceOrdine)}</CodiceOrdine>
+                <Capienza>${capacity}</Capienza>
+                <IVAEccedenteOmaggi>${totalOmaggiIva}</IVAEccedenteOmaggi>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+      } else {
+        sectorsXml += `
+            <OrdineDiPosto>
+                <CodiceOrdine>${escapeXml(codiceOrdine)}</CodiceOrdine>
+                <Capienza>${capacity}</Capienza>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+      }
+    }
+
+    if (sectorsXml === '') {
+      if (isMonthly) {
+        sectorsXml = `
+            <OrdineDiPosto>
+                <CodiceOrdine>${normalizeSiaeCodiceOrdine(null)}</CodiceOrdine>
+                <Capienza>${ticketedEvent.capacity || 100}</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>`;
+      } else {
+        sectorsXml = `
+            <OrdineDiPosto>
+                <CodiceOrdine>${normalizeSiaeCodiceOrdine(null)}</CodiceOrdine>
+                <Capienza>${ticketedEvent.capacity || 100}</Capienza>
+            </OrdineDiPosto>`;
+      }
+    }
+
+    const tipoTassazione = ticketedEvent.taxType || 'S';
+    const incidenza = tipoTassazione === 'I' ? (ticketedEvent.entertainmentIncidence ?? 100) : 0;
+    const imponibileIntrattenimenti = 0;
+    const genreCode = mapToSiaeTipoGenere(ticketedEvent.genreCode);
+    const incidenzaGenere = ticketedEvent.genreIncidence ?? 0;
+    const eventName = eventRecord.name || 'Evento';
+
+    const genreNum = parseInt(genreCode);
+    const requiresPerformer = (genreNum >= 5 && genreNum <= 9) || (genreNum >= 45 && genreNum <= 59);
+
+    let autoreXml = '';
+    let esecutoreXml = '';
+    if (requiresPerformer) {
+      if (ticketedEvent.author) {
+        autoreXml = `
+                        <Autore>${escapeXml(ticketedEvent.author)}</Autore>`;
+      }
+      const performer = ticketedEvent.performer || eventName;
+      esecutoreXml = `
+                        <Esecutore>${escapeXml(performer)}</Esecutore>`;
+    }
+
+    let intrattenimentoXml: string;
+    if (isMonthly) {
+      intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+                <Incidenza>${incidenza}</Incidenza>
+                <ImponibileIntrattenimenti>${imponibileIntrattenimenti}</ImponibileIntrattenimenti>
+            </Intrattenimento>`;
+    } else {
+      if (tipoTassazione === 'I' && incidenza > 0) {
+        intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+                <Incidenza>${incidenza}</Incidenza>
+            </Intrattenimento>`;
+      } else {
+        intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+            </Intrattenimento>`;
+      }
+    }
+
+    eventsXml += `
+        <Evento>${intrattenimentoXml}
+            <Locale>
+                <Denominazione>${escapeXml(venueName)}</Denominazione>
+                <CodiceLocale>${escapeXml(venueCode)}</CodiceLocale>
+            </Locale>
+            <DataEvento>${eventDateStr}</DataEvento>
+            <OraEvento>${eventTimeStr}</OraEvento>
+            <MultiGenere>
+                <TipoGenere>${escapeXml(genreCode)}</TipoGenere>
+                <IncidenzaGenere>${incidenzaGenere}</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>${escapeXml(eventName)}</Titolo>${autoreXml}${esecutoreXml}
+                </TitoliOpere>
+            </MultiGenere>${sectorsXml}
+        </Evento>`;
+  }
+
+  let abbonamentiXml = '';
+  if (subscriptions.length > 0) {
+    const subsByCode: Map<string, C1SubscriptionData[]> = new Map();
+    for (const sub of subscriptions) {
+      const code = sub.subscriptionCode;
+      if (!subsByCode.has(code)) {
+        subsByCode.set(code, []);
+      }
+      subsByCode.get(code)!.push(sub);
+    }
+
+    for (const [subCode, subs] of subsByCode) {
+      const firstSub = subs[0];
+      const validTo = new Date(firstSub.validTo || new Date());
+      const validitaStr = formatSiaeDateCompact(validTo);
+
+      let codiceOrdine = normalizeSiaeCodiceOrdine(null);
+      if (firstSub.sectorId) {
+        for (const event of events) {
+          const sector = event.sectors.find(s => s.id === firstSub.sectorId);
+          if (sector) {
+            codiceOrdine = normalizeSiaeCodiceOrdine(sector.sectorCode || sector.orderCode);
+            break;
+          }
+        }
+      }
+
+      const tipoTitolo = normalizeSiaeTipoTitolo(firstSub.ticketTypeCode, firstSub.isComplimentary);
+      const subTipoTassazione = firstSub.taxType || 'S';
+      const turno = firstSub.turnType || 'F';
+
+      const emittedSubs = subs.filter(s => s.status === 'active');
+      const cancelledSubs = subs.filter(s => s.status === 'cancelled');
+
+      const emessiQuantita = emittedSubs.length;
+      const emessiCorrispettivo = toCentesimi(emittedSubs.reduce((sum, s) => sum + parseFloat(String(s.totalAmount || '0')), 0));
+      const emessiIva = toCentesimi(emittedSubs.reduce((sum, s) => sum + parseFloat(String(s.rateoVat || '0')), 0));
+
+      const annullatiQuantita = cancelledSubs.length;
+      const annullatiCorrispettivo = toCentesimi(cancelledSubs.reduce((sum, s) => sum + parseFloat(String(s.totalAmount || '0')), 0));
+      const annullatiIva = toCentesimi(cancelledSubs.reduce((sum, s) => sum + parseFloat(String(s.rateoVat || '0')), 0));
+
+      abbonamentiXml += `
+        <Abbonamenti>
+            <CodiceAbbonamento>${escapeXml(subCode)}</CodiceAbbonamento>
+            <Validita>${validitaStr}</Validita>
+            <TipoTassazione valore="${subTipoTassazione}"/>
+            <Turno valore="${turno}"/>
+            <CodiceOrdine>${codiceOrdine}</CodiceOrdine>
+            <TipoTitolo>${tipoTitolo}</TipoTitolo>
+            <QuantitaEventiAbilitati>${firstSub.eventsCount || 1}</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>${emessiQuantita}</Quantita>
+                <CorrispettivoLordo>${emessiCorrispettivo}</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>${emessiIva}</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>${annullatiQuantita}</Quantita>
+                <CorrispettivoLordo>${annullatiCorrispettivo}</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>${annullatiIva}</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>`;
+    }
+  }
+
+  const titolareName = businessName;
+  const organizerName = businessName;
+  const organizerTaxId = taxId;
+  const organizerType = 'G';
+  const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
+    <Titolare>
+        <Denominazione>${escapeXml(titolareName)}</Denominazione>
+        <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
+        <SistemaEmissione>${escapeXml(resolvedSystemCode)}</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>${escapeXml(organizerName)}</Denominazione>
+        <CodiceFiscale>${escapeXml(organizerTaxId)}</CodiceFiscale>
+        <TipoOrganizzatore valore="${organizerType}"/>${eventsXml}${abbonamentiXml}
+    </Organizzatore>
+</${rootElement}>`;
+
+  return {
+    xml,
+    stats: {
+      ticketsCount: totalTicketsCount,
+      totalRevenue: totalRevenue / 100,
+      eventsCount: events.length,
+      subscriptionsCount: subscriptions.length
+    }
+  };
+}
