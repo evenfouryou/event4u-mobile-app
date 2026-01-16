@@ -3707,57 +3707,48 @@ export function validatePreTransmission(
   let datesCoherent = true;
   const reportDateObj = typeof reportDate === 'string' ? new Date(reportDate) : reportDate;
   
+  // FIX 2026-01-16: DataGenerazione deve essere la data di CREAZIONE del file (oggi),
+  // NON la data del periodo del report. Per report di date passate, DataGenerazione è comunque oggi.
+  const actualToday = new Date().toISOString().split('T')[0].replace(/-/g, ''); // Data reale odierna YYYYMMDD
+  const reportDateStr = reportDateObj.toISOString().split('T')[0].replace(/-/g, ''); // Data periodo report YYYYMMDD
+  
   // Estrai DataGenerazione dall'XML
   const dataGenerazioneMatch = xml.match(/DataGenerazione="([^"]+)"/);
   if (dataGenerazioneMatch) {
     const xmlDate = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
-    const today = reportDateObj.toISOString().split('T')[0].replace(/-/g, ''); // Converti a YYYYMMDD
     
-    // La data di generazione deve essere quella del report
-    if (xmlDate !== today && xmlDate !== today.substring(0, 6)) {
-      // Per mensile, accetta anche anno-mese
-      if (reportType === 'mensile') {
-        const reportMonth = today.substring(0, 6);
-        const xmlMonth = xmlDate.substring(0, 6);
-        if (xmlMonth !== reportMonth) {
-          datesCoherent = false;
-          // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
-          errors.push({
-            code: 'DATE_MISMATCH',
-            field: 'dates',
-            message: `Data generazione (${xmlDate}) non corrisponde al periodo del report (${reportMonth})`,
-            resolution: 'Verificare che la data di generazione corrisponda al periodo del report',
-            siaeErrorCode: '0603'
-          });
-        }
-      } else {
-        datesCoherent = false;
-        // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
-        errors.push({
-          code: 'DATE_MISMATCH',
-          field: 'dates',
-          message: `DataGenerazione (${xmlDate}) non corrisponde alla data del report (${today})`,
-          resolution: 'Verificare che DataGenerazione corrisponda alla data odierna',
-          siaeErrorCode: '0603'
-        });
-      }
+    // DataGenerazione deve essere la data odierna (quando è stato generato il file)
+    // Tolleranza: accetta anche ieri in caso di trasmissioni a cavallo di mezzanotte
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0].replace(/-/g, '');
+    
+    if (xmlDate !== actualToday && xmlDate !== yesterdayStr) {
+      datesCoherent = false;
+      errors.push({
+        code: 'DATE_MISMATCH',
+        field: 'dates',
+        message: `DataGenerazione (${xmlDate}) non corrisponde alla data odierna (${actualToday})`,
+        resolution: 'Rigenerare il report per aggiornare DataGenerazione alla data corrente',
+        siaeErrorCode: '0603'
+      });
     }
   }
   
   // Verifica Mese attributo (per report mensile)
+  // FIX 2026-01-16: L'attributo Mese deve corrispondere al PERIODO del report, non a oggi
   if (reportType === 'mensile') {
     const meseMatch = xml.match(/Mese="([^"]+)"/);
     if (meseMatch) {
       const mese = meseMatch[1]; // Formato: YYYYMM
-      const reportMonth = reportDateObj.toISOString().substring(0, 7).replace('-', '');
+      const reportMonth = reportDateStr.substring(0, 6); // YYYYMM del periodo richiesto
       if (mese !== reportMonth) {
         datesCoherent = false;
-        // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
         errors.push({
           code: 'MONTH_MISMATCH',
           field: 'month',
-          message: `Attributo Mese (${mese}) non corrisponde al periodo corrente (${reportMonth})`,
-          resolution: 'Verificare che l\'attributo Mese corrisponda al mese corrente',
+          message: `Attributo Mese (${mese}) non corrisponde al periodo richiesto (${reportMonth})`,
+          resolution: 'Verificare che l\'attributo Mese corrisponda al mese del report',
           siaeErrorCode: '0603'
         });
       }
@@ -3765,19 +3756,18 @@ export function validatePreTransmission(
   }
   
   // Verifica Data attributo (per report giornaliero)
+  // FIX 2026-01-16: L'attributo Data deve corrispondere al PERIODO del report, non a oggi
   if (reportType === 'giornaliero') {
     const dataMatch = xml.match(/Data="([^"]+)"/);
     if (dataMatch) {
       const data = dataMatch[1]; // Formato: YYYYMMDD
-      const today = reportDateObj.toISOString().split('T')[0].replace(/-/g, '');
-      if (data !== today) {
+      if (data !== reportDateStr) {
         datesCoherent = false;
-        // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
         errors.push({
           code: 'DAY_MISMATCH',
           field: 'day',
-          message: `Attributo Data (${data}) non corrisponde a oggi (${today})`,
-          resolution: 'Verificare che l\'attributo Data corrisponda alla data odierna',
+          message: `Attributo Data (${data}) non corrisponde al periodo richiesto (${reportDateStr})`,
+          resolution: 'Verificare che l\'attributo Data corrisponda alla data del report',
           siaeErrorCode: '0603'
         });
       }
