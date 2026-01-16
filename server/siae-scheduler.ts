@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
 import { calculateTransmissionStats, calculateFileHash } from './siae-routes';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
@@ -527,6 +527,17 @@ async function sendDailyReports() {
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigDaily?.systemCode})`);
         
+        // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
+        // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
+        const systemCodePreValidation = validateSiaeSystemCode(systemCode);
+        if (!systemCodePreValidation.valid) {
+          log(`BLOCCO TRASMISSIONE RMG: Codice sistema non valido - ${systemCodePreValidation.error}`);
+          log(`Suggerimento: ${systemCodePreValidation.isDefault 
+            ? 'Configurare il codice sistema SIAE in Impostazioni > SIAE > Configurazione Sistema' 
+            : 'Verificare il formato del codice sistema'}`);
+          continue; // Salta questo evento, non inviare con codice non valido
+        }
+        
         // RMG = Riepilogo Giornaliero: genera nome file PRIMA di generateXMLContent per coerenza
         let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
         
@@ -781,6 +792,17 @@ async function sendMonthlyReports() {
         const siaeConfigForResolve = { systemCode: siaeConfigMonthly?.systemCode || undefined };
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for monthly report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigMonthly?.systemCode})`);
+        
+        // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
+        // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
+        const systemCodePreValidationMonthly = validateSiaeSystemCode(systemCode);
+        if (!systemCodePreValidationMonthly.valid) {
+          log(`BLOCCO TRASMISSIONE RPM: Codice sistema non valido - ${systemCodePreValidationMonthly.error}`);
+          log(`Suggerimento: ${systemCodePreValidationMonthly.isDefault 
+            ? 'Configurare il codice sistema SIAE in Impostazioni > SIAE > Configurazione Sistema' 
+            : 'Verificare il formato del codice sistema'}`);
+          continue; // Salta questo evento, non inviare con codice non valido
+        }
         
         // RPM = Riepilogo Mensile: genera nome file PRIMA di generateXMLContent per coerenza
         let fileName = generateSiaeFileName('mensile', previousMonth, progressivo, null, systemCode);
@@ -1081,6 +1103,17 @@ async function sendRCAReports() {
         const siaeConfigForResolve = { systemCode: siaeConfig?.systemCode || undefined };
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for RCA report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfig?.systemCode})`);
+        
+        // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
+        // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
+        const systemCodePreValidationRca = validateSiaeSystemCode(systemCode);
+        if (!systemCodePreValidationRca.valid) {
+          log(`BLOCCO TRASMISSIONE RCA: Codice sistema non valido - ${systemCodePreValidationRca.error}`);
+          log(`Suggerimento: ${systemCodePreValidationRca.isDefault 
+            ? 'Configurare il codice sistema SIAE in Impostazioni > SIAE > Configurazione Sistema' 
+            : 'Verificare il formato del codice sistema'}`);
+          continue; // Salta questo evento, non inviare con codice non valido
+        }
         
         const rcaParams: RCAParams = {
           companyId: ticketedEvent.companyId,
