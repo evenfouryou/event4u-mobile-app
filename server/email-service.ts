@@ -479,10 +479,16 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
   
   // Subject conforme a RFC-2822 SIAE (Sezione 1.5.3)
-  // FORMATO SUBJECT (completo): RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.01.00
+  // FIX 2026-01-16: Subject DEVE essere uguale al nome file senza estensione (errore 0603)
   const emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
   
-  console.log(`[EMAIL-SERVICE] SIAE file naming: attachmentName=${fileName}, subject=${emailSubject}`);
+  // Validazione coerenza subject/filename per prevenire errore SIAE 0603
+  const fileNameBase = fileName.replace(/\.xsi(\.p7m)?$/, '');
+  if (emailSubject !== fileNameBase) {
+    console.error(`[EMAIL-SERVICE] CRITICAL: Subject/filename mismatch! subject="${emailSubject}" != fileNameBase="${fileNameBase}"`);
+    throw new Error(`SIAE 0603: Subject email non corrisponde al nome file. subject="${emailSubject}", filename="${fileName}"`);
+  }
+  console.log(`[EMAIL-SERVICE] SIAE file naming: attachmentName=${fileName}, subject=${emailSubject} (coerenza verificata)`);
   console.log(`[EMAIL-SERVICE] FIX 2026-01-07: Using raw XML for S/MIME (no double signature)`);
   if (p7mBase64) {
     console.log(`[EMAIL-SERVICE] WARNING: P7M provided but ignored - S/MIME includes XML directly`);
