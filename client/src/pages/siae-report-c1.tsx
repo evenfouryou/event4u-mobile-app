@@ -234,24 +234,59 @@ export default function SiaeReportC1() {
     setIsGeneratingPdf(true);
     
     try {
+      // Cattura l'elemento come immagine ad alta risoluzione
+      const canvas = await html2canvas(element, {
+        scale: 2, // Alta risoluzione
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      await pdf.html(element, {
-        callback: function (doc) {
-          const filename = `Report_C1_${reportDate}.pdf`;
-          doc.save(filename);
-        },
-        x: 5,
-        y: 5,
-        width: 200,
-        windowWidth: 800,
-        html2canvas: {
-          scale: 1,
-          useCORS: true,
-          logging: false,
-          letterRendering: true
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      // Calcola le dimensioni per adattare l'immagine alla pagina A4
+      const ratio = Math.min((pdfWidth - 10) / imgWidth, (pdfHeight - 10) / imgHeight);
+      const scaledWidth = imgWidth * ratio;
+      const scaledHeight = imgHeight * ratio;
+      
+      // Se il contenuto è più alto di una pagina, gestisci le pagine multiple
+      const pageHeightPx = (pdfHeight - 10) / ratio;
+      const totalPages = Math.ceil(imgHeight / pageHeightPx);
+      
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) {
+          pdf.addPage();
         }
-      });
+        
+        // Crea un canvas per questa pagina
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = imgWidth;
+        pageCanvas.height = Math.min(pageHeightPx, imgHeight - page * pageHeightPx);
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(
+            canvas,
+            0, page * pageHeightPx,
+            imgWidth, pageCanvas.height,
+            0, 0,
+            imgWidth, pageCanvas.height
+          );
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const pageScaledHeight = pageCanvas.height * ratio;
+          pdf.addImage(pageImgData, 'PNG', 5, 5, scaledWidth, pageScaledHeight);
+        }
+      }
+      
+      const filename = `Report_C1_${reportDate}.pdf`;
+      pdf.save(filename);
     } catch (error) {
       console.error('Errore generazione PDF:', error);
       alert('Errore nella generazione del PDF. Prova con la funzione Stampa.');
