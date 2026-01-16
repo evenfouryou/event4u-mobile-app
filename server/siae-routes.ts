@@ -8521,8 +8521,13 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
   // Gli attributi validi per RiepilogoGiornaliero/RiepilogoMensile sono solo:
   // Sostituzione, Data/Mese, DataGenerazione, OraGenerazione, ProgressivoGenerazione
   
+  // FIX 2026-01-16: ProgressivoGenerazione DEVE essere paddato a 3 cifre per coerenza con nome file
+  // Nome file: RMG_20260114_P0004010_008.xsi → ProgressivoGenerazione="008" (non "8")
+  // Questo previene errore SIAE 0600 "Nome del file contenente il riepilogo sbagliato"
+  const progressivePadded = String(progressiveGen).padStart(3, '0');
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressiveGen}">
+<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
