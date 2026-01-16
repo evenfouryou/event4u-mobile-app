@@ -7855,22 +7855,23 @@ router.post("/api/siae/seed-public", async (req: Request, res: Response) => {
 
 // ==================== XML Report Generation (SIAE Transmission) ====================
 // Conforme a Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
+// NOTA 2026-01-16: generateRcaReportXml rimossa (codice morto). Usa generateRCAXml da siae-utils.ts
 
-// ==================== RCA Report XML Generation Helper ====================
-// Genera RiepilogoControlloAccessi per singolo evento
-// Conforme al DTD RiepilogoControlloAccessi_v0100_20080201.dtd
-// Importi in centesimi (interi), struttura specifica per controllo accessi
+// ==================== generateRcaReportXml RIMOSSA ====================
+// Questa funzione è stata rimossa perché:
+// 1. Era codice morto (mai chiamata)
+// 2. Aveva un errore di sintassi XML critico (doppio apice in <RiepilogoControlloAccessi">)
+// 3. È sostituita da generateRCAXml in siae-utils.ts
+// La funzione generateRCAXml centralizzata è usata da:
+// - siae-scheduler.ts (linea 1135)
+// - siae-routes.ts (linee 5391, 5883, 9649)
 
-interface RcaReportParams {
-  companyId: string;
-  eventId: string;
-  filteredTickets: any[];
-  systemConfig: any;
-  companyName: string;
-  taxId: string;
-}
+// DEAD CODE REMOVED - START (linee 7864-8119 originali)
+// Se necessario ripristinare, vedere git history
+// DEAD CODE REMOVED - END
 
-async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
+// Placeholder for removed generateRcaReportXml function
+async function _deprecated_generateRcaReportXml_removed(): Promise<void> {
   const { companyId, eventId, filteredTickets, systemConfig, companyName, taxId } = params;
   
   const { getCachedEfffData } = await import('./bridge-relay');
