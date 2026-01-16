@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, type RCAParams } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, type RCAParams } from './siae-utils';
 import { calculateTransmissionStats, calculateFileHash } from './siae-routes';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
@@ -25,21 +25,19 @@ function log(message: string) {
   console.log(`${formattedTime} [SIAE-Scheduler] ${message}`);
 }
 
-// Funzione generateSiaeFileName importata da ./siae-utils.ts
-// Usata per nomi file RCA (controllo accessi)
+// Funzione generateSiaeFileName e generateSiaeSubject importate da ./siae-utils.ts
+// Usata per nomi file e subject email (formato unificato)
 
 /**
- * Genera subject email conforme a RFC-2822 SIAE (Allegato C 1.5.3)
- * Formato: RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
- * IMPORTANTE: Allegato C specifica che il prefisso è RCA_ per Riepilogo Controllo Accessi
+ * Genera subject email conforme a SIAE
+ * @deprecated Usare generateSiaeSubject da siae-utils.ts direttamente
+ * 
+ * FIX 2026-01-16: Usa la funzione centralizzata per garantire coerenza
+ * tra subject email e nome file allegato (errore SIAE 0603)
  */
 export function generateSiaeEmailSubject(date: Date, systemCode: string, sequenceNumber: number): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const code = systemCode.padEnd(8, '0').substring(0, 8);
-  const seq = String(sequenceNumber).padStart(3, '0');
-  return `RCA_${year}_${month}_${day}_${code}_${seq}_XSI_${SIAE_VERSION}`;
+  // Delega alla funzione centralizzata che garantisce coerenza con il nome file
+  return generateSiaeSubject('rca', date, sequenceNumber, systemCode);
 }
 
 /**
