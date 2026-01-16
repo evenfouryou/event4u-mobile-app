@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5771,6 +5771,28 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const cachedEfffData = getCachedEfffData();
   const preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig);
   console.log(`[SIAE-ROUTES] FIX 2026-01-15: Pre-resolved system code for ALL report types: ${preResolvedSystemCode}`);
+  
+  // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
+  // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
+  const systemCodeValidationResult = validateSiaeSystemCode(preResolvedSystemCode);
+  if (!systemCodeValidationResult.valid) {
+    console.error(`[SIAE-ROUTES] BLOCCO TRASMISSIONE: Codice sistema non valido - ${systemCodeValidationResult.error}`);
+    return {
+      success: false,
+      statusCode: 400,
+      error: systemCodeValidationResult.error,
+      data: {
+        code: 'INVALID_SYSTEM_CODE',
+        systemCode: preResolvedSystemCode,
+        isDefault: systemCodeValidationResult.isDefault,
+        isTestCode: systemCodeValidationResult.isTestCode,
+        suggestion: systemCodeValidationResult.isDefault 
+          ? 'Configurare il codice sistema SIAE in Impostazioni > SIAE > Configurazione Sistema, oppure collegare una Smart Card di attivazione attiva tramite il Desktop Bridge.'
+          : 'Verificare il formato del codice sistema. Codici test: P + 7 cifre (es: P0004010)'
+      }
+    };
+  }
+  console.log(`[SIAE-ROUTES] Codice sistema validato: ${preResolvedSystemCode} (test: ${systemCodeValidationResult.isTestCode})`);
   
   if (isRCA && eventId) {
     // RCA: Use RiepilogoControlloAccessi format per DTD ControlloAccessi_v0001_20080626.dtd

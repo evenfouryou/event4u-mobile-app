@@ -919,6 +919,66 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
 export const SIAE_SYSTEM_CODE_DEFAULT = 'EVENT4U1';
 
 /**
+ * Valida il formato del codice sistema SIAE.
+ * 
+ * Codici validi SIAE:
+ * - Test: Iniziano con 'P' seguito da 7 cifre (es: P0004010)
+ * - Produzione: 8 caratteri alfanumerici assegnati da SIAE
+ * 
+ * Il default EVENT4U1 NON è un codice registrato presso SIAE e causerà errore 0600.
+ * 
+ * @param systemCode - Codice da validare
+ * @returns Oggetto con validità e eventuale messaggio di errore
+ */
+export function validateSiaeSystemCode(systemCode: string): { 
+  valid: boolean; 
+  isDefault: boolean;
+  isTestCode: boolean;
+  error?: string;
+} {
+  if (!systemCode || systemCode.length !== 8) {
+    return {
+      valid: false,
+      isDefault: false,
+      isTestCode: false,
+      error: `Codice sistema "${systemCode}" non valido: deve essere esattamente 8 caratteri`
+    };
+  }
+  
+  const isDefault = systemCode === SIAE_SYSTEM_CODE_DEFAULT;
+  const isTestCode = systemCode.toUpperCase().startsWith('P');
+  
+  // Il codice default EVENT4U1 NON è registrato presso SIAE
+  if (isDefault) {
+    return {
+      valid: false,
+      isDefault: true,
+      isTestCode: false,
+      error: `Codice sistema "${SIAE_SYSTEM_CODE_DEFAULT}" è un placeholder non registrato presso SIAE. Configurare un codice valido in Impostazioni SIAE oppure collegare una Smart Card attiva.`
+    };
+  }
+  
+  // Codici test (iniziano con P): verificare formato P + 7 cifre
+  if (isTestCode) {
+    const testCodePattern = /^P\d{7}$/;
+    if (!testCodePattern.test(systemCode.toUpperCase())) {
+      return {
+        valid: false,
+        isDefault: false,
+        isTestCode: true,
+        error: `Codice sistema test "${systemCode}" non valido: formato atteso P + 7 cifre (es: P0004010)`
+      };
+    }
+  }
+  
+  return {
+    valid: true,
+    isDefault: false,
+    isTestCode
+  };
+}
+
+/**
  * Risolve il codice sistema SIAE da usare in modo consistente in tutto il sistema.
  * 
  * PRIORITÀ (dalla più affidabile alla meno affidabile):
