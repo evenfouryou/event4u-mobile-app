@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero Sostituzione="N" Data="20260116" DataGenerazione="20260117" OraGenerazione="020040" ProgressivoGenerazione="001">
+    <Titolare>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02114370436</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02114370436</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>N/D</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260114</DataEvento>
+            <OraEvento>2301</OraEvento>
+            <MultiGenere>
+                <TipoGenere>45</TipoGenere>
+        <Autore>Autore Evento</Autore>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>14 gennaio - teatro con posti</Titolo>
+                        <Esecutore>14 gennaio - teatro con posti</Esecutore>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <Capienza>100</Capienza>
+            </OrdineDiPosto>
+        </Evento>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABO-MKGLNGFS-HF82</CodiceAbbonamento>
+            <Validita>20270116</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>A0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>1</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>200</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>44</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+    </Organizzatore>
+</RiepilogoGiornaliero>
