@@ -500,11 +500,16 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // Codice sistema: DEVE essere esattamente 8 caratteri
-  let sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-  if (sysCode.length !== 8) {
-    console.warn(`[SIAE-UTILS] WARNING: Codice sistema "${sysCode}" ha ${sysCode.length} caratteri invece di 8!`);
+  // FIX 2026-01-17: Codice sistema OBBLIGATORIO - non usare default!
+  // Il default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
+  if (!systemCode || systemCode.length !== 8) {
+    console.error(`[SIAE-UTILS] CRITICAL: Codice sistema mancante o invalido in generateSiaeAttachmentName! Valore: "${systemCode || 'undefined'}"`);
+    // Se il codice è il default o mancante, BLOCCA con errore esplicito invece di usare placeholder
+    if (!systemCode || systemCode === SIAE_SYSTEM_CODE_DEFAULT) {
+      throw new Error(`Codice sistema SIAE non configurato. Il codice "${SIAE_SYSTEM_CODE_DEFAULT}" non è registrato presso SIAE e causerebbe errore 0600.`);
+    }
   }
+  const sysCode = systemCode;
   
   // Estensione: .xsi.p7m per CAdES, .xsi per non firmato
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
@@ -701,9 +706,14 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
     return { success: false, xml: '', transactionCount: 0, errors, warnings };
   }
   
-  // Valori default e configurazione
-  // 1. SistemaEmissione: da systemConfig.systemCode o default
-  const sistemaEmissione = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  // FIX 2026-01-17: Validazione codice sistema PRIMA di generare XML
+  // Blocca la generazione se il codice sistema non è valido (previene errore 0600)
+  const systemCodeResult = resolveSystemCodeSafe(null, systemConfig);
+  if (!systemCodeResult.success || !systemCodeResult.systemCode) {
+    errors.push(systemCodeResult.error || 'Codice sistema SIAE non configurato - impossibile generare Log C1');
+    return { success: false, xml: '', transactionCount: 0, errors, warnings };
+  }
+  const sistemaEmissione = systemCodeResult.systemCode;
   
   // CF deve essere uppercase, max 16 caratteri, senza padding con spazi
   const cfTitolare = taxId.toUpperCase().substring(0, 16);
@@ -716,7 +726,7 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
   // Tipi: 01=prima emissione, 02=sostituzione, 03=annullamento, 04=duplicato, 05=emissione sistema
   const codiceRichiedente = formatCodiceRichiedente(
     systemConfig?.codiceRichiedente,
-    systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT
+    sistemaEmissione
   );
   
   // DEBUG: Log per tracciare valori generati
@@ -979,12 +989,22 @@ export function validateSiaeSystemCode(systemCode: string): {
 }
 
 /**
+ * Risultato della risoluzione del codice sistema SIAE
+ */
+export interface ResolveSystemCodeResult {
+  success: boolean;
+  systemCode: string | null;
+  source: 'smartcard' | 'config' | 'none';
+  error?: string;
+}
+
+/**
  * Risolve il codice sistema SIAE da usare in modo consistente in tutto il sistema.
  * 
  * PRIORITÀ (dalla più affidabile alla meno affidabile):
  * 1. Smart Card EFFF systemId - Codice ufficiale SIAE dalla carta di attivazione
  * 2. systemConfig.systemCode - Configurazione manuale dell'utente
- * 3. SIAE_SYSTEM_CODE_DEFAULT - Fallback hardcoded
+ * 3. BLOCCO - NON ritorna più EVENT4U1 che causa errore 0600!
  * 
  * IMPORTANTE: Questo codice DEVE essere usato in modo consistente per:
  * - Nome file allegato (es: RPM_202601_P0004010_001.xsi)
@@ -995,9 +1015,48 @@ export function validateSiaeSystemCode(systemCode: string): {
  * - 0600: "Nome del file contenente il riepilogo sbagliato"
  * - 0603: "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
  * 
+ * FIX 2026-01-17: Non ritorna più il default EVENT4U1 che NON è registrato presso SIAE!
+ * Ora ritorna null se nessun codice valido è disponibile, forzando il chiamante a gestire l'errore.
+ * 
  * @param cachedEfff - Dati EFFF dalla smart card (opzionale)
  * @param systemConfig - Configurazione SIAE dell'azienda (opzionale)
- * @returns Codice sistema a 8 caratteri da usare ovunque
+ * @returns Oggetto con codice sistema o errore
+ */
+export function resolveSystemCodeSafe(
+  cachedEfff?: { systemId?: string } | null,
+  systemConfig?: { systemCode?: string } | null
+): ResolveSystemCodeResult {
+  // Priorità 1: Smart Card EFFF (codice ufficiale SIAE)
+  if (cachedEfff?.systemId && cachedEfff.systemId.length === 8) {
+    console.log(`[SIAE-UTILS] resolveSystemCodeSafe: using Smart Card EFFF systemId = ${cachedEfff.systemId}`);
+    return { success: true, systemCode: cachedEfff.systemId, source: 'smartcard' };
+  }
+  
+  // Priorità 2: Configurazione utente (ma NON se è il default EVENT4U1!)
+  if (systemConfig?.systemCode && 
+      systemConfig.systemCode.length === 8 && 
+      systemConfig.systemCode !== SIAE_SYSTEM_CODE_DEFAULT) {
+    console.log(`[SIAE-UTILS] resolveSystemCodeSafe: using systemConfig.systemCode = ${systemConfig.systemCode}`);
+    return { success: true, systemCode: systemConfig.systemCode, source: 'config' };
+  }
+  
+  // FIX 2026-01-17: NON ritornare EVENT4U1! Causa errore SIAE 0600!
+  console.error(`[SIAE-UTILS] resolveSystemCodeSafe: NESSUN CODICE SISTEMA VALIDO! Configurare in Impostazioni SIAE o collegare Smart Card.`);
+  return { 
+    success: false, 
+    systemCode: null, 
+    source: 'none',
+    error: `Codice sistema SIAE non configurato. Il codice "${SIAE_SYSTEM_CODE_DEFAULT}" non è registrato presso SIAE e causerebbe errore 0600. Configurare un codice valido in Impostazioni SIAE oppure collegare una Smart Card attiva.`
+  };
+}
+
+/**
+ * LEGACY: Risolve il codice sistema SIAE (mantiene compatibilità con codice esistente)
+ * 
+ * ATTENZIONE: Questa funzione ritorna ancora EVENT4U1 come fallback per compatibilità.
+ * Usare resolveSystemCodeSafe() per nuove implementazioni!
+ * 
+ * @deprecated Usare resolveSystemCodeSafe() che non ritorna codici invalidi
  */
 export function resolveSystemCode(
   cachedEfff?: { systemId?: string } | null,
@@ -1015,8 +1074,8 @@ export function resolveSystemCode(
     return systemConfig.systemCode;
   }
   
-  // Priorità 3: Default
-  console.log(`[SIAE-UTILS] resolveSystemCode: using default = ${SIAE_SYSTEM_CODE_DEFAULT}`);
+  // Priorità 3: Default (DEPRECATO - causa errore 0600!)
+  console.warn(`[SIAE-UTILS] resolveSystemCode: WARNING - using default ${SIAE_SYSTEM_CODE_DEFAULT} which is NOT registered with SIAE!`);
   return SIAE_SYSTEM_CODE_DEFAULT;
 }
 
@@ -1920,8 +1979,14 @@ export function generateRCAXml(params: RCAParams): RCAResult {
     return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
   }
   
-  // Valori configurazione
-  const sistemaEmissione = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  // FIX 2026-01-17: Validazione codice sistema PRIMA di generare XML
+  // Blocca la generazione se il codice sistema non è valido (previene errore 0600)
+  const systemCodeResult = resolveSystemCodeSafe(null, systemConfig);
+  if (!systemCodeResult.success || !systemCodeResult.systemCode) {
+    errors.push(systemCodeResult.error || 'Codice sistema SIAE non configurato - impossibile generare report');
+    return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
+  }
+  const sistemaEmissione = systemCodeResult.systemCode;
   const cfTitolare = taxId.toUpperCase().substring(0, 16);
   const cfOrganizzatore = (event.organizerTaxId || taxId).toUpperCase().substring(0, 16);
   // PRIORITÀ: systemConfig.businessName > companyName (fix warning 2606)

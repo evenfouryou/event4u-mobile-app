@@ -53,6 +53,13 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Added validation: `DataGenerazioneRiepilogo` must be today's date (file generation date)
 - Separated required elements for RCA (`DenominazioneTitolareCA`, `CFTitolareCA`, `CodiceSistemaCA`) vs RMG/RPM (`Denominazione`, `CodiceFiscale`)
 
+**Error 0600 Prevention Enhancement (2026-01-17)**: Fixed root causes of SIAE error 0600 by blocking XML generation when system code is invalid:
+- Added `resolveSystemCodeSafe()` function that returns error instead of falling back to invalid `EVENT4U1` default
+- Updated `generateRCAXml()` and `generateC1LogXml()` to validate system code BEFORE generating XML
+- Updated `generateSiaeAttachmentName()` to throw error if system code is missing or is the invalid default
+- Removed all `|| SIAE_SYSTEM_CODE_DEFAULT` fallback patterns from XML generation code paths
+- System code validation now blocks at generation time, not just at transmission time
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 
