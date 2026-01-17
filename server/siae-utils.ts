@@ -3821,64 +3821,130 @@ export async function validatePreTransmission(
   const actualToday = new Date().toISOString().split('T')[0].replace(/-/g, ''); // Data reale odierna YYYYMMDD
   const reportDateStr = reportDateObj.toISOString().split('T')[0].replace(/-/g, ''); // Data periodo report YYYYMMDD
   
-  // Estrai DataGenerazione dall'XML
-  const dataGenerazioneMatch = xml.match(/DataGenerazione="([^"]+)"/);
-  if (dataGenerazioneMatch) {
-    const xmlDate = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
+  // Tolleranza mezzanotte - accetta anche ieri
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0].replace(/-/g, '');
+  
+  // FIX 2026-01-17: RCA usa elementi (non attributi) per le date
+  // RCA: <DataGenerazioneRiepilogo>yyyyMMdd</DataGenerazioneRiepilogo>, <DataRiepilogo>yyyyMMdd</DataRiepilogo>
+  // RMG/RPM: DataGenerazione="yyyyMMdd" (attributo)
+  if (reportType === 'rca') {
+    // ==================== VALIDAZIONE DATE RCA (ELEMENTI) ====================
     
-    // DataGenerazione deve essere la data odierna (quando è stato generato il file)
-    // Tolleranza: accetta anche ieri in caso di trasmissioni a cavallo di mezzanotte
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0].replace(/-/g, '');
-    
-    if (xmlDate !== actualToday && xmlDate !== yesterdayStr) {
+    // 1. DataGenerazioneRiepilogo deve essere la data odierna
+    const dataGenRiepilogoMatch = xml.match(/<DataGenerazioneRiepilogo>([^<]+)<\/DataGenerazioneRiepilogo>/);
+    if (dataGenRiepilogoMatch) {
+      const xmlDate = dataGenRiepilogoMatch[1]; // Formato: YYYYMMDD
+      
+      if (xmlDate !== actualToday && xmlDate !== yesterdayStr) {
+        datesCoherent = false;
+        errors.push({
+          code: 'DATE_MISMATCH',
+          field: 'dates',
+          message: `DataGenerazioneRiepilogo (${xmlDate}) non corrisponde alla data odierna (${actualToday})`,
+          resolution: 'Rigenerare il report per aggiornare DataGenerazioneRiepilogo alla data corrente',
+          siaeErrorCode: '0603'
+        });
+      }
+    } else {
       datesCoherent = false;
       errors.push({
-        code: 'DATE_MISMATCH',
-        field: 'dates',
-        message: `DataGenerazione (${xmlDate}) non corrisponde alla data odierna (${actualToday})`,
-        resolution: 'Rigenerare il report per aggiornare DataGenerazione alla data corrente',
+        code: 'MISSING_DATA_GENERAZIONE_RIEPILOGO',
+        field: 'DataGenerazioneRiepilogo',
+        message: 'Elemento DataGenerazioneRiepilogo mancante nell\'XML RCA',
+        resolution: 'Verificare che l\'XML RCA contenga <DataGenerazioneRiepilogo>',
         siaeErrorCode: '0603'
       });
     }
-  }
-  
-  // Verifica Mese attributo (per report mensile)
-  // FIX 2026-01-16: L'attributo Mese deve corrispondere al PERIODO del report, non a oggi
-  if (reportType === 'mensile') {
-    const meseMatch = xml.match(/Mese="([^"]+)"/);
-    if (meseMatch) {
-      const mese = meseMatch[1]; // Formato: YYYYMM
-      const reportMonth = reportDateStr.substring(0, 6); // YYYYMM del periodo richiesto
-      if (mese !== reportMonth) {
+    
+    // 2. FIX 2026-01-17: DataRiepilogo DEVE corrispondere alla data nel nome file!
+    // SIAE Error 0603: "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
+    // Nome file RCA: RCA_yyyyMMdd_SSSSSSSS_nnn.xsi
+    // DataRiepilogo deve essere ESATTAMENTE uguale a yyyyMMdd nel nome file
+    const dataRiepilogoMatch = xml.match(/<DataRiepilogo>([^<]+)<\/DataRiepilogo>/);
+    if (dataRiepilogoMatch) {
+      const xmlDataRiepilogo = dataRiepilogoMatch[1]; // Formato: YYYYMMDD
+      
+      // DataRiepilogo deve corrispondere a reportDateStr (data dell'evento = data nel nome file)
+      if (xmlDataRiepilogo !== reportDateStr) {
         datesCoherent = false;
         errors.push({
-          code: 'MONTH_MISMATCH',
-          field: 'month',
-          message: `Attributo Mese (${mese}) non corrisponde al periodo richiesto (${reportMonth})`,
-          resolution: 'Verificare che l\'attributo Mese corrisponda al mese del report',
+          code: 'DATA_RIEPILOGO_MISMATCH',
+          field: 'DataRiepilogo',
+          message: `DataRiepilogo (${xmlDataRiepilogo}) non corrisponde alla data evento/nome file (${reportDateStr})`,
+          resolution: 'La DataRiepilogo nell\'XML deve corrispondere alla data nel nome file RCA',
+          siaeErrorCode: '0603'
+        });
+      }
+    } else {
+      datesCoherent = false;
+      errors.push({
+        code: 'MISSING_DATA_RIEPILOGO',
+        field: 'DataRiepilogo',
+        message: 'Elemento DataRiepilogo mancante nell\'XML RCA',
+        resolution: 'Verificare che l\'XML RCA contenga <DataRiepilogo>',
+        siaeErrorCode: '0603'
+      });
+    }
+    
+  } else {
+    // ==================== VALIDAZIONE DATE RMG/RPM (ATTRIBUTI) ====================
+    
+    // Estrai DataGenerazione dall'XML (attributo)
+    const dataGenerazioneMatch = xml.match(/DataGenerazione="([^"]+)"/);
+    if (dataGenerazioneMatch) {
+      const xmlDate = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
+      
+      // DataGenerazione deve essere la data odierna (quando è stato generato il file)
+      if (xmlDate !== actualToday && xmlDate !== yesterdayStr) {
+        datesCoherent = false;
+        errors.push({
+          code: 'DATE_MISMATCH',
+          field: 'dates',
+          message: `DataGenerazione (${xmlDate}) non corrisponde alla data odierna (${actualToday})`,
+          resolution: 'Rigenerare il report per aggiornare DataGenerazione alla data corrente',
           siaeErrorCode: '0603'
         });
       }
     }
-  }
-  
-  // Verifica Data attributo (per report giornaliero)
-  // FIX 2026-01-16: L'attributo Data deve corrispondere al PERIODO del report, non a oggi
-  if (reportType === 'giornaliero') {
-    const dataMatch = xml.match(/Data="([^"]+)"/);
-    if (dataMatch) {
-      const data = dataMatch[1]; // Formato: YYYYMMDD
-      if (data !== reportDateStr) {
-        datesCoherent = false;
-        errors.push({
-          code: 'DAY_MISMATCH',
-          field: 'day',
-          message: `Attributo Data (${data}) non corrisponde al periodo richiesto (${reportDateStr})`,
-          resolution: 'Verificare che l\'attributo Data corrisponda alla data del report',
-          siaeErrorCode: '0603'
-        });
+    
+    // Verifica Mese attributo (per report mensile)
+    // FIX 2026-01-16: L'attributo Mese deve corrispondere al PERIODO del report, non a oggi
+    if (reportType === 'mensile') {
+      const meseMatch = xml.match(/Mese="([^"]+)"/);
+      if (meseMatch) {
+        const mese = meseMatch[1]; // Formato: YYYYMM
+        const reportMonth = reportDateStr.substring(0, 6); // YYYYMM del periodo richiesto
+        if (mese !== reportMonth) {
+          datesCoherent = false;
+          errors.push({
+            code: 'MONTH_MISMATCH',
+            field: 'month',
+            message: `Attributo Mese (${mese}) non corrisponde al periodo richiesto (${reportMonth})`,
+            resolution: 'Verificare che l\'attributo Mese corrisponda al mese del report',
+            siaeErrorCode: '0603'
+          });
+        }
+      }
+    }
+    
+    // Verifica Data attributo (per report giornaliero)
+    // FIX 2026-01-16: L'attributo Data deve corrispondere al PERIODO del report, non a oggi
+    if (reportType === 'giornaliero') {
+      const dataMatch = xml.match(/Data="([^"]+)"/);
+      if (dataMatch) {
+        const data = dataMatch[1]; // Formato: YYYYMMDD
+        if (data !== reportDateStr) {
+          datesCoherent = false;
+          errors.push({
+            code: 'DAY_MISMATCH',
+            field: 'day',
+            message: `Attributo Data (${data}) non corrisponde al periodo richiesto (${reportDateStr})`,
+            resolution: 'Verificare che l\'attributo Data corrisponda alla data del report',
+            siaeErrorCode: '0603'
+          });
+        }
       }
     }
   }
@@ -3899,29 +3965,68 @@ export async function validatePreTransmission(
   }
   
   // ==================== 7. VALIDAZIONE OBBLIGATORIA ELEMENTI ====================
-  // Verifica elementi obbligatori comuni
-  const requiredElements = ['Titolare', 'Denominazione', 'CodiceFiscale'];
-  for (const elem of requiredElements) {
-    if (!xml.includes(`<${elem}>`)) {
-      errors.push({
-        code: `MISSING_${elem.toUpperCase()}`,
-        field: elem,
-        message: `Elemento obbligatorio mancante: <${elem}>`,
-        siaeErrorCode: '40605'
-      });
+  // FIX 2026-01-17: RCA usa elementi diversi da RMG/RPM
+  if (reportType === 'rca') {
+    // RCA usa DenominazioneTitolareCA, CFTitolareCA, CodiceSistemaCA
+    const rcaRequiredElements = ['Titolare', 'DenominazioneTitolareCA', 'CFTitolareCA', 'CodiceSistemaCA', 'DataRiepilogo'];
+    for (const elem of rcaRequiredElements) {
+      if (!xml.includes(`<${elem}>`)) {
+        errors.push({
+          code: `MISSING_${elem.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`,
+          field: elem,
+          message: `Elemento RCA obbligatorio mancante: <${elem}>`,
+          siaeErrorCode: '40605'
+        });
+      }
+    }
+  } else {
+    // RMG/RPM usano Denominazione, CodiceFiscale
+    const requiredElements = ['Titolare', 'Denominazione', 'CodiceFiscale'];
+    for (const elem of requiredElements) {
+      if (!xml.includes(`<${elem}>`)) {
+        errors.push({
+          code: `MISSING_${elem.toUpperCase()}`,
+          field: elem,
+          message: `Elemento obbligatorio mancante: <${elem}>`,
+          siaeErrorCode: '40605'
+        });
+      }
     }
   }
   
-  // ==================== 8. VALIDAZIONE ATTRIBUTI GENERAZIONE ====================
-  const requiredAttributes = ['DataGenerazione', 'OraGenerazione', 'ProgressivoGenerazione'];
-  for (const attr of requiredAttributes) {
-    if (!xml.includes(`${attr}="`)) {
+  // ==================== 8. VALIDAZIONE ATTRIBUTI/ELEMENTI GENERAZIONE ====================
+  // FIX 2026-01-17: RCA usa elementi, RMG/RPM usano attributi
+  if (reportType === 'rca') {
+    // RCA usa elementi per le date di generazione (già validati in sezione 5)
+    // Verifica solo ProgressivoRiepilogo
+    if (!xml.includes('<ProgressivoRiepilogo>')) {
       errors.push({
-        code: `MISSING_ATTR_${attr.toUpperCase()}`,
-        field: attr,
-        message: `Attributo obbligatorio mancante: ${attr}`,
+        code: 'MISSING_PROGRESSIVO_RIEPILOGO',
+        field: 'ProgressivoRiepilogo',
+        message: 'Elemento obbligatorio mancante: <ProgressivoRiepilogo>',
         siaeErrorCode: '40605'
       });
+    }
+    if (!xml.includes('<OraGenerazioneRiepilogo>')) {
+      errors.push({
+        code: 'MISSING_ORA_GENERAZIONE_RIEPILOGO',
+        field: 'OraGenerazioneRiepilogo',
+        message: 'Elemento obbligatorio mancante: <OraGenerazioneRiepilogo>',
+        siaeErrorCode: '40605'
+      });
+    }
+  } else {
+    // RMG/RPM usano attributi per le date di generazione
+    const requiredAttributes = ['DataGenerazione', 'OraGenerazione', 'ProgressivoGenerazione'];
+    for (const attr of requiredAttributes) {
+      if (!xml.includes(`${attr}="`)) {
+        errors.push({
+          code: `MISSING_ATTR_${attr.toUpperCase()}`,
+          field: attr,
+          message: `Attributo obbligatorio mancante: ${attr}`,
+          siaeErrorCode: '40605'
+        });
+      }
     }
   }
   

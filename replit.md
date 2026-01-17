@@ -46,6 +46,13 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Helper function `hydrateC1EventContextFromTickets` in routes for data preparation
 - Removed ~302 lines of duplicate code from `siae-routes.ts`
 
+**RCA Date Coherence Fix (2026-01-17)**: Fixed SIAE error 0603 for RCA reports by updating `validatePreTransmission`:
+- RCA uses elements (not attributes) for dates: `<DataRiepilogo>`, `<DataGenerazioneRiepilogo>`, `<OraGenerazioneRiepilogo>`
+- RMG/RPM use attributes: `DataGenerazione="..."`, `OraGenerazione="..."`
+- Added validation: `DataRiepilogo` must match the date in filename (RCA_yyyyMMdd_SSSSSSSS_nnn.xsi)
+- Added validation: `DataGenerazioneRiepilogo` must be today's date (file generation date)
+- Separated required elements for RCA (`DenominazioneTitolareCA`, `CFTitolareCA`, `CodiceSistemaCA`) vs RMG/RPM (`Denominazione`, `CodiceFiscale`)
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 
