@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5042,10 +5042,29 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     const activeCard = activationCards.find(c => c.status === 'active');
     const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
     
-    // FIX 2026-01-15: Risolvi systemCode UNA VOLTA con resolveSystemCode per coerenza (errori SIAE 0600/0603)
+    // FIX 2026-01-17: Per reinvio RCA (S/MIME), il codice DEVE provenire dalla Smart Card
     const resendCachedEfff = getCachedEfffData();
-    const resendResolvedSystemCode = resolveSystemCode(resendCachedEfff, systemConfig);
-    console.log(`[SIAE-ROUTES] Resend: Resolved systemCode=${resendResolvedSystemCode} (cachedEfff.systemId=${resendCachedEfff?.systemId}, systemConfig.systemCode=${systemConfig?.systemCode})`);
+    const resendIsRca = original.transmissionType === 'rca';
+    let resendResolvedSystemCode: string;
+    
+    if (resendIsRca) {
+      const smimeResult = resolveSystemCodeForSmime(resendCachedEfff, systemConfig);
+      if (!smimeResult.success || !smimeResult.systemCode) {
+        console.error(`[SIAE-ROUTES] Resend BLOCCO RCA: ${smimeResult.error}`);
+        return res.status(400).json({
+          message: smimeResult.error || 'Smart Card richiesta per reinvio RCA',
+          code: 'SMARTCARD_REQUIRED_FOR_RCA'
+        });
+      }
+      resendResolvedSystemCode = smimeResult.systemCode;
+      if (smimeResult.warning) {
+        console.warn(`[SIAE-ROUTES] Resend RCA Warning: ${smimeResult.warning}`);
+      }
+      console.log(`[SIAE-ROUTES] Resend: RCA systemCode from ${smimeResult.source}: ${resendResolvedSystemCode}`);
+    } else {
+      resendResolvedSystemCode = resolveSystemCode(resendCachedEfff, systemConfig);
+      console.log(`[SIAE-ROUTES] Resend: systemCode=${resendResolvedSystemCode} for ${original.transmissionType}`);
+    }
     
     // Import and use the generateRcaXml function
     const { generateRcaXml, SiaeEventForLog } = await import('./siae-utils');
@@ -5194,12 +5213,27 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
   try {
     const data = insertSiaeTransmissionSchema.parse(req.body);
     
-    // FIX 2026-01-15: Validazione coerenza systemCode per prevenire errori SIAE 0600/0603
-    // Se fileContent è fornito, deve avere systemCode coerente con il codice risolto
+    // FIX 2026-01-17: Validazione coerenza systemCode per prevenire errori SIAE 0600/0603
+    // Per RCA, il codice DEVE provenire dalla Smart Card
     if (data.fileContent && typeof data.fileContent === 'string') {
       const systemConfig = await siaeStorage.getSiaeSystemConfig(data.companyId);
       const postCachedEfff = getCachedEfffData();
-      const postResolvedSystemCode = resolveSystemCode(postCachedEfff, systemConfig);
+      const postIsRca = data.transmissionType === 'rca';
+      let postResolvedSystemCode: string;
+      
+      if (postIsRca) {
+        const smimeResult = resolveSystemCodeForSmime(postCachedEfff, systemConfig);
+        if (!smimeResult.success || !smimeResult.systemCode) {
+          console.error(`[SIAE-ROUTES] POST BLOCCO RCA: ${smimeResult.error}`);
+          return res.status(400).json({
+            message: smimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
+            code: 'SMARTCARD_REQUIRED_FOR_RCA'
+          });
+        }
+        postResolvedSystemCode = smimeResult.systemCode;
+      } else {
+        postResolvedSystemCode = resolveSystemCode(postCachedEfff, systemConfig);
+      }
       
       const systemCodeValidation = validateSystemCodeConsistency(data.fileContent, postResolvedSystemCode);
       if (!systemCodeValidation.valid) {
@@ -5283,21 +5317,36 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
-    // FIX 2026-01-15: Usa systemCode salvato nella trasmissione per massima coerenza
-    // Se non esiste (trasmissioni legacy), risolvi con resolveSystemCode()
-    // Questo previene errori SIAE 0600/0603 (incoerenza tra nome file, XML e subject email)
+    // FIX 2026-01-17: Per RCA (S/MIME), il systemCode DEVE provenire dalla Smart Card
     const systemConfig = await siaeStorage.getSiaeSystemConfig(transmission.companyId);
     let resolvedSystemCodeForEmail: string;
+    const isRcaTransmission = transmission.transmissionType === 'rca';
+    
     if (transmission.systemCode && transmission.systemCode.length === 8) {
       // Usa il systemCode salvato nella trasmissione (preferito per coerenza con XML esistente)
       resolvedSystemCodeForEmail = transmission.systemCode;
       console.log(`[SIAE-ROUTES] SendEmail: Using SAVED systemCode=${resolvedSystemCodeForEmail} from transmission record`);
+    } else if (isRcaTransmission) {
+      // FIX 2026-01-17: Per RCA LEGACY senza systemCode, DEVE usare Smart Card
+      const sendEmailCachedEfff = getCachedEfffData();
+      const smimeResult = resolveSystemCodeForSmime(sendEmailCachedEfff, systemConfig);
+      if (!smimeResult.success || !smimeResult.systemCode) {
+        console.error(`[SIAE-ROUTES] SendEmail BLOCCO RCA: ${smimeResult.error}`);
+        return res.status(400).json({
+          message: smimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
+          code: 'SMARTCARD_REQUIRED_FOR_RCA'
+        });
+      }
+      resolvedSystemCodeForEmail = smimeResult.systemCode;
+      if (smimeResult.warning) {
+        console.warn(`[SIAE-ROUTES] SendEmail RCA Warning: ${smimeResult.warning}`);
+      }
+      console.log(`[SIAE-ROUTES] SendEmail: RCA systemCode from ${smimeResult.source}: ${resolvedSystemCodeForEmail}`);
     } else {
-      // Fallback per trasmissioni legacy senza systemCode salvato
+      // Per RMG/RPM legacy usa il vecchio metodo
       const sendEmailCachedEfff = getCachedEfffData();
       resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig);
-      console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (legacy transmission without saved systemCode)`);
-      console.warn(`[SIAE-ROUTES] WARNING: Transmission ${id} has no saved systemCode - potential 0600 error if XML was generated with different code`);
+      console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (legacy ${transmission.transmissionType})`);
     }
     
     // CRITICAL FIX: Rigenera SEMPRE l'XML obbligatoriamente per garantire formato corretto
@@ -5771,12 +5820,37 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // FIX 2026-01-14: Calcola il progressivo UNA SOLA VOLTA e riusa per XML e nome file
   let calculatedProgressivo: number;
   
-  // FIX 2026-01-15: Calcola il codice sistema UNA SOLA VOLTA all'inizio per coerenza
-  // Questo evita errori SIAE 0600/0603 causati da differenze tra NomeFile XML e nome file allegato
+  // FIX 2026-01-17: Per RCA (S/MIME), codice sistema DEVE provenire dalla Smart Card
+  // Usare siaeConfig.systemCode con Smart Card diversa causa errore SIAE 0600
   const { getCachedEfffData } = await import('./bridge-relay');
   const cachedEfffData = getCachedEfffData();
-  const preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig);
-  console.log(`[SIAE-ROUTES] FIX 2026-01-15: Pre-resolved system code for ALL report types: ${preResolvedSystemCode}`);
+  
+  // Per RCA usa resolveSystemCodeForSmime, per altri tipi usa resolveSystemCode
+  let preResolvedSystemCode: string;
+  if (isRCA) {
+    const smimeResult = resolveSystemCodeForSmime(cachedEfffData, systemConfig);
+    if (!smimeResult.success || !smimeResult.systemCode) {
+      console.error(`[SIAE-ROUTES] BLOCCO RCA: ${smimeResult.error}`);
+      return {
+        success: false,
+        statusCode: 400,
+        error: smimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
+        data: {
+          code: 'SMARTCARD_REQUIRED_FOR_RCA',
+          source: smimeResult.source,
+        }
+      };
+    }
+    preResolvedSystemCode = smimeResult.systemCode;
+    if (smimeResult.warning) {
+      console.warn(`[SIAE-ROUTES] RCA Warning: ${smimeResult.warning}`);
+    }
+    console.log(`[SIAE-ROUTES] FIX 2026-01-17: RCA system code from ${smimeResult.source}: ${preResolvedSystemCode}`);
+  } else {
+    // Per RMG/RPM usa il vecchio metodo (non richiede S/MIME)
+    preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig);
+    console.log(`[SIAE-ROUTES] Pre-resolved system code for ${transmissionType}: ${preResolvedSystemCode}`);
+  }
   
   // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
   // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
@@ -9372,10 +9446,24 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
     const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
     
-    // FIX 2026-01-14: Risolvi codice sistema PRIMA della generazione XML per coerenza (errori SIAE 0600/0603)
+    // FIX 2026-01-17: Per RCA (S/MIME), codice sistema DEVE provenire dalla Smart Card
     const rcaEfffData = getCachedEfffData();
-    const rcaResolvedSystemCode = resolveSystemCode(rcaEfffData, siaeConfig);
-    console.log(`[RCA] Resolved system code for XML: ${rcaResolvedSystemCode}`);
+    const rcaSmimeResult = resolveSystemCodeForSmime(rcaEfffData, siaeConfig);
+    
+    if (!rcaSmimeResult.success || !rcaSmimeResult.systemCode) {
+      console.error(`[RCA] BLOCCO: ${rcaSmimeResult.error}`);
+      return res.status(400).json({
+        message: rcaSmimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
+        code: 'SMARTCARD_REQUIRED_FOR_RCA',
+        source: rcaSmimeResult.source,
+      });
+    }
+    
+    const rcaResolvedSystemCode = rcaSmimeResult.systemCode;
+    if (rcaSmimeResult.warning) {
+      console.warn(`[RCA] Warning: ${rcaSmimeResult.warning}`);
+    }
+    console.log(`[RCA] System code from ${rcaSmimeResult.source}: ${rcaResolvedSystemCode}`);
     
     const rcaParams: RCAParams = {
       companyId: event.companyId,
