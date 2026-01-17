@@ -60,6 +60,14 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Removed all `|| SIAE_SYSTEM_CODE_DEFAULT` fallback patterns from XML generation code paths
 - System code validation now blocks at generation time, not just at transmission time
 
+**S/MIME System Code Consistency Fix (2026-01-17)**: Added `resolveSystemCodeForSmime()` function to prevent error 0600 caused by Smart Card / configuration mismatch:
+- For RCA transmissions signed with S/MIME, the system code MUST come from the Smart Card's EFFF file
+- SIAE verifies that the system code in the XML matches the one registered on the Smart Card used for signing
+- Using `siaeConfig.systemCode` when the Smart Card has a different code causes error 0600
+- New function blocks RCA transmission if Smart Card's systemId is not available or invalid
+- Logs warning if siaeConfig.systemCode differs from Smart Card code (uses Smart Card code anyway)
+- Scheduler RCA flow now uses `resolveSystemCodeForSmime()` instead of legacy `resolveSystemCode()`
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 

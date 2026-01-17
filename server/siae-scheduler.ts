@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, resolveSystemCodeForSmime, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
 import { calculateTransmissionStats, calculateFileHash } from './siae-routes';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
@@ -1097,12 +1097,26 @@ async function sendRCAReports() {
         const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
         const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
         
-        // FIX 2026-01-15: Risolvi systemCode UNA VOLTA per coerenza XML/nome file (errori SIAE 0600/0603)
+        // FIX 2026-01-17: Per RCA (S/MIME) usare SOLO codice dalla Smart Card!
+        // Usando siaeConfig.systemCode con una Smart Card diversa causa errore SIAE 0600
         const cachedEfff = getCachedEfffData();
-        // FIX: Converti null a undefined per compatibilità con resolveSystemCode
         const siaeConfigForResolve = { systemCode: siaeConfig?.systemCode || undefined };
-        const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
-        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for RCA report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfig?.systemCode})`);
+        
+        // Per RCA, usa resolveSystemCodeForSmime che richiede Smart Card
+        const systemCodeResult = resolveSystemCodeForSmime(cachedEfff, siaeConfigForResolve);
+        
+        if (!systemCodeResult.success || !systemCodeResult.systemCode) {
+          log(`BLOCCO TRASMISSIONE RCA: ${systemCodeResult.error}`);
+          log(`La Smart Card deve essere connessa e contenere un codice sistema valido.`);
+          log(`cachedEfff.systemId=${cachedEfff?.systemId || '(non disponibile)'}, siaeConfig.systemCode=${siaeConfig?.systemCode || '(non configurato)'}`);
+          continue; // Salta questo evento - non inviare senza codice dalla Smart Card
+        }
+        
+        const systemCode = systemCodeResult.systemCode;
+        if (systemCodeResult.warning) {
+          log(`ATTENZIONE RCA: ${systemCodeResult.warning}`);
+        }
+        log(`FIX 2026-01-17: Resolved systemCode=${systemCode} from ${systemCodeResult.source} for RCA report`);
         
         // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
         // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600

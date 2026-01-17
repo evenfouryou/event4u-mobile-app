@@ -1080,6 +1080,81 @@ export function resolveSystemCode(
 }
 
 /**
+ * FIX 2026-01-17: Risolve codice sistema per trasmissioni S/MIME (RCA)
+ * 
+ * Per trasmissioni firmate con S/MIME, SIAE verifica che il codice sistema nell'XML
+ * corrisponda a quello registrato sulla Smart Card usata per la firma.
+ * 
+ * IMPORTANTE: Se la Smart Card ha un systemId, questo DEVE essere usato.
+ * Usare un codice diverso (es. siaeConfig.systemCode) causa errore SIAE 0600:
+ * "Nome del file contenente il riepilogo sbagliato"
+ * 
+ * @param cachedEfff - Dati EFFF dalla Smart Card (OBBLIGATORIO per S/MIME)
+ * @param systemConfig - Configurazione SIAE dell'azienda (fallback)
+ * @returns Oggetto con codice sistema e source, oppure errore
+ */
+export interface ResolveSystemCodeForSmimeResult {
+  success: boolean;
+  systemCode: string | null;
+  source: 'smartcard' | 'config' | 'none';
+  warning?: string;
+  error?: string;
+}
+
+export function resolveSystemCodeForSmime(
+  cachedEfff?: { systemId?: string } | null,
+  systemConfig?: { systemCode?: string } | null
+): ResolveSystemCodeForSmimeResult {
+  // Per S/MIME, la Smart Card è OBBLIGATORIA
+  if (!cachedEfff) {
+    console.error(`[SIAE-UTILS] resolveSystemCodeForSmime: EFFF data non disponibile - Smart Card non connessa o non letta`);
+    return {
+      success: false,
+      systemCode: null,
+      source: 'none',
+      error: 'SMART_CARD_REQUIRED: Per trasmissioni RCA (S/MIME) è necessario connettere una Smart Card SIAE. ' +
+             'Il codice sistema deve provenire dalla carta usata per la firma digitale.'
+    };
+  }
+  
+  // Priorità 1: Smart Card EFFF (UNICO codice valido per S/MIME)
+  if (cachedEfff.systemId && cachedEfff.systemId.length === 8) {
+    console.log(`[SIAE-UTILS] resolveSystemCodeForSmime: using Smart Card EFFF systemId = ${cachedEfff.systemId}`);
+    
+    // Verifica coerenza con siaeConfig se configurato
+    if (systemConfig?.systemCode && 
+        systemConfig.systemCode.length === 8 && 
+        systemConfig.systemCode !== cachedEfff.systemId) {
+      console.warn(`[SIAE-UTILS] resolveSystemCodeForSmime: ATTENZIONE - siaeConfig.systemCode (${systemConfig.systemCode}) != Smart Card (${cachedEfff.systemId})`);
+      console.warn(`[SIAE-UTILS] Per S/MIME verrà usato il codice dalla Smart Card. Aggiornare la configurazione se necessario.`);
+      return { 
+        success: true, 
+        systemCode: cachedEfff.systemId, 
+        source: 'smartcard',
+        warning: `Configurazione SIAE (${systemConfig.systemCode}) diversa dalla Smart Card (${cachedEfff.systemId}). Usato codice Smart Card per evitare errore SIAE 0600.`
+      };
+    }
+    
+    return { success: true, systemCode: cachedEfff.systemId, source: 'smartcard' };
+  }
+  
+  // Smart Card connessa ma senza systemId valido
+  console.error(`[SIAE-UTILS] resolveSystemCodeForSmime: Smart Card connessa ma systemId non valido: "${cachedEfff.systemId || '(vuoto)'}"`);
+  
+  // NON usare siaeConfig come fallback per S/MIME - causa errore 0600!
+  // L'XML userebbe siaeConfig.systemCode ma la firma S/MIME è fatta con la Smart Card che ha un codice diverso
+  return {
+    success: false,
+    systemCode: null,
+    source: 'none',
+    error: `SMARTCARD_SYSTEMID_INVALID: La Smart Card non contiene un codice sistema valido (letto: "${cachedEfff.systemId || '(vuoto)'}"). ` +
+           `Verificare che la carta sia inserita correttamente e che sia una carta SIAE di attivazione valida. ` +
+           `Non è possibile usare il codice dalla configurazione (${systemConfig?.systemCode || 'non configurato'}) ` +
+           `perché SIAE verificherebbe la firma contro il codice della Smart Card.`
+  };
+}
+
+/**
  * Stati ticket che indicano annullamento/cancellazione per conteggi SIAE
  * Usare questa costante in tutto il sistema per coerenza
  */
