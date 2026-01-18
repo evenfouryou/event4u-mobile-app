@@ -233,8 +233,11 @@ export default function SiaeTransmissionsPage() {
   // Use all ticketed events for dropdown filter
   const eventsForDropdown = ticketedEvents;
 
-  // Filter to show only closed events for RCA (events with ticketingStatus='closed')
+  // FIX 2026-01-18: Per RCA mostra solo eventi closed, per RMG/RPM permetti anche ongoing
+  // RCA: solo eventi conclusi (obbligatorio per SIAE)
   const eventsForRCA = ticketedEvents?.filter(e => e.status === 'closed') || [];
+  // RMG/RPM: permetti eventi in corso o conclusi
+  const eventsForDaily = ticketedEvents?.filter(e => e.status === 'closed' || e.status === 'ongoing' || e.status === 'active') || [];
 
   // Fetch validation prerequisites for selected event
   const { data: prerequisiteValidation, isLoading: isLoadingPrerequisites } = useQuery<{
@@ -1458,23 +1461,28 @@ export default function SiaeTransmissionsPage() {
                 )}
               </div>
               
-              {/* Selezione evento - richiesto per RCA */}
+              {/* Selezione evento - richiesto per RCA, opzionale per RMG/RPM */}
               <div>
                 <Label>Evento {c1Type === 'rca' && <span className="text-destructive">*</span>}</Label>
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                   <SelectTrigger data-testid="select-rca-event" className={c1Type === 'rca' && !selectedEventId ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Seleziona un evento concluso..." />
+                    <SelectValue placeholder={c1Type === 'rca' ? "Seleziona un evento concluso..." : "Seleziona un evento..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {eventsForRCA.length === 0 ? (
-                      <SelectItem value="none" disabled>Nessun evento passato disponibile</SelectItem>
+                    {/* FIX 2026-01-18: Per RMG/RPM usa eventsForDaily (include ongoing), per RCA usa eventsForRCA (solo closed) */}
+                    {(c1Type === 'rca' ? eventsForRCA : eventsForDaily).length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        {c1Type === 'rca' ? 'Nessun evento concluso disponibile' : 'Nessun evento disponibile'}
+                      </SelectItem>
                     ) : (
-                      eventsForRCA.map((event) => (
+                      (c1Type === 'rca' ? eventsForRCA : eventsForDaily).map((event) => (
                         <SelectItem key={event.id} value={event.id}>
                           <div className="flex flex-col items-start">
                             <span className="font-medium">{event.eventName}</span>
                             <span className="text-xs text-muted-foreground">
                               {format(new Date(event.eventDate), "d MMMM yyyy", { locale: it })}
+                              {event.status === 'ongoing' && ' (in corso)'}
+                              {event.status === 'active' && ' (attivo)'}
                             </span>
                           </div>
                         </SelectItem>
@@ -1487,9 +1495,14 @@ export default function SiaeTransmissionsPage() {
                     Seleziona un evento per inviare il report RCA
                   </p>
                 )}
-                {(c1Type !== 'rca' || selectedEventId) && (
+                {c1Type === 'rca' && selectedEventId && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Solo eventi già conclusi possono essere trasmessi
+                    Solo eventi già conclusi possono essere trasmessi per RCA
+                  </p>
+                )}
+                {c1Type !== 'rca' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Per RMG/RPM puoi selezionare anche eventi in corso
                   </p>
                 )}
               </div>
@@ -2702,20 +2715,24 @@ export default function SiaeTransmissionsPage() {
               </p>
             </div>
             
-            {/* Selezione evento - richiesto per RCA */}
+            {/* Selezione evento - richiesto per RCA, opzionale per RMG/RPM */}
             <div>
               <Label className="text-sm font-medium mb-2 block">Evento {c1Type === 'rca' && <span className="text-destructive">*</span>}</Label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                 <SelectTrigger className={`h-12 ${c1Type === 'rca' && !selectedEventId ? 'border-destructive' : ''}`} data-testid="select-rca-event-mobile">
-                  <SelectValue placeholder="Seleziona evento..." />
+                  <SelectValue placeholder={c1Type === 'rca' ? "Seleziona evento concluso..." : "Seleziona evento..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {eventsForRCA.length === 0 ? (
-                    <SelectItem value="none" disabled>Nessun evento disponibile</SelectItem>
+                  {/* FIX 2026-01-18: Per RMG/RPM usa eventsForDaily (include ongoing) */}
+                  {(c1Type === 'rca' ? eventsForRCA : eventsForDaily).length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      {c1Type === 'rca' ? 'Nessun evento concluso' : 'Nessun evento disponibile'}
+                    </SelectItem>
                   ) : (
-                    eventsForRCA.map((event) => (
+                    (c1Type === 'rca' ? eventsForRCA : eventsForDaily).map((event) => (
                       <SelectItem key={event.id} value={event.id}>
                         {event.eventName} - {format(new Date(event.eventDate), "d MMM", { locale: it })}
+                        {event.status === 'ongoing' && ' (in corso)'}
                       </SelectItem>
                     ))
                   )}
@@ -2724,6 +2741,11 @@ export default function SiaeTransmissionsPage() {
               {c1Type === 'rca' && !selectedEventId && (
                 <p className="text-xs text-destructive mt-1">
                   Seleziona un evento per inviare il report RCA
+                </p>
+              )}
+              {c1Type !== 'rca' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Per RMG/RPM puoi selezionare eventi in corso
                 </p>
               )}
             </div>
