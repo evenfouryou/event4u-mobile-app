@@ -233,11 +233,16 @@ export default function SiaeTransmissionsPage() {
   // Use all ticketed events for dropdown filter
   const eventsForDropdown = ticketedEvents;
 
-  // FIX 2026-01-18: Per RCA mostra solo eventi closed, per RMG/RPM permetti anche ongoing
+  // FIX 2026-01-18: Per RCA mostra solo eventi closed, per RMG/RPM permetti anche ongoing/scheduled
   // RCA: solo eventi conclusi (obbligatorio per SIAE)
   const eventsForRCA = ticketedEvents?.filter(e => e.status === 'closed') || [];
-  // RMG/RPM: permetti eventi in corso o conclusi
-  const eventsForDaily = ticketedEvents?.filter(e => e.status === 'closed' || e.status === 'ongoing' || e.status === 'active') || [];
+  // RMG/RPM: permetti eventi scheduled (data odierna), ongoing, o conclusi
+  // Status possibili: draft, scheduled, ongoing, closed
+  const eventsForDaily = ticketedEvents?.filter(e => 
+    e.status === 'closed' || 
+    e.status === 'ongoing' || 
+    e.status === 'scheduled' // eventi programmati per oggi
+  ) || [];
 
   // Fetch validation prerequisites for selected event
   const { data: prerequisiteValidation, isLoading: isLoadingPrerequisites } = useQuery<{
@@ -1482,7 +1487,8 @@ export default function SiaeTransmissionsPage() {
                             <span className="text-xs text-muted-foreground">
                               {format(new Date(event.eventDate), "d MMMM yyyy", { locale: it })}
                               {event.status === 'ongoing' && ' (in corso)'}
-                              {event.status === 'active' && ' (attivo)'}
+                              {event.status === 'scheduled' && ' (programmato)'}
+                              {event.status === 'closed' && ' (concluso)'}
                             </span>
                           </div>
                         </SelectItem>
@@ -2733,6 +2739,7 @@ export default function SiaeTransmissionsPage() {
                       <SelectItem key={event.id} value={event.id}>
                         {event.eventName} - {format(new Date(event.eventDate), "d MMM", { locale: it })}
                         {event.status === 'ongoing' && ' (in corso)'}
+                        {event.status === 'scheduled' && ' (prog.)'}
                       </SelectItem>
                     ))
                   )}
