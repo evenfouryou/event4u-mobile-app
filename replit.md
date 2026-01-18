@@ -46,19 +46,23 @@ Events are categorized for `gestore` view into "In Corso", "Futuri", and "Passat
 ### Mobile App (Expo React Native)
 The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 54 and React Native. It features a dark nightclub theme (#0a0e17 background, #FFD700 golden accent, #00CED1 teal status) with glass-morphism effects matching the web design exactly. Uses React Navigation for routing, TanStack Query for data fetching, and Zustand for state management. Backend connection: https://workspace.jonathanpetrell.repl.co
 
-**Mobile Modules (67 screens total):**
--   **Authentication**: Login, Register, Forgot Password
--   **Public Events**: Home, Events list, Event details, Venues, Cart, Checkout
--   **Account Management**: Profile, Tickets, Wallet, Name Change, Resales
--   **SIAE Ticketing**: Dashboard, Transmissions list/detail, Reports generation (gestore/super_admin)
--   **Inventory/Magazzino**: Products, Stock levels, Consumption tracking, Adjustments (warehouse/gestore)
--   **AI Analytics**: Dashboard, Insights, Trends, Predictions, Recommendations (gestore/super_admin)
--   **Accounting/Contabilità**: Invoices, Transactions, Financial Reports (gestore/super_admin)
--   **Admin Super**: Gestori management, Companies, System Settings (super_admin only)
--   **Floor Plan Editor**: Venue maps, Zone editing, Occupancy view (organizer/gestore)
--   **Scanner Management**: Operators, Live scanning, Scan activity (organizer/gestore)
--   **PR Dashboard**: Guest lists, Tables, Events, Wallet
--   **Cashier**: Ticket issuance, Quick sale
+**Mobile Modules (155 screens total - Complete Feature Parity):**
+-   **Authentication**: Login, Register, Forgot Password (3 screens)
+-   **Public Events**: Home, Landing, Events list, Event details, Venues, Cart, Checkout, TicketVerify (8 screens)
+-   **Account Management**: Profile, Tickets, Wallet, Name Change, Resales, Subscriptions, ClientWallet, ResaleSuccess (8 screens)
+-   **SIAE Ticketing**: Dashboard, Transmissions, Reports, Config, ActivationCards, Customers, Events, Tickets, TicketTypes, NameChanges, Resales, Transactions, BoxOffice, Subscriptions, NumberedSeats, AuditLogs, Approvals, Tables, TicketingConsole, ReportC1, ReportC2 (22 screens)
+-   **Inventory/Magazzino**: Products, Stock levels, Consumption, Adjustments, Warehouse, Suppliers, PurchaseOrders, ReturnToWarehouse (8 screens)
+-   **Management/Organizer**: Dashboard, Events, Locations, LocationDetail, Stations, StationDetail, EventWizard, DirectStock, BartenderStock, EventFormats, NightFile, Personnel, Staff, Reports, EventPageEditor (15 screens)
+-   **AI Analytics**: Dashboard, Insights, Trends, Predictions, Recommendations (5 screens)
+-   **Accounting/Contabilità**: Dashboard, Invoices, InvoiceDetail, Transactions, FinancialReports (5 screens)
+-   **Admin Super**: Dashboard, SuperAdminDashboard, Gestori, GestoreDetail, Companies, SystemSettings, Users, NameChanges, SiteSettings, BillingPlans, BillingOrganizers, BillingOrganizerDetail, BillingInvoices, BillingReports, GestoreCompanies, GestoreUsers, GestoreEvents, EventDetail, Stripe (19 screens)
+-   **Floor Plan Editor**: Home, Viewer, Editor, ZoneDetail (4 screens)
+-   **Scanner Management**: Home, Scanning, Scanned, Tickets, Management (5 screens)
+-   **PR Dashboard**: Home, Dashboard, MyEvents, Staff, Management, StaffPrHome, StaffPrEventPanel, Scanner (8 screens)
+-   **Cashier**: Home, Dashboard, CassaBiglietti, Management, EventAllocations (5 screens)
+-   **Marketing**: Dashboard, Email, Loyalty, Referrals, Bundles (5 screens)
+-   **School Badges**: Manager, Landing, Verify, View, Error, Scanner (6 screens)
+-   **Settings/Tools**: Settings, Printer, TemplateBuilder, DigitalTemplateBuilder, DownloadSmartCardApp, Import, PriceLists, Beverage (8 screens)
 
 ## External Dependencies
 
