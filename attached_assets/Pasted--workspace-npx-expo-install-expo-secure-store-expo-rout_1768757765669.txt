@@ -1,0 +1,43 @@
+~/workspace$ npx expo install expo-secure-store expo-router expo-constants expo-linking expo-status-bar
+› Installing 5 SDK 54.0.0 compatible native modules using npm
+> npm install
+npm error code ERESOLVE
+npm error ERESOLVE unable to resolve dependency tree
+npm error
+npm error While resolving: event4u-mobile@1.0.0
+npm error Found: react-native-safe-area-context@4.12.0
+npm error node_modules/react-native-safe-area-context
+npm error   react-native-safe-area-context@"4.12.0" from the root project
+npm error   peer react-native-safe-area-context@">= 4.0.0" from @react-navigation/drawer@7.7.12
+npm error   node_modules/@react-navigation/drawer
+npm error     @react-navigation/drawer@"^7.1.1" from the root project
+npm error     peerOptional @react-navigation/drawer@"^7.5.0" from expo-router@6.0.21
+npm error     node_modules/expo-router
+npm error       expo-router@"~6.0.21" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error peer react-native-safe-area-context@">= 5.4.0" from expo-router@6.0.21
+npm error node_modules/expo-router
+npm error   expo-router@"~6.0.21" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error /home/runner/.npm/_logs/2026-01-18T17_35_48_555Z-eresolve-report.txt
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-01-18T17_35_48_555Z-debug-0.log
+Error: npm install exited with non-zero code: 1
+Error: npm install exited with non-zero code: 1
+    at ChildProcess.completionListener (/home/runner/workspace/node_modules/@expo/spawn-async/build/spawnAsync.js:42:23)
+    at Object.onceWrapper (node:events:634:26)
+    at ChildProcess.emit (node:events:519:28)
+    at maybeClose (node:internal/child_process:1101:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+    ...
+    at spawnAsync (/home/runner/workspace/node_modules/@expo/spawn-async/build/spawnAsync.js:7:23)
+    at NpmPackageManager.runAsync (/home/runner/workspace/node_modules/@expo/package-manager/build/node/BasePackageManager.js:41:42)
+    at /home/runner/workspace/node_modules/@expo/package-manager/build/node/NpmPackageManager.js:36:20
+    at /home/runner/workspace/node_modules/@expo/package-manager/build/utils/spawn.js:14:34
+~/workspace$ 
