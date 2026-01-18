@@ -568,11 +568,12 @@ async function sendDailyReports() {
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
         // Calculate transmission statistics
+        // FIX 2026-01-18: Cast per proprietà tipoTassazione non presente nel tipo base
         const dailyStats = await calculateTransmissionStats(
           reportData.filteredTickets || [],
           ticketedEvent.companyId,
           ticketedEvent.id,
-          ticketedEvent.tipoTassazione,
+          (ticketedEvent as any).tipoTassazione,
           ticketedEvent.entertainmentIncidence
         );
         const dailyFileHash = calculateFileHash(xmlContent);
@@ -821,11 +822,12 @@ async function sendMonthlyReports() {
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
         // Calculate transmission statistics
+        // FIX 2026-01-18: Cast per proprietà tipoTassazione non presente nel tipo base
         const monthlyStats = await calculateTransmissionStats(
           reportData.filteredTickets || [],
           ticketedEvent.companyId,
           ticketedEvent.id,
-          ticketedEvent.tipoTassazione,
+          (ticketedEvent as any).tipoTassazione,
           ticketedEvent.entertainmentIncidence
         );
         const monthlyFileHash = calculateFileHash(xmlContent);
@@ -1174,11 +1176,12 @@ async function sendRCAReports() {
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
         
         // Calculate transmission statistics for RCA
+        // FIX 2026-01-18: Usa ticketsForLog invece di eventTickets (variabile non definita)
         const rcaStats = await calculateTransmissionStats(
-          eventTickets,
+          ticketsForLog,
           ticketedEvent.companyId,
           ticketedEvent.id,
-          ticketedEvent.tipoTassazione,
+          (ticketedEvent as any).tipoTassazione,
           ticketedEvent.entertainmentIncidence
         );
         const rcaFileHash = calculateFileHash(xmlContent);

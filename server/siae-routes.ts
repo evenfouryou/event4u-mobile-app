@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -240,6 +240,10 @@ interface TransmissionStats {
   totalImpostaIntrattenimento: number;
   ticketsChanged: number;
   ticketsResold: number;
+  // FIX 2026-01-18: Aggiunti campi autoritativi per resend e validazione
+  totalGross: number;        // Totale lordo (solo biglietti NON annullati)
+  cancelledCount: number;    // Conteggio biglietti annullati (tutti gli stati SIAE)
+  activeTicketCount: number; // Conteggio biglietti attivi (non annullati)
 }
 
 export async function calculateTransmissionStats(
@@ -254,11 +258,18 @@ export async function calculateTransmissionStats(
   let totalImpostaIntrattenimento = 0;
   let ticketsChanged = 0;
   let ticketsResold = 0;
+  // FIX 2026-01-18: Campi separati per metriche resend
+  let totalGross = 0;        // Totale lordo solo biglietti attivi
+  let cancelledCount = 0;    // Biglietti annullati o sostituiti
+  let activeTicketCount = 0; // Biglietti attivi
   
   for (const ticket of filteredTickets) {
     const vatAmount = parseFloat(ticket.vatAmount || '0');
     const grossAmount = parseFloat(ticket.grossAmount || '0');
+    const ticketStatus = ticket.status || '';
     
+    // ORIGINALE: totalIva/totalEsenti/totalImpostaIntrattenimento su TUTTI i biglietti
+    // Questo mantiene compatibilità con le trasmissioni iniziali
     totalIva += vatAmount;
     
     if (vatAmount === 0) {
@@ -269,7 +280,20 @@ export async function calculateTransmissionStats(
       totalImpostaIntrattenimento += grossAmount * (entertainmentIncidence / 100);
     }
     
-    if (ticket.status === 'annullato_cambio_nominativo' || ticket.replacedByTicketId) {
+    // FIX 2026-01-18: Calcolo metriche separate per resend
+    // Un biglietto è "cancellato" se: isCancelledStatus OPPURE ha replacedByTicketId
+    const isCancelled = isCancelledStatus(ticketStatus) || !!ticket.replacedByTicketId;
+    
+    if (isCancelled) {
+      cancelledCount++;
+    } else {
+      // Solo biglietti attivi contribuiscono a totalGross
+      totalGross += grossAmount;
+      activeTicketCount++;
+    }
+    
+    // Conteggio cambio nominativo (sottocategoria degli annullati)
+    if (ticketStatus === 'annullato_cambio_nominativo' || ticket.replacedByTicketId) {
       ticketsChanged++;
     }
   }
@@ -289,6 +313,9 @@ export async function calculateTransmissionStats(
     totalImpostaIntrattenimento,
     ticketsChanged,
     ticketsResold,
+    totalGross,
+    cancelledCount,
+    activeTicketCount,
   };
 }
 
@@ -5115,8 +5142,14 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     );
     const resendFileHash = calculateFileHash(rcaResult.xml);
     
+    // FIX 2026-01-18: Usa valori autoritativi da rcaResult per garantire allineamento
+    // rcaResult ora contiene: ticketCount, cancelledCount, totalGrossAmount, activeGrossAmount
+    // Questi sono i valori calcolati durante la generazione XML - quindi DEVONO corrispondere
+    const resendFileName = generateSiaeAttachmentName('rca', new Date(original.periodDate), nextProgressivo, null, resendResolvedSystemCode);
+    
     // Create new transmission with substitution flag
     // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
+    // FIX 2026-01-18: Usa valori autoritativi da rcaResult (non da stats separate)
     const newTransmission = await siaeStorage.createSiaeTransmission({
       companyId: original.companyId,
       ticketedEventId: original.ticketedEventId,
@@ -5126,13 +5159,13 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       isSubstitution: true,
       originalTransmissionId: original.id,
       progressivoInvio: nextProgressivo,
-      fileName: rcaResult.fileName,
+      fileName: resendFileName.replace(/\.xsi(\.p7m)?$/, ''), // Nome senza estensione
       fileExtension: '.xsi',
       fileContent: rcaResult.xml,
       status: 'pending',
-      ticketsCount: rcaResult.ticketsCount,
-      ticketsCancelled: rcaResult.cancelledCount,
-      totalAmount: rcaResult.totalRevenue.toFixed(2),
+      ticketsCount: rcaResult.ticketCount, // FIX: valore autoritativo da XML generator
+      ticketsCancelled: rcaResult.cancelledCount, // FIX: valore autoritativo da XML generator
+      totalAmount: rcaResult.totalGrossAmount.toFixed(2), // FIX: valore autoritativo da XML generator
       systemCode: resendResolvedSystemCode, // FIX: Salva codice per reinvii futuri
       fileHash: resendFileHash,
       totalIva: resendStats.totalIva.toFixed(2),
@@ -5186,10 +5219,10 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       await sendSiaeTransmissionEmail({
         to: toEmail,
         companyName: company?.name || 'N/A',
-        transmissionType: original.transmissionType,
+        transmissionType: original.transmissionType as "monthly" | "daily" | "rca" | "corrective",
         periodDate: original.periodDate,
-        ticketsCount: rcaResult.ticketsCount,
-        totalAmount: rcaResult.totalRevenue.toFixed(2),
+        ticketsCount: rcaResult.ticketCount, // FIX 2026-01-18: valore autoritativo da rcaResult
+        totalAmount: rcaResult.totalGrossAmount.toFixed(2), // FIX 2026-01-18: valore autoritativo da rcaResult
         xmlContent: rcaResult.xml,
         transmissionId: newTransmission.id,
         systemCode: resendResolvedSystemCode, // FIX: Usa codice risolto
@@ -6345,7 +6378,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   if (!emailResult.success) {
     await siaeStorage.updateSiaeTransmission(transmission.id, {
       status: 'failed',
-      error: emailResult.error || 'Invio email fallito',
+      errorMessage: emailResult.error || 'Invio email fallito',
     });
     return {
       success: false,
@@ -6378,10 +6411,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     attachmentHash,
     smimeSigned: emailResult.smimeSigned || false,
     smimeSignerEmail: emailResult.signerEmail || undefined,
-    smimeCertSerial: emailResult.certificateSerial || undefined,
     smimeSignedAt: emailResult.signedAt ? new Date(emailResult.signedAt) : undefined,
     status: 'sent',
-    smtpMessageId: emailResult.messageId || undefined,
     sentAt: new Date(),
   });
   
@@ -6790,9 +6821,11 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
           
         await siaeStorage.createSiaeLog({
           companyId: matchedTransmission.companyId,
-          eventType: response.status === 'accepted' ? 'transmission_confirmed' : 'transmission_error',
+          logType: response.status === 'accepted' ? 'transmission_confirmed' : 'transmission_error',
           eventDetails,
           transmissionId: matchedTransmission.id,
+          cfOrganizzatore: '',
+          cfTitolare: '',
         });
         
         console.log(`[SIAE-ROUTES] Updated transmission ${matchedTransmission.id}: ${newStatus}`);
@@ -6881,9 +6914,11 @@ router.post("/api/siae/transmissions/:id/confirm-receipt", requireAuth, requireG
     // Log the confirmation
     await siaeStorage.createSiaeLog({
       companyId: transmission.companyId,
-      eventType: 'transmission_confirmed',
+      logType: 'transmission_confirmed',
       eventDetails: `Conferma ricezione trasmissione ${id} - Protocollo: ${receiptProtocol}`,
       transmissionId: id,
+      cfOrganizzatore: '',
+      cfTitolare: '',
     });
     
     const user = req.user as any;
@@ -6962,13 +6997,6 @@ router.post("/api/siae/box-office/sessions", requireAuth, async (req: Request, r
         companyId = channel.companyId;
       }
     }
-    if (!companyId && data.ticketedEventId) {
-      const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(data.ticketedEventId);
-      if (ticketedEvent?.companyId) {
-        companyId = ticketedEvent.companyId;
-      }
-    }
-    
     if (companyId) {
       await siaeStorage.createAuditLog({
         companyId,
@@ -7005,13 +7033,6 @@ router.post("/api/siae/box-office/sessions/:id/close", requireAuth, async (req: 
         companyId = channel.companyId;
       }
     }
-    if (!companyId && session.ticketedEventId) {
-      const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(session.ticketedEventId);
-      if (ticketedEvent?.companyId) {
-        companyId = ticketedEvent.companyId;
-      }
-    }
-    
     if (companyId) {
       await siaeStorage.createAuditLog({
         companyId,
@@ -7121,7 +7142,6 @@ router.post("/api/siae/subscriptions", requireAuth, requireOrganizer, async (req
     if (!customerId && req.body.holderFirstName && req.body.holderLastName) {
       const uniqueId = crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase();
       const newCustomer = await siaeStorage.createSiaeCustomer({
-        companyId: req.body.companyId || user.companyId,
         firstName: req.body.holderFirstName,
         lastName: req.body.holderLastName,
         uniqueCode: `CLT${uniqueId}`,
@@ -7339,8 +7359,7 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
         errorCode: "AGENT_SELECTION_REQUIRED",
         availableAgents: connectedAgents.map(a => ({
           agentId: a.agentId,
-          deviceName: a.deviceName,
-          printerName: a.printerName
+          deviceName: a.deviceName
         }))
       });
     }
@@ -7359,13 +7378,13 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
     const validFromStr = subscription.validFrom ? new Date(subscription.validFrom).toLocaleDateString('it-IT') : '';
     const validToStr = subscription.validTo ? new Date(subscription.validTo).toLocaleDateString('it-IT') : '';
     const totalAmountStr = `€ ${Number(subscription.totalAmount || 0).toFixed(2).replace('.', ',')}`;
-    const emissionDateStr = subscription.issuedAt ? new Date(subscription.issuedAt).toLocaleString('it-IT') : new Date().toLocaleString('it-IT');
+    const emissionDateStr = subscription.createdAt ? new Date(subscription.createdAt).toLocaleString('it-IT') : new Date().toLocaleString('it-IT');
     
     // Map subscription data to template field keys
     const subscriptionData: Record<string, string> = {
       subscription_code: subscription.subscriptionCode || '',
       subscriber_name: holderName || 'N/D',
-      subscription_type: subscription.subscriptionType || '',
+      subscription_type: subscription.subscriptionTypeId || '',
       total_entries: String(subscription.eventsCount || 0),
       used_entries: String(subscription.eventsUsed || 0),
       remaining_entries: String((subscription.eventsCount || 0) - (subscription.eventsUsed || 0)),
@@ -7562,10 +7581,9 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       });
     }
     
-    // Update subscription printed status
+    // Update subscription updated timestamp
     await db.update(siaeSubscriptions)
       .set({ 
-        printedAt: new Date(),
         updatedAt: new Date()
       })
       .where(eq(siaeSubscriptions.id, subscriptionId));
@@ -7641,7 +7659,7 @@ router.get("/api/siae/subscriptions/:id/usage", requireAuth, async (req: Request
         ticketedEventId: siaeTicketedEvents.id,
         eventId: events.id,
         eventName: events.name,
-        eventDate: events.startDate,
+        eventDate: events.startDatetime,
         locationId: events.locationId,
       })
       .from(siaeTicketedEvents)
@@ -7778,7 +7796,6 @@ router.post("/api/siae/ticketed-events/:eventId/subscriptions", requireAuth, asy
     if (!customerId && req.body.holderFirstName && req.body.holderLastName) {
       const uniqueId = crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase();
       const newCustomer = await siaeStorage.createSiaeCustomer({
-        companyId: user.companyId,
         firstName: req.body.holderFirstName,
         lastName: req.body.holderLastName,
         uniqueCode: `CLT${uniqueId}`,
@@ -8026,7 +8043,7 @@ async function hydrateC1EventContextFromTickets(
       sectors: allSectors.map((s: any): C1SectorData => ({
         id: s.id,
         sectorCode: s.sectorCode,
-        orderCode: s.orderCode,
+        orderCode: s.sortOrder,
         capacity: s.capacity,
       })),
       tickets: eventTickets.map((t: any): C1TicketData => ({
@@ -9431,7 +9448,6 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         participantLastName: t.participantLastName || null,
         originalTicketId: t.originalTicketId || null,
         replacedByTicketId: t.replacedByTicketId || null,
-        entertainmentTaxBase: t.entertainmentTaxBase || null,
         originalProgressiveNumber: t.progressiveNumber || null,
       };
     });
@@ -9442,7 +9458,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       name: event.eventName || 'Evento',
       date: eventDate,
       time: event.eventTime ? new Date(event.eventTime) : eventDate,
-      venueCode: location?.siaeCode || event.siaeVenueCode || '0000000000001',
+      venueCode: location?.siaeLocationCode || event.siaeVenueCode || '0000000000001',
       genreCode: event.genreCode || '64',
       organizerTaxId: company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '',
       organizerName: company?.name || siaeConfig?.businessName || 'Organizzatore',
@@ -9763,7 +9779,7 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
       },
       sectors: sectors.map(s => ({
         id: s.id,
-        orderCode: s.orderCode || null,
+        orderCode: s.sortOrder || null,
         capacity: s.capacity || null,
       })),
       systemConfig: systemConfig ? {

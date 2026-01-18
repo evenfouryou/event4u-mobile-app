@@ -1907,11 +1907,15 @@ export interface RCAParams {
 
 /**
  * Risultato generazione RiepilogoControlloAccessi XML
+ * FIX 2026-01-18: Aggiunti campi autoritativi per allineamento resend
  */
 export interface RCAResult {
   success: boolean;
   xml: string;
-  ticketCount: number;
+  ticketCount: number;           // Totale biglietti processati
+  cancelledCount: number;        // Biglietti annullati (isCancelledStatus + replaced)
+  totalGrossAmount: number;      // Totale lordo TUTTI i biglietti
+  activeGrossAmount: number;     // Totale lordo solo biglietti attivi
   sectorSummaries: RCASectorSummary[];
   errors: string[];
   warnings: string[];
@@ -2044,14 +2048,22 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const { event, tickets, sectors, systemConfig, companyName, taxId, progressivo = 1, venueName, author, performer, forceSubstitution = false } = params;
   
   // Validazione parametri obbligatori
+  // FIX 2026-01-18: Early return con tutti i campi dell'interfaccia RCAResult
+  // NOTA: Clona gli array errors/warnings per evitare condivisione di stato tra chiamate
+  const emptyResult = (): RCAResult => ({
+    success: false, xml: '', ticketCount: 0, cancelledCount: 0,
+    totalGrossAmount: 0, activeGrossAmount: 0, sectorSummaries: [], 
+    errors: [...errors], warnings: [...warnings]
+  });
+  
   if (!event) {
     errors.push('Evento obbligatorio per generazione RiepilogoControlloAccessi');
-    return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
+    return emptyResult();
   }
   
   if (!taxId || taxId.length < 11) {
     errors.push('Codice Fiscale Titolare obbligatorio (11-16 caratteri)');
-    return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
+    return emptyResult();
   }
   
   // FIX 2026-01-17: Validazione codice sistema PRIMA di generare XML
@@ -2059,7 +2071,7 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const systemCodeResult = resolveSystemCodeSafe(null, systemConfig);
   if (!systemCodeResult.success || !systemCodeResult.systemCode) {
     errors.push(systemCodeResult.error || 'Codice sistema SIAE non configurato - impossibile generare report');
-    return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
+    return emptyResult();
   }
   const sistemaEmissione = systemCodeResult.systemCode;
   const cfTitolare = taxId.toUpperCase().substring(0, 16);
@@ -2152,10 +2164,20 @@ export function generateRCAXml(params: RCAParams): RCAResult {
     }
   }
   
+  // FIX 2026-01-18: Calcola valori autoritativi durante l'iterazione
+  // Questi valori verranno usati per i metadati della trasmissione (allineamento resend)
+  let totalCancelledCount = 0;
+  let totalGrossAmount = 0;
+  let activeGrossAmount = 0;
+  
   // Aggrega biglietti per settore → tipo titolo
   for (const ticket of tickets) {
     const codiceOrdinePosto = normalizeCodiceOrdinePosto(ticket.sectorCode);
     const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
+    
+    // Calcola valori autoritativi per ogni biglietto
+    const grossAmount = parseFloat(ticket.grossAmount || '0');
+    totalGrossAmount += grossAmount;
     
     // Crea settore se non esiste
     if (!sectorMap.has(codiceOrdinePosto)) {
@@ -2189,9 +2211,15 @@ export function generateRCAXml(params: RCAParams): RCAResult {
     // Mappa status a contatori (usiamo solo Tradiz - tradizionale)
     const status = (ticket.status || '').toLowerCase();
     
-    if (isCancelledStatus(status)) {
+    // FIX 2026-01-18: Traccia annullati con isCancelledStatus + replacedByTicketId
+    // Un biglietto è annullato se ha status annullato OPPURE è stato sostituito
+    const isCancelled = isCancelledStatus(status) || !!(ticket as any).replacedByTicketId;
+    
+    if (isCancelled) {
       counters.annullatiTradiz++;
+      totalCancelledCount++;
     } else if (status === 'validated' || status === 'used' || status === 'usato' || status === 'checked_in') {
+      activeGrossAmount += grossAmount;
       const isManual = (ticket as any).manualCheckin === true;
       if (isManual) {
         counters.manualiTradiz++;
@@ -2199,6 +2227,8 @@ export function generateRCAXml(params: RCAParams): RCAResult {
         counters.automatizzatiTradiz++;
       }
     } else {
+      // Non annullato e non validato = no accesso
+      activeGrossAmount += grossAmount;
       counters.noAccessoTradiz++;
     }
   }
@@ -2352,10 +2382,15 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   // RFC 5751 e Allegato C richiedono CRLF nei messaggi S/MIME
   const xml = xmlLines.join('\r\n');
   
+  // FIX 2026-01-18: Ritorna valori autoritativi calcolati durante iterazione
+  // Questi sono i valori che devono essere usati per i metadati della trasmissione
   return {
     success: errors.length === 0,
     xml,
     ticketCount: tickets.length,
+    cancelledCount: totalCancelledCount,
+    totalGrossAmount: totalGrossAmount,
+    activeGrossAmount: activeGrossAmount,
     sectorSummaries,
     errors,
     warnings
