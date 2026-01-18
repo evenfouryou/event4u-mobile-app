@@ -89,6 +89,14 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Falls back to cached data or config only if active read fails
 - Ensures correct system code is always used for S/MIME signed transmissions
 
+**RPM Internal Dates Validation (2026-01-18)**: Added comprehensive validation for ALL internal dates in RPM reports to prevent error 0603:
+- Validates `<Validita>` dates belong to the report month (YYYYMM)
+- Validates `<DataInizioValidita>` for subscriptions are in report month
+- Validates `<DataFineValidita>` is not before report month
+- Validates `<DataEmissione>` dates are in report month
+- Blocks transmission with clear error messages listing each invalid date
+- Prevents "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti" errors
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 

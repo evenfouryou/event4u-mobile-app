@@ -4182,6 +4182,91 @@ export async function validatePreTransmission(
           });
         }
       }
+      
+      // FIX 2026-01-18: Verifica coerenza date interne al riepilogo RPM
+      // TUTTE le date nel contenuto XML devono appartenere al mese dichiarato
+      // Errore 0603: "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
+      const meseMatchForContent = xml.match(/Mese="([^"]+)"/);
+      if (meseMatchForContent) {
+        const reportMese = meseMatchForContent[1]; // YYYYMM
+        
+        // Validazione <Validita> - date di validità biglietti/abbonamenti
+        const validitaMatches = Array.from(xml.matchAll(/<Validita>(\d{8})<\/Validita>/g));
+        for (const match of validitaMatches) {
+          const validitaDate = match[1]; // YYYYMMDD
+          const validitaMese = validitaDate.substring(0, 6); // YYYYMM
+          
+          // La Validita DEVE appartenere al mese del report
+          if (validitaMese !== reportMese) {
+            datesCoherent = false;
+            errors.push({
+              code: 'VALIDITA_DATE_MISMATCH',
+              field: 'Validita',
+              message: `Data Validita (${validitaDate}) non appartiene al mese del riepilogo (${reportMese})`,
+              resolution: `Tutte le date <Validita> devono essere nel mese ${reportMese}. Verificare la logica di generazione abbonamenti.`,
+              siaeErrorCode: '0603'
+            });
+          }
+        }
+        
+        // Validazione <DataInizioValidita> per abbonamenti
+        const dataInizioMatches = Array.from(xml.matchAll(/<DataInizioValidita>(\d{8})<\/DataInizioValidita>/g));
+        for (const match of dataInizioMatches) {
+          const inizioDate = match[1]; // YYYYMMDD
+          const inizioMese = inizioDate.substring(0, 6); // YYYYMM
+          
+          if (inizioMese !== reportMese) {
+            datesCoherent = false;
+            errors.push({
+              code: 'DATA_INIZIO_VALIDITA_MISMATCH',
+              field: 'DataInizioValidita',
+              message: `Data inizio validità (${inizioDate}) non appartiene al mese del riepilogo (${reportMese})`,
+              resolution: `Tutte le date <DataInizioValidita> devono essere nel mese ${reportMese}`,
+              siaeErrorCode: '0603'
+            });
+          }
+        }
+        
+        // Validazione <DataFineValidita> per abbonamenti
+        // NOTA: DataFineValidita può essere FUTURA rispetto al mese del report (es. abbonamento annuale)
+        // MA se è PASSATA deve comunque appartenere almeno al mese del report o successivo
+        const dataFineMatches = Array.from(xml.matchAll(/<DataFineValidita>(\d{8})<\/DataFineValidita>/g));
+        for (const match of dataFineMatches) {
+          const fineDate = match[1]; // YYYYMMDD
+          const fineMese = fineDate.substring(0, 6); // YYYYMM
+          
+          // DataFineValidita deve essere >= al mese del report (può essere futura)
+          if (fineMese < reportMese) {
+            datesCoherent = false;
+            errors.push({
+              code: 'DATA_FINE_VALIDITA_EXPIRED',
+              field: 'DataFineValidita',
+              message: `Data fine validità (${fineDate}) è precedente al mese del riepilogo (${reportMese})`,
+              resolution: `Le date <DataFineValidita> devono essere nel mese ${reportMese} o successivo`,
+              siaeErrorCode: '0603'
+            });
+          }
+        }
+        
+        // Validazione <DataEmissione> per biglietti nel riepilogo
+        const dataEmissioneMatches = Array.from(xml.matchAll(/<DataEmissione>(\d{8})<\/DataEmissione>/g));
+        for (const match of dataEmissioneMatches) {
+          const emissioneDate = match[1]; // YYYYMMDD
+          const emissioneMese = emissioneDate.substring(0, 6); // YYYYMM
+          
+          // DataEmissione deve appartenere al mese del report
+          if (emissioneMese !== reportMese) {
+            datesCoherent = false;
+            errors.push({
+              code: 'DATA_EMISSIONE_MISMATCH',
+              field: 'DataEmissione',
+              message: `Data emissione (${emissioneDate}) non appartiene al mese del riepilogo (${reportMese})`,
+              resolution: `Tutte le date <DataEmissione> devono essere nel mese ${reportMese}`,
+              siaeErrorCode: '0603'
+            });
+          }
+        }
+      }
     }
     
     // Verifica Data attributo (per report giornaliero)
