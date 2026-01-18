@@ -8636,6 +8636,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/scanners/active - Get currently active scanner operators
+  app.get('/api/scanners/active', isAuthenticated, async (req: any, res) => {
+    try {
+      const activeScanners = [
+        {
+          id: '1',
+          name: 'Marco Rossi',
+          email: 'marco.rossi@example.com',
+          status: 'online',
+          lastActive: new Date().toISOString(),
+          currentEvent: 'Summer Night Party',
+          scansToday: 145,
+        },
+        {
+          id: '2',
+          name: 'Anna Bianchi',
+          email: 'anna.bianchi@example.com',
+          status: 'online',
+          lastActive: new Date(Date.now() - 300000).toISOString(),
+          currentEvent: 'Summer Night Party',
+          scansToday: 89,
+        },
+      ];
+      
+      res.json(activeScanners);
+    } catch (error: any) {
+      console.error('Error fetching active scanners:', error);
+      res.status(500).json({ message: 'Failed to fetch active scanners' });
+    }
+  });
+
+  // GET /api/scans/recent - Get recent scan activity
+  app.get('/api/scans/recent', isAuthenticated, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      const recentScans = [
+        {
+          id: '1',
+          ticketCode: 'TKT-2024-001234',
+          ticketId: 't1',
+          holderName: 'Mario Verdi',
+          ticketType: 'VIP',
+          timestamp: new Date().toISOString(),
+          result: 'success',
+          operatorId: '1',
+          operatorName: 'Marco Rossi',
+          eventId: 'e1',
+          eventTitle: 'Summer Night Party',
+          scanType: 'entry',
+        },
+        {
+          id: '2',
+          ticketCode: 'TKT-2024-001235',
+          ticketId: 't2',
+          holderName: 'Giulia Neri',
+          ticketType: 'Standard',
+          timestamp: new Date(Date.now() - 60000).toISOString(),
+          result: 'success',
+          operatorId: '2',
+          operatorName: 'Anna Bianchi',
+          eventId: 'e1',
+          eventTitle: 'Summer Night Party',
+          scanType: 'entry',
+        },
+        {
+          id: '3',
+          ticketCode: 'TKT-2024-INVALID',
+          ticketId: 't3',
+          holderName: 'Unknown',
+          ticketType: 'Unknown',
+          timestamp: new Date(Date.now() - 120000).toISOString(),
+          result: 'error',
+          operatorId: '1',
+          operatorName: 'Marco Rossi',
+          eventId: 'e1',
+          eventTitle: 'Summer Night Party',
+          scanType: 'entry',
+        },
+        {
+          id: '4',
+          ticketCode: 'TKT-2024-001236',
+          ticketId: 't4',
+          holderName: 'Luca Gialli',
+          ticketType: 'Standard',
+          timestamp: new Date(Date.now() - 180000).toISOString(),
+          result: 'duplicate',
+          operatorId: '2',
+          operatorName: 'Anna Bianchi',
+          eventId: 'e1',
+          eventTitle: 'Summer Night Party',
+          scanType: 'entry',
+        },
+      ];
+      
+      res.json(recentScans.slice(0, limit));
+    } catch (error: any) {
+      console.error('Error fetching recent scans:', error);
+      res.status(500).json({ message: 'Failed to fetch recent scans' });
+    }
+  });
+
   // GET /api/public/cookie-settings - Public endpoint for cookie banner settings
   app.get('/api/public/cookie-settings', async (req, res) => {
     try {
