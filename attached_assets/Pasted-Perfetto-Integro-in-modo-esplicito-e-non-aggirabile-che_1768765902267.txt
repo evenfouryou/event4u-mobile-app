@@ -1,0 +1,125 @@
+Perfetto 👍
+Integro **in modo esplicito e non aggirabile** che **DEVONO essere implementate TUTTE le funzioni, TUTTE le schermate e TUTTI i tipi di utente**, **senza elencarli**, facendo sempre riferimento al sito come fonte unica.
+
+Qui sotto trovi il **PROMPT FINALE DEFINITIVO** pronto per Replit AI 👇
+(questo è già scritto “a prova di interpretazione”)
+
+---
+
+## 🎯 Prompt per Replit AI (Expo / React Native)
+
+> **ATTENZIONE – CONTESTO CRITICO**
+> L’app mobile generata con **Expo (React Native)** **NON è conforme** al progetto originale.
+>
+> Attualmente:
+>
+> * La struttura dell’app è diversa dal sito
+> * I flussi non coincidono
+> * Le schermate sono incomplete
+> * Le funzioni non sono tutte presenti
+> * La grafica è stata interpretata in modo errato
+>
+> ---
+>
+> ## 🧠 FONTE DI VERITÀ UNICA
+>
+> **Il sito web è l’unica e sola fonte di riferimento.**
+>
+> Tutto ciò che è presente sul sito in termini di:
+>
+> * **funzioni**
+> * **schermate**
+> * **tipologie di utente**
+> * **permessi**
+> * **sezioni**
+> * **flussi**
+> * **logica applicativa**
+> * **notifiche**
+> * **UI / UX**
+>
+> **DEVE essere implementato integralmente anche nell’app mobile**,
+> senza omissioni, riduzioni o reinterpretazioni.
+>
+> ---
+>
+> ## 🏠 HOME DELL’APP (REQUISITO OBBLIGATORIO)
+>
+> L’app **deve avviarsi dalla Home pubblica dedicata ai clienti**,
+> **così come già progettata e approvata**.
+>
+> * Accessibile senza login
+> * Identica per struttura, logica e grafica
+>
+> **Solo successivamente** è consentito l’accesso alle schermate di:
+>
+> * login
+> * autenticazione
+> * aree riservate in base all’utente
+>
+> Il flusso **Home → Login → Area riservata** **non deve essere alterato**.
+>
+> ---
+>
+> ## 🧩 FUNZIONI, SCHERMATE E UTENTI
+>
+> * **Ogni funzione presente sul sito deve esistere nell’app**
+> * **Ogni schermata presente sul sito deve essere replicata nell’app**
+> * **Ogni tipologia di utente presente sul sito deve essere gestita nell’app**
+>
+> Le differenze tra sito e app **possono essere esclusivamente di layout**,
+> mai di contenuto o comportamento.
+>
+> ---
+>
+> ## 🎨 UI / UX
+>
+> * Grafica coerente e fedele al sito
+> * Stessi colori, font, stile e branding
+> * Nessun utilizzo di template o componenti grafici generici Expo
+> * Nessuna reinterpretazione creativa
+>
+> ---
+>
+> ## 🔁 COMPORTAMENTO OBBLIGATORIO
+>
+> * Se qualcosa esiste sul sito → **deve esistere anche nell’app**
+> * Se qualcosa funziona in un certo modo sul sito → **deve funzionare allo stesso modo nell’app**
+>
+> Le notifiche e ogni meccanismo di comunicazione presenti sul sito
+> **devono essere attivi e funzionanti anche nell’app**.
+>
+> ---
+>
+> ## 🚨 REGOLA NON NEGOZIABILE
+>
+> In caso di dubbio:
+>
+> * **NON inventare**
+> * **NON semplificare**
+> * **NON interpretare**
+>
+> Chiedi chiarimenti **prima di procedere**.
+>
+> ---
+>
+> ## 🛠️ OBIETTIVO FINALE
+>
+> L’app Expo deve essere:
+>
+> * una **replica funzionale completa del sito**
+> * completa di **tutte le funzioni**
+> * completa di **tutte le schermate**
+> * completa di **tutti i tipi di utente**
+> * pronta per iOS e Android
+>
+> **L’app mobile è l’estensione diretta del sito, non una versione ridotta.**
+
+---
+
+Se vuoi, posso:
+
+* ridurlo in **versione “AI strict / command mode”**
+* adattarlo **esattamente al tuo stack (Expo + TypeScript + Express)**
+* oppure prepararti un **prompt di controllo** per verificare che Replit abbia fatto tutto
+
+Dimmi tu e lo portiamo a livello enterprise 🚀
