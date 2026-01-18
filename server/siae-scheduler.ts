@@ -521,11 +521,20 @@ async function sendDailyReports() {
         // ticketedEvent NON ha systemCode - è nella tabella siaeSystemConfig
         const siaeConfigDaily = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
         
-        // FIX 2026-01-15: Risolvi systemCode UNA VOLTA e passa a generateXMLContent
-        // Questo garantisce coerenza tra XML e nome file (errori SIAE 0600/0603)
+        // FIX 2026-01-18: TUTTI i report sono firmati S/MIME, usa resolveSystemCodeForSmime
+        // Questo garantisce coerenza tra XML e Smart Card (errori SIAE 0600/0603)
         const siaeConfigForResolve = { systemCode: siaeConfigDaily?.systemCode || undefined };
-        const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
-        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigDaily?.systemCode})`);
+        const smimeResult = resolveSystemCodeForSmime(cachedEfff, siaeConfigForResolve);
+        if (!smimeResult.success || !smimeResult.systemCode) {
+          log(`BLOCCO TRASMISSIONE RMG: ${smimeResult.error}`);
+          log(`Suggerimento: Collegare la Smart Card tramite Desktop Bridge prima dell'invio`);
+          continue; // Salta - Smart Card richiesta per S/MIME
+        }
+        const systemCode = smimeResult.systemCode;
+        if (smimeResult.warning) {
+          log(`WARNING RMG: ${smimeResult.warning}`);
+        }
+        log(`FIX 2026-01-18: Resolved systemCode=${systemCode} from ${smimeResult.source} for daily report`);
         
         // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
         // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
@@ -788,11 +797,20 @@ async function sendMonthlyReports() {
         // ticketedEvent NON ha systemCode - è nella tabella siaeSystemConfig
         const siaeConfigMonthly = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
         
-        // FIX 2026-01-15: Risolvi systemCode UNA VOLTA e passa a generateXMLContent
-        // Questo garantisce coerenza tra XML e nome file (errori SIAE 0600/0603)
+        // FIX 2026-01-18: TUTTI i report sono firmati S/MIME, usa resolveSystemCodeForSmime
+        // Questo garantisce coerenza tra XML e Smart Card (errori SIAE 0600/0603)
         const siaeConfigForResolve = { systemCode: siaeConfigMonthly?.systemCode || undefined };
-        const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
-        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for monthly report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigMonthly?.systemCode})`);
+        const smimeResultMonthly = resolveSystemCodeForSmime(cachedEfff, siaeConfigForResolve);
+        if (!smimeResultMonthly.success || !smimeResultMonthly.systemCode) {
+          log(`BLOCCO TRASMISSIONE RPM: ${smimeResultMonthly.error}`);
+          log(`Suggerimento: Collegare la Smart Card tramite Desktop Bridge prima dell'invio`);
+          continue; // Salta - Smart Card richiesta per S/MIME
+        }
+        const systemCode = smimeResultMonthly.systemCode;
+        if (smimeResultMonthly.warning) {
+          log(`WARNING RPM: ${smimeResultMonthly.warning}`);
+        }
+        log(`FIX 2026-01-18: Resolved systemCode=${systemCode} from ${smimeResultMonthly.source} for monthly report`);
         
         // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
         // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600

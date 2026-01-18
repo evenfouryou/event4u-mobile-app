@@ -5187,6 +5187,21 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       resendCancelledCount = 0; // C1 doesn't track cancelled separately in result
     }
     
+    // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per tutti i flussi
+    const resendValidationType: 'rca' | 'rmg' | 'rpm' = filenameType === 'rca' ? 'rca' : (filenameType === 'mensile' ? 'rpm' : 'rmg');
+    const resendPreValidation = await validatePreTransmission(generatedXml, resendValidationType);
+    if (!resendPreValidation.valid) {
+      console.error(`[SIAE-ROUTES] Resend DTD validation failed: ${resendPreValidation.errors.join('; ')}`);
+      return res.status(400).json({
+        message: `Errore validazione XML: ${resendPreValidation.errors[0]}`,
+        errors: resendPreValidation.errors,
+        code: 'DTD_VALIDATION_FAILED'
+      });
+    }
+    if (resendPreValidation.warnings.length > 0) {
+      console.warn(`[SIAE-ROUTES] Resend DTD warnings: ${resendPreValidation.warnings.join('; ')}`);
+    }
+    
     // Calculate transmission statistics
     const resendStats = await calculateTransmissionStats(
       eventTickets,
