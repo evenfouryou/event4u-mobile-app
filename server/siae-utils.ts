@@ -1623,8 +1623,13 @@ export function validateC1Report(xml: string): C1ValidationResult {
         summary.totalAmount += parseInt(match[1], 10);
       }
     } else {
-      // SIAE richiede almeno un evento nel report C1 - senza eventi il report è invalido
-      errors.push('SIAE_NO_EVENTS: Nessun elemento <Evento> trovato. Il report C1 richiede almeno un evento con biglietti emessi.');
+      // FIX 2026-01-18: Per report giornaliero (RMG), 0 biglietti è permesso (solo warning)
+      // Per report mensile (RPM), rimane un errore bloccante
+      if (isRG) {
+        warnings.push('Nessun evento trovato nel report giornaliero (RMG con 0 biglietti)');
+      } else {
+        errors.push('SIAE_NO_EVENTS: Nessun elemento <Evento> trovato. Il report C1 mensile richiede almeno un evento con biglietti emessi.');
+      }
     }
     
     if (!xml.includes(`</${rootTag}>`)) {
@@ -4417,8 +4422,14 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const sostituzione = progressivo > 1 ? 'S' : 'N';
   const progressivePadded = String(progressivo).padStart(3, '0');
 
+  // FIX 2026-01-18: Per report giornaliero (RMG), 0 biglietti è permesso
+  // Per report mensile (RPM), rimane un errore bloccante
   if (events.length === 0 && subscriptions.length === 0) {
-    throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto. Il report C1 richiede almeno un evento con biglietti emessi.');
+    if (isMonthly) {
+      throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto. Il report C1 mensile richiede almeno un evento con biglietti emessi.');
+    }
+    // Per giornaliero, genera un report vuoto con warning nel log
+    console.warn('[generateC1Xml] Report giornaliero senza eventi/abbonamenti - generazione report vuoto');
   }
 
   let eventsXml = '';

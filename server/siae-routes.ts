@@ -5161,11 +5161,16 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         isMonthly
       );
       
+      // FIX 2026-01-18: Per report giornaliero (RMG), 0 biglietti è permesso
+      // Per report mensile (RPM), rimane un errore bloccante
       if (hydratedData.events.length === 0 && hydratedData.subscriptions.length === 0) {
-        return res.status(400).json({
-          message: 'SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto.',
-          code: 'NO_DATA_FOR_PERIOD'
-        });
+        if (isMonthly) {
+          return res.status(400).json({
+            message: 'SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto.',
+            code: 'NO_DATA_FOR_PERIOD'
+          });
+        }
+        console.warn('[SIAE-ROUTES] Report giornaliero (resend) senza eventi/abbonamenti - generazione consentita');
       }
       
       const c1Result = generateC1Xml({
@@ -6148,8 +6153,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     
     const hydratedData = await hydrateC1EventContextFromTickets(filteredTickets, companyId, effectiveReportDate, isMonthly);
     
+    // FIX 2026-01-18: Per report giornaliero (RMG), 0 biglietti è permesso
+    // Per report mensile (RPM), rimane un errore bloccante
     if (hydratedData.events.length === 0 && hydratedData.subscriptions.length === 0) {
-      throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto.');
+      if (isMonthly) {
+        throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto. Il report mensile richiede almeno un evento.');
+      }
+      console.warn('[SIAE-ROUTES] Report giornaliero senza eventi/abbonamenti - generazione consentita');
     }
     
     const c1Params: C1XmlParams = {
