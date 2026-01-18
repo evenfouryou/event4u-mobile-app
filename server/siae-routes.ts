@@ -1420,8 +1420,8 @@ router.post("/api/siae/customers", async (req: Request, res: Response) => {
     const customer = await siaeStorage.createSiaeCustomer(data);
     
     await siaeStorage.createAuditLog({
-      companyId: null, // siaeCustomers doesn't have companyId
-      userId: null,
+      companyId: '', // siaeCustomers doesn't have companyId
+      userId: undefined,
       action: 'customer_created',
       entityType: 'customer',
       entityId: customer.id,
@@ -3457,13 +3457,13 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireGestore, async (r
         ...r.nameChange,
         ticket: {
           ...r.ticket,
-          sigilloFiscale: r.ticket.sigilloFiscale, // Esplicito per conformità SIAE
+          fiscalSealCode: r.ticket.fiscalSealCode, // Esplicito per conformità SIAE
         },
         ticketedEvent: r.ticketedEvent,
         event: r.event,
         company: r.company,
         // SIAE Compliance: sigillo fiscale per tracciabilità
-        sigilloFiscaleOriginale: r.ticket.sigilloFiscale,
+        sigilloFiscaleOriginale: r.ticket.fiscalSealCode,
       })),
       pagination: {
         page: pageNum,
@@ -3986,8 +3986,8 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
     }
     
     // Check temporal limit - deadline hours before event
-    // Fallback: use event.date if startDatetime is null (legacy events or all-day events)
-    const eventDateSource = eventDetails.startDatetime || eventDetails.date;
+    // Use startDatetime for event timing (required field)
+    const eventDateSource = eventDetails.startDatetime;
     const deadlineHours = ticketedEvent.nameChangeDeadlineHours || 48;
     
     if (eventDateSource) {
@@ -4122,8 +4122,7 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
                   cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
                   cancellationDate: new Date(),
                   cancelledByUserId: userId,
-                  annullamentoMotivo: `Cambio nominativo auto-approvato - Sigillo originale: ${originalTicket.fiscalSealCode || originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
-                  annullamentoData: new Date()
+                  customText: `Cambio nominativo auto-approvato - Sigillo originale: ${originalTicket.fiscalSealCode || 'N/A'} - Nuovo: ${sealData.sealCode}`
                 })
                 .where(eq(siaeTickets.id, originalTicket.id));
               
@@ -4157,8 +4156,8 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
                   
                   const ticketData = {
                     eventName: event.name,
-                    eventDate: event.date,
-                    locationName: event.location || 'N/A',
+                    eventDate: event.startDatetime,
+                    locationName: event.locationId || 'N/A',
                     sectorName: sector?.name || 'N/A',
                     holderName: `${data.newFirstName} ${data.newLastName}`,
                     price: String(originalTicket.grossAmount || originalTicket.ticketPrice || '0'),
@@ -4193,18 +4192,13 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
             }
             
             // Create audit log
-            await siaeStorage.createSiaeAuditLog({
+            await siaeStorage.createAuditLog({
               companyId: ticketedEvent.companyId,
               userId,
               action: 'name_change_auto_approved',
               entityType: 'ticket',
               entityId: result.newTicket.id,
-              details: {
-                originalTicketId: originalTicket.id,
-                newTicketId: result.newTicket.id,
-                nameChangeId: change.id,
-                fiscalSeal: sealData.sealCode
-              }
+              description: `Auto-approvato: originalTicket=${originalTicket.id}, newTicket=${result.newTicket.id}, seal=${sealData.sealCode}`
             });
             
             return res.status(201).json({
@@ -4418,8 +4412,7 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
           cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
           cancellationDate: new Date(),
           cancelledByUserId: userId,
-          annullamentoMotivo: `Cambio nominativo - Sigillo originale: ${originalTicket.fiscalSealCode || originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
-          annullamentoData: new Date(),
+          customText: `Cambio nominativo - Sigillo originale: ${originalTicket.fiscalSealCode || 'N/A'} - Nuovo: ${sealData.sealCode}`,
           updatedAt: new Date()
         })
         .where(eq(siaeTickets.id, originalTicket.id));
@@ -4513,8 +4506,8 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
         
         const ticketData = {
           eventName: event.name,
-          eventDate: event.date,
-          locationName: event.location || 'N/A',
+          eventDate: event.startDatetime,
+          locationName: event.locationId || 'N/A',
           sectorName: sector?.name || 'N/A',
           holderName: `${nameChangeRequest.newFirstName} ${nameChangeRequest.newLastName}`,
           price: String(originalTicket.grossAmount || originalTicket.ticketPrice || '0'),
@@ -4553,20 +4546,13 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
     }
     
     // 10. Create audit log
-    await siaeStorage.createSiaeAuditLog({
+    await siaeStorage.createAuditLog({
       companyId: ticketedEvent.companyId,
       userId,
       action: 'name_change_completed',
       entityType: 'ticket',
       entityId: result.newTicket.id,
-      details: {
-        originalTicketId: originalTicket.id,
-        newTicketId: result.newTicket.id,
-        nameChangeId: req.params.id,
-        oldHolder: `${originalTicket.participantFirstName} ${originalTicket.participantLastName}`,
-        newHolder: `${nameChangeRequest.newFirstName} ${nameChangeRequest.newLastName}`,
-        fiscalSeal: sealData.sealCode
-      }
+      description: `Completato: ${originalTicket.participantFirstName} ${originalTicket.participantLastName} -> ${nameChangeRequest.newFirstName} ${nameChangeRequest.newLastName}, seal=${sealData.sealCode}`
     });
     
     res.json({
@@ -5051,7 +5037,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     let resendResolvedSystemCode: string;
     
     if (resendIsRca) {
-      const smimeResult = resolveSystemCodeForSmime(resendCachedEfff, systemConfig);
+      const smimeResult = resolveSystemCodeForSmime(resendCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
       if (!smimeResult.success || !smimeResult.systemCode) {
         console.error(`[SIAE-ROUTES] Resend BLOCCO RCA: ${smimeResult.error}`);
         return res.status(400).json({
@@ -5065,39 +5051,59 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       }
       console.log(`[SIAE-ROUTES] Resend: RCA systemCode from ${smimeResult.source}: ${resendResolvedSystemCode}`);
     } else {
-      resendResolvedSystemCode = resolveSystemCode(resendCachedEfff, systemConfig);
+      resendResolvedSystemCode = resolveSystemCode(resendCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
       console.log(`[SIAE-ROUTES] Resend: systemCode=${resendResolvedSystemCode} for ${original.transmissionType}`);
     }
     
-    // Import and use the generateRcaXml function
-    const { generateRcaXml, SiaeEventForLog } = await import('./siae-utils');
+    // Import and use the generateRCAXml function
+    const { generateRCAXml } = await import('./siae-utils');
     
     // Prepare event data for RCA generation with Sostituzione="S"
     // FIX 2026-01-15: Usa resendResolvedSystemCode invece di ticketedEvent.systemCode o default
-    const eventForLog: SiaeEventForLog = {
+    const eventForLog = {
       id: ticketedEvent.id,
-      eventId: ticketedEvent.eventId,
-      eventTitle: baseEvent?.name || ticketedEvent.eventTitle || 'Evento',
-      eventLocation: ticketedEvent.eventLocation || baseEvent?.locationId || 'Locale',
-      genreCode: ticketedEvent.genreCode || '60',
-      tipoTassazione: ticketedEvent.tipoTassazione || 'I',
-      entertainmentIncidence: ticketedEvent.entertainmentIncidence || 50,
-      systemCode: resendResolvedSystemCode, // FIX: Usa codice risolto
-      siaeLocationCode: ticketedEvent.siaeLocationCode || '0000000000000',
-      organizerType: ticketedEvent.organizerType || 'G',
-      businessName: systemConfig?.businessName || company?.name || 'N/D',
-      startDatetime: baseEvent?.startDatetime || new Date(),
+      name: baseEvent?.name || 'Evento',
+      date: baseEvent?.startDatetime || new Date(),
+      time: baseEvent?.startDatetime || null,
+      venueCode: ticketedEvent.siaeLocationCode || '0000000000001',
+      genreCode: ticketedEvent.genreCode || 'S1',
+      organizerTaxId: taxId,
+      organizerName: company?.name || 'N/D',
+      tipoTassazione: (ticketedEvent.taxType as 'S' | 'I') || 'S',
+      ivaPreassolta: (ticketedEvent.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
     };
     
-    const rcaResult = generateRcaXml(
-      eventTickets,
-      eventForLog,
-      company?.name || 'N/D',
+    // Convert tickets to SiaeTicketForLog format
+    const ticketsForRca = eventTickets.map(ticket => ({
+      id: ticket.id,
+      fiscalSealCode: ticket.fiscalSealCode || null,
+      progressiveNumber: ticket.progressiveNumber || 1,
+      cardCode: ticket.cardCode || null,
+      emissionChannelCode: ticket.emissionChannelCode || null,
+      emissionDate: ticket.emissionDate ? new Date(ticket.emissionDate) : new Date(),
+      ticketTypeCode: ticket.ticketTypeCode || 'R1',
+      sectorCode: ticket.sectorCode || 'A0',
+      grossAmount: ticket.grossAmount || '0',
+      netAmount: ticket.netAmount || null,
+      vatAmount: ticket.vatAmount || null,
+      prevendita: ticket.prevendita || '0',
+      prevenditaVat: ticket.prevenditaVat || null,
+      status: ticket.status || 'emitted',
+      cancellationReasonCode: ticket.cancellationReasonCode || null,
+      cancellationDate: ticket.cancellationDate || null,
+    }));
+    
+    const rcaResult = generateRCAXml({
+      companyId: original.companyId,
+      eventId: ticketedEvent.eventId,
+      event: eventForLog,
+      tickets: ticketsForRca,
+      systemConfig: { systemCode: resendResolvedSystemCode ?? undefined },
+      companyName: company?.name || 'N/D',
       taxId,
-      resendResolvedSystemCode, // FIX: Usa codice risolto
-      nextProgressivo,
-      true // isSubstitution = true -> Sostituzione="S"
-    );
+      progressivo: nextProgressivo,
+      forceSubstitution: true
+    });
     
     // Calculate transmission statistics
     const resendStats = await calculateTransmissionStats(
@@ -5225,7 +5231,7 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
       let postResolvedSystemCode: string;
       
       if (postIsRca) {
-        const smimeResult = resolveSystemCodeForSmime(postCachedEfff, systemConfig);
+        const smimeResult = resolveSystemCodeForSmime(postCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
         if (!smimeResult.success || !smimeResult.systemCode) {
           console.error(`[SIAE-ROUTES] POST BLOCCO RCA: ${smimeResult.error}`);
           return res.status(400).json({
@@ -5235,7 +5241,7 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
         }
         postResolvedSystemCode = smimeResult.systemCode;
       } else {
-        postResolvedSystemCode = resolveSystemCode(postCachedEfff, systemConfig);
+        postResolvedSystemCode = resolveSystemCode(postCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
       }
       
       const systemCodeValidation = validateSystemCodeConsistency(data.fileContent, postResolvedSystemCode);
@@ -5332,7 +5338,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     } else if (isRcaTransmission) {
       // FIX 2026-01-17: Per RCA LEGACY senza systemCode, DEVE usare Smart Card
       const sendEmailCachedEfff = getCachedEfffData();
-      const smimeResult = resolveSystemCodeForSmime(sendEmailCachedEfff, systemConfig);
+      const smimeResult = resolveSystemCodeForSmime(sendEmailCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
       if (!smimeResult.success || !smimeResult.systemCode) {
         console.error(`[SIAE-ROUTES] SendEmail BLOCCO RCA: ${smimeResult.error}`);
         return res.status(400).json({
@@ -5348,7 +5354,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     } else {
       // Per RMG/RPM legacy usa il vecchio metodo
       const sendEmailCachedEfff = getCachedEfffData();
-      resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig);
+      resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
       console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (legacy ${transmission.transmissionType})`);
     }
     
@@ -5718,7 +5724,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   
   // Pre-fetch all ticketed events to get their event dates and IDs
   const ticketedEventsMap = new Map<string, { eventDate: Date; eventId: string }>();
-  const uniqueTicketedEventIds = [...new Set(allTickets.map(t => t.ticketedEventId).filter(Boolean))];
+  const uniqueTicketedEventIds = Array.from(new Set(allTickets.map(t => t.ticketedEventId).filter(Boolean)));
   
   for (const ticketedEventId of uniqueTicketedEventIds) {
     const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(ticketedEventId);
@@ -5831,7 +5837,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // Per RCA usa resolveSystemCodeForSmime, per altri tipi usa resolveSystemCode
   let preResolvedSystemCode: string;
   if (isRCA) {
-    const smimeResult = resolveSystemCodeForSmime(cachedEfffData, systemConfig);
+    const smimeResult = resolveSystemCodeForSmime(cachedEfffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
     if (!smimeResult.success || !smimeResult.systemCode) {
       console.error(`[SIAE-ROUTES] BLOCCO RCA: ${smimeResult.error}`);
       return {
@@ -5851,8 +5857,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     console.log(`[SIAE-ROUTES] FIX 2026-01-17: RCA system code from ${smimeResult.source}: ${preResolvedSystemCode}`);
   } else {
     // Per RMG/RPM usa il vecchio metodo (non richiede S/MIME)
-    preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig);
-    console.log(`[SIAE-ROUTES] Pre-resolved system code for ${transmissionType}: ${preResolvedSystemCode}`);
+    preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+    console.log(`[SIAE-ROUTES] Pre-resolved system code for ${type}: ${preResolvedSystemCode}`);
   }
   
   // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML

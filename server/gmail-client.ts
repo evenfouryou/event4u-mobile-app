@@ -193,18 +193,36 @@ async function extractAttachments(
   }
 }
 
-// Extract transmission reference from filename (e.g., RCA_2025_12_17_001.xsi_2026_01_08...)
-function extractTransmissionRefFromFilename(filename: string): { reportType: string; reportDate: string; progressivo: string } | null {
-  // Pattern: RCA_YYYY_MM_DD_NNN or RMG_YYYY_MM_DD_NNN or RPM_YYYY_MM_NNN
-  const match = filename.match(/^(RCA|RMG|RPM)_(\d{4})_(\d{2})_(\d{2})?_?(\d{3})/);
-  if (match) {
-    const [, type, year, month, day, prog] = match;
+// Extract transmission reference from filename
+// Supports both formats:
+// 1. Our format: RCA_yyyyMMdd_SSSSSSSS_nnn.xsi (e.g., RCA_20260115_P0004010_001.xsi)
+// 2. Legacy/SIAE format: RCA_YYYY_MM_DD_nnn (e.g., RCA_2025_12_17_001.xsi)
+function extractTransmissionRefFromFilename(filename: string): { reportType: string; reportDate: string; progressivo: string; systemCode?: string } | null {
+  // Pattern 1: Our format with contiguous date and system code
+  // RCA_yyyyMMdd_SSSSSSSS_nnn or RMG_yyyyMMdd_SSSSSSSS_nnn or RPM_yyyyMM_SSSSSSSS_nnn
+  const ourFormatMatch = filename.match(/^(RCA|RMG|RPM)_(\d{4})(\d{2})(\d{2})?_([A-Z0-9]{8})_(\d{3})/);
+  if (ourFormatMatch) {
+    const [, type, year, month, day, sysCode, prog] = ourFormatMatch;
+    return {
+      reportType: type.toLowerCase(),
+      reportDate: day ? `${year}-${month}-${day}` : `${year}-${month}`,
+      progressivo: prog,
+      systemCode: sysCode
+    };
+  }
+  
+  // Pattern 2: Legacy format with underscore-separated dates (no system code)
+  // RCA_YYYY_MM_DD_NNN or RMG_YYYY_MM_DD_NNN or RPM_YYYY_MM_NNN
+  const legacyMatch = filename.match(/^(RCA|RMG|RPM)_(\d{4})_(\d{2})_(\d{2})?_?(\d{3})/);
+  if (legacyMatch) {
+    const [, type, year, month, day, prog] = legacyMatch;
     return {
       reportType: type.toLowerCase(),
       reportDate: day ? `${year}-${month}-${day}` : `${year}-${month}`,
       progressivo: prog
     };
   }
+  
   return null;
 }
 

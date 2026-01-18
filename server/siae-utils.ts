@@ -4372,7 +4372,7 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     }
 
     let sectorsXml = '';
-    for (const [sectorKey, sectorTickets] of ticketsBySector) {
+    for (const [sectorKey, sectorTickets] of Array.from(ticketsBySector.entries())) {
       let codiceOrdine = normalizeSiaeCodiceOrdine(null);
       let capacity = ticketedEvent.capacity || 100;
 
@@ -4397,8 +4397,8 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
       let titoliAccessoXml = '';
       let totalOmaggiIva = 0;
 
-      for (const [tipoTitolo, typeTickets] of ticketsByType) {
-        const validTickets = typeTickets.filter(t =>
+      for (const [tipoTitolo, typeTickets] of Array.from(ticketsByType.entries())) {
+        const validTickets = typeTickets.filter((t: C1TicketData) =>
           !isCancelledStatus(t.status) && !t.cancellationReasonCode && !t.cancellationDate
         );
 
@@ -4407,11 +4407,11 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
         const quantita = validTickets.length;
         totalTicketsCount += quantita;
 
-        const corrispettivoLordo = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.grossAmount || '0')), 0));
-        const prevendita = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.prevendita || '0')), 0));
-        const ivaCorrispettivo = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.vatAmount || '0')), 0));
-        const ivaPrevendita = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.prevenditaVat || '0')), 0));
-        const importoPrestazione = toCentesimi(validTickets.reduce((sum, t) => sum + parseFloat(String(t.serviceAmount || '0')), 0));
+        const corrispettivoLordo = toCentesimi(validTickets.reduce((sum: number, t: C1TicketData) => sum + parseFloat(String(t.grossAmount || '0')), 0));
+        const prevendita = toCentesimi(validTickets.reduce((sum: number, t: C1TicketData) => sum + parseFloat(String(t.prevendita || '0')), 0));
+        const ivaCorrispettivo = toCentesimi(validTickets.reduce((sum: number, t: C1TicketData) => sum + parseFloat(String(t.vatAmount || '0')), 0));
+        const ivaPrevendita = toCentesimi(validTickets.reduce((sum: number, t: C1TicketData) => sum + parseFloat(String(t.prevenditaVat || '0')), 0));
+        const importoPrestazione = toCentesimi(validTickets.reduce((sum: number, t: C1TicketData) => sum + parseFloat(String(t.serviceAmount || '0')), 0));
 
         totalRevenue += corrispettivoLordo;
 
@@ -4538,7 +4538,7 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
       subsByCode.get(code)!.push(sub);
     }
 
-    for (const [subCode, subs] of subsByCode) {
+    for (const [subCode, subs] of Array.from(subsByCode.entries())) {
       const firstSub = subs[0];
       const validTo = new Date(firstSub.validTo || new Date());
       const validitaStr = formatSiaeDateCompact(validTo);
@@ -4558,16 +4558,16 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
       const subTipoTassazione = firstSub.taxType || 'S';
       const turno = firstSub.turnType || 'F';
 
-      const emittedSubs = subs.filter(s => s.status === 'active');
-      const cancelledSubs = subs.filter(s => s.status === 'cancelled');
+      const emittedSubs = subs.filter((s: C1SubscriptionData) => s.status === 'active');
+      const cancelledSubs = subs.filter((s: C1SubscriptionData) => s.status === 'cancelled');
 
       const emessiQuantita = emittedSubs.length;
-      const emessiCorrispettivo = toCentesimi(emittedSubs.reduce((sum, s) => sum + parseFloat(String(s.totalAmount || '0')), 0));
-      const emessiIva = toCentesimi(emittedSubs.reduce((sum, s) => sum + parseFloat(String(s.rateoVat || '0')), 0));
+      const emessiCorrispettivo = toCentesimi(emittedSubs.reduce((sum: number, s: C1SubscriptionData) => sum + parseFloat(String(s.totalAmount || '0')), 0));
+      const emessiIva = toCentesimi(emittedSubs.reduce((sum: number, s: C1SubscriptionData) => sum + parseFloat(String(s.rateoVat || '0')), 0));
 
       const annullatiQuantita = cancelledSubs.length;
-      const annullatiCorrispettivo = toCentesimi(cancelledSubs.reduce((sum, s) => sum + parseFloat(String(s.totalAmount || '0')), 0));
-      const annullatiIva = toCentesimi(cancelledSubs.reduce((sum, s) => sum + parseFloat(String(s.rateoVat || '0')), 0));
+      const annullatiCorrispettivo = toCentesimi(cancelledSubs.reduce((sum: number, s: C1SubscriptionData) => sum + parseFloat(String(s.totalAmount || '0')), 0));
+      const annullatiIva = toCentesimi(cancelledSubs.reduce((sum: number, s: C1SubscriptionData) => sum + parseFloat(String(s.rateoVat || '0')), 0));
 
       abbonamentiXml += `
         <Abbonamenti>
