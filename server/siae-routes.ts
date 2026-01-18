@@ -5082,55 +5082,109 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       console.log(`[SIAE-ROUTES] Resend: systemCode=${resendResolvedSystemCode} for ${original.transmissionType}`);
     }
     
-    // Import and use the generateRCAXml function
-    const { generateRCAXml } = await import('./siae-utils');
+    // FIX 2026-01-18: Import correct generators based on transmission type
+    const { generateRCAXml, generateC1Xml } = await import('./siae-utils');
     
-    // Prepare event data for RCA generation with Sostituzione="S"
-    // FIX 2026-01-15: Usa resendResolvedSystemCode invece di ticketedEvent.systemCode o default
-    const eventForLog = {
-      id: ticketedEvent.id,
-      name: baseEvent?.name || 'Evento',
-      date: baseEvent?.startDatetime || new Date(),
-      time: baseEvent?.startDatetime || null,
-      venueCode: ticketedEvent.siaeLocationCode || '0000000000001',
-      genreCode: ticketedEvent.genreCode || 'S1',
-      organizerTaxId: taxId,
-      organizerName: company?.name || 'N/D',
-      tipoTassazione: (ticketedEvent.taxType as 'S' | 'I') || 'S',
-      ivaPreassolta: (ticketedEvent.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
+    // Map transmissionType to filename type and validation type
+    const getFilenameType = (tt: string): 'rca' | 'mensile' | 'giornaliero' => {
+      if (tt === 'monthly') return 'mensile';
+      if (tt === 'daily') return 'giornaliero';
+      return 'rca';
     };
+    const filenameType = getFilenameType(original.transmissionType);
     
-    // Convert tickets to SiaeTicketForLog format
-    const ticketsForRca = eventTickets.map(ticket => ({
-      id: ticket.id,
-      fiscalSealCode: ticket.fiscalSealCode || null,
-      progressiveNumber: ticket.progressiveNumber || 1,
-      cardCode: ticket.cardCode || null,
-      emissionChannelCode: ticket.emissionChannelCode || null,
-      emissionDate: ticket.emissionDate ? new Date(ticket.emissionDate) : new Date(),
-      ticketTypeCode: ticket.ticketTypeCode || 'R1',
-      sectorCode: ticket.sectorCode || 'A0',
-      grossAmount: ticket.grossAmount || '0',
-      netAmount: ticket.netAmount || null,
-      vatAmount: ticket.vatAmount || null,
-      prevendita: ticket.prevendita || '0',
-      prevenditaVat: ticket.prevenditaVat || null,
-      status: ticket.status || 'emitted',
-      cancellationReasonCode: ticket.cancellationReasonCode || null,
-      cancellationDate: ticket.cancellationDate || null,
-    }));
+    // Variables for XML result
+    let generatedXml: string;
+    let resendTicketsCount: number;
+    let resendTotalAmount: number;
+    let resendCancelledCount: number = 0;
     
-    const rcaResult = generateRCAXml({
-      companyId: original.companyId,
-      eventId: ticketedEvent.eventId,
-      event: eventForLog,
-      tickets: ticketsForRca,
-      systemConfig: { systemCode: resendResolvedSystemCode ?? undefined },
-      companyName: company?.name || 'N/D',
-      taxId,
-      progressivo: nextProgressivo,
-      forceSubstitution: true
-    });
+    if (original.transmissionType === 'rca') {
+      // RCA: Use generateRCAXml
+      const eventForLog = {
+        id: ticketedEvent.id,
+        name: baseEvent?.name || 'Evento',
+        date: baseEvent?.startDatetime || new Date(),
+        time: baseEvent?.startDatetime || null,
+        venueCode: ticketedEvent.siaeLocationCode || '0000000000001',
+        genreCode: ticketedEvent.genreCode || 'S1',
+        organizerTaxId: taxId,
+        organizerName: company?.name || 'N/D',
+        tipoTassazione: (ticketedEvent.taxType as 'S' | 'I') || 'S',
+        ivaPreassolta: (ticketedEvent.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
+      };
+      
+      const ticketsForRca = eventTickets.map(ticket => ({
+        id: ticket.id,
+        fiscalSealCode: ticket.fiscalSealCode || null,
+        progressiveNumber: ticket.progressiveNumber || 1,
+        cardCode: ticket.cardCode || null,
+        emissionChannelCode: ticket.emissionChannelCode || null,
+        emissionDate: ticket.emissionDate ? new Date(ticket.emissionDate) : new Date(),
+        ticketTypeCode: ticket.ticketTypeCode || 'R1',
+        sectorCode: ticket.sectorCode || 'A0',
+        grossAmount: ticket.grossAmount || '0',
+        netAmount: ticket.netAmount || null,
+        vatAmount: ticket.vatAmount || null,
+        prevendita: ticket.prevendita || '0',
+        prevenditaVat: ticket.prevenditaVat || null,
+        status: ticket.status || 'emitted',
+        cancellationReasonCode: ticket.cancellationReasonCode || null,
+        cancellationDate: ticket.cancellationDate || null,
+      }));
+      
+      const rcaResult = generateRCAXml({
+        companyId: original.companyId,
+        eventId: ticketedEvent.eventId,
+        event: eventForLog,
+        tickets: ticketsForRca,
+        systemConfig: { systemCode: resendResolvedSystemCode ?? undefined },
+        companyName: company?.name || 'N/D',
+        taxId,
+        progressivo: nextProgressivo,
+        forceSubstitution: true
+      });
+      
+      generatedXml = rcaResult.xml;
+      resendTicketsCount = rcaResult.ticketCount;
+      resendTotalAmount = rcaResult.totalGrossAmount;
+      resendCancelledCount = rcaResult.cancelledCount;
+    } else {
+      // Monthly (RPM) or Daily (RMG): Use generateC1Xml with hydrateC1EventContextFromTickets
+      const isMonthly = original.transmissionType === 'monthly';
+      const reportDate = new Date(original.periodDate);
+      
+      const hydratedData = await hydrateC1EventContextFromTickets(
+        eventTickets,
+        original.companyId,
+        reportDate,
+        isMonthly
+      );
+      
+      if (hydratedData.events.length === 0 && hydratedData.subscriptions.length === 0) {
+        return res.status(400).json({
+          message: 'SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto.',
+          code: 'NO_DATA_FOR_PERIOD'
+        });
+      }
+      
+      const c1Result = generateC1Xml({
+        reportKind: isMonthly ? 'mensile' : 'giornaliero',
+        companyId: original.companyId,
+        reportDate,
+        resolvedSystemCode: resendResolvedSystemCode,
+        progressivo: nextProgressivo, // progressivo > 1 forces Sostituzione="S"
+        taxId,
+        businessName: company?.name || 'N/D',
+        events: hydratedData.events,
+        subscriptions: hydratedData.subscriptions,
+      });
+      
+      generatedXml = c1Result.xml;
+      resendTicketsCount = c1Result.stats.ticketsCount;
+      resendTotalAmount = c1Result.stats.totalRevenue;
+      resendCancelledCount = 0; // C1 doesn't track cancelled separately in result
+    }
     
     // Calculate transmission statistics
     const resendStats = await calculateTransmissionStats(
@@ -5140,16 +5194,12 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       ticketedEvent.tipoTassazione,
       ticketedEvent.entertainmentIncidence
     );
-    const resendFileHash = calculateFileHash(rcaResult.xml);
+    const resendFileHash = calculateFileHash(generatedXml);
     
-    // FIX 2026-01-18: Usa valori autoritativi da rcaResult per garantire allineamento
-    // rcaResult ora contiene: ticketCount, cancelledCount, totalGrossAmount, activeGrossAmount
-    // Questi sono i valori calcolati durante la generazione XML - quindi DEVONO corrispondere
-    const resendFileName = generateSiaeAttachmentName('rca', new Date(original.periodDate), nextProgressivo, null, resendResolvedSystemCode);
+    // FIX 2026-01-18: Use correct filename type based on transmissionType
+    const resendFileName = generateSiaeAttachmentName(filenameType, new Date(original.periodDate), nextProgressivo, null, resendResolvedSystemCode);
     
     // Create new transmission with substitution flag
-    // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
-    // FIX 2026-01-18: Usa valori autoritativi da rcaResult (non da stats separate)
     const newTransmission = await siaeStorage.createSiaeTransmission({
       companyId: original.companyId,
       ticketedEventId: original.ticketedEventId,
@@ -5159,14 +5209,14 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       isSubstitution: true,
       originalTransmissionId: original.id,
       progressivoInvio: nextProgressivo,
-      fileName: resendFileName.replace(/\.xsi(\.p7m)?$/, ''), // Nome senza estensione
+      fileName: resendFileName.replace(/\.xsi(\.p7m)?$/, ''),
       fileExtension: '.xsi',
-      fileContent: rcaResult.xml,
+      fileContent: generatedXml,
       status: 'pending',
-      ticketsCount: rcaResult.ticketCount, // FIX: valore autoritativo da XML generator
-      ticketsCancelled: rcaResult.cancelledCount, // FIX: valore autoritativo da XML generator
-      totalAmount: rcaResult.totalGrossAmount.toFixed(2), // FIX: valore autoritativo da XML generator
-      systemCode: resendResolvedSystemCode, // FIX: Salva codice per reinvii futuri
+      ticketsCount: resendTicketsCount,
+      ticketsCancelled: resendCancelledCount,
+      totalAmount: resendTotalAmount.toFixed(2),
+      systemCode: resendResolvedSystemCode,
       fileHash: resendFileHash,
       totalIva: resendStats.totalIva.toFixed(2),
       totalEsenti: resendStats.totalEsenti.toFixed(2),
@@ -5194,11 +5244,11 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
-      // FIX 2026-01-15: Validazione pre-trasmissione con resendResolvedSystemCode (async per DTD validator)
+      // FIX 2026-01-18: Use correct validation type based on transmissionType
       const preValidation = await validatePreTransmission(
-        rcaResult.xml,
-        resendResolvedSystemCode, // FIX: Usa codice risolto per coerenza
-        'rca',
+        generatedXml,
+        resendResolvedSystemCode,
+        filenameType, // FIX: Use mapped type (rca/mensile/giornaliero)
         original.periodDate
       );
       
@@ -5221,11 +5271,11 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         companyName: company?.name || 'N/A',
         transmissionType: original.transmissionType as "monthly" | "daily" | "rca" | "corrective",
         periodDate: original.periodDate,
-        ticketsCount: rcaResult.ticketCount, // FIX 2026-01-18: valore autoritativo da rcaResult
-        totalAmount: rcaResult.totalGrossAmount.toFixed(2), // FIX 2026-01-18: valore autoritativo da rcaResult
-        xmlContent: rcaResult.xml,
+        ticketsCount: resendTicketsCount, // FIX 2026-01-18: Use unified variable
+        totalAmount: resendTotalAmount.toFixed(2), // FIX 2026-01-18: Use unified variable
+        xmlContent: generatedXml, // FIX 2026-01-18: Use unified variable
         transmissionId: newTransmission.id,
-        systemCode: resendResolvedSystemCode, // FIX: Usa codice risolto
+        systemCode: resendResolvedSystemCode,
         sequenceNumber: nextProgressivo,
         signWithSmime: true,
         requireSignature: true,
