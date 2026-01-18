@@ -56,6 +56,19 @@ import DashboardScreen from '../screens/management/DashboardScreen';
 import ManageEventsScreen from '../screens/management/ManageEventsScreen';
 import EventHubScreen from '../screens/management/EventHubScreen';
 
+// SIAE Screens
+import SIAEHomeScreen from '../screens/siae/SIAEHomeScreen';
+import SIAETransmissionsScreen from '../screens/siae/SIAETransmissionsScreen';
+import SIAETransmissionDetailScreen from '../screens/siae/SIAETransmissionDetailScreen';
+import SIAEReportsScreen from '../screens/siae/SIAEReportsScreen';
+
+// Inventory Screens
+import InventoryHomeScreen from '../screens/inventory/InventoryHomeScreen';
+import ProductListScreen from '../screens/inventory/ProductListScreen';
+import ProductDetailScreen from '../screens/inventory/ProductDetailScreen';
+import StockAdjustmentScreen from '../screens/inventory/StockAdjustmentScreen';
+import ConsumptionScreen from '../screens/inventory/ConsumptionScreen';
+
 // Type definitions
 export type RootStackParamList = {
   Auth: undefined;
@@ -74,6 +87,8 @@ export type DrawerParamList = {
   PRTabs: undefined;
   CashierTabs: undefined;
   ManagementTabs: undefined;
+  SIAETabs: undefined;
+  InventoryTabs: undefined;
 };
 
 export type CustomerTabParamList = {
@@ -150,6 +165,33 @@ export type ManagementStackParamList = {
   EventHub: { eventId: string };
 };
 
+export type SIAETabParamList = {
+  SIAEHome: undefined;
+  SIAETransmissions: undefined;
+  SIAEReports: undefined;
+};
+
+export type SIAEStackParamList = {
+  SIAEDashboard: undefined;
+  SIAETransmissions: undefined;
+  SIAETransmissionDetail: { transmissionId: number };
+  SIAEReports: { defaultType?: string };
+};
+
+export type InventoryTabParamList = {
+  InventoryHome: undefined;
+  Products: undefined;
+  Consumption: undefined;
+};
+
+export type InventoryStackParamList = {
+  InventoryDashboard: undefined;
+  ProductList: undefined;
+  ProductDetail: { productId: string };
+  StockAdjustment: { productId?: string; type?: 'add' | 'remove' | 'set' };
+  Consumption: undefined;
+};
+
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -173,6 +215,14 @@ const CashierTab = createBottomTabNavigator<CashierTabParamList>();
 // Management tabs and stacks
 const ManagementTab = createBottomTabNavigator<ManagementTabParamList>();
 const ManagementStack = createNativeStackNavigator<ManagementStackParamList>();
+
+// SIAE tabs and stacks
+const SIAETab = createBottomTabNavigator<SIAETabParamList>();
+const SIAEStack = createNativeStackNavigator<SIAEStackParamList>();
+
+// Inventory tabs and stacks
+const InventoryTab = createBottomTabNavigator<InventoryTabParamList>();
+const InventoryStack = createNativeStackNavigator<InventoryStackParamList>();
 
 // ============= Auth Navigator =============
 function AuthNavigator() {
@@ -573,6 +623,177 @@ function ManagementTabs() {
   );
 }
 
+// ============= SIAE Stacks =============
+function SIAEHomeStack() {
+  return (
+    <SIAEStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SIAEStack.Screen name="SIAEDashboard" component={SIAEHomeScreen} />
+      <SIAEStack.Screen name="SIAETransmissions" component={SIAETransmissionsScreen} />
+      <SIAEStack.Screen name="SIAETransmissionDetail" component={SIAETransmissionDetailScreen} />
+      <SIAEStack.Screen name="SIAEReports" component={SIAEReportsScreen} />
+    </SIAEStack.Navigator>
+  );
+}
+
+function SIAETransmissionsStack() {
+  return (
+    <SIAEStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SIAEStack.Screen name="SIAETransmissions" component={SIAETransmissionsScreen} />
+      <SIAEStack.Screen name="SIAETransmissionDetail" component={SIAETransmissionDetailScreen} />
+    </SIAEStack.Navigator>
+  );
+}
+
+function SIAEReportsStack() {
+  return (
+    <SIAEStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SIAEStack.Screen name="SIAEReports" component={SIAEReportsScreen} />
+      <SIAEStack.Screen name="SIAETransmissionDetail" component={SIAETransmissionDetailScreen} />
+    </SIAEStack.Navigator>
+  );
+}
+
+function SIAETabs() {
+  return (
+    <SIAETab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'SIAEHome':
+              iconName = focused ? 'home' : 'home-outline';
+              break;
+            case 'SIAETransmissions':
+              iconName = focused ? 'list' : 'list-outline';
+              break;
+            case 'SIAEReports':
+              iconName = focused ? 'document-text' : 'document-text-outline';
+              break;
+            default:
+              iconName = 'home-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <SIAETab.Screen name="SIAEHome" component={SIAEHomeStack} options={{ tabBarLabel: 'SIAE' }} />
+      <SIAETab.Screen name="SIAETransmissions" component={SIAETransmissionsStack} options={{ tabBarLabel: 'Trasmissioni' }} />
+      <SIAETab.Screen name="SIAEReports" component={SIAEReportsStack} options={{ tabBarLabel: 'Report' }} />
+    </SIAETab.Navigator>
+  );
+}
+
+// ============= Inventory Stacks =============
+function InventoryHomeStack() {
+  return (
+    <InventoryStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <InventoryStack.Screen name="InventoryDashboard" component={InventoryHomeScreen} />
+      <InventoryStack.Screen name="ProductList" component={ProductListScreen} />
+      <InventoryStack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <InventoryStack.Screen name="StockAdjustment" component={StockAdjustmentScreen} />
+      <InventoryStack.Screen name="Consumption" component={ConsumptionScreen} />
+    </InventoryStack.Navigator>
+  );
+}
+
+function InventoryProductsStack() {
+  return (
+    <InventoryStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <InventoryStack.Screen name="ProductList" component={ProductListScreen} />
+      <InventoryStack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <InventoryStack.Screen name="StockAdjustment" component={StockAdjustmentScreen} />
+    </InventoryStack.Navigator>
+  );
+}
+
+function InventoryConsumptionStack() {
+  return (
+    <InventoryStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <InventoryStack.Screen name="Consumption" component={ConsumptionScreen} />
+    </InventoryStack.Navigator>
+  );
+}
+
+function InventoryTabs() {
+  return (
+    <InventoryTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'InventoryHome':
+              iconName = focused ? 'grid' : 'grid-outline';
+              break;
+            case 'Products':
+              iconName = focused ? 'cube' : 'cube-outline';
+              break;
+            case 'Consumption':
+              iconName = focused ? 'remove-circle' : 'remove-circle-outline';
+              break;
+            default:
+              iconName = 'grid-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <InventoryTab.Screen name="InventoryHome" component={InventoryHomeStack} options={{ tabBarLabel: 'Magazzino' }} />
+      <InventoryTab.Screen name="Products" component={InventoryProductsStack} options={{ tabBarLabel: 'Prodotti' }} />
+      <InventoryTab.Screen name="Consumption" component={InventoryConsumptionStack} options={{ tabBarLabel: 'Consumo' }} />
+    </InventoryTab.Navigator>
+  );
+}
+
 // ============= App Drawer =============
 function AppDrawer() {
   const { user } = useAuthStore();
@@ -657,6 +878,34 @@ function AppDrawer() {
             drawerLabel: 'Gestione',
             drawerIcon: ({ color, size }) => (
               <Ionicons name="settings-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* SIAE mode - for gestore/admin (Italian fiscal compliance) */}
+      {(userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="SIAETabs" 
+          component={SIAETabs}
+          options={{
+            drawerLabel: 'SIAE Ticketing',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="receipt-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* Inventory mode - for warehouse, organizer, gestore */}
+      {(userRole === 'warehouse' || userRole === 'magazziniere' || userRole === 'organizer' || userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="InventoryTabs" 
+          component={InventoryTabs}
+          options={{
+            drawerLabel: 'Magazzino',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="cube-outline" size={size} color={color} />
             ),
           }}
         />
