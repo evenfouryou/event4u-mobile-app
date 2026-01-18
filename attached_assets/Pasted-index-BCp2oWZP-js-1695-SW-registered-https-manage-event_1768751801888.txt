@@ -1,0 +1,111 @@
+index-BCp2oWZP.js:1695 SW registered: https://manage.eventfouryou.com/
+index-BCp2oWZP.js:1144 [DEBUG SC] Fetching initial status via HTTP...
+index-BCp2oWZP.js:1144 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-BCp2oWZP.js:1144 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-BCp2oWZP.js:1144 [DEBUG SC] Cookies present: YES
+index-BCp2oWZP.js:1144 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-BCp2oWZP.js:1144 [DEBUG SC] WebSocket created, state: 0
+index-BCp2oWZP.js:1144 [DEBUG SC] WebSocket OPEN! State: 1
+index-BCp2oWZP.js:1144 [DEBUG SC] Sending get_status request...
+index-BCp2oWZP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-BCp2oWZP.js:1144 [DEBUG SC] Parsed message type: connection_status
+index-BCp2oWZP.js:1144 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-BCp2oWZP.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-BCp2oWZP.js:1144 [DEBUG SC] Message type: connection_status
+index-BCp2oWZP.js:1144 [DEBUG SC] msg.connected: true
+index-BCp2oWZP.js:1144 [DEBUG SC] msg.bridgeConnected: true
+index-BCp2oWZP.js:1144 [DEBUG SC] isConnected (final): true
+index-BCp2oWZP.js:1144 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-BCp2oWZP.js:1144 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-BCp2oWZP.js:1144 [DEBUG SC] Status after update: {"connected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-18T15:56:01.915Z","pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false,"error":null,"bridgeConnected":true,"canEmitRealSeals":false,"demoMode":false,"relayConnected":true}
+index-BCp2oWZP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":349,"cardBalance":438861,"cardKeyId":129,"car
+index-BCp2oWZP.js:1144 [DEBUG SC] Parsed message type: status
+index-BCp2oWZP.js:1144 [DEBUG SC] Handling status message
+index-BCp2oWZP.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BCp2oWZP.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 349,
+  "cardBalance": 438861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardCounter: 349
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardBalance: 438861
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardKeyId: 129
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardInserted: true
+index-BCp2oWZP.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-BCp2oWZP.js:1144 [DEBUG SC] data.readerConnected: true
+index-BCp2oWZP.js:1144 [DEBUG SC] HTTP status received: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 349,
+  "cardBalance": 438861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BCp2oWZP.js:1144 [DEBUG SC] HTTP - cardSerial: 4130313238343837
+index-BCp2oWZP.js:1144 [DEBUG SC] HTTP - cardCounter: 349
+index-BCp2oWZP.js:1144 [DEBUG SC] HTTP - cardBalance: 438861
+index-BCp2oWZP.js:1144 [DEBUG SC] HTTP - cardKeyId: 129
+index-BCp2oWZP.js:1144 [DEBUG SC] HTTP - cardInserted: true
+index-BCp2oWZP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"super_admin","toUserId":"9d593553-939f-47cc-9b08-7cf92e5b6f68","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":
+index-BCp2oWZP.js:1144 [DEBUG SC] Parsed message type: status
+index-BCp2oWZP.js:1144 [DEBUG SC] Handling status message
+index-BCp2oWZP.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BCp2oWZP.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 349,
+  "cardBalance": 438861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardCounter: 349
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardBalance: 438861
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardKeyId: 129
+index-BCp2oWZP.js:1144 [DEBUG SC] data.cardInserted: true
+index-BCp2oWZP.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-BCp2oWZP.js:1144 [DEBUG SC] data.readerConnected: true
+index-BCp2oWZP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-BCp2oWZP.js:1144 [DEBUG SC] Parsed message type: ping
+index-BCp2oWZP.js:1144 [DEBUG SC] Ping received, sending pong
+/api/siae/companies/4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91/transmissions/send-c1:1  Failed to load resource: the server responded with a status of 400 ()
+index-BCp2oWZP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-BCp2oWZP.js:1144 [DEBUG SC] Parsed message type: ping
+index-BCp2oWZP.js:1144 [DEBUG SC] Ping received, sending pong
