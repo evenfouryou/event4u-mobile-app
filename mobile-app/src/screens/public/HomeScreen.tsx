@@ -46,25 +46,27 @@ interface EventCategory {
   color: string;
 }
 
-const CATEGORIES: EventCategory[] = [
-  { id: 'all', name: 'Tutti', slug: 'all', icon: 'apps', color: colors.primary },
-  { id: 'music', name: 'Musica', slug: 'music', icon: 'musical-notes', color: '#8B5CF6' },
-  { id: 'techno', name: 'Techno', slug: 'techno', icon: 'pulse', color: '#00CED1' },
-  { id: 'hiphop', name: 'Hip Hop', slug: 'hiphop', icon: 'mic', color: '#F59E0B' },
-  { id: 'house', name: 'House', slug: 'house', icon: 'headset', color: '#EC4899' },
-  { id: 'latin', name: 'Latino', slug: 'latin', icon: 'flame', color: '#EF4444' },
-];
-
 export function HomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
   const [events, setEvents] = useState<PublicEvent[]>([]);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [error, setError] = useState<string | null>(null);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await api.get<EventCategory[]>('/api/public/event-categories');
+      const allCategory: EventCategory = { id: 'all', name: 'Tutti', slug: 'all', icon: 'apps', color: colors.primary };
+      setCategories([allCategory, ...(data || [])]);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  }, []);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -82,7 +84,8 @@ export function HomeScreen() {
 
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+    fetchCategories();
+  }, [fetchEvents, fetchCategories]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -240,7 +243,7 @@ export function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
           >
-            {CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <TouchableOpacity
                 key={category.id}
                 style={[

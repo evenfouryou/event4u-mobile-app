@@ -313,14 +313,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   permissionButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.lg,
     marginTop: spacing.xl,
   },
   permissionButtonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderColor: colors.primary,
+    borderColor: colors.emerald,
   },
   cornerTopLeft: {
     top: -2,
@@ -415,8 +415,8 @@ const styles = StyleSheet.create({
   },
   scanLine: {
     height: 2,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
+    backgroundColor: colors.emerald,
+    shadowColor: colors.emerald,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 8,

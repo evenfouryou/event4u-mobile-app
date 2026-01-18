@@ -28,16 +28,18 @@ export function MyResalesScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const { data: resales, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['/api/resales/my-listings'],
-    queryFn: () => api.get<ResaleListing[]>('/api/resales/my-listings'),
+  const { data: resalesData, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['/api/public/account/resales'],
+    queryFn: () => api.get<{ resales: ResaleListing[] }>('/api/public/account/resales'),
   });
+  
+  const resales = resalesData?.resales || [];
 
   const cancelListingMutation = useMutation({
-    mutationFn: (listingId: string) => api.delete(`/api/resales/${listingId}`),
+    mutationFn: (listingId: string) => api.delete(`/api/public/account/resale/${listingId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/resales'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/account/resales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
       Alert.alert('Successo', 'Annuncio rimosso con successo');
     },
     onError: (error: Error) => {

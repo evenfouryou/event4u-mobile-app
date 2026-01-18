@@ -176,8 +176,8 @@ export function ScannerStatsScreen() {
           </Card>
 
           <Card style={styles.statCard}>
-            <Ionicons name="people" size={28} color={colors.primary} />
-            <Text style={[styles.statValue, { color: colors.primary }]}>{currentStats.uniqueVisitors}</Text>
+            <Ionicons name="people" size={28} color={colors.emerald} />
+            <Text style={[styles.statValue, { color: colors.emerald }]}>{currentStats.uniqueVisitors}</Text>
             <Text style={styles.statLabel}>Visitatori</Text>
           </Card>
         </View>
@@ -194,13 +194,13 @@ export function ScannerStatsScreen() {
           <Card style={styles.infoCard}>
             <View style={styles.infoRow}>
               <View style={styles.infoItem}>
-                <Ionicons name="time-outline" size={24} color={colors.primary} />
+                <Ionicons name="time-outline" size={24} color={colors.emerald} />
                 <Text style={styles.infoLabel}>Ora di Punta</Text>
                 <Text style={styles.infoValue}>{currentStats.peakHour}</Text>
               </View>
               <View style={styles.infoDivider} />
               <View style={styles.infoItem}>
-                <Ionicons name="trending-up-outline" size={24} color={colors.primary} />
+                <Ionicons name="trending-up-outline" size={24} color={colors.emerald} />
                 <Text style={styles.infoLabel}>Media/Ora</Text>
                 <Text style={styles.infoValue}>{currentStats.avgScansPerHour.toFixed(1)}</Text>
               </View>
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   timeFilterButtonActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
   },
   timeFilterText: {
     color: colors.mutedForeground,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   timeFilterTextActive: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
   },
   overviewSection: {
     marginBottom: spacing.lg,

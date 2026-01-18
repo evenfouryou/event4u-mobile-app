@@ -29,14 +29,16 @@ export function WalletScreen() {
   const insets = useSafeAreaInsets();
 
   const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery({
-    queryKey: ['/api/wallet'],
-    queryFn: () => api.get<WalletData>('/api/wallet'),
+    queryKey: ['/api/public/account/wallet'],
+    queryFn: () => api.get<WalletData>('/api/public/account/wallet'),
   });
 
-  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions, isRefetching } = useQuery({
-    queryKey: ['/api/wallet/transactions'],
-    queryFn: () => api.get<Transaction[]>('/api/wallet/transactions'),
+  const { data: transactionsData, isLoading: transactionsLoading, refetch: refetchTransactions, isRefetching } = useQuery({
+    queryKey: ['/api/public/account/wallet/transactions'],
+    queryFn: () => api.get<{ transactions: Transaction[] }>('/api/public/account/wallet/transactions'),
   });
+  
+  const transactions = transactionsData?.transactions || [];
 
   const handleRefresh = () => {
     refetchWallet();

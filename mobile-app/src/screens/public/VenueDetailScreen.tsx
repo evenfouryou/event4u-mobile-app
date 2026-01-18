@@ -49,11 +49,11 @@ export function VenueDetailScreen() {
   const { venueId } = route.params;
 
   const { data: venue, isLoading } = useQuery<Venue>({
-    queryKey: ['/api/venues', venueId],
+    queryKey: ['/api/public/all-locations', venueId],
   });
 
   const { data: venueEvents } = useQuery<Event[]>({
-    queryKey: ['/api/venues', venueId, 'events'],
+    queryKey: ['/api/public/events', { locationId: venueId }],
     enabled: !!venueId,
   });
 

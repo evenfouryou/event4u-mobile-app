@@ -62,7 +62,7 @@ export function ScannerOperatorsScreen() {
     >
       <View style={styles.operatorHeader}>
         <View style={styles.avatarContainer}>
-          <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
+          <View style={[styles.avatar, { backgroundColor: colors.emerald + '20' }]}>
             <Text style={styles.avatarText}>
               {item.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
             </Text>
@@ -145,7 +145,7 @@ export function ScannerOperatorsScreen() {
             onPress={handleAddOperator}
             data-testid="button-add-operator"
           >
-            <Ionicons name="add" size={24} color={colors.primaryForeground} />
+            <Ionicons name="add" size={24} color={colors.emeraldForeground} />
           </TouchableOpacity>
         }
       />
@@ -159,8 +159,8 @@ export function ScannerOperatorsScreen() {
           <Text style={styles.statLabel}>Online</Text>
         </Card>
         <Card style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: colors.primary + '20' }]}>
-            <Ionicons name="people" size={16} color={colors.primary} />
+          <View style={[styles.statIcon, { backgroundColor: colors.emerald + '20' }]}>
+            <Ionicons name="people" size={16} color={colors.emerald} />
           </View>
           <Text style={styles.statValue}>{totalCount}</Text>
           <Text style={styles.statLabel}>Totali</Text>
@@ -180,7 +180,7 @@ export function ScannerOperatorsScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
-            tintColor={colors.primary}
+            tintColor={colors.emerald}
           />
         }
         ListEmptyComponent={
@@ -202,7 +202,7 @@ export function ScannerOperatorsScreen() {
                 onPress={handleAddOperator}
                 data-testid="button-add-operator-empty"
               >
-                <Ionicons name="add" size={20} color={colors.primaryForeground} />
+                <Ionicons name="add" size={20} color={colors.emeraldForeground} />
                 <Text style={styles.emptyButtonText}>Aggiungi Operatore</Text>
               </TouchableOpacity>
             </Card>
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
   },
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     maxWidth: 120,
   },
   eventTagMore: {
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.emerald + '20',
   },
   eventTagText: {
     color: colors.foreground,
@@ -417,14 +417,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     marginTop: spacing.lg,
   },
   emptyButtonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },

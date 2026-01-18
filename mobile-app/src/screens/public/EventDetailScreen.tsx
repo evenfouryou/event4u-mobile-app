@@ -44,7 +44,7 @@ export function EventDetailScreen() {
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
 
   const { data: event, isLoading } = useQuery<Event>({
-    queryKey: ['/api/events', eventId],
+    queryKey: ['/api/public/events', eventId],
   });
 
   const handleTicketQuantityChange = (ticketId: string, delta: number) => {

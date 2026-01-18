@@ -22,6 +22,8 @@ interface TicketDetail {
   ticketCode: string;
   status: 'valid' | 'used' | 'cancelled';
   holderName: string;
+  holderFirstName: string | null;
+  holderLastName: string | null;
   purchaseDate: string;
   price: number;
   canNameChange: boolean;
@@ -29,6 +31,9 @@ interface TicketDetail {
   isFromNameChange: boolean;
   fiscalSealCode: string | null;
   progressiveNumber: number | null;
+  sectorName: string | null;
+  ticketTypeCode: string | null;
+  hoursToEvent: number | null;
 }
 
 type RouteParams = {
@@ -157,6 +162,13 @@ export function TicketDetailScreen() {
             </Text>
           </View>
           
+          {ticket.sectorName && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Settore</Text>
+              <Text style={styles.infoValue}>{ticket.sectorName}</Text>
+            </View>
+          )}
+          
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Data acquisto</Text>
             <Text style={styles.infoValue}>{ticket.purchaseDate}</Text>
@@ -166,6 +178,20 @@ export function TicketDetailScreen() {
             <Text style={styles.infoLabel}>Prezzo</Text>
             <Text style={styles.infoValue}>€{ticket.price.toFixed(2)}</Text>
           </View>
+          
+          {ticket.fiscalSealCode && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Contrassegno SIAE</Text>
+              <Text style={styles.infoValue}>{ticket.fiscalSealCode}</Text>
+            </View>
+          )}
+          
+          {ticket.progressiveNumber && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Numero progressivo</Text>
+              <Text style={styles.infoValue}>{ticket.progressiveNumber}</Text>
+            </View>
+          )}
         </Card>
 
         {ticket.status === 'valid' && !ticket.isFromNameChange && (

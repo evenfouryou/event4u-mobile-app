@@ -306,7 +306,7 @@ export function LiveScanningScreen() {
 
           <View style={styles.statsRow}>
             <Animated.View style={[styles.statBadge, { transform: [{ scale: pulseAnim }] }]}>
-              <Ionicons name="scan" size={16} color={colors.primary} />
+              <Ionicons name="scan" size={16} color={colors.emerald} />
               <Text style={styles.statBadgeValue}>{stats.totalScans}</Text>
               <Text style={styles.statBadgeLabel}>oggi</Text>
             </Animated.View>
@@ -431,7 +431,7 @@ export function LiveScanningScreen() {
               disabled={!manualCode.trim()}
               data-testid="button-submit-manual"
             >
-              <Ionicons name="checkmark" size={20} color={colors.primaryForeground} />
+              <Ionicons name="checkmark" size={20} color={colors.emeraldForeground} />
               <Text style={styles.submitButtonText}>Verifica Biglietto</Text>
             </TouchableOpacity>
           </View>
@@ -466,14 +466,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   permissionButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.lg,
     marginTop: spacing.xl,
   },
   permissionButtonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },
@@ -544,15 +544,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.emerald + '20',
   },
   statBadgeValue: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
   },
   statBadgeLabel: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.xs,
   },
   overlayMiddle: {
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderColor: colors.primary,
+    borderColor: colors.emerald,
   },
   cornerTopLeft: {
     top: -2,
@@ -609,8 +609,8 @@ const styles = StyleSheet.create({
   },
   scanLine: {
     height: 2,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
+    backgroundColor: colors.emerald,
+    shadowColor: colors.emerald,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 8,
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
   },
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   submitButtonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },

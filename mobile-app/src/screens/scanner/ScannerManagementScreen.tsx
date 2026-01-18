@@ -231,7 +231,7 @@ export default function ScannerManagementScreen() {
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Ionicons name="scan-outline" size={16} color={colors.primary} />
+            <Ionicons name="scan-outline" size={16} color={colors.emerald} />
             <Text style={styles.statValue}>{item.totalScans.toLocaleString()}</Text>
             <Text style={styles.statLabel}>scansioni</Text>
           </View>
@@ -262,7 +262,7 @@ export default function ScannerManagementScreen() {
             onPress={() => handleEditPermissions(item)}
             data-testid={`button-permissions-${item.id}`}
           >
-            <Ionicons name="key-outline" size={18} color={colors.primary} />
+            <Ionicons name="key-outline" size={18} color={colors.emerald} />
             <Text style={styles.actionButtonText}>Permessi</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -314,7 +314,7 @@ export default function ScannerManagementScreen() {
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: colors.primary }]}>
+            <Text style={[styles.summaryValue, { color: colors.emerald }]}>
               {mockOperators.reduce((sum, o) => sum + o.totalScans, 0).toLocaleString()}
             </Text>
             <Text style={styles.summaryLabel}>Scansioni</Text>
@@ -341,7 +341,7 @@ export default function ScannerManagementScreen() {
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListEmptyComponent={
@@ -445,8 +445,8 @@ export default function ScannerManagementScreen() {
                     <Switch
                       value={selectedOperator.permissions[key]}
                       onValueChange={() => togglePermission(key)}
-                      trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
-                      thumbColor={selectedOperator.permissions[key] ? colors.primary : colors.mutedForeground}
+                      trackColor={{ false: colors.surface, true: `${colors.emerald}50` }}
+                      thumbColor={selectedOperator.permissions[key] ? colors.emerald : colors.mutedForeground}
                     />
                   </View>
                 ))}
@@ -466,7 +466,7 @@ export default function ScannerManagementScreen() {
         activeOpacity={0.8}
         data-testid="button-fab-add"
       >
-        <Ionicons name="person-add" size={24} color={colors.primaryForeground} />
+        <Ionicons name="person-add" size={24} color={colors.emeraldForeground} />
       </TouchableOpacity>
     </View>
   );
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: `${colors.primary}20`,
+    backgroundColor: `${colors.emerald}20`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
   },
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
   },
   buttonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },
@@ -741,10 +741,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
+    shadowColor: colors.emerald,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,

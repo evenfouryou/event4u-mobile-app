@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,12 @@ import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { api } from '../../lib/api';
+
+const DOCUMENT_TYPES = [
+  { value: 'identity_card', label: "Carta d'identità" },
+  { value: 'passport', label: 'Passaporto' },
+  { value: 'driving_license', label: 'Patente di guida' },
+] as const;
 
 interface TicketInfo {
   id: string;
@@ -35,6 +41,9 @@ export function NameChangeScreen() {
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [codiceFiscale, setCodiceFiscale] = useState('');
+  const [documentType, setDocumentType] = useState<'identity_card' | 'passport' | 'driving_license'>('identity_card');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ['/api/public/account/tickets', ticketId],
@@ -42,8 +51,16 @@ export function NameChangeScreen() {
   });
 
   const transferMutation = useMutation({
-    mutationFn: (data: { ticketId: string; newFirstName: string; newLastName: string; newEmail: string; newCodiceFiscale: string }) =>
-      api.post('/api/public/account/name-change', data),
+    mutationFn: (data: { 
+      ticketId: string; 
+      newFirstName: string; 
+      newLastName: string; 
+      newEmail: string; 
+      newCodiceFiscale: string;
+      documentType: string;
+      documentNumber: string;
+      dateOfBirth: string;
+    }) => api.post('/api/public/account/name-change', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
       Alert.alert(
@@ -58,7 +75,7 @@ export function NameChangeScreen() {
   });
 
   const handleTransfer = () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !codiceFiscale.trim() || !documentNumber.trim() || !dateOfBirth.trim()) {
       Alert.alert('Errore', 'Compila tutti i campi obbligatori');
       return;
     }
@@ -81,7 +98,10 @@ export function NameChangeScreen() {
             newFirstName: firstName, 
             newLastName: lastName, 
             newEmail: email, 
-            newCodiceFiscale: codiceFiscale 
+            newCodiceFiscale: codiceFiscale,
+            documentType,
+            documentNumber,
+            dateOfBirth,
           }),
         },
       ]
@@ -181,12 +201,51 @@ export function NameChangeScreen() {
             />
             
             <Input
-              label="Codice Fiscale"
+              label="Codice Fiscale *"
               value={codiceFiscale}
               onChangeText={setCodiceFiscale}
               placeholder="Codice fiscale del nuovo intestatario"
               autoCapitalize="characters"
               maxLength={16}
+            />
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Tipo documento *</Text>
+              <View style={styles.documentTypeRow}>
+                {DOCUMENT_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[
+                      styles.documentTypeButton,
+                      documentType === type.value && styles.documentTypeButtonActive
+                    ]}
+                    onPress={() => setDocumentType(type.value)}
+                  >
+                    <Text style={[
+                      styles.documentTypeText,
+                      documentType === type.value && styles.documentTypeTextActive
+                    ]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            <Input
+              label="Numero documento *"
+              value={documentNumber}
+              onChangeText={setDocumentNumber}
+              placeholder="Numero del documento di identità"
+              autoCapitalize="characters"
+            />
+            
+            <Input
+              label="Data di nascita *"
+              value={dateOfBirth}
+              onChangeText={setDateOfBirth}
+              placeholder="GG/MM/AAAA"
+              keyboardType="numeric"
             />
           </Card>
 
@@ -331,5 +390,39 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
     marginTop: spacing.sm,
+  },
+  inputGroup: {
+    marginTop: spacing.sm,
+  },
+  inputLabel: {
+    color: colors.foreground,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    marginBottom: spacing.sm,
+  },
+  documentTypeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  documentTypeButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  documentTypeButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '10',
+  },
+  documentTypeText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+  },
+  documentTypeTextActive: {
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
   },
 });

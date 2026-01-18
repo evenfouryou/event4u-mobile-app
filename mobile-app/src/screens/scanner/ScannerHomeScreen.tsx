@@ -109,7 +109,7 @@ export function ScannerHomeScreen() {
         contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + spacing.xl }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.primary} />
+          <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.emerald} />
         }
       >
         <View style={styles.section}>
@@ -163,8 +163,8 @@ export function ScannerHomeScreen() {
               <Text style={styles.sectionTitle}>Statistiche Oggi</Text>
               <View style={styles.statsGrid}>
                 <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: colors.primary + '20' }]}>
-                    <Ionicons name="scan-outline" size={24} color={colors.primary} />
+                  <View style={[styles.statIconContainer, { backgroundColor: colors.emerald + '20' }]}>
+                    <Ionicons name="scan-outline" size={24} color={colors.emerald} />
                   </View>
                   <Text style={styles.statValue}>{todayStats.totalScans}</Text>
                   <Text style={styles.statLabel}>Scansioni</Text>
@@ -204,7 +204,7 @@ export function ScannerHomeScreen() {
                 data-testid="button-scan"
               >
                 <View style={styles.scanButtonInner}>
-                  <Ionicons name="scan" size={48} color={colors.primaryForeground} />
+                  <Ionicons name="scan" size={48} color={colors.emeraldForeground} />
                   <Text style={styles.scanButtonText}>Scansiona</Text>
                   <Text style={styles.scanButtonSubtext}>Tocca per avviare la scansione</Text>
                 </View>
@@ -241,7 +241,7 @@ export function ScannerHomeScreen() {
               onPress={handleManageOperators}
               data-testid="button-manage-operators"
             >
-              <Ionicons name="settings-outline" size={16} color={colors.primary} />
+              <Ionicons name="settings-outline" size={16} color={colors.emerald} />
               <Text style={styles.manageButtonText}>Gestisci</Text>
             </TouchableOpacity>
           </View>
@@ -275,7 +275,7 @@ export function ScannerHomeScreen() {
               data-testid="button-view-activity"
             >
               <Text style={styles.manageButtonText}>Vedi Tutto</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={16} color={colors.emerald} />
             </TouchableOpacity>
           </View>
           {(recentScans && recentScans.length > 0) ? (
@@ -312,7 +312,7 @@ export function ScannerHomeScreen() {
 
         {!selectedEvent && !eventsLoading && events && events.length > 0 && (
           <Card style={styles.selectEventPrompt}>
-            <Ionicons name="hand-left-outline" size={48} color={colors.primary} />
+            <Ionicons name="hand-left-outline" size={48} color={colors.emerald} />
             <Text style={styles.promptTitle}>Seleziona un evento</Text>
             <Text style={styles.promptText}>
               Scegli l'evento per cui vuoi scansionare i biglietti
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   eventCardSelected: {
-    borderColor: colors.primary,
+    borderColor: colors.emerald,
   },
   eventTitle: {
     color: colors.foreground,
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   scanButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
   },
@@ -442,13 +442,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
   },
   scanButtonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize['2xl'],
     fontWeight: fontWeight.bold,
     marginTop: spacing.md,
   },
   scanButtonSubtext: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.sm,
     opacity: 0.8,
     marginTop: spacing.xs,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   manageButtonText: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },

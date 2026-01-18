@@ -150,7 +150,7 @@ export function ScannerHistoryScreen() {
               <Ionicons
                 name={item.icon as any}
                 size={16}
-                color={activeFilter === item.id ? colors.primaryForeground : colors.foreground}
+                color={activeFilter === item.id ? colors.emeraldForeground : colors.foreground}
               />
               <Text
                 style={[
@@ -178,7 +178,7 @@ export function ScannerHistoryScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
-            tintColor={colors.primary}
+            tintColor={colors.emerald}
           />
         }
         ListEmptyComponent={
@@ -230,8 +230,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   filterChipText: {
     color: colors.foreground,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   filterChipTextActive: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
   },
   scansList: {
     padding: spacing.lg,

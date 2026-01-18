@@ -34,7 +34,7 @@ export function VenuesScreen() {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
 
   const { data: venues, isLoading } = useQuery<Venue[]>({
-    queryKey: ['/api/venues', { search: searchQuery }],
+    queryKey: ['/api/public/all-locations', { search: searchQuery }],
   });
 
   const handleVenuePress = useCallback((venue: Venue) => {

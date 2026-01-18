@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -153,10 +153,12 @@ export function AccountSubscriptionsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-  const { data: subscriptions, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['/api/subscriptions'],
-    queryFn: () => api.get<Subscription[]>('/api/subscriptions'),
+  const { data: subscriptionsData, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['/api/public/account/subscriptions'],
+    queryFn: () => api.get<{ upcoming: Subscription[]; past: Subscription[] }>('/api/public/account/subscriptions'),
   });
+  
+  const subscriptions = [...(subscriptionsData?.upcoming || []), ...(subscriptionsData?.past || [])];
 
   const activeSubscriptions = subscriptions?.filter(s => s.status === 'active') || [];
   const otherSubscriptions = subscriptions?.filter(s => s.status !== 'active') || [];

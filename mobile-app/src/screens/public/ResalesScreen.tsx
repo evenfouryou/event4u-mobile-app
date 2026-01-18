@@ -40,7 +40,7 @@ export function ResalesScreen() {
   const [showSortOptions, setShowSortOptions] = useState(false);
 
   const { data: resales, isLoading, refetch, isRefetching } = useQuery<ResaleTicket[]>({
-    queryKey: ['/api/resales', { search: searchQuery, sort: sortBy }],
+    queryKey: ['/api/public/resales', { search: searchQuery, sort: sortBy }],
   });
 
   const handleResalePress = useCallback((resale: ResaleTicket) => {

@@ -259,7 +259,7 @@ export function OperatorDetailScreen() {
           >
             <View style={[styles.checkbox, formData.permissions.scanEntry && styles.checkboxChecked]}>
               {formData.permissions.scanEntry && (
-                <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                <Ionicons name="checkmark" size={16} color={colors.emeraldForeground} />
               )}
             </View>
             <View style={styles.permissionInfo}>
@@ -280,12 +280,12 @@ export function OperatorDetailScreen() {
           >
             <View style={[styles.checkbox, formData.permissions.scanExit && styles.checkboxChecked]}>
               {formData.permissions.scanExit && (
-                <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                <Ionicons name="checkmark" size={16} color={colors.emeraldForeground} />
               )}
             </View>
             <View style={styles.permissionInfo}>
               <View style={styles.permissionHeader}>
-                <Ionicons name="exit-outline" size={20} color={colors.primary} />
+                <Ionicons name="exit-outline" size={20} color={colors.emerald} />
                 <Text style={styles.permissionTitle}>Scansione Uscita</Text>
               </View>
               <Text style={styles.permissionDescription}>
@@ -301,7 +301,7 @@ export function OperatorDetailScreen() {
           >
             <View style={[styles.checkbox, formData.permissions.manualCheckIn && styles.checkboxChecked]}>
               {formData.permissions.manualCheckIn && (
-                <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                <Ionicons name="checkmark" size={16} color={colors.emeraldForeground} />
               )}
             </View>
             <View style={styles.permissionInfo}>
@@ -340,7 +340,7 @@ export function OperatorDetailScreen() {
                   formData.assignedEventIds.includes(event.id) && styles.checkboxChecked
                 ]}>
                   {formData.assignedEventIds.includes(event.id) && (
-                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                    <Ionicons name="checkmark" size={16} color={colors.emeraldForeground} />
                   )}
                 </View>
                 <View style={styles.eventInfo}>
@@ -481,8 +481,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   permissionInfo: {
     flex: 1,

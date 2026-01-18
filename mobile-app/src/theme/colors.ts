@@ -16,6 +16,11 @@ export const colors = {
   teal: '#00CED1',
   tealForeground: '#000000',
   
+  emerald: '#10B981',
+  emeraldForeground: '#FFFFFF',
+  emeraldLight: '#34D399',
+  emeraldDark: '#059669',
+  
   foreground: '#FFFFFF',
   textPrimary: '#FFFFFF',
   textSecondary: '#94A3B8',

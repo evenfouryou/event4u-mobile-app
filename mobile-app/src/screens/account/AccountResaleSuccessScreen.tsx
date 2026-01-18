@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 

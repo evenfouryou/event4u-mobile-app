@@ -35,8 +35,8 @@ export function ResaleListingScreen() {
   const [price, setPrice] = useState('');
 
   const { data: ticket, isLoading } = useQuery({
-    queryKey: ['/api/tickets', ticketId, 'resale-info'],
-    queryFn: () => api.get<TicketResaleInfo>(`/api/tickets/${ticketId}/resale-info`),
+    queryKey: ['/api/public/account/tickets', ticketId, 'resale-info'],
+    queryFn: () => api.get<TicketResaleInfo>(`/api/public/account/tickets/${ticketId}/resale-info`),
   });
 
   const createListingMutation = useMutation({

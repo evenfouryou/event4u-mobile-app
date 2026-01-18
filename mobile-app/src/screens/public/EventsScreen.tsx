@@ -46,7 +46,7 @@ export function EventsScreen() {
   );
 
   const { data: events, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['/api/events', { filter: activeFilter, category: activeCategory, search: searchQuery }],
+    queryKey: ['/api/public/events', { filter: activeFilter, categoryId: activeCategory, search: searchQuery }],
   });
 
   const handleEventPress = useCallback((eventId: string) => {

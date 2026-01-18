@@ -40,8 +40,9 @@ export function ProfileScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data: ProfileData) => api.put('/api/auth/profile', data),
+    mutationFn: (data: ProfileData) => api.patch('/api/public/account/profile', data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/public/customers/me'] });
       checkAuth();
       Alert.alert('Successo', 'Profilo aggiornato con successo');
     },
@@ -51,7 +52,7 @@ export function ProfileScreen() {
   });
 
   const updatePasswordMutation = useMutation({
-    mutationFn: (data: PasswordData) => api.put('/api/auth/password', data),
+    mutationFn: (data: PasswordData) => api.patch('/api/public/account/password', data),
     onSuccess: () => {
       setCurrentPassword('');
       setNewPassword('');

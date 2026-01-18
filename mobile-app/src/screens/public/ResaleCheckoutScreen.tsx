@@ -38,7 +38,7 @@ export function ResaleCheckoutScreen() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   const { data: resale, isLoading } = useQuery<ResaleDetail>({
-    queryKey: ['/api/resales', resaleId],
+    queryKey: ['/api/public/resales', resaleId],
   });
 
   const purchaseMutation = useMutation({

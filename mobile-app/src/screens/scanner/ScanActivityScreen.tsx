@@ -198,7 +198,7 @@ export function ScanActivityScreen() {
             onPress={() => setShowFilterModal(true)}
             data-testid="button-filters"
           >
-            <Ionicons name="filter" size={20} color={activeFiltersCount > 0 ? colors.primaryForeground : colors.foreground} />
+            <Ionicons name="filter" size={20} color={activeFiltersCount > 0 ? colors.emeraldForeground : colors.foreground} />
             {activeFiltersCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
@@ -246,7 +246,7 @@ export function ScanActivityScreen() {
               <Ionicons
                 name={item.icon as any}
                 size={16}
-                color={resultFilter === item.id ? colors.primaryForeground : colors.foreground}
+                color={resultFilter === item.id ? colors.emeraldForeground : colors.foreground}
               />
               <Text
                 style={[
@@ -274,7 +274,7 @@ export function ScanActivityScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
-            tintColor={colors.primary}
+            tintColor={colors.emerald}
           />
         }
         ListEmptyComponent={
@@ -401,8 +401,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   filterButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   filterBadge: {
     position: 'absolute',
@@ -462,8 +462,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   filterChipText: {
     color: colors.foreground,
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   filterChipTextActive: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
   },
   list: {
     padding: spacing.lg,
@@ -606,15 +606,15 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   filterOptionActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   filterOptionText: {
     color: colors.foreground,
     fontSize: fontSize.sm,
   },
   filterOptionTextActive: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontWeight: fontWeight.semibold,
   },
   modalActions: {
@@ -639,11 +639,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.emerald,
     alignItems: 'center',
   },
   applyButtonText: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },

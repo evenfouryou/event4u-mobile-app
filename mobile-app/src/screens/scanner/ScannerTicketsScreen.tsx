@@ -39,7 +39,7 @@ interface TicketStats {
 
 const STATUS_CONFIG = {
   valid: { label: 'Valido', color: colors.teal, icon: 'checkmark-circle' },
-  used: { label: 'Utilizzato', color: colors.primary, icon: 'enter' },
+  used: { label: 'Utilizzato', color: colors.emerald, icon: 'enter' },
   expired: { label: 'Scaduto', color: colors.mutedForeground, icon: 'time' },
   cancelled: { label: 'Annullato', color: colors.destructive, icon: 'close-circle' },
   refunded: { label: 'Rimborsato', color: colors.warning, icon: 'return-down-back' },
@@ -148,7 +148,7 @@ export default function ScannerTicketsScreen() {
 
             {item.status === 'used' && item.scannedAt && (
               <View style={styles.scannedInfo}>
-                <Ionicons name="scan-outline" size={14} color={colors.primary} />
+                <Ionicons name="scan-outline" size={14} color={colors.emerald} />
                 <Text style={styles.scannedText}>
                   Scansionato alle {item.scannedAt} - {item.gate}
                 </Text>
@@ -190,7 +190,7 @@ export default function ScannerTicketsScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{mockStats.used}</Text>
+              <Text style={[styles.statValue, { color: colors.emerald }]}>{mockStats.used}</Text>
               <Text style={styles.statLabel}>Usati</Text>
             </View>
             <View style={styles.statDivider} />
@@ -202,7 +202,7 @@ export default function ScannerTicketsScreen() {
 
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressSegment, { flex: mockStats.used, backgroundColor: colors.primary }]} />
+              <View style={[styles.progressSegment, { flex: mockStats.used, backgroundColor: colors.emerald }]} />
               <View style={[styles.progressSegment, { flex: mockStats.valid, backgroundColor: colors.teal }]} />
               <View style={[styles.progressSegment, { flex: mockStats.expired + mockStats.cancelled, backgroundColor: colors.mutedForeground }]} />
             </View>
@@ -287,7 +287,7 @@ export default function ScannerTicketsScreen() {
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListEmptyComponent={
@@ -397,8 +397,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   filterPillText: {
     color: colors.foreground,
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   filterPillTextActive: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
   },
   filterDivider: {
     width: 1,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   scannedText: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },

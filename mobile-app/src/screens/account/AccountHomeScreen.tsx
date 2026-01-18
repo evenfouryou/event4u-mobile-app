@@ -1,12 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { useAuthStore } from '../../store/auth';
 import { Card } from '../../components/Card';
 import { Header } from '../../components/Header';
+import { api } from '../../lib/api';
+
+interface Customer {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -46,14 +56,19 @@ function MenuItem({ icon, title, subtitle, onPress, destructive, badge }: MenuIt
 export function AccountHomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+
+  const { data: customer, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['/api/public/customers/me'],
+    queryFn: () => api.get<Customer>('/api/public/customers/me'),
+  });
 
   const handleLogout = async () => {
     await logout();
   };
 
-  const initials = user 
-    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email[0].toUpperCase()
+  const initials = customer 
+    ? `${customer.firstName?.[0] || ''}${customer.lastName?.[0] || ''}`.toUpperCase() || customer.email[0].toUpperCase()
     : '?';
 
   return (
@@ -62,6 +77,13 @@ export function AccountHomeScreen() {
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.primary}
+          />
+        }
       >
         <Card style={styles.profileCard}>
           <View style={styles.profileHeader}>
@@ -70,11 +92,11 @@ export function AccountHomeScreen() {
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
-                {user?.firstName && user?.lastName 
-                  ? `${user.firstName} ${user.lastName}`
+                {customer?.firstName && customer?.lastName 
+                  ? `${customer.firstName} ${customer.lastName}`
                   : 'Utente'}
               </Text>
-              <Text style={styles.profileEmail}>{user?.email}</Text>
+              <Text style={styles.profileEmail}>{customer?.email}</Text>
             </View>
           </View>
         </Card>

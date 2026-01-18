@@ -175,7 +175,7 @@ export default function ScannerScannedScreen() {
             <Text style={styles.mainStatValue}>{mockStats.totalScanned}</Text>
             <Text style={styles.mainStatLabel}>Totale Scansioni</Text>
             <View style={styles.durationBadge}>
-              <Ionicons name="time-outline" size={12} color={colors.primary} />
+              <Ionicons name="time-outline" size={12} color={colors.emerald} />
               <Text style={styles.durationText}>{mockStats.duration}</Text>
             </View>
           </Card>
@@ -214,7 +214,7 @@ export default function ScannerScannedScreen() {
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListEmptyComponent={
@@ -264,11 +264,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    backgroundColor: `${colors.primary}20`,
+    backgroundColor: `${colors.emerald}20`,
     borderRadius: borderRadius.full,
   },
   durationText: {
-    color: colors.primary,
+    color: colors.emerald,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },
@@ -311,8 +311,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
   },
   filterPillText: {
     color: colors.foreground,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   filterPillTextActive: {
-    color: colors.primaryForeground,
+    color: colors.emeraldForeground,
   },
   listContent: {
     paddingHorizontal: spacing.lg,
