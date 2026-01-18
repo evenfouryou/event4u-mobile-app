@@ -22,6 +22,19 @@ interface ScanStats {
   duplicateScans: number;
 }
 
+interface ActiveScannersInfo {
+  onlineCount: number;
+  totalCount: number;
+}
+
+interface RecentScan {
+  id: string;
+  ticketCode: string;
+  holderName: string;
+  result: 'success' | 'error' | 'duplicate';
+  timestamp: string;
+}
+
 export function ScannerHomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -35,6 +48,28 @@ export function ScannerHomeScreen() {
     queryKey: ['/api/scanner/stats/today', selectedEvent?.id],
     enabled: !!selectedEvent,
   });
+
+  const { data: activeScanners } = useQuery<ActiveScannersInfo>({
+    queryKey: ['/api/scanners/active'],
+  });
+
+  const { data: recentScans } = useQuery<RecentScan[]>({
+    queryKey: ['/api/scans/recent'],
+  });
+
+  const handleManageOperators = useCallback(() => {
+    navigation.navigate('ScannerOperators');
+  }, [navigation]);
+
+  const handleViewActivity = useCallback(() => {
+    navigation.navigate('ScanActivity');
+  }, [navigation]);
+
+  const handleLiveScanning = useCallback(() => {
+    if (selectedEvent) {
+      navigation.navigate('LiveScanning', { eventId: selectedEvent.id, eventTitle: selectedEvent.title });
+    }
+  }, [navigation, selectedEvent]);
 
   const todayStats = stats || {
     totalScans: 0,
@@ -197,6 +232,83 @@ export function ScannerHomeScreen() {
             </View>
           </>
         )}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Scanner Attivi</Text>
+            <TouchableOpacity
+              style={styles.manageButton}
+              onPress={handleManageOperators}
+              data-testid="button-manage-operators"
+            >
+              <Ionicons name="settings-outline" size={16} color={colors.primary} />
+              <Text style={styles.manageButtonText}>Gestisci</Text>
+            </TouchableOpacity>
+          </View>
+          <Card style={styles.activeScannersCard}>
+            <View style={styles.activeScannersRow}>
+              <View style={styles.activeScannerStat}>
+                <View style={[styles.onlineDot, { backgroundColor: colors.teal }]} />
+                <Text style={[styles.activeScannersValue, { color: colors.teal }]}>
+                  {activeScanners?.onlineCount || 0}
+                </Text>
+                <Text style={styles.activeScannersLabel}>Online</Text>
+              </View>
+              <View style={styles.activeScannerDivider} />
+              <View style={styles.activeScannerStat}>
+                <View style={[styles.onlineDot, { backgroundColor: colors.mutedForeground }]} />
+                <Text style={styles.activeScannersValue}>
+                  {activeScanners?.totalCount || 0}
+                </Text>
+                <Text style={styles.activeScannersLabel}>Totali</Text>
+              </View>
+            </View>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Attività Recente</Text>
+            <TouchableOpacity
+              style={styles.manageButton}
+              onPress={handleViewActivity}
+              data-testid="button-view-activity"
+            >
+              <Text style={styles.manageButtonText}>Vedi Tutto</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          {(recentScans && recentScans.length > 0) ? (
+            <View style={styles.recentScansContainer}>
+              {recentScans.slice(0, 5).map((scan) => (
+                <View key={scan.id} style={styles.recentScanItem}>
+                  <View style={[
+                    styles.recentScanIndicator,
+                    { backgroundColor: scan.result === 'success' ? colors.teal : scan.result === 'duplicate' ? colors.warning : colors.destructive }
+                  ]}>
+                    <Ionicons
+                      name={scan.result === 'success' ? 'checkmark' : scan.result === 'duplicate' ? 'alert' : 'close'}
+                      size={12}
+                      color={colors.foreground}
+                    />
+                  </View>
+                  <View style={styles.recentScanInfo}>
+                    <Text style={styles.recentScanHolder}>{scan.holderName}</Text>
+                    <Text style={styles.recentScanCode}>{scan.ticketCode}</Text>
+                  </View>
+                  <Text style={styles.recentScanTime}>
+                    {new Date(scan.timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Card style={styles.noRecentScansCard}>
+              <Ionicons name="scan-outline" size={32} color={colors.mutedForeground} />
+              <Text style={styles.noRecentScansText}>Nessuna scansione recente</Text>
+            </Card>
+          )}
+        </View>
 
         {!selectedEvent && !eventsLoading && events && events.length > 0 && (
           <Card style={styles.selectEventPrompt}>
@@ -373,6 +485,101 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
     textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  manageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  manageButtonText: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  activeScannersCard: {
+    padding: spacing.lg,
+  },
+  activeScannersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeScannerStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+  },
+  activeScannersValue: {
+    color: colors.foreground,
+    fontSize: fontSize['2xl'],
+    fontWeight: fontWeight.bold,
+  },
+  activeScannersLabel: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+  },
+  activeScannerDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.lg,
+  },
+  recentScansContainer: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  recentScanItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  recentScanIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentScanInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  recentScanHolder: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+  },
+  recentScanCode: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xxs,
+  },
+  recentScanTime: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+  },
+  noRecentScansCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  noRecentScansText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
     marginTop: spacing.sm,
   },
 });

@@ -39,6 +39,10 @@ import ScannerHomeScreen from '../screens/scanner/ScannerHomeScreen';
 import ScannerScanScreen from '../screens/scanner/ScannerScanScreen';
 import ScannerHistoryScreen from '../screens/scanner/ScannerHistoryScreen';
 import ScannerStatsScreen from '../screens/scanner/ScannerStatsScreen';
+import { ScannerOperatorsScreen } from '../screens/scanner/ScannerOperatorsScreen';
+import { OperatorDetailScreen } from '../screens/scanner/OperatorDetailScreen';
+import { ScanActivityScreen } from '../screens/scanner/ScanActivityScreen';
+import { LiveScanningScreen } from '../screens/scanner/LiveScanningScreen';
 
 // PR Screens
 import PRHomeScreen from '../screens/pr/PRHomeScreen';
@@ -90,6 +94,12 @@ import GestoreDetailScreen from '../screens/admin/GestoreDetailScreen';
 import CompaniesScreen from '../screens/admin/CompaniesScreen';
 import SystemSettingsScreen from '../screens/admin/SystemSettingsScreen';
 
+// Floor Plan Screens
+import { FloorPlanHomeScreen } from '../screens/floorplan/FloorPlanHomeScreen';
+import { FloorPlanViewerScreen } from '../screens/floorplan/FloorPlanViewerScreen';
+import { ZoneDetailScreen } from '../screens/floorplan/ZoneDetailScreen';
+import { FloorPlanEditorScreen } from '../screens/floorplan/FloorPlanEditorScreen';
+
 // Type definitions
 export type RootStackParamList = {
   Auth: undefined;
@@ -113,6 +123,20 @@ export type DrawerParamList = {
   AnalyticsTabs: undefined;
   AccountingTabs: undefined;
   AdminTabs: undefined;
+  FloorPlanTabs: undefined;
+};
+
+export type FloorPlanTabParamList = {
+  FloorPlanHome: undefined;
+  FloorPlanViewer: undefined;
+  FloorPlanEditor: undefined;
+};
+
+export type FloorPlanStackParamList = {
+  FloorPlanList: undefined;
+  FloorPlanViewer: { venueId: string; venueName?: string };
+  ZoneDetail: { zoneId: string; zoneName?: string };
+  FloorPlanEditor: { venueId?: string; zoneId?: string; mode?: 'create' | 'edit' };
 };
 
 export type AdminTabParamList = {
@@ -185,9 +209,13 @@ export type AccountStackParamList = {
 
 export type ScannerStackParamList = {
   ScannerDashboard: undefined;
-  ScannerScan: undefined;
-  ScannerHistory: undefined;
-  ScannerStats: undefined;
+  ScannerScan: { eventId?: string; eventTitle?: string };
+  ScannerHistory: { eventId?: string };
+  ScannerStats: { eventId?: string };
+  ScannerOperators: undefined;
+  OperatorDetail: { operatorId?: string; mode: 'create' | 'edit' };
+  ScanActivity: undefined;
+  LiveScanning: { eventId?: string; eventTitle?: string };
 };
 
 export type PRStackParamList = {
@@ -305,6 +333,10 @@ const AccountingStack = createNativeStackNavigator<AccountingStackParamList>();
 // Admin tabs and stacks
 const AdminTab = createBottomTabNavigator<AdminTabParamList>();
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
+
+// Floor Plan tabs and stacks
+const FloorPlanTab = createBottomTabNavigator<FloorPlanTabParamList>();
+const FloorPlanStack = createNativeStackNavigator<FloorPlanStackParamList>();
 
 // ============= Auth Navigator =============
 function AuthNavigator() {
@@ -445,6 +477,10 @@ function ScannerHomeStack() {
       }}
     >
       <ScannerStack.Screen name="ScannerDashboard" component={ScannerHomeScreen} />
+      <ScannerStack.Screen name="ScannerOperators" component={ScannerOperatorsScreen} />
+      <ScannerStack.Screen name="OperatorDetail" component={OperatorDetailScreen} />
+      <ScannerStack.Screen name="ScanActivity" component={ScanActivityScreen} />
+      <ScannerStack.Screen name="LiveScanning" component={LiveScanningScreen} />
     </ScannerStack.Navigator>
   );
 }
@@ -1198,6 +1234,93 @@ function AdminTabs() {
   );
 }
 
+// ============= Floor Plan Stacks =============
+function FloorPlanHomeStack() {
+  return (
+    <FloorPlanStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <FloorPlanStack.Screen name="FloorPlanList" component={FloorPlanHomeScreen} />
+      <FloorPlanStack.Screen name="FloorPlanViewer" component={FloorPlanViewerScreen} />
+      <FloorPlanStack.Screen name="ZoneDetail" component={ZoneDetailScreen} />
+      <FloorPlanStack.Screen name="FloorPlanEditor" component={FloorPlanEditorScreen} />
+    </FloorPlanStack.Navigator>
+  );
+}
+
+function FloorPlanViewerStack() {
+  return (
+    <FloorPlanStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <FloorPlanStack.Screen name="FloorPlanList" component={FloorPlanHomeScreen} />
+      <FloorPlanStack.Screen name="FloorPlanViewer" component={FloorPlanViewerScreen} />
+      <FloorPlanStack.Screen name="ZoneDetail" component={ZoneDetailScreen} />
+    </FloorPlanStack.Navigator>
+  );
+}
+
+function FloorPlanEditorStack() {
+  return (
+    <FloorPlanStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <FloorPlanStack.Screen name="FloorPlanEditor" component={FloorPlanEditorScreen} />
+      <FloorPlanStack.Screen name="FloorPlanViewer" component={FloorPlanViewerScreen} />
+      <FloorPlanStack.Screen name="ZoneDetail" component={ZoneDetailScreen} />
+    </FloorPlanStack.Navigator>
+  );
+}
+
+function FloorPlanTabs() {
+  return (
+    <FloorPlanTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'FloorPlanHome':
+              iconName = focused ? 'map' : 'map-outline';
+              break;
+            case 'FloorPlanViewer':
+              iconName = focused ? 'eye' : 'eye-outline';
+              break;
+            case 'FloorPlanEditor':
+              iconName = focused ? 'create' : 'create-outline';
+              break;
+            default:
+              iconName = 'map-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <FloorPlanTab.Screen name="FloorPlanHome" component={FloorPlanHomeStack} options={{ tabBarLabel: 'Planimetrie' }} />
+      <FloorPlanTab.Screen name="FloorPlanViewer" component={FloorPlanViewerStack} options={{ tabBarLabel: 'Visualizza' }} />
+      <FloorPlanTab.Screen name="FloorPlanEditor" component={FloorPlanEditorStack} options={{ tabBarLabel: 'Modifica' }} />
+    </FloorPlanTab.Navigator>
+  );
+}
+
 // ============= App Drawer =============
 function AppDrawer() {
   const { user } = useAuthStore();
@@ -1282,6 +1405,20 @@ function AppDrawer() {
             drawerLabel: 'Gestione',
             drawerIcon: ({ color, size }) => (
               <Ionicons name="settings-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* Floor Plan mode - for organizer, gestore, admin */}
+      {(userRole === 'organizer' || userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="FloorPlanTabs" 
+          component={FloorPlanTabs}
+          options={{
+            drawerLabel: 'Planimetrie',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="map-outline" size={size} color={color} />
             ),
           }}
         />
