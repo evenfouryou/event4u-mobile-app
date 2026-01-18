@@ -18,6 +18,9 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/t
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
+const CASHIER_ACCENT = colors.cashier;
+const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+
 interface CashierStats {
   totalRevenue: number;
   ticketsSold: number;
@@ -90,6 +93,7 @@ export function CashierHomeScreen() {
       value: stats ? formatCurrency(stats.totalRevenue) : '€ 0,00',
       icon: 'cash',
       trend: null,
+      color: CASHIER_ACCENT,
     },
     {
       id: '2',
@@ -97,6 +101,7 @@ export function CashierHomeScreen() {
       value: stats?.ticketsSold?.toString() || '0',
       icon: 'ticket',
       trend: null,
+      color: CASHIER_ACCENT,
     },
     {
       id: '3',
@@ -104,12 +109,14 @@ export function CashierHomeScreen() {
       value: stats?.transactionsCount?.toString() || '0',
       icon: 'swap-horizontal',
       trend: null,
+      color: CASHIER_ACCENT,
     },
     {
       id: '4',
       label: 'Incassi Contanti',
       value: stats ? formatCurrency(stats.cashRevenue) : '€ 0,00',
       icon: 'wallet',
+      color: CASHIER_ACCENT,
     },
   ];
 
@@ -118,25 +125,25 @@ export function CashierHomeScreen() {
       id: '1',
       title: 'Vendi Biglietto',
       icon: 'ticket',
-      color: colors.primary,
+      color: CASHIER_ACCENT,
       action: () => navigation.navigate('CashierTicket'),
     },
     {
       id: '2',
       title: 'Riepilogo Bevande',
       icon: 'wine',
-      color: colors.accent,
+      color: colors.cashierLight,
       action: () => {
-        // Navigate to beverage summary
+        navigation.navigate('CashierDashboard');
       },
     },
     {
       id: '3',
       title: 'Riepilogo Incassi',
       icon: 'pie-chart',
-      color: colors.success,
+      color: colors.cashierDark,
       action: () => {
-        // Navigate to revenue summary
+        navigation.navigate('CashierDashboard');
       },
     },
     {
@@ -164,18 +171,18 @@ export function CashierHomeScreen() {
   const getTransactionColor = (type: string) => {
     switch (type) {
       case 'ticket':
-        return colors.primary;
+        return CASHIER_ACCENT;
       case 'beverage':
-        return colors.accent;
+        return colors.cashierLight;
       default:
-        return colors.success;
+        return colors.cashierDark;
     }
   };
 
   const renderStatCard = ({ item }: { item: typeof statCards[0] }) => (
     <Card style={[styles.statCard, { width: (width - spacing.lg * 2 - spacing.md) / 2 }]}>
       <View style={styles.statHeader}>
-        <Ionicons name={item.icon as any} size={24} color={colors.primary} />
+        <Ionicons name={item.icon as any} size={24} color={item.color || CASHIER_ACCENT} />
       </View>
       <Text style={styles.statLabel}>{item.label}</Text>
       <Text style={styles.statValue}>{item.value}</Text>

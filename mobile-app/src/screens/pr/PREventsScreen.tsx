@@ -50,7 +50,7 @@ export function PREventsScreen() {
 
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
-      case 'upcoming': return colors.primary;
+      case 'upcoming': return colors.purple;
       case 'ongoing': return colors.success;
       case 'completed': return colors.mutedForeground;
     }
@@ -72,7 +72,7 @@ export function PREventsScreen() {
       <Card style={styles.eventCard}>
         <View style={styles.eventHeader}>
           <View style={styles.eventImagePlaceholder}>
-            <Ionicons name="calendar" size={32} color={colors.primary} />
+            <Ionicons name="calendar" size={32} color={colors.purple} />
           </View>
           <View style={styles.eventMainInfo}>
             <Text style={styles.eventName} numberOfLines={1}>{item.name}</Text>
@@ -96,12 +96,12 @@ export function PREventsScreen() {
         
         <View style={styles.eventStats}>
           <View style={styles.statItem}>
-            <Ionicons name="people-outline" size={18} color={colors.primary} />
+            <Ionicons name="people-outline" size={18} color={colors.purple} />
             <Text style={styles.statValue}>{item.guestCount}</Text>
             <Text style={styles.statLabel}>Ospiti</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="grid-outline" size={18} color={colors.accent} />
+            <Ionicons name="grid-outline" size={18} color={colors.purpleLight} />
             <Text style={styles.statValue}>{item.tableCount}</Text>
             <Text style={styles.statLabel}>Tavoli</Text>
           </View>
@@ -117,14 +117,14 @@ export function PREventsScreen() {
             style={styles.actionButton}
             onPress={() => navigation.navigate('PRGuestLists', { eventId: item.id, eventName: item.name })}
           >
-            <Ionicons name="list" size={16} color={colors.primary} />
+            <Ionicons name="list" size={16} color={colors.purple} />
             <Text style={styles.actionText}>Lista Ospiti</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => navigation.navigate('PRTables', { eventId: item.id, eventName: item.name })}
           >
-            <Ionicons name="grid" size={16} color={colors.primary} />
+            <Ionicons name="grid" size={16} color={colors.purple} />
             <Text style={styles.actionText}>Tavoli</Text>
           </TouchableOpacity>
         </View>
@@ -175,7 +175,7 @@ export function PREventsScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={colors.purple}
           />
         }
         ListEmptyComponent={
@@ -214,8 +214,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   filterText: {
     color: colors.mutedForeground,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -317,10 +317,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
   },
   actionText: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },

@@ -161,11 +161,11 @@ export function PRDashboardScreen() {
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'guest_added':
-        return colors.accent;
+        return colors.purpleLight;
       case 'guest_confirmed':
         return colors.success;
       case 'table_booked':
-        return colors.primary;
+        return colors.purple;
       case 'payment_received':
         return colors.success;
       default:
@@ -189,7 +189,7 @@ export function PRDashboardScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
       >
         <Card variant="elevated" style={styles.earningsCard}>
@@ -229,8 +229,8 @@ export function PRDashboardScreen() {
 
         <View style={styles.statsGrid}>
           <Card variant="glass" style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: colors.accent + '20' }]}>
-              <Ionicons name="people" size={22} color={colors.accent} />
+            <View style={[styles.statIcon, { backgroundColor: colors.purpleLight + '20' }]}>
+              <Ionicons name="people" size={22} color={colors.purpleLight} />
             </View>
             <Text style={styles.statValue}>{stats?.totalGuests || 0}</Text>
             <Text style={styles.statLabel}>Ospiti Totali</Text>
@@ -243,8 +243,8 @@ export function PRDashboardScreen() {
             <Text style={styles.statLabel}>In Attesa</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="grid" size={22} color={colors.primary} />
+            <View style={[styles.statIcon, { backgroundColor: colors.purple + '20' }]}>
+              <Ionicons name="grid" size={22} color={colors.purple} />
             </View>
             <Text style={styles.statValue}>{stats?.totalTables || 0}</Text>
             <Text style={styles.statLabel}>Tavoli</Text>
@@ -275,7 +275,7 @@ export function PRDashboardScreen() {
                 >
                   <Card variant="glass" style={styles.eventCard}>
                     <View style={styles.eventImagePlaceholder}>
-                      <Ionicons name="calendar" size={32} color={colors.primary} />
+                      <Ionicons name="calendar" size={32} color={colors.purple} />
                     </View>
                     <View style={styles.eventInfo}>
                       <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
@@ -283,11 +283,11 @@ export function PRDashboardScreen() {
                       <Text style={styles.eventVenue} numberOfLines={1}>{event.venue}</Text>
                       <View style={styles.eventStats}>
                         <View style={styles.eventStat}>
-                          <Ionicons name="people" size={14} color={colors.primary} />
+                          <Ionicons name="people" size={14} color={colors.purple} />
                           <Text style={styles.eventStatText}>{event.guestCount}</Text>
                         </View>
                         <View style={styles.eventStat}>
-                          <Ionicons name="grid" size={14} color={colors.accent} />
+                          <Ionicons name="grid" size={14} color={colors.purpleLight} />
                           <Text style={styles.eventStatText}>{event.tableCount}</Text>
                         </View>
                       </View>
@@ -369,8 +369,8 @@ const styles = StyleSheet.create({
   earningsCard: {
     padding: spacing.xl,
     marginBottom: spacing.lg,
-    backgroundColor: colors.primary + '15',
-    borderColor: colors.primary + '30',
+    backgroundColor: colors.purple + '15',
+    borderColor: colors.purple + '30',
   },
   earningsHeader: {
     flexDirection: 'row',
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   seeAllText: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   eventDate: {
-    color: colors.accent,
+    color: colors.purpleLight,
     fontSize: fontSize.xs,
     marginBottom: spacing.xxs,
   },

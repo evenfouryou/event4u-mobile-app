@@ -17,6 +17,9 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/t
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
+const CASHIER_ACCENT = colors.cashier;
+const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+
 interface Event {
   id: string;
   name: string;
@@ -55,9 +58,9 @@ export function EventCashierAllocationsScreen() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const { data: events = [], refetch } = useQuery<Event[]>({
-    queryKey: ['/api/organizer/events/cashier-allocations'],
+    queryKey: ['/api/cashier/allocations/events'],
     queryFn: () =>
-      api.get<Event[]>('/api/organizer/events/cashier-allocations').catch(() => [
+      api.get<Event[]>('/api/cashier/allocations/events').catch(() => [
         {
           id: '1',
           name: 'Notte Italiana',
@@ -138,9 +141,9 @@ export function EventCashierAllocationsScreen() {
   });
 
   const { data: availableCashiers = [] } = useQuery<AvailableCashier[]>({
-    queryKey: ['/api/organizer/cashiers/available'],
+    queryKey: ['/api/cashier/allocations/available'],
     queryFn: () =>
-      api.get<AvailableCashier[]>('/api/organizer/cashiers/available').catch(() => [
+      api.get<AvailableCashier[]>('/api/cashier/allocations/available').catch(() => [
         { id: 'c1', name: 'Marco Rossi', email: 'marco.r@email.com', availability: true },
         { id: 'c2', name: 'Laura Bianchi', email: 'laura.b@email.com', availability: true },
         { id: 'c3', name: 'Paolo Verdi', email: 'paolo.v@email.com', availability: false },
@@ -150,9 +153,9 @@ export function EventCashierAllocationsScreen() {
 
   const assignCashierMutation = useMutation({
     mutationFn: (data: { eventId: string; cashierId: string; shift: string; station: string }) =>
-      api.post('/api/organizer/events/assign-cashier', data),
+      api.post('/api/cashier/allocations/assign', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/organizer/events/cashier-allocations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cashier/allocations/events'] });
       setShowAssignModal(false);
       Alert.alert('Successo', 'Cassiere assegnato con successo');
     },
@@ -160,9 +163,9 @@ export function EventCashierAllocationsScreen() {
 
   const removeAllocationMutation = useMutation({
     mutationFn: (allocationId: string) =>
-      api.delete(`/api/organizer/events/allocations/${allocationId}`),
+      api.delete(`/api/cashier/allocations/${allocationId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/organizer/events/cashier-allocations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cashier/allocations/events'] });
       Alert.alert('Successo', 'Allocazione rimossa');
     },
   });
@@ -254,7 +257,7 @@ export function EventCashierAllocationsScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={CASHIER_ACCENT} />
         }
       >
         <Card variant="glass" style={styles.summaryCard}>
@@ -321,7 +324,7 @@ export function EventCashierAllocationsScreen() {
                   <View key={allocation.id} style={styles.allocationItem}>
                     <View style={styles.allocationInfo}>
                       <View style={styles.allocationAvatar}>
-                        <Ionicons name="person" size={16} color={colors.primary} />
+                        <Ionicons name="person" size={16} color={CASHIER_ACCENT} />
                       </View>
                       <View>
                         <Text style={styles.allocationName}>{allocation.cashierName}</Text>
@@ -364,7 +367,7 @@ export function EventCashierAllocationsScreen() {
                 onPress={() => openAssignModal(event)}
                 data-testid={`button-add-cashier-${event.id}`}
               >
-                <Ionicons name="add" size={20} color={colors.primary} />
+                <Ionicons name="add" size={20} color={CASHIER_ACCENT} />
                 <Text style={styles.addButtonText}>Aggiungi Cassiere</Text>
               </TouchableOpacity>
             )}
@@ -412,7 +415,7 @@ export function EventCashierAllocationsScreen() {
                   >
                     <View style={styles.cashierInfo}>
                       <View style={styles.cashierAvatar}>
-                        <Ionicons name="person" size={20} color={colors.primary} />
+                        <Ionicons name="person" size={20} color={CASHIER_ACCENT} />
                       </View>
                       <View>
                         <Text style={styles.cashierName}>{cashier.name}</Text>
@@ -424,7 +427,7 @@ export function EventCashierAllocationsScreen() {
                         <Text style={styles.assignedText}>Assegnato</Text>
                       </View>
                     ) : cashier.availability ? (
-                      <Ionicons name="add-circle" size={24} color={colors.primary} />
+                      <Ionicons name="add-circle" size={24} color={CASHIER_ACCENT} />
                     ) : (
                       <View style={styles.unavailableBadge}>
                         <Text style={styles.unavailableText}>Non Disponibile</Text>
@@ -542,7 +545,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: CASHIER_ACCENT + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -584,12 +587,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: CASHIER_ACCENT + '50',
     borderStyle: 'dashed',
     borderRadius: borderRadius.lg,
   },
   addButtonText: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
@@ -661,7 +664,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: CASHIER_ACCENT + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },

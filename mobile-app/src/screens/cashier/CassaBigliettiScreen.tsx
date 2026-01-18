@@ -16,6 +16,9 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/t
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
+const CASHIER_ACCENT = colors.cashier;
+const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+
 interface Event {
   id: string;
   name: string;
@@ -306,7 +309,7 @@ export function CassaBigliettiScreen() {
                     <Ionicons
                       name="cash"
                       size={24}
-                      color={paymentMethod === 'cash' ? colors.primary : colors.mutedForeground}
+                      color={paymentMethod === 'cash' ? CASHIER_ACCENT : colors.mutedForeground}
                     />
                     <Text
                       style={[
@@ -325,7 +328,7 @@ export function CassaBigliettiScreen() {
                     <Ionicons
                       name="card"
                       size={24}
-                      color={paymentMethod === 'card' ? colors.primary : colors.mutedForeground}
+                      color={paymentMethod === 'card' ? CASHIER_ACCENT : colors.mutedForeground}
                     />
                     <Text
                       style={[
@@ -344,7 +347,7 @@ export function CassaBigliettiScreen() {
                     <Ionicons
                       name="swap-horizontal"
                       size={24}
-                      color={paymentMethod === 'mixed' ? colors.primary : colors.mutedForeground}
+                      color={paymentMethod === 'mixed' ? CASHIER_ACCENT : colors.mutedForeground}
                     />
                     <Text
                       style={[
@@ -403,7 +406,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   eventCardSelected: {
-    borderColor: colors.primary,
+    borderColor: CASHIER_ACCENT,
     borderWidth: 2,
   },
   eventName: {
@@ -454,7 +457,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   ticketPrice: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
   },
@@ -476,7 +479,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quantityButtonAdd: {
-    backgroundColor: colors.primary,
+    backgroundColor: CASHIER_ACCENT,
   },
   quantityButtonDisabled: {
     opacity: 0.5,
@@ -507,7 +510,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   cartBadge: {
-    backgroundColor: colors.primary,
+    backgroundColor: CASHIER_ACCENT,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -604,7 +607,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   orderTotalValue: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize['2xl'],
     fontWeight: fontWeight.bold,
   },
@@ -632,8 +635,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   paymentOptionActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
+    borderColor: CASHIER_ACCENT,
+    backgroundColor: CASHIER_ACCENT + '10',
   },
   paymentOptionText: {
     color: colors.mutedForeground,
@@ -641,7 +644,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   paymentOptionTextActive: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
   },
   modalActions: {
     flexDirection: 'row',

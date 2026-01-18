@@ -15,7 +15,7 @@ interface StatCardProps {
   color?: string;
 }
 
-function StatCard({ title, value, icon, trend, trendUp, color = colors.primary }: StatCardProps) {
+function StatCard({ title, value, icon, trend, trendUp, color = colors.purple }: StatCardProps) {
   return (
     <Card style={styles.statCard}>
       <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
@@ -51,7 +51,7 @@ function EventItem({ name, date, venue, guestCount, onPress }: EventItemProps) {
   return (
     <TouchableOpacity style={styles.eventItem} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.eventImagePlaceholder}>
-        <Ionicons name="calendar" size={28} color={colors.primary} />
+        <Ionicons name="calendar" size={28} color={colors.purple} />
       </View>
       <View style={styles.eventInfo}>
         <Text style={styles.eventName} numberOfLines={1}>{name}</Text>
@@ -60,7 +60,7 @@ function EventItem({ name, date, venue, guestCount, onPress }: EventItemProps) {
       </View>
       <View style={styles.eventStats}>
         <View style={styles.guestBadge}>
-          <Ionicons name="people" size={14} color={colors.primary} />
+          <Ionicons name="people" size={14} color={colors.purple} />
           <Text style={styles.guestCount}>{guestCount}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
@@ -102,7 +102,7 @@ export function PRHomeScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={colors.purple}
           />
         }
       >
@@ -121,13 +121,13 @@ export function PRHomeScreen() {
             icon="calendar-outline"
             trend="+8%"
             trendUp
-            color={colors.primary}
+            color={colors.purple}
           />
           <StatCard 
             title="Ospiti Totali"
             value="156"
             icon="people-outline"
-            color={colors.accent}
+            color={colors.purpleLight}
           />
           <StatCard 
             title="Tavoli Prenotati"
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   seeAllText: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -353,13 +353,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: borderRadius.full,
   },
   guestCount: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
   },

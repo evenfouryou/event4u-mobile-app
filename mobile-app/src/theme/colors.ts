@@ -16,6 +16,18 @@ export const colors = {
   teal: '#00CED1',
   tealForeground: '#000000',
   
+  // PR Role colors (purple theme)
+  purple: '#8B5CF6',
+  purpleForeground: '#FFFFFF',
+  purpleLight: '#A855F7',
+  purpleDark: '#7C3AED',
+  
+  // Cashier Role colors (amber/orange theme)
+  cashier: '#F59E0B',
+  cashierForeground: '#000000',
+  cashierLight: '#FBBF24',
+  cashierDark: '#D97706',
+  
   emerald: '#10B981',
   emeraldForeground: '#FFFFFF',
   emeraldLight: '#34D399',

@@ -19,6 +19,9 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/t
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
+const CASHIER_ACCENT = colors.cashier;
+const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+
 interface Cashier {
   id: string;
   name: string;
@@ -60,9 +63,9 @@ export function CashierManagementScreen() {
   });
 
   const { data: cashiers = [], refetch } = useQuery<Cashier[]>({
-    queryKey: ['/api/organizer/cashiers'],
+    queryKey: ['/api/cashier/management/staff'],
     queryFn: () =>
-      api.get<Cashier[]>('/api/organizer/cashiers').catch(() => [
+      api.get<Cashier[]>('/api/cashier/management/staff').catch(() => [
         {
           id: '1',
           name: 'Marco Rossi',
@@ -117,9 +120,9 @@ export function CashierManagementScreen() {
   });
 
   const addCashierMutation = useMutation({
-    mutationFn: (data: typeof newCashier) => api.post('/api/organizer/cashiers', data),
+    mutationFn: (data: typeof newCashier) => api.post('/api/cashier/management/staff', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/organizer/cashiers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cashier/management/staff'] });
       setShowAddModal(false);
       setNewCashier({
         name: '',
@@ -137,9 +140,9 @@ export function CashierManagementScreen() {
   });
 
   const updateCashierMutation = useMutation({
-    mutationFn: (data: Cashier) => api.put(`/api/organizer/cashiers/${data.id}`, data),
+    mutationFn: (data: Cashier) => api.put(`/api/cashier/management/staff/${data.id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/organizer/cashiers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cashier/management/staff'] });
       setShowEditModal(false);
       setSelectedCashier(null);
       Alert.alert('Successo', 'Cassiere aggiornato');
@@ -221,7 +224,7 @@ export function CashierManagementScreen() {
         showBack
         rightAction={
           <TouchableOpacity onPress={() => setShowAddModal(true)} data-testid="button-add-cashier">
-            <Ionicons name="add-circle" size={28} color={colors.primary} />
+            <Ionicons name="add-circle" size={28} color={CASHIER_ACCENT} />
           </TouchableOpacity>
         }
       />
@@ -231,7 +234,7 @@ export function CashierManagementScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={CASHIER_ACCENT} />
         }
       >
         <View style={styles.statsRow}>
@@ -246,7 +249,7 @@ export function CashierManagementScreen() {
             <Text style={styles.statLabel}>Attivi</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>
+            <Text style={[styles.statValue, { color: CASHIER_ACCENT }]}>
               {formatCurrency(cashiers.reduce((sum, c) => sum + c.totalSales, 0))}
             </Text>
             <Text style={styles.statLabel}>Vendite Totali</Text>
@@ -293,7 +296,7 @@ export function CashierManagementScreen() {
                   <View style={styles.cashierHeader}>
                     <View style={styles.cashierInfo}>
                       <View style={styles.avatar}>
-                        <Ionicons name="person" size={24} color={colors.primary} />
+                        <Ionicons name="person" size={24} color={CASHIER_ACCENT} />
                       </View>
                       <View style={styles.cashierDetails}>
                         <Text style={styles.cashierName}>{cashier.name}</Text>
@@ -402,8 +405,8 @@ export function CashierManagementScreen() {
                           permissions: { ...newCashier.permissions, [key]: value },
                         })
                       }
-                      trackColor={{ false: colors.borderSubtle, true: colors.primary + '60' }}
-                      thumbColor={newCashier.permissions[key] ? colors.primary : colors.mutedForeground}
+                      trackColor={{ false: colors.borderSubtle, true: CASHIER_ACCENT + '60' }}
+                      thumbColor={newCashier.permissions[key] ? CASHIER_ACCENT : colors.mutedForeground}
                     />
                   </View>
                 )
@@ -467,9 +470,9 @@ export function CashierManagementScreen() {
                             permissions: { ...selectedCashier.permissions, [key]: value },
                           })
                         }
-                        trackColor={{ false: colors.borderSubtle, true: colors.primary + '60' }}
+                        trackColor={{ false: colors.borderSubtle, true: CASHIER_ACCENT + '60' }}
                         thumbColor={
-                          selectedCashier.permissions[key] ? colors.primary : colors.mutedForeground
+                          selectedCashier.permissions[key] ? CASHIER_ACCENT : colors.mutedForeground
                         }
                       />
                     </View>
@@ -564,7 +567,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: CASHIER_ACCENT + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -633,13 +636,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   permissionBadge: {
-    backgroundColor: colors.accent + '20',
+    backgroundColor: CASHIER_ACCENT + '20',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
   },
   permissionText: {
-    color: colors.accent,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },

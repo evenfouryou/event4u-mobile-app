@@ -68,7 +68,7 @@ export function PersonnelScreen() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.get<any[]>('/api/personnel');
+      const data = await api.get<any[]>('/api/users');
       setPersonnel(data.map((p: any) => ({
         id: p.id?.toString() || '',
         firstName: p.firstName || '',

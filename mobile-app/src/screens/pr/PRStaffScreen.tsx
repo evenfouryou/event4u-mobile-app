@@ -125,9 +125,9 @@ export function PRStaffScreen() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'sub_pr':
-        return colors.primary;
+        return colors.purple;
       case 'promoter':
-        return colors.accent;
+        return colors.purpleLight;
       case 'hostess':
         return colors.success;
       default:
@@ -186,7 +186,7 @@ export function PRStaffScreen() {
         showBack
         rightAction={
           <TouchableOpacity onPress={handleInviteStaff} data-testid="button-invite-staff">
-            <Ionicons name="person-add" size={24} color={colors.primary} />
+            <Ionicons name="person-add" size={24} color={colors.purple} />
           </TouchableOpacity>
         }
       />
@@ -196,7 +196,7 @@ export function PRStaffScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
       >
         <View style={styles.statsRow}>
@@ -209,7 +209,7 @@ export function PRStaffScreen() {
             <Text style={styles.statLabel}>Attivi</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.accent }]}>{totalGuests}</Text>
+            <Text style={[styles.statValue, { color: colors.purpleLight }]}>{totalGuests}</Text>
             <Text style={styles.statLabel}>Ospiti Mese</Text>
           </Card>
         </View>
@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   filterPillText: {
     color: colors.mutedForeground,

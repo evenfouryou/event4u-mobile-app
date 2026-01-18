@@ -126,7 +126,7 @@ export function PRMyEventsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'upcoming':
-        return colors.accent;
+        return colors.purpleLight;
       case 'active':
         return colors.success;
       case 'completed':
@@ -169,7 +169,7 @@ export function PRMyEventsScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
       >
         <ScrollView
@@ -235,7 +235,7 @@ export function PRMyEventsScreen() {
                       <Image source={{ uri: event.imageUrl }} style={styles.eventImage} />
                     ) : (
                       <View style={styles.eventImagePlaceholder}>
-                        <Ionicons name="calendar" size={40} color={colors.primary} />
+                        <Ionicons name="calendar" size={40} color={colors.purple} />
                       </View>
                     )}
                     <View style={styles.eventOverlay}>
@@ -250,11 +250,11 @@ export function PRMyEventsScreen() {
                     
                     <View style={styles.eventDetails}>
                       <View style={styles.eventDetailRow}>
-                        <Ionicons name="calendar-outline" size={16} color={colors.accent} />
+                        <Ionicons name="calendar-outline" size={16} color={colors.purpleLight} />
                         <Text style={styles.eventDetailText}>{formatDate(event.date)}</Text>
                       </View>
                       <View style={styles.eventDetailRow}>
-                        <Ionicons name="time-outline" size={16} color={colors.accent} />
+                        <Ionicons name="time-outline" size={16} color={colors.purpleLight} />
                         <Text style={styles.eventDetailText}>{event.time}</Text>
                       </View>
                     </View>
@@ -266,13 +266,13 @@ export function PRMyEventsScreen() {
 
                     <View style={styles.statsRow}>
                       <View style={styles.stat}>
-                        <Ionicons name="people" size={18} color={colors.primary} />
+                        <Ionicons name="people" size={18} color={colors.purple} />
                         <Text style={styles.statValue}>{event.myGuests}</Text>
                         <Text style={styles.statLabel}>ospiti</Text>
                       </View>
                       <View style={styles.statDivider} />
                       <View style={styles.stat}>
-                        <Ionicons name="grid" size={18} color={colors.accent} />
+                        <Ionicons name="grid" size={18} color={colors.purpleLight} />
                         <Text style={styles.statValue}>{event.myTables}</Text>
                         <Text style={styles.statLabel}>tavoli</Text>
                       </View>
@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   filterPillText: {
     color: colors.mutedForeground,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   eventDetailText: {
-    color: colors.accent,
+    color: colors.purpleLight,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },

@@ -45,7 +45,7 @@ export function PRGuestListsScreen() {
   const getStatusColor = (status: Guest['status']) => {
     switch (status) {
       case 'pending': return colors.warning;
-      case 'confirmed': return colors.primary;
+      case 'confirmed': return colors.purple;
       case 'checkedIn': return colors.success;
       case 'noShow': return colors.destructive;
     }
@@ -125,13 +125,13 @@ export function PRGuestListsScreen() {
       </View>
       <View style={styles.guestActions}>
         <TouchableOpacity style={styles.guestAction}>
-          <Ionicons name="call-outline" size={18} color={colors.primary} />
+          <Ionicons name="call-outline" size={18} color={colors.purple} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.guestAction}>
-          <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+          <Ionicons name="chatbubble-outline" size={18} color={colors.purple} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.guestAction}>
-          <Ionicons name="create-outline" size={18} color={colors.primary} />
+          <Ionicons name="create-outline" size={18} color={colors.purple} />
         </TouchableOpacity>
       </View>
     </Card>
@@ -145,7 +145,7 @@ export function PRGuestListsScreen() {
         onBack={() => navigation.goBack()}
         rightAction={
           <TouchableOpacity onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add-circle" size={28} color={colors.primary} />
+            <Ionicons name="add-circle" size={28} color={colors.purple} />
           </TouchableOpacity>
         }
       />
@@ -179,7 +179,7 @@ export function PRGuestListsScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={colors.purple}
           />
         }
         ListEmptyComponent={
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.purple,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -337,13 +337,13 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   noteBadge: {
-    backgroundColor: colors.accent + '30',
+    backgroundColor: colors.purpleLight + '30',
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
   },
   noteText: {
-    color: colors.accent,
+    color: colors.purpleLight,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   plusOneText: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.xs,
     marginTop: 2,
   },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },

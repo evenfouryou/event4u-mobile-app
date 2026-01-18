@@ -190,7 +190,7 @@ export function PRManagementScreen() {
         showBack
         rightAction={
           <TouchableOpacity onPress={() => setShowAddModal(true)} data-testid="button-add-pr">
-            <Ionicons name="add-circle" size={28} color={colors.primary} />
+            <Ionicons name="add-circle" size={28} color={colors.purple} />
           </TouchableOpacity>
         }
       />
@@ -200,7 +200,7 @@ export function PRManagementScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
       >
         <View style={styles.statsGrid}>
@@ -213,11 +213,11 @@ export function PRManagementScreen() {
             <Text style={styles.statLabel}>Attivi</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.accent }]}>{totalStats.totalGuests}</Text>
+            <Text style={[styles.statValue, { color: colors.purpleLight }]}>{totalStats.totalGuests}</Text>
             <Text style={styles.statLabel}>Ospiti Totali</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>
+            <Text style={[styles.statValue, { color: colors.purple }]}>
               € {totalStats.totalEarnings.toFixed(0)}
             </Text>
             <Text style={styles.statLabel}>Commissioni</Text>
@@ -289,7 +289,7 @@ export function PRManagementScreen() {
                   <View style={styles.prHeader}>
                     <View style={styles.prInfo}>
                       <View style={styles.avatar}>
-                        <Ionicons name="person" size={24} color={colors.primary} />
+                        <Ionicons name="person" size={24} color={colors.purple} />
                       </View>
                       <View style={styles.prDetails}>
                         <Text style={styles.prName}>{pr.name}</Text>
@@ -481,8 +481,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   filterPillText: {
     color: colors.mutedForeground,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.purple + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },

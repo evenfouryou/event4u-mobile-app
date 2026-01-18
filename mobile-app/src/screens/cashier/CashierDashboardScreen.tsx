@@ -16,6 +16,9 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/t
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
+const CASHIER_ACCENT = colors.cashier;
+const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+
 const { width } = Dimensions.get('window');
 
 interface DashboardStats {
@@ -185,7 +188,7 @@ export function CashierDashboardScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={CASHIER_ACCENT} />
         }
       >
         <View style={styles.periodSelector}>
@@ -228,17 +231,17 @@ export function CashierDashboardScreen() {
 
         <View style={styles.statsGrid}>
           <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="ticket" size={24} color={colors.primary} />
+            <Ionicons name="ticket" size={24} color={CASHIER_ACCENT} />
             <Text style={styles.statValue}>{stats?.ticketsSold || 0}</Text>
             <Text style={styles.statLabel}>Biglietti</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="swap-horizontal" size={24} color={colors.accent} />
+            <Ionicons name="swap-horizontal" size={24} color={colors.cashierLight} />
             <Text style={styles.statValue}>{stats?.transactionsCount || 0}</Text>
             <Text style={styles.statLabel}>Transazioni</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="calculator" size={24} color={colors.success} />
+            <Ionicons name="calculator" size={24} color={colors.cashierDark} />
             <Text style={styles.statValue}>{formatCurrency(stats?.averageTransaction || 0)}</Text>
             <Text style={styles.statLabel}>Media</Text>
           </Card>
@@ -348,7 +351,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   periodButtonActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: CASHIER_ACCENT,
   },
   periodButtonText: {
     color: colors.mutedForeground,
@@ -362,8 +365,8 @@ const styles = StyleSheet.create({
   revenueCard: {
     padding: spacing.xl,
     marginBottom: spacing.lg,
-    backgroundColor: colors.primary + '15',
-    borderColor: colors.primary + '30',
+    backgroundColor: CASHIER_ACCENT + '15',
+    borderColor: CASHIER_ACCENT + '30',
   },
   revenueLabel: {
     color: colors.mutedForeground,
@@ -448,7 +451,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   seeAllText: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
@@ -477,7 +480,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   eventRevenue: {
-    color: colors.success,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
   },

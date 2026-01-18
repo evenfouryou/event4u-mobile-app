@@ -208,7 +208,7 @@ export function StaffPrEventPanelScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
       >
         {activeTab === 'overview' && event && (
@@ -229,7 +229,7 @@ export function StaffPrEventPanelScreen() {
 
             <View style={styles.statsGrid}>
               <Card variant="glass" style={styles.statCard}>
-                <Ionicons name="people" size={28} color={colors.primary} />
+                <Ionicons name="people" size={28} color={colors.purple} />
                 <Text style={styles.statValue}>{event.currentAttendance}</Text>
                 <Text style={styles.statLabel}>Presenti</Text>
                 <Text style={styles.statSubtext}>di {event.totalCapacity}</Text>
@@ -326,8 +326,8 @@ export function StaffPrEventPanelScreen() {
                     <View>
                       <Text style={styles.guestName}>{guest.name}</Text>
                       <View style={styles.guestMeta}>
-                        <View style={[styles.ticketBadge, { backgroundColor: colors.accent + '20' }]}>
-                          <Text style={[styles.ticketText, { color: colors.accent }]}>{guest.ticketType}</Text>
+                        <View style={[styles.ticketBadge, { backgroundColor: colors.purpleLight + '20' }]}>
+                          <Text style={[styles.ticketText, { color: colors.purpleLight }]}>{guest.ticketType}</Text>
                         </View>
                         <Text style={styles.addedBy}>da {guest.addedBy}</Text>
                       </View>
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
+    borderBottomColor: colors.purple,
   },
   tabText: {
     color: colors.mutedForeground,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   tabTextActive: {
-    color: colors.primary,
+    color: colors.purple,
     fontWeight: fontWeight.semibold,
   },
   tabBadge: {
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   tabBadgeActive: {
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.purple + '20',
   },
   tabBadgeText: {
     color: colors.mutedForeground,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   tabBadgeTextActive: {
-    color: colors.primary,
+    color: colors.purple,
   },
   content: {
     flex: 1,
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.purple,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,

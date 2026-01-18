@@ -72,7 +72,7 @@ export function NightFileScreen() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.get<any>(`/api/events/${eventId}/night-file`);
+      const data = await api.get<any>(`/api/night-files/event/${eventId}`);
       setSummary({
         eventId: data.eventId?.toString() || eventId,
         eventName: data.eventName || data.name || '',

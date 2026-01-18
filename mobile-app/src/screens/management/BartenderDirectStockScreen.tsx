@@ -59,8 +59,8 @@ export function BartenderDirectStockScreen() {
       setError(null);
       
       let endpoint = stationId 
-        ? `/api/stations/${stationId}/products`
-        : `/api/events/${eventId}/stock`;
+        ? `/api/stations/${stationId}`
+        : `/api/events/${eventId}/direct-stock`;
       
       const [productsData, stationData] = await Promise.all([
         api.get<any[]>(endpoint),
@@ -119,8 +119,8 @@ export function BartenderDirectStockScreen() {
       }));
 
       const endpoint = stationId 
-        ? `/api/stations/${stationId}/consumption`
-        : `/api/events/${eventId}/consumption`;
+        ? `/api/stations/${stationId}`
+        : `/api/events/${eventId}/direct-stock/consume`;
 
       await api.post(endpoint, { consumptions: entries });
       

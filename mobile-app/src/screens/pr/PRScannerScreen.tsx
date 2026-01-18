@@ -169,7 +169,7 @@ export function PRScannerScreen() {
             <Ionicons
               name={flashOn ? 'flash' : 'flash-off'}
               size={24}
-              color={flashOn ? colors.primary : colors.foreground}
+              color={flashOn ? colors.purple : colors.foreground}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -231,7 +231,7 @@ export function PRScannerScreen() {
                 <Card variant="glass" style={styles.guestCard}>
                   <View style={styles.guestHeader}>
                     <View style={styles.guestAvatar}>
-                      <Ionicons name="person" size={28} color={colors.primary} />
+                      <Ionicons name="person" size={28} color={colors.purple} />
                     </View>
                     <View style={styles.guestInfo}>
                       <Text style={styles.guestName}>{scanResult.guest.name}</Text>
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scanCountBadge: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.purple,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 30,
     height: 30,
-    borderColor: colors.primary,
+    borderColor: colors.purple,
   },
   topLeft: {
     top: 0,
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '60%',
     height: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.purple,
     top: '50%',
   },
   scanInstruction: {
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.purple + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -497,13 +497,13 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   ticketBadge: {
-    backgroundColor: colors.accent + '20',
+    backgroundColor: colors.purpleLight + '20',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
   },
   ticketText: {
-    color: colors.accent,
+    color: colors.purpleLight,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
   },

@@ -129,7 +129,7 @@ export function StaffPrHomeScreen() {
       case 'active':
         return colors.success;
       case 'upcoming':
-        return colors.accent;
+        return colors.purpleLight;
       case 'completed':
         return colors.mutedForeground;
       default:
@@ -153,7 +153,7 @@ export function StaffPrHomeScreen() {
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'info':
-        return colors.accent;
+        return colors.purpleLight;
       case 'warning':
         return colors.warning;
       case 'success':
@@ -186,7 +186,7 @@ export function StaffPrHomeScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
       >
         {activeEvent && (
@@ -224,15 +224,15 @@ export function StaffPrHomeScreen() {
 
         <View style={styles.statsGrid}>
           <Card variant="glass" style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="today" size={22} color={colors.primary} />
+            <View style={[styles.statIcon, { backgroundColor: colors.purple + '20' }]}>
+              <Ionicons name="today" size={22} color={colors.purple} />
             </View>
             <Text style={styles.statValue}>{stats?.guestsToday || 0}</Text>
             <Text style={styles.statLabel}>Oggi</Text>
           </Card>
           <Card variant="glass" style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: colors.accent + '20' }]}>
-              <Ionicons name="calendar" size={22} color={colors.accent} />
+            <View style={[styles.statIcon, { backgroundColor: colors.purpleLight + '20' }]}>
+              <Ionicons name="calendar" size={22} color={colors.purpleLight} />
             </View>
             <Text style={styles.statValue}>{stats?.guestsThisWeek || 0}</Text>
             <Text style={styles.statLabel}>Questa Settimana</Text>
@@ -253,7 +253,7 @@ export function StaffPrHomeScreen() {
             activeOpacity={0.8}
             data-testid="button-scan-qr"
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.primary }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.purple }]}>
               <Ionicons name="qr-code" size={28} color={colors.primaryForeground} />
             </View>
             <Text style={styles.quickActionLabel}>Scansiona QR</Text>
@@ -264,7 +264,7 @@ export function StaffPrHomeScreen() {
             activeOpacity={0.8}
             data-testid="button-search-guest"
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.accent }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.purpleLight }]}>
               <Ionicons name="search" size={28} color={colors.primaryForeground} />
             </View>
             <Text style={styles.quickActionLabel}>Cerca Ospite</Text>
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   seeAllText: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
@@ -524,19 +524,19 @@ const styles = StyleSheet.create({
     marginRight: spacing.lg,
   },
   eventDate: {
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.purple + '20',
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',
     minWidth: 50,
   },
   eventDay: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },
   eventMonth: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.xs,
     textTransform: 'uppercase',
   },
@@ -561,14 +561,14 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   roleBadge: {
-    backgroundColor: colors.accent + '20',
+    backgroundColor: colors.purpleLight + '20',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xxs,
     borderRadius: borderRadius.sm,
     alignSelf: 'flex-start',
   },
   roleText: {
-    color: colors.accent,
+    color: colors.purpleLight,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },
@@ -606,6 +606,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.purple,
   },
 });

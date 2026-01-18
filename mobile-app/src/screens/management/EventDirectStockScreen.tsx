@@ -57,7 +57,7 @@ export function EventDirectStockScreen() {
       setError(null);
       const [eventData, stockData] = await Promise.all([
         api.get<any>(`/api/events/${eventId}`),
-        api.get<any[]>(`/api/events/${eventId}/stock`).catch(() => []),
+        api.get<any[]>(`/api/events/${eventId}/direct-stock`).catch(() => []),
       ]);
       setEventName(eventData.name || 'Evento');
       setProducts(stockData.map((p: any) => ({
@@ -126,7 +126,7 @@ export function EventDirectStockScreen() {
         type: m.type,
       }));
 
-      await api.post(`/api/events/${eventId}/stock/update`, { movements: stockUpdates });
+      await api.post(`/api/events/${eventId}/direct-stock/load`, { movements: stockUpdates });
       
       Alert.alert('Successo', 'Stock aggiornato correttamente', [
         { text: 'OK', onPress: () => navigation.goBack() },

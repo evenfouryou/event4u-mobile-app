@@ -95,7 +95,7 @@ export function PRWalletScreen() {
   const getTransactionColor = (type: Transaction['type']) => {
     switch (type) {
       case 'earning': return colors.success;
-      case 'payout': return colors.primary;
+      case 'payout': return colors.purple;
       case 'pending': return colors.warning;
     }
   };
@@ -115,7 +115,7 @@ export function PRWalletScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={colors.purple}
           />
         }
       >
@@ -248,7 +248,7 @@ export function PRWalletScreen() {
 
         <Card style={styles.infoCard}>
           <View style={styles.infoHeader}>
-            <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <Ionicons name="information-circle" size={20} color={colors.purple} />
             <Text style={styles.infoTitle}>Come funziona</Text>
           </View>
           <Text style={styles.infoText}>
@@ -314,7 +314,7 @@ export function PRWalletScreen() {
             <View style={styles.payoutMethodSection}>
               <Text style={styles.payoutMethodLabel}>Metodo di pagamento</Text>
               <View style={styles.payoutMethodCard}>
-                <Ionicons name="card-outline" size={24} color={colors.primary} />
+                <Ionicons name="card-outline" size={24} color={colors.purple} />
                 <View style={styles.payoutMethodInfo}>
                   <Text style={styles.payoutMethodName}>Bonifico Bancario</Text>
                   <Text style={styles.payoutMethodDetails}>IBAN: IT** **** **** **** 1234</Text>
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.purple,
   },
   tabText: {
     color: colors.mutedForeground,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   transactionEvent: {
-    color: colors.primary,
+    color: colors.purple,
     fontSize: fontSize.sm,
     marginTop: 2,
   },
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: colors.purple + '50',
   },
   payoutMethodInfo: {
     flex: 1,

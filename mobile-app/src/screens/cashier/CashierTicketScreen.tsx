@@ -14,6 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Input, Header } from '../../components';
+import { api } from '../../lib/api';
+
+const CASHIER_ACCENT = colors.cashier;
+const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
 
 interface TicketType {
   id: string;
@@ -177,7 +181,7 @@ export function CashierTicketScreen() {
                   <Ionicons
                     name={item.icon as any}
                     size={28}
-                    color={selectedTicket === item.id ? colors.primaryForeground : colors.primary}
+                    color={selectedTicket === item.id ? CASHIER_ACCENT_FOREGROUND : CASHIER_ACCENT}
                   />
                 </View>
                 <View style={styles.ticketTypeContent}>
@@ -209,7 +213,7 @@ export function CashierTicketScreen() {
                   <Ionicons
                     name="remove"
                     size={24}
-                    color={quantity <= 1 ? colors.mutedForeground : colors.primary}
+                    color={quantity <= 1 ? colors.mutedForeground : CASHIER_ACCENT}
                   />
                 </TouchableOpacity>
                 <Text style={styles.quantityValue}>{quantity}</Text>
@@ -222,7 +226,7 @@ export function CashierTicketScreen() {
                   <Ionicons
                     name="add"
                     size={24}
-                    color={quantity >= 20 ? colors.mutedForeground : colors.primary}
+                    color={quantity >= 20 ? colors.mutedForeground : CASHIER_ACCENT}
                   />
                 </TouchableOpacity>
               </View>
@@ -450,8 +454,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   ticketTypeButtonSelected: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderColor: CASHIER_ACCENT,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
   },
   ticketTypeIcon: {
     width: 56,
@@ -463,7 +467,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   ticketTypeIconSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: CASHIER_ACCENT,
   },
   ticketTypeContent: {
     flex: 1,
@@ -479,7 +483,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   ticketTypePrice: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
   },
@@ -542,8 +546,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   paymentMethodButtonSelected: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderColor: CASHIER_ACCENT,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
   },
   paymentIcon: {
     width: 48,
@@ -590,7 +594,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   totalValue: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },
@@ -674,7 +678,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   confirmationTotalValue: {
-    color: colors.primary,
+    color: CASHIER_ACCENT,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },

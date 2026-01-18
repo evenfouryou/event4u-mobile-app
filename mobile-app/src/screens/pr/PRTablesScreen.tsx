@@ -52,7 +52,7 @@ export function PRTablesScreen() {
   const getStatusColor = (status: TableReservation['status']) => {
     switch (status) {
       case 'pending': return colors.warning;
-      case 'confirmed': return colors.primary;
+      case 'confirmed': return colors.purple;
       case 'seated': return colors.success;
       case 'cancelled': return colors.destructive;
     }
@@ -97,7 +97,7 @@ export function PRTablesScreen() {
     <Card style={styles.tableCard}>
       <View style={styles.tableHeader}>
         <View style={styles.tableIconContainer}>
-          <Ionicons name="grid" size={24} color={colors.primary} />
+          <Ionicons name="grid" size={24} color={colors.purple} />
         </View>
         <View style={styles.tableMainInfo}>
           <Text style={styles.tableName}>{item.tableName}</Text>
@@ -126,10 +126,10 @@ export function PRTablesScreen() {
         </View>
         <View style={styles.clientActions}>
           <TouchableOpacity style={styles.clientAction}>
-            <Ionicons name="call-outline" size={18} color={colors.primary} />
+            <Ionicons name="call-outline" size={18} color={colors.purple} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.clientAction}>
-            <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+            <Ionicons name="chatbubble-outline" size={18} color={colors.purple} />
           </TouchableOpacity>
         </View>
       </View>
@@ -162,7 +162,7 @@ export function PRTablesScreen() {
         onBack={() => navigation.goBack()}
         rightAction={
           <TouchableOpacity onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add-circle" size={28} color={colors.primary} />
+            <Ionicons name="add-circle" size={28} color={colors.purple} />
           </TouchableOpacity>
         }
       />
@@ -171,11 +171,11 @@ export function PRTablesScreen() {
         <Text style={styles.eventTitle}>{eventName}</Text>
         <View style={styles.summaryStats}>
           <View style={styles.summaryStat}>
-            <Ionicons name="grid" size={16} color={colors.primary} />
+            <Ionicons name="grid" size={16} color={colors.purple} />
             <Text style={styles.summaryValue}>{activeReservations.length}</Text>
           </View>
           <View style={styles.summaryStat}>
-            <Ionicons name="people" size={16} color={colors.accent} />
+            <Ionicons name="people" size={16} color={colors.purpleLight} />
             <Text style={styles.summaryValue}>{totalGuests}</Text>
           </View>
           <View style={styles.summaryStat}>
@@ -194,7 +194,7 @@ export function PRTablesScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={colors.purple}
           />
         }
         ListEmptyComponent={
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -389,12 +389,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.accent + '30',
+    backgroundColor: colors.purpleLight + '30',
     alignItems: 'center',
     justifyContent: 'center',
   },
   clientAvatarText: {
-    color: colors.accent,
+    color: colors.purpleLight,
     fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
   },
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.purple + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
