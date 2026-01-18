@@ -197,13 +197,36 @@ import { BeverageScreen } from '../screens/settings/BeverageScreen';
 // Type definitions
 export type RootStackParamList = {
   Auth: undefined;
+  Public: undefined;
   AppDrawer: undefined;
+  CustomerMain: undefined;
+  ScannerMain: undefined;
+  PRMain: undefined;
+  CashierMain: undefined;
 };
 
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+};
+
+export type PublicAppStackParamList = {
+  Home: undefined;
+  EventsList: undefined;
+  EventDetail: { eventId: string };
+  VenuesList: undefined;
+  VenueDetail: { venueId: string };
+  Resales: undefined;
+  ResaleCheckout: { resaleId: string };
+  Cart: undefined;
+  Checkout: undefined;
+  CheckoutSuccess: { transactionId: string };
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+  TicketVerify: { ticketCode: string };
+  EventShortLink: { shortCode: string };
 };
 
 export type DrawerParamList = {
@@ -515,6 +538,7 @@ export type SettingsStackParamList = {
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const PublicAppStack = createNativeStackNavigator<PublicAppStackParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
 // Customer tabs and stacks
@@ -587,6 +611,34 @@ function AuthNavigator() {
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </AuthStack.Navigator>
+  );
+}
+
+// ============= Public Navigator (for non-authenticated users) =============
+function PublicNavigator() {
+  return (
+    <PublicAppStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <PublicAppStack.Screen name="Home" component={HomeScreen} />
+      <PublicAppStack.Screen name="EventsList" component={EventsScreen} />
+      <PublicAppStack.Screen name="EventDetail" component={EventDetailScreen} />
+      <PublicAppStack.Screen name="VenuesList" component={VenuesScreen} />
+      <PublicAppStack.Screen name="VenueDetail" component={VenueDetailScreen} />
+      <PublicAppStack.Screen name="Resales" component={ResalesScreen} />
+      <PublicAppStack.Screen name="ResaleCheckout" component={ResaleCheckoutScreen} />
+      <PublicAppStack.Screen name="Cart" component={CartScreen} />
+      <PublicAppStack.Screen name="Checkout" component={CheckoutScreen} />
+      <PublicAppStack.Screen name="CheckoutSuccess" component={CheckoutSuccessScreen} />
+      <PublicAppStack.Screen name="Login" component={LoginScreen} />
+      <PublicAppStack.Screen name="Register" component={RegisterScreen} />
+      <PublicAppStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <PublicAppStack.Screen name="TicketVerify" component={TicketVerifyScreen} />
+      <PublicAppStack.Screen name="EventShortLink" component={EventShortLinkScreen} />
+    </PublicAppStack.Navigator>
   );
 }
 
@@ -2271,20 +2323,55 @@ function AppDrawer() {
 
 // ============= Main Navigator =============
 export function MainNavigator() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
 
   if (isLoading) {
     return null;
   }
 
+  const userRole = user?.role || 'cliente';
+
+  // Determine which content to render based on authentication and role
+  const renderAppContent = () => {
+    if (!isAuthenticated) {
+      // NOT AUTHENTICATED: Show public screens with Login/Register accessible
+      return <RootStack.Screen name="Public" component={PublicNavigator} />;
+    }
+
+    // AUTHENTICATED: Route based on role
+    switch (userRole) {
+      case 'cliente':
+        // Customer role: CustomerTabs only, NO drawer
+        return <RootStack.Screen name="CustomerMain" component={CustomerTabs} />;
+      
+      case 'scanner':
+        // Scanner role: ScannerTabs only, NO drawer
+        return <RootStack.Screen name="ScannerMain" component={ScannerTabs} />;
+      
+      case 'pr':
+      case 'capo_staff':
+        // PR role: PRTabs only, NO drawer
+        return <RootStack.Screen name="PRMain" component={PRTabs} />;
+      
+      case 'cashier':
+        // Cashier role: CashierTabs only, NO drawer
+        return <RootStack.Screen name="CashierMain" component={CashierTabs} />;
+      
+      case 'gestore':
+      case 'super_admin':
+        // Gestore/Admin roles: AppDrawer with all modules
+        return <RootStack.Screen name="AppDrawer" component={AppDrawer} />;
+      
+      default:
+        // Default to CustomerTabs for any other role
+        return <RootStack.Screen name="CustomerMain" component={CustomerTabs} />;
+    }
+  };
+
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <RootStack.Screen name="Auth" component={AuthNavigator} />
-        ) : (
-          <RootStack.Screen name="AppDrawer" component={AppDrawer} />
-        )}
+        {renderAppContent()}
       </RootStack.Navigator>
     </NavigationContainer>
   );

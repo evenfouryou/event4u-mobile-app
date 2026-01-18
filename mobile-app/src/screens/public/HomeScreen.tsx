@@ -5,106 +5,75 @@ import {
   ScrollView, 
   StyleSheet, 
   TouchableOpacity, 
-  useWindowDimensions,
-  RefreshControl
+  TextInput,
+  FlatList,
+  RefreshControl,
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { api } from '../../lib/api';
+import { EventCard } from '../../components/EventCard';
+import { Button } from '../../components/Button';
 
-interface Event {
-  id: number;
-  name: string;
-  startDatetime: string;
-  endDatetime?: string;
-  location?: string;
-}
-
-interface DashboardStats {
-  activeEvents: number;
+interface PublicEvent {
+  id: string;
+  eventId: number;
+  eventName: string;
+  eventStart: string;
+  eventEnd: string;
+  eventImageUrl: string | null;
+  locationName: string;
+  locationAddress: string;
+  categoryName: string | null;
+  categoryIcon: string | null;
+  categoryColor: string | null;
+  minPrice: number;
+  totalAvailable: number;
   ticketsSold: number;
-  todayRevenue: number;
-  nextEventName?: string;
-  nextEventDate?: string;
+  distance: number | null;
 }
 
-interface UserData {
-  firstName?: string;
-  lastName?: string;
-  role?: string;
+interface EventCategory {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  color: string;
 }
+
+const CATEGORIES: EventCategory[] = [
+  { id: 'all', name: 'Tutti', slug: 'all', icon: 'apps', color: colors.primary },
+  { id: 'music', name: 'Musica', slug: 'music', icon: 'musical-notes', color: '#8B5CF6' },
+  { id: 'techno', name: 'Techno', slug: 'techno', icon: 'pulse', color: '#00CED1' },
+  { id: 'hiphop', name: 'Hip Hop', slug: 'hiphop', icon: 'mic', color: '#F59E0B' },
+  { id: 'house', name: 'House', slug: 'house', icon: 'headset', color: '#EC4899' },
+  { id: 'latin', name: 'Latino', slug: 'latin', icon: 'flame', color: '#EF4444' },
+];
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
 
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<PublicEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [user, setUser] = useState<UserData | null>(null);
-  const [stats, setStats] = useState<DashboardStats>({
-    activeEvents: 0,
-    ticketsSold: 0,
-    todayRevenue: 0,
-  });
-  const [hasBeverageAccess, setHasBeverageAccess] = useState(false);
-  const [hasScannerAccess, setHasScannerAccess] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       setError(null);
-      const [eventsData, userData, userFeatures] = await Promise.all([
-        api.get<Event[]>('/api/events').catch(() => []),
-        api.get<UserData>('/api/auth/user').catch(() => null),
-        api.get<any>('/api/user-features/current/my').catch(() => null),
-      ]);
-      
-      // Set feature access based on user features
-      if (userFeatures) {
-        setHasBeverageAccess(userFeatures.beverageEnabled !== false);
-        setHasScannerAccess(userFeatures.scannerEnabled !== false);
-      } else {
-        // Default to true if gestore role
-        const isGestore = userData?.role === 'gestore';
-        setHasBeverageAccess(isGestore);
-        setHasScannerAccess(isGestore);
-      }
-      
-      setEvents(eventsData || []);
-      setUser(userData);
-      
-      const now = new Date();
-      const activeEvents = eventsData?.filter((e: Event) => {
-        const startDate = new Date(e.startDatetime);
-        const endDate = e.endDatetime ? new Date(e.endDatetime) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
-        return startDate <= now && endDate >= now;
-      }) || [];
-      
-      const futureEvents = eventsData?.filter((e: Event) => new Date(e.startDatetime) > now)
-        .sort((a: Event, b: Event) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime()) || [];
-      
-      const nextEvent = futureEvents[0];
-      
-      // Calculate real stats from events data
-      const totalTicketsSold = eventsData?.reduce((sum: number, e: any) => 
-        sum + (e.ticketsSold || 0), 0) || 0;
-      const totalRevenue = eventsData?.reduce((sum: number, e: any) => 
-        sum + parseFloat(e.actualRevenue || e.revenue || '0'), 0) || 0;
-      
-      setStats({
-        activeEvents: activeEvents.length,
-        ticketsSold: totalTicketsSold,
-        todayRevenue: totalRevenue,
-        nextEventName: nextEvent?.name,
-        nextEventDate: nextEvent?.startDatetime,
-      });
+      const data = await api.get<PublicEvent[]>('/api/public/events');
+      setEvents(data || []);
     } catch (err) {
-      setError('Errore nel caricamento dei dati');
+      console.error('Error fetching events:', err);
+      setError('Errore nel caricamento degli eventi');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -112,282 +81,291 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchData();
-  }, [fetchData]);
+    fetchEvents();
+  }, [fetchEvents]);
 
-  const getGreeting = (): string => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Buongiorno';
-    if (hour < 18) return 'Buon pomeriggio';
-    return 'Buonasera';
+  const handleEventPress = (eventId: string) => {
+    navigation.navigate('EventDetail', { eventId });
   };
 
-  const getInitials = (firstName?: string, lastName?: string): string => {
-    const first = firstName?.charAt(0) || '';
-    const last = lastName?.charAt(0) || '';
-    return (first + last).toUpperCase() || 'U';
+  const handleSearch = () => {
+    navigation.navigate('EventsList', { search: searchQuery });
+  };
+
+  const handleCategoryPress = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    if (categoryId !== 'all') {
+      navigation.navigate('EventsList', { category: categoryId });
+    }
+  };
+
+  const handleCartPress = () => {
+    navigation.navigate('Cart');
+  };
+
+  const handleLoginPress = () => {
+    navigation.navigate('Login');
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
+      weekday: 'short',
       day: 'numeric',
       month: 'short',
     });
   };
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
-  const handleEventPress = (eventId: number) => {
-    navigation.navigate('EventDetail', { eventId });
-  };
+  const filteredEvents = events.filter(event => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return event.eventName.toLowerCase().includes(query) ||
+             event.locationName.toLowerCase().includes(query);
+    }
+    return true;
+  });
 
-  const handleSeeAllEvents = () => {
-    navigation.navigate('Events');
-  };
+  const todayEvents = filteredEvents.filter(event => {
+    const eventDate = new Date(event.eventStart);
+    const today = new Date();
+    return eventDate.toDateString() === today.toDateString();
+  });
 
-  const handleNewEvent = () => {
-    navigation.navigate('CreateEvent');
-  };
-
-  const handleScanner = () => {
-    navigation.navigate('Scanner');
-  };
-
-  const handleBeverage = () => {
-    navigation.navigate('Beverage');
-  };
-
-  const recentEvents = events.slice(0, isLandscape ? 4 : 3);
-
-  const statsGridColumns = isLandscape ? 4 : 2;
+  const upcomingEvents = filteredEvents.filter(event => {
+    const eventDate = new Date(event.eventStart);
+    const today = new Date();
+    return eventDate > today;
+  });
 
   if (loading) {
     return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 100 }]}
-      >
-        <View style={styles.headerSkeleton}>
-          <View style={styles.avatarSkeleton} />
-          <View style={styles.headerTextSkeleton}>
-            <View style={styles.greetingSkeleton} />
-            <View style={styles.nameSkeleton} />
-          </View>
-        </View>
-        <View style={[styles.statsGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
-          {[1, 2, 3, 4].map((i) => (
-            <View key={i} style={[styles.statCardSkeleton, { width: `${100 / statsGridColumns - 2}%` }]} />
-          ))}
-        </View>
-        <View style={styles.sectionSkeleton} />
-        {[1, 2, 3].map((i) => (
-          <View key={i} style={styles.eventCardSkeleton} />
-        ))}
-      </ScrollView>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-        <Ionicons name="alert-circle-outline" size={64} color={colors.destructive} />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity 
-          style={styles.retryButton} 
-          onPress={fetchData}
-          data-testid="button-retry"
-        >
-          <Text style={styles.retryButtonText}>Riprova</Text>
-        </TouchableOpacity>
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Caricamento eventi...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 100 }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-    >
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {getInitials(user?.firstName, user?.lastName)}
-            </Text>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent, 
+          { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 100 }
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <LinearGradient
+              colors={[colors.primary, '#FFA500']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoGradient}
+            >
+              <Text style={styles.logoText}>E4U</Text>
+            </LinearGradient>
+            <Text style={styles.brandText}>Event4U</Text>
           </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.userName}>{user?.firstName || 'Gestore'}</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={styles.iconButton}
+              onPress={handleCartPress}
+              data-testid="button-cart"
+            >
+              <Ionicons name="cart-outline" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={handleLoginPress}
+              data-testid="button-login"
+            >
+              <Ionicons name="person-outline" size={20} color={colors.primaryForeground} />
+              <Text style={styles.loginButtonText}>Accedi</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-        <View style={styles.onlineStatus}>
-          <View style={styles.onlineDot} />
-          <Text style={styles.onlineText}>Online</Text>
-        </View>
-      </View>
-
-      <View style={[
-        styles.statsGrid, 
-        isLandscape && styles.statsGridLandscape
-      ]}>
-        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
-            <View style={styles.statIconGradient1}>
-              <Ionicons name="calendar-outline" size={28} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{stats.activeEvents}</Text>
-          <Text style={styles.statLabel}>Eventi Attivi</Text>
-        </View>
-
-        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
-            <View style={styles.statIconGradient2}>
-              <Ionicons name="ticket-outline" size={28} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{stats.ticketsSold}</Text>
-          <Text style={styles.statLabel}>Biglietti Venduti</Text>
         </View>
 
-        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(20, 184, 166, 0.2)' }]}>
-            <View style={styles.statIconGradient3}>
-              <Ionicons name="wallet-outline" size={28} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{formatCurrency(stats.todayRevenue)}</Text>
-          <Text style={styles.statLabel}>Incasso Oggi</Text>
+        <View style={styles.heroSection}>
+          <Text style={styles.heroTitle}>Scopri gli eventi</Text>
+          <Text style={styles.heroSubtitle}>I migliori eventi nella tua zona</Text>
         </View>
 
-        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(244, 63, 94, 0.2)' }]}>
-            <View style={styles.statIconGradient4}>
-              <Ionicons name="time-outline" size={28} color="#FFFFFF" />
-            </View>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color={colors.mutedForeground} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cerca eventi, locali..."
+              placeholderTextColor={colors.mutedForeground}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+              data-testid="input-search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.statValue} numberOfLines={1}>
-            {stats.nextEventName ? formatDate(stats.nextEventDate!) : '--'}
-          </Text>
-          <Text style={styles.statLabel}>Prossimo Evento</Text>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.quickActionsContainer}
-        >
-          <TouchableOpacity 
-            style={[styles.quickActionButton, styles.quickActionGradient1]}
-            onPress={handleNewEvent}
-            activeOpacity={0.8}
-            data-testid="button-new-event"
+        <View style={styles.categoriesSection}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}
           >
-            <View style={styles.quickActionIconContainer}>
-              <Ionicons name="add-outline" size={32} color="#FFFFFF" />
-            </View>
-            <Text style={styles.quickActionLabel}>Nuovo Evento</Text>
-          </TouchableOpacity>
-
-          {hasScannerAccess && (
-            <TouchableOpacity 
-              style={[styles.quickActionButton, styles.quickActionGradient2]}
-              onPress={handleScanner}
-              activeOpacity={0.8}
-              data-testid="button-scanner"
-            >
-              <View style={styles.quickActionIconContainer}>
-                <Ionicons name="qr-code-outline" size={32} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionLabel}>Scanner</Text>
-            </TouchableOpacity>
-          )}
-
-          {hasBeverageAccess && (
-            <TouchableOpacity 
-              style={[styles.quickActionButton, styles.quickActionGradient3]}
-              onPress={handleBeverage}
-              activeOpacity={0.8}
-              data-testid="button-beverage"
-            >
-              <View style={styles.quickActionIconContainer}>
-                <Ionicons name="wine-outline" size={32} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionLabel}>Beverage</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Eventi Recenti</Text>
-          <TouchableOpacity onPress={handleSeeAllEvents} data-testid="button-see-all-events">
-            <Text style={styles.seeAllText}>Vedi tutti</Text>
-          </TouchableOpacity>
-        </View>
-
-        {recentEvents.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyStateText}>Nessun evento disponibile</Text>
-          </View>
-        ) : (
-          <View style={[
-            styles.eventsContainer,
-            isLandscape && styles.eventsContainerLandscape
-          ]}>
-            {recentEvents.map((event) => (
+            {CATEGORIES.map((category) => (
               <TouchableOpacity
-                key={event.id}
+                key={category.id}
                 style={[
-                  styles.eventCard,
-                  isLandscape && styles.eventCardLandscape
+                  styles.categoryChip,
+                  selectedCategory === category.id && styles.categoryChipActive,
+                  selectedCategory === category.id && { borderColor: category.color }
                 ]}
-                onPress={() => handleEventPress(event.id)}
-                activeOpacity={0.8}
-                data-testid={`event-card-${event.id}`}
+                onPress={() => handleCategoryPress(category.id)}
+                data-testid={`category-${category.id}`}
               >
-                <View style={styles.eventIconContainer}>
-                  <Ionicons name="calendar" size={24} color={colors.primary} />
-                </View>
-                <View style={styles.eventContent}>
-                  <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
-                  <Text style={styles.eventDate}>{formatDate(event.startDatetime)}</Text>
-                </View>
-                <View style={styles.eventChevron}>
-                  <Ionicons name="chevron-forward" size={24} color={colors.mutedForeground} />
-                </View>
+                <Ionicons 
+                  name={category.icon as any} 
+                  size={16} 
+                  color={selectedCategory === category.id ? category.color : colors.mutedForeground} 
+                />
+                <Text style={[
+                  styles.categoryText,
+                  selectedCategory === category.id && { color: category.color }
+                ]}>
+                  {category.name}
+                </Text>
               </TouchableOpacity>
             ))}
+          </ScrollView>
+        </View>
+
+        {todayEvents.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <View style={styles.liveDot} />
+                <Text style={styles.sectionTitle}>Stasera</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('EventsList', { filter: 'today' })}>
+                <Text style={styles.seeAllText}>Vedi tutti</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalEventsList}
+            >
+              {todayEvents.slice(0, 5).map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.horizontalEventCard}
+                  onPress={() => handleEventPress(event.id)}
+                  activeOpacity={0.9}
+                  data-testid={`event-today-${event.id}`}
+                >
+                  <Image
+                    source={event.eventImageUrl ? { uri: event.eventImageUrl } : require('../../../assets/event-placeholder.png')}
+                    style={styles.horizontalEventImage}
+                    defaultSource={require('../../../assets/event-placeholder.png')}
+                  />
+                  <LinearGradient
+                    colors={['transparent', colors.overlay.dark]}
+                    style={styles.eventGradient}
+                  />
+                  <View style={styles.todayBadge}>
+                    <View style={styles.todayDot} />
+                    <Text style={styles.todayText}>LIVE</Text>
+                  </View>
+                  <View style={styles.horizontalEventContent}>
+                    <Text style={styles.horizontalEventTitle} numberOfLines={2}>{event.eventName}</Text>
+                    <View style={styles.eventInfoRow}>
+                      <Ionicons name="location-outline" size={12} color={colors.teal} />
+                      <Text style={styles.eventInfoText} numberOfLines={1}>{event.locationName}</Text>
+                    </View>
+                    <Text style={styles.eventPrice}>
+                      {event.minPrice === 0 ? 'Gratuito' : `Da €${event.minPrice.toFixed(2)}`}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
-      </View>
-    </ScrollView>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('EventsList')}>
+              <Text style={styles.seeAllText}>Vedi tutti</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+              <Text style={styles.errorText}>{error}</Text>
+              <Button
+                title="Riprova"
+                onPress={fetchEvents}
+                variant="primary"
+                size="sm"
+              />
+            </View>
+          ) : upcomingEvents.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle}>Nessun evento trovato</Text>
+              <Text style={styles.emptyText}>Prova a cercare con altri termini</Text>
+            </View>
+          ) : (
+            <View style={styles.eventsList}>
+              {upcomingEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  id={event.id}
+                  title={event.eventName}
+                  date={formatDate(event.eventStart)}
+                  time={formatTime(event.eventStart)}
+                  location={event.locationName}
+                  imageUrl={event.eventImageUrl || undefined}
+                  price={event.minPrice}
+                  isLive={new Date(event.eventStart).toDateString() === new Date().toDateString()}
+                  onPress={() => handleEventPress(event.id)}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -396,355 +374,275 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: spacing.lg,
   },
   centerContent: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+  },
+  loadingText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+    marginTop: spacing.lg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
-  headerLeft: {
+  logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
+  logoGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  avatarText: {
+  logoText: {
     color: colors.primaryForeground,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
   },
-  headerTextContainer: {
-    gap: spacing.xs,
-  },
-  greeting: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.sm,
-  },
-  userName: {
+  brandText: {
     color: colors.foreground,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },
-  onlineStatus: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  loginButtonText: {
+    color: colors.primaryForeground,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+  heroSection: {
+    marginBottom: spacing.xl,
+  },
+  heroTitle: {
+    color: colors.foreground,
+    fontSize: fontSize['3xl'],
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing.sm,
+  },
+  heroSubtitle: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+  },
+  searchContainer: {
+    marginBottom: spacing.xl,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.foreground,
+    fontSize: fontSize.base,
+  },
+  categoriesSection: {
+    marginBottom: spacing.xl,
+  },
+  categoriesContainer: {
+    gap: spacing.md,
+    paddingRight: spacing.lg,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.success,
+  categoryChipActive: {
+    backgroundColor: colors.glass.background,
+    borderWidth: 1,
   },
-  onlineText: {
-    color: colors.success,
+  categoryText: {
+    color: colors.mutedForeground,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  statsGridLandscape: {
-    gap: spacing.sm,
-  },
-  statCard: {
-    width: '48%',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statCardLandscape: {
-    width: '23%',
-    padding: spacing.md,
-  },
-  statIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statIconGradient1: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  statIconGradient2: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: '#F59E0B',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  statIconGradient3: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: '#14B8A6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#14B8A6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  statIconGradient4: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: '#F43F5E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#F43F5E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  statValue: {
-    color: colors.foreground,
-    fontSize: fontSize['2xl'],
-    fontWeight: fontWeight.bold,
-    marginBottom: spacing.xs,
-  },
-  statLabel: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.sm,
-  },
   section: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.teal,
   },
   sectionTitle: {
     color: colors.foreground,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.semibold,
-    marginBottom: spacing.md,
   },
   seeAllText: {
     color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
-  quickActionsContainer: {
-    gap: spacing.md,
-    paddingRight: spacing.md,
+  horizontalEventsList: {
+    gap: spacing.lg,
+    paddingRight: spacing.lg,
   },
-  quickActionButton: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.xl,
-    padding: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.sm,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  quickActionGradient1: {
-    backgroundColor: '#6366F1',
-    shadowColor: '#6366F1',
-  },
-  quickActionGradient2: {
-    backgroundColor: '#F59E0B',
-    shadowColor: '#F59E0B',
-  },
-  quickActionGradient3: {
-    backgroundColor: '#8B5CF6',
-    shadowColor: '#8B5CF6',
-  },
-  quickActionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickActionLabel: {
-    color: '#FFFFFF',
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    textAlign: 'center',
-  },
-  eventsContainer: {
-    gap: spacing.md,
-  },
-  eventsContainerLandscape: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  eventCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+  horizontalEventCard: {
+    width: 280,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius['2xl'],
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
+    borderColor: colors.borderSubtle,
   },
-  eventCardLandscape: {
-    width: '48%',
+  horizontalEventImage: {
+    width: '100%',
+    height: 160,
+    backgroundColor: colors.muted,
   },
-  eventIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    justifyContent: 'center',
+  eventGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 100,
+    height: 60,
+  },
+  todayBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  eventContent: {
-    flex: 1,
+    backgroundColor: colors.glass.background,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
     gap: spacing.xs,
   },
-  eventName: {
+  todayDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.teal,
+  },
+  todayText: {
+    color: colors.teal,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 1,
+  },
+  horizontalEventContent: {
+    padding: spacing.lg,
+  },
+  horizontalEventTitle: {
     color: colors.foreground,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing.sm,
   },
-  eventDate: {
+  eventInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  eventInfoText: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
+    flex: 1,
   },
-  eventChevron: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.muted,
-    justifyContent: 'center',
-    alignItems: 'center',
+  eventPrice: {
+    color: colors.primary,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    marginTop: spacing.sm,
   },
-  emptyState: {
+  eventsList: {
+    gap: spacing.md,
+  },
+  errorContainer: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
+    paddingVertical: spacing['2xl'],
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyStateText: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.sm,
-    marginTop: spacing.md,
+    borderColor: colors.borderSubtle,
+    gap: spacing.md,
   },
   errorText: {
     color: colors.foreground,
     fontSize: fontSize.base,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
     textAlign: 'center',
   },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-  },
-  retryButtonText: {
-    color: colors.primaryForeground,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-  },
-  headerSkeleton: {
-    flexDirection: 'row',
+  emptyContainer: {
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  avatarSkeleton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.muted,
-  },
-  headerTextSkeleton: {
-    gap: spacing.sm,
-  },
-  greetingSkeleton: {
-    width: 80,
-    height: 16,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.muted,
-  },
-  nameSkeleton: {
-    width: 120,
-    height: 24,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.muted,
-  },
-  statCardSkeleton: {
-    height: 140,
-    backgroundColor: colors.muted,
+    paddingVertical: spacing['3xl'],
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
-    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
-  sectionSkeleton: {
-    height: 24,
-    width: 150,
-    backgroundColor: colors.muted,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
+  emptyTitle: {
+    color: colors.foreground,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
     marginTop: spacing.lg,
   },
-  eventCardSkeleton: {
-    height: 80,
-    backgroundColor: colors.muted,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
+  emptyText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    marginTop: spacing.sm,
   },
 });
