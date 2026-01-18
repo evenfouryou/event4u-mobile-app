@@ -68,6 +68,13 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Logs warning if siaeConfig.systemCode differs from Smart Card code (uses Smart Card code anyway)
 - Scheduler RCA flow now uses `resolveSystemCodeForSmime()` instead of legacy `resolveSystemCode()`
 
+**RPM Future Event Blocking (2026-01-18)**: Added validation to prevent SIAE error 0603 caused by future event dates:
+- RPM (monthly reports) cannot be sent for a month that hasn't concluded yet
+- Validates that `DataGenerazione` must be in the month AFTER the report period (e.g., January 2026 report requires `DataGenerazione` >= February 2026)
+- Validates that no `<DataEvento>` in the XML is in the future relative to `DataGenerazione`
+- Events scheduled for dates after today are blocked from being included in riepiloghi
+- Pre-transmission validation returns actionable error messages with resolution guidance
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 

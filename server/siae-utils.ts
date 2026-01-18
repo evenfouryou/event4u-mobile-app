@@ -4126,6 +4126,23 @@ export async function validatePreTransmission(
           });
         }
       }
+      
+      // FIX 2026-01-18: Verifica che non ci siano eventi futuri nel riepilogo
+      // La SIAE non accetta riepiloghi con DataEvento nel futuro
+      const dataEventoMatches = Array.from(xml.matchAll(/<DataEvento>(\d{8})<\/DataEvento>/g));
+      for (const match of dataEventoMatches) {
+        const eventDate = match[1]; // YYYYMMDD
+        if (eventDate > actualToday) {
+          datesCoherent = false;
+          errors.push({
+            code: 'FUTURE_EVENT_DATE',
+            field: 'DataEvento',
+            message: `Il riepilogo contiene un evento con data futura: ${eventDate} (oggi è ${actualToday})`,
+            resolution: `Rimuovere gli eventi futuri dal riepilogo o attendere che l'evento si sia svolto`,
+            siaeErrorCode: '0603'
+          });
+        }
+      }
     }
     
     // Verifica Data attributo (per report giornaliero)
