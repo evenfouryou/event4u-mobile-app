@@ -819,7 +819,7 @@ router.post("/api/siae/event-genres/set-standard-vat", requireAuth, requireSuper
       const standardVat = genre.taxType === 'S' ? 10 : 22;
       // Aggiorna solo se vatRate è null/undefined o diverso dallo standard
       if (genre.vatRate === null || genre.vatRate === undefined || Number(genre.vatRate) !== standardVat) {
-        await siaeStorage.updateSiaeEventGenre(genre.code, { vatRate: standardVat });
+        await siaeStorage.updateSiaeEventGenre(genre.code, { vatRate: String(standardVat) });
         updated++;
       }
     }
@@ -1420,7 +1420,7 @@ router.post("/api/siae/customers", async (req: Request, res: Response) => {
     const customer = await siaeStorage.createSiaeCustomer(data);
     
     await siaeStorage.createAuditLog({
-      companyId: customer.companyId || null,
+      companyId: null, // siaeCustomers doesn't have companyId
       userId: null,
       action: 'customer_created',
       entityType: 'customer',
@@ -1446,7 +1446,7 @@ router.patch("/api/siae/customers/:id", requireAuth, async (req: Request, res: R
     
     const user = req.user as any;
     await siaeStorage.createAuditLog({
-      companyId: customer.companyId || user.companyId,
+      companyId: user.companyId, // siaeCustomers doesn't have companyId
       userId: user.id,
       action: 'customer_updated',
       entityType: 'customer',
@@ -1483,7 +1483,7 @@ router.post("/api/siae/customers/:id/verify-manual", requireAuth, requireGestore
     
     const user = req.user as any;
     await siaeStorage.createAuditLog({
-      companyId: customer.companyId || user.companyId,
+      companyId: user.companyId, // siaeCustomers doesn't have companyId
       userId: user.id,
       action: 'customer_verified_manual',
       entityType: 'customer',
@@ -1603,7 +1603,7 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
     
     const user = req.user as any;
     await siaeStorage.createAuditLog({
-      companyId: customer.companyId || user.companyId,
+      companyId: user.companyId, // siaeCustomers doesn't have companyId
       userId: user.id,
       action: 'customer_deleted',
       entityType: 'customer',
@@ -2836,17 +2836,23 @@ router.get("/api/siae/sectors/:sectorId/available-zones", requireAuth, requireOr
       return res.status(404).json({ message: "Settore non trovato" });
     }
     
-    // Ottieni l'evento per trovare la location
+    // Ottieni l'evento ticketed e il suo evento base per trovare la location
     const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, sector.ticketedEventId));
-    if (!ticketedEvent || !ticketedEvent.locationId) {
+    if (!ticketedEvent) {
+      return res.json({ zones: [] });
+    }
+    
+    // Get the base event to find the locationId
+    const [baseEvent] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
+    if (!baseEvent || !baseEvent.locationId) {
       return res.json({ zones: [] });
     }
     
     // Import venueFloorPlans
     const { venueFloorPlans } = await import("@shared/schema");
     
-    // Ottieni i floor plan della location
-    const floorPlans = await db.select().from(venueFloorPlans).where(eq(venueFloorPlans.locationId, ticketedEvent.locationId));
+    // Ottieni i floor plan della location (using event.locationId)
+    const floorPlans = await db.select().from(venueFloorPlans).where(eq(venueFloorPlans.locationId, baseEvent.locationId));
     if (floorPlans.length === 0) {
       return res.json({ zones: [] });
     }
@@ -3320,8 +3326,8 @@ router.get("/api/siae/transactions/:id/export-xml", requireAuth, async (req: Req
   <Biglietti>
 ${tickets.map(ticket => `    <Biglietto>
       <CodiceBiglietto>${ticket.ticketCode}</CodiceBiglietto>
-      <SigilloFiscale>${ticket.sigilloFiscale || ''}</SigilloFiscale>
-      <Prezzo>${ticket.price || 0}</Prezzo>
+      <SigilloFiscale>${ticket.fiscalSealCode || ''}</SigilloFiscale>
+      <Prezzo>${ticket.grossAmount || 0}</Prezzo>
       <Stato>${ticket.status}</Stato>
       <Partecipante>${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}</Partecipante>
     </Biglietto>`).join('\n')}
@@ -3381,7 +3387,7 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireGestore, async (r
           participantFirstName: siaeTickets.participantFirstName,
           participantLastName: siaeTickets.participantLastName,
           ticketedEventId: siaeTickets.ticketedEventId,
-          sigilloFiscale: siaeTickets.sigilloFiscale,
+          fiscalSealCode: siaeTickets.fiscalSealCode,
         },
         ticketedEvent: {
           id: siaeTicketedEvents.id,
@@ -3550,7 +3556,7 @@ router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireG
       conditions.push(eq(siaeTicketedEvents.companyId, effectiveCompanyId));
     }
     if (eventId) {
-      conditions.push(eq(siaeTicketedEvents.eventId, Number(eventId)));
+      conditions.push(eq(siaeTicketedEvents.eventId, eventId as string));
     }
     
     // Get cancelled tickets awaiting reissue
@@ -3592,7 +3598,7 @@ router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireG
         ticketedEvent: r.ticketedEvent,
         event: r.event,
         company: r.company,
-        sigilloFiscaleOriginale: r.ticket.sigilloFiscale,
+        sigilloFiscaleOriginale: r.ticket.fiscalSealCode,
       })),
       // Richieste di cambio nominativo in attesa di elaborazione
       pendingRequests: pendingRequests.map(r => ({
@@ -3601,7 +3607,7 @@ router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireG
         ticketedEvent: r.ticketedEvent,
         event: r.event,
         company: r.company,
-        sigilloFiscaleOriginale: r.ticket.sigilloFiscale,
+        sigilloFiscaleOriginale: r.ticket.fiscalSealCode,
       })),
       summary: {
         cancelledAwaitingReissueCount: cancelledAwaitingReissue.length,
@@ -3658,7 +3664,7 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGest
         .set({
           status: 'rejected',
           processedAt: new Date(),
-          rejectionReason: rejectionReason || 'Rifiutata dall\'amministratore'
+          notes: rejectionReason || 'Rifiutata dall\'amministratore' // schema uses 'notes' not 'rejectionReason'
         })
         .where(eq(siaeNameChanges.id, id));
       
@@ -3686,7 +3692,7 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGest
     const newTicketCode = `NC-${now.getTime().toString(36).toUpperCase()}`;
     
     // Request fiscal seal via bridge (smart card SIAE)
-    const priceInCents = Math.round(parseFloat(originalTicket.price || originalTicket.finalPrice || "0") * 100);
+    const priceInCents = Math.round(parseFloat(originalTicket.grossAmount || "0") * 100);
     let sealData;
     try {
       console.log(`[NAME-CHANGE] Requesting fiscal seal for name change, price: ${priceInCents} cents`);
@@ -3702,7 +3708,7 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGest
     
     // Get next progressivo for this event
     const [maxProgressivo] = await db
-      .select({ max: sql<number>`COALESCE(MAX(${siaeTickets.progressivoSerata}), 0)` })
+      .select({ max: sql<number>`COALESCE(MAX(${siaeTickets.progressiveNumber}), 0)` })
       .from(siaeTickets)
       .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
     const nextProgressivo = (maxProgressivo?.max || 0) + 1;
@@ -3710,30 +3716,29 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGest
     // SIAE Compliant: New ticket must reference original ticket for fiscal traceability
     // Per Allegato B: il nuovo titolo deve contenere riferimento esplicito al sigillo fiscale del titolo annullato
     await db.insert(siaeTickets).values({
-      id: newTicketId,
       ticketCode: newTicketCode,
       ticketedEventId: originalTicket.ticketedEventId,
-      ticketTypeId: originalTicket.ticketTypeId,
+      sectorId: originalTicket.sectorId,
+      sectorCode: originalTicket.sectorCode,
+      ticketTypeCode: originalTicket.ticketTypeCode,
+      ticketType: originalTicket.ticketType, // schema uses ticketType not ticketTypeId
       customerId: originalTicket.customerId, // IMPORTANTE: Preserva customerId per rivendita
       participantFirstName: nameChange.newFirstName,
       participantLastName: nameChange.newLastName,
-      participantEmail: nameChange.newEmail || originalTicket.participantEmail,
-      participantCodiceFiscale: nameChange.newCodiceFiscale || originalTicket.participantCodiceFiscale,
-      participantPhone: originalTicket.participantPhone,
-      price: originalTicket.price,
-      finalPrice: originalTicket.finalPrice,
-      status: 'sold',
-      sigilloFiscale: sealData.sealCode, // Real sigillo from smart card SIAE
+      // Note: participantEmail, participantCodiceFiscale, participantPhone don't exist in schema
+      grossAmount: originalTicket.grossAmount, // schema uses grossAmount not price/finalPrice
+      netAmount: originalTicket.netAmount,
+      vatAmount: originalTicket.vatAmount,
+      status: 'valid',
+      fiscalSealCode: sealData.sealCode, // schema uses fiscalSealCode not sigilloFiscale
       fiscalSealCounter: sealData.counter, // Counter from SIAE card
       cardCode: sealData.serialNumber, // Card serial number
-      progressivoSerata: nextProgressivo, // New progressivo for traceability
-      entranceType: originalTicket.entranceType,
-      paymentStatus: 'paid',
+      progressiveNumber: nextProgressivo, // schema uses progressiveNumber not progressivoSerata
+      // Note: entranceType, orderId don't exist in schema
       paymentMethod: originalTicket.paymentMethod,
-      orderId: originalTicket.orderId,
       // RIFERIMENTO FISCALE AL TITOLO ANNULLATO (Allegato B SIAE)
       originalTicketId: originalTicket.id, // Link al biglietto originale annullato
-      soldAt: now,
+      emissionDate: now,
       createdAt: now,
       updatedAt: now,
     });
@@ -3746,8 +3751,8 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGest
         cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
         cancellationDate: now,
         replacedByTicketId: newTicketId, // Link al biglietto sostitutivo (tracciabilità SIAE)
-        annullamentoMotivo: `Cambio nominativo - Sigillo originale: ${originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
-        annullamentoData: now,
+        // Note: annullamentoMotivo doesn't exist in schema - use customText for notes
+        customText: `Cambio nominativo - Sigillo originale: ${originalTicket.fiscalSealCode || 'N/A'} - Nuovo: ${sealData.sealCode}`,
         updatedAt: now
       })
       .where(eq(siaeTickets.id, originalTicket.id));
@@ -3823,7 +3828,7 @@ router.post("/api/siae/tickets/:ticketId/gestore-name-change", requireAuth, requ
     const newTicketCode = `NC-${now.getTime().toString(36).toUpperCase()}`;
     
     // Request fiscal seal via bridge (smart card SIAE)
-    const priceInCents = Math.round(parseFloat(originalTicket.price || originalTicket.finalPrice || "0") * 100);
+    const priceInCents = Math.round(parseFloat(originalTicket.grossAmount || "0") * 100);
     let sealData;
     try {
       console.log(`[GESTORE-NAME-CHANGE] Requesting fiscal seal, price: ${priceInCents} cents`);
@@ -3839,37 +3844,35 @@ router.post("/api/siae/tickets/:ticketId/gestore-name-change", requireAuth, requ
     
     // Get next progressivo for this event
     const [maxProgressivo] = await db
-      .select({ max: sql<number>`COALESCE(MAX(${siaeTickets.progressivoSerata}), 0)` })
+      .select({ max: sql<number>`COALESCE(MAX(${siaeTickets.progressiveNumber}), 0)` })
       .from(siaeTickets)
       .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
     const nextProgressivo = (maxProgressivo?.max || 0) + 1;
     
     // Create new ticket with updated holder data
     await db.insert(siaeTickets).values({
-      id: newTicketId,
       ticketCode: newTicketCode,
       ticketedEventId: originalTicket.ticketedEventId,
-      ticketTypeId: originalTicket.ticketTypeId,
       sectorId: originalTicket.sectorId,
+      sectorCode: originalTicket.sectorCode,
+      ticketTypeCode: originalTicket.ticketTypeCode,
+      ticketType: originalTicket.ticketType, // schema uses ticketType not ticketTypeId
       customerId: originalTicket.customerId,
       participantFirstName: newFirstName,
       participantLastName: newLastName,
-      participantEmail: newEmail || originalTicket.participantEmail,
-      participantCodiceFiscale: newCodiceFiscale || originalTicket.participantCodiceFiscale,
-      participantPhone: originalTicket.participantPhone,
-      price: originalTicket.price,
-      finalPrice: originalTicket.finalPrice,
-      status: 'sold',
-      sigilloFiscale: sealData.sealCode,
+      // Note: participantEmail, participantCodiceFiscale, participantPhone don't exist in schema
+      grossAmount: originalTicket.grossAmount, // schema uses grossAmount not price/finalPrice
+      netAmount: originalTicket.netAmount,
+      vatAmount: originalTicket.vatAmount,
+      status: 'valid',
+      fiscalSealCode: sealData.sealCode, // schema uses fiscalSealCode not sigilloFiscale
       fiscalSealCounter: sealData.counter,
       cardCode: sealData.serialNumber,
-      progressivoSerata: nextProgressivo,
-      entranceType: originalTicket.entranceType,
-      paymentStatus: 'paid',
+      progressiveNumber: nextProgressivo, // schema uses progressiveNumber not progressivoSerata
+      // Note: entranceType, orderId don't exist in schema
       paymentMethod: 'name_change',
-      orderId: originalTicket.orderId,
       originalTicketId: originalTicket.id,
-      soldAt: now,
+      emissionDate: now,
       createdAt: now,
       updatedAt: now,
     });
@@ -3881,8 +3884,8 @@ router.post("/api/siae/tickets/:ticketId/gestore-name-change", requireAuth, requ
         cancellationReasonCode: '10',
         cancellationDate: now,
         replacedByTicketId: newTicketId,
-        annullamentoMotivo: `Cambio nominativo gestore: ${causale} - Sigillo originale: ${originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
-        annullamentoData: now,
+        // Note: annullamentoMotivo doesn't exist in schema - use customText for notes
+        customText: `Cambio nominativo gestore: ${causale} - Sigillo originale: ${originalTicket.fiscalSealCode || 'N/A'} - Nuovo: ${sealData.sealCode}`,
         updatedAt: now
       })
       .where(eq(siaeTickets.id, originalTicket.id));
