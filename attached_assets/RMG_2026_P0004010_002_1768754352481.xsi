@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero Sostituzione="S" Data="20260118" DataGenerazione="20260118" OraGenerazione="163426" ProgressivoGenerazione="002">
+    <Titolare>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260118</DataEvento>
+            <OraEvento>1424</OraEvento>
+            <MultiGenere>
+                <TipoGenere>60</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Test dom</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>P0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <Quantita>3</Quantita>
+                    <CorrispettivoLordo>6000</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+    </Organizzatore>
+</RiepilogoGiornaliero>

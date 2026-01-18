@@ -184,21 +184,26 @@ export function validateSystemCodeConsistency(
   }
   
   // Verifica anche attributo NomeFile (solo per RMG/RPM che lo supportano)
-  // Formato generato da generateSiaeAttachmentName():
-  // - RMG: RMG_YYYY_SSSSSSSS_nnn.xsi (es: RMG_2026_P0004010_001.xsi) - solo anno!
-  // - RPM: RPM_YYYYMM_SSSSSSSS_nnn.xsi (es: RPM_202601_P0004010_001.xsi)
-  // - RCA: RCA_YYYYMMDD_SSSSSSSS_nnn.xsi (es: RCA_20260118_P0004010_001.xsi)
-  // Il codice sistema è SEMPRE nella 3a parte (parts[2]) con underscore come separatore
+  // FIX 2026-01-18: Formato SIAE Allegato C con underscore tra ogni componente
+  // - RMG: RMG_YYYY_MM_GG_SSSSSSSS_nnn.xsi (es: RMG_2026_01_18_P0004010_001.xsi)
+  // - RPM: RPM_YYYY_MM_SSSSSSSS_nnn.xsi (es: RPM_2026_01_P0004010_001.xsi)
+  // - RCA: RCA_YYYY_MM_GG_SSSSSSSS_nnn.xsi (es: RCA_2026_01_18_P0004010_001.xsi)
+  // Il codice sistema è in posizione variabile in base al tipo
   if (isRMG || isRPM) {
     const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
     if (nomeFileMatch) {
       const nomeFileValue = nomeFileMatch[1];
       const parts = nomeFileValue.split('_');
-      // parts[0] = tipo (RMG/RPM)
-      // parts[1] = data (yyyyMMdd o yyyyMM)
-      // parts[2] = codice sistema (8 caratteri)
-      // parts[3] = progressivo.estensione (nnn.xsi o nnn.xsi.p7m)
-      const nomeFileSystemCode = parts.length >= 3 ? parts[2] : null;
+      // FIX 2026-01-18: Nuovo formato con underscore tra componenti data
+      // RMG: RMG_YYYY_MM_GG_SSSSSSSS_PPP.xsi (6 parti)
+      // RPM: RPM_YYYY_MM_SSSSSSSS_PPP.xsi (5 parti)
+      // La posizione del codice sistema varia in base al tipo
+      let nomeFileSystemCode: string | null = null;
+      if (parts[0] === 'RMG' && parts.length >= 5) {
+        nomeFileSystemCode = parts[4]; // RMG_YYYY_MM_DD_SSSSSSSS_PPP
+      } else if (parts[0] === 'RPM' && parts.length >= 4) {
+        nomeFileSystemCode = parts[3]; // RPM_YYYY_MM_SSSSSSSS_PPP
+      }
       
       if (nomeFileSystemCode && nomeFileSystemCode !== expectedSystemCode) {
         return {
@@ -515,28 +520,26 @@ export function generateSiaeAttachmentName(
   // Estensione: .xsi.p7m per CAdES, .xsi per non firmato
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
-  // Data contigua SENZA underscore (yyyyMMdd)
-  const dateStr = `${year}${month}${day}`;
-  const monthStr = `${year}${month}`;
+  // FIX 2026-01-18: Formato SIAE ufficiale (Allegato C) usa underscore come separatori
+  // Formato: XXX_AAAA_MM_GG_SSSSSSSS_###.xsi (con underscore tra ogni componente data)
+  // NON date contigue! Es: RMG_2026_01_18_P0004010_001.xsi (non RMG_20260118_...)
   
-  // Formato allegato conforme SIAE:
-  // - RMG: RMG_YYYY_SSSSSSSS_nnn.xsi (solo anno!)
-  // - RPM: RPM_YYYYMM_SSSSSSSS_nnn.xsi (anno-mese)
-  // - RCA: RCA_YYYYMMDD_SSSSSSSS_nnn.xsi (data completa)
+  // Formato allegato conforme SIAE Allegato C:
+  // - RMG: RMG_YYYY_MM_GG_SSSSSSSS_nnn.xsi (data con underscore)
+  // - RPM: RPM_YYYY_MM_SSSSSSSS_nnn.xsi (anno-mese con underscore)
+  // - RCA: RCA_YYYY_MM_GG_SSSSSSSS_nnn.xsi (data completa con underscore)
   switch (reportType) {
     case 'mensile':
-      // RPM = Riepilogo Periodico Mensile (usa anno-mese)
-      return `RPM_${monthStr}_${sysCode}_${prog}${extension}`;
+      // RPM = Riepilogo Periodico Mensile
+      return `RPM_${year}_${month}_${sysCode}_${prog}${extension}`;
     case 'log':
     case 'rca':
-      // RCA = Riepilogo Controllo Accessi (usa data completa)
-      return `RCA_${dateStr}_${sysCode}_${prog}${extension}`;
+      // RCA = Riepilogo Controllo Accessi
+      return `RCA_${year}_${month}_${day}_${sysCode}_${prog}${extension}`;
     case 'giornaliero':
     default:
-      // RMG = Riepilogo Mensile Giornaliero (usa SOLO anno!)
-      // FIX 2026-01-18: RMG usa SOLO l'anno, NON la data completa
-      // Errore 0600 se si usa YYYYMMDD invece di YYYY
-      return `RMG_${year}_${sysCode}_${prog}${extension}`;
+      // RMG = Riepilogo Mensile Giornaliero
+      return `RMG_${year}_${month}_${day}_${sysCode}_${prog}${extension}`;
   }
 }
 
