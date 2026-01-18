@@ -6,3 +6,6 @@ export { ScannerOperatorsScreen } from './ScannerOperatorsScreen';
 export { OperatorDetailScreen } from './OperatorDetailScreen';
 export { ScanActivityScreen } from './ScanActivityScreen';
 export { LiveScanningScreen } from './LiveScanningScreen';
+export { default as ScannerScannedScreen } from './ScannerScannedScreen';
+export { default as ScannerTicketsScreen } from './ScannerTicketsScreen';
+export { default as ScannerManagementScreen } from './ScannerManagementScreen';

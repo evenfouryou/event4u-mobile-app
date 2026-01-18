@@ -23,6 +23,9 @@ import ResaleCheckoutScreen from '../screens/public/ResaleCheckoutScreen';
 import CartScreen from '../screens/public/CartScreen';
 import CheckoutScreen from '../screens/public/CheckoutScreen';
 import CheckoutSuccessScreen from '../screens/public/CheckoutSuccessScreen';
+import { LandingScreen } from '../screens/public/LandingScreen';
+import { TicketVerifyScreen } from '../screens/public/TicketVerifyScreen';
+import { EventShortLinkScreen } from '../screens/public/EventShortLinkScreen';
 
 // Account Screens
 import AccountHomeScreen from '../screens/account/AccountHomeScreen';
@@ -33,6 +36,9 @@ import WalletScreen from '../screens/account/WalletScreen';
 import NameChangeScreen from '../screens/account/NameChangeScreen';
 import ResaleListingScreen from '../screens/account/ResaleListingScreen';
 import MyResalesScreen from '../screens/account/MyResalesScreen';
+import { AccountResaleSuccessScreen } from '../screens/account/AccountResaleSuccessScreen';
+import { AccountSubscriptionsScreen } from '../screens/account/AccountSubscriptionsScreen';
+import { ClientWalletScreen } from '../screens/account/ClientWalletScreen';
 
 // Scanner Screens
 import ScannerHomeScreen from '../screens/scanner/ScannerHomeScreen';
@@ -43,6 +49,9 @@ import { ScannerOperatorsScreen } from '../screens/scanner/ScannerOperatorsScree
 import { OperatorDetailScreen } from '../screens/scanner/OperatorDetailScreen';
 import { ScanActivityScreen } from '../screens/scanner/ScanActivityScreen';
 import { LiveScanningScreen } from '../screens/scanner/LiveScanningScreen';
+import ScannerScannedScreen from '../screens/scanner/ScannerScannedScreen';
+import ScannerTicketsScreen from '../screens/scanner/ScannerTicketsScreen';
+import ScannerManagementScreen from '../screens/scanner/ScannerManagementScreen';
 
 // PR Screens
 import PRHomeScreen from '../screens/pr/PRHomeScreen';
@@ -50,21 +59,63 @@ import PREventsScreen from '../screens/pr/PREventsScreen';
 import PRGuestListsScreen from '../screens/pr/PRGuestListsScreen';
 import PRTablesScreen from '../screens/pr/PRTablesScreen';
 import PRWalletScreen from '../screens/pr/PRWalletScreen';
+import { PRDashboardScreen } from '../screens/pr/PRDashboardScreen';
+import { PRStaffScreen } from '../screens/pr/PRStaffScreen';
+import { PRMyEventsScreen } from '../screens/pr/PRMyEventsScreen';
+import { PRManagementScreen } from '../screens/pr/PRManagementScreen';
+import { StaffPrHomeScreen } from '../screens/pr/StaffPrHomeScreen';
+import { StaffPrEventPanelScreen } from '../screens/pr/StaffPrEventPanelScreen';
+import { PRScannerScreen } from '../screens/pr/PRScannerScreen';
 
 // Cashier Screens
 import CashierHomeScreen from '../screens/cashier/CashierHomeScreen';
 import CashierTicketScreen from '../screens/cashier/CashierTicketScreen';
+import { CassaBigliettiScreen } from '../screens/cashier/CassaBigliettiScreen';
+import { CashierManagementScreen } from '../screens/cashier/CashierManagementScreen';
+import { CashierDashboardScreen } from '../screens/cashier/CashierDashboardScreen';
+import { EventCashierAllocationsScreen } from '../screens/cashier/EventCashierAllocationsScreen';
 
 // Management Screens
 import DashboardScreen from '../screens/management/DashboardScreen';
 import ManageEventsScreen from '../screens/management/ManageEventsScreen';
 import EventHubScreen from '../screens/management/EventHubScreen';
+import { LocationsScreen } from '../screens/management/LocationsScreen';
+import { LocationDetailScreen } from '../screens/management/LocationDetailScreen';
+import { StationsScreen } from '../screens/management/StationsScreen';
+import { StationDetailScreen } from '../screens/management/StationDetailScreen';
+import { EventWizardScreen } from '../screens/management/EventWizardScreen';
+import { EventDirectStockScreen } from '../screens/management/EventDirectStockScreen';
+import { BartenderDirectStockScreen } from '../screens/management/BartenderDirectStockScreen';
+import { EventFormatsScreen } from '../screens/management/EventFormatsScreen';
+import { NightFileScreen } from '../screens/management/NightFileScreen';
+import { PersonnelScreen } from '../screens/management/PersonnelScreen';
+import { StaffScreen } from '../screens/management/StaffScreen';
+import { ReportsScreen } from '../screens/management/ReportsScreen';
+import { EventPageEditorScreen } from '../screens/management/EventPageEditorScreen';
 
 // SIAE Screens
 import SIAEHomeScreen from '../screens/siae/SIAEHomeScreen';
 import SIAETransmissionsScreen from '../screens/siae/SIAETransmissionsScreen';
 import SIAETransmissionDetailScreen from '../screens/siae/SIAETransmissionDetailScreen';
 import SIAEReportsScreen from '../screens/siae/SIAEReportsScreen';
+import SIAESystemConfigScreen from '../screens/siae/SIAESystemConfigScreen';
+import SIAEActivationCardsScreen from '../screens/siae/SIAEActivationCardsScreen';
+import SIAECustomersScreen from '../screens/siae/SIAECustomersScreen';
+import SIAETicketedEventsScreen from '../screens/siae/SIAETicketedEventsScreen';
+import SIAETicketsScreen from '../screens/siae/SIAETicketsScreen';
+import SIAETicketTypesScreen from '../screens/siae/SIAETicketTypesScreen';
+import SIAENameChangesScreen from '../screens/siae/SIAENameChangesScreen';
+import SIAEResalesScreen from '../screens/siae/SIAEResalesScreen';
+import SIAETransactionsScreen from '../screens/siae/SIAETransactionsScreen';
+import SIAEBoxOfficeScreen from '../screens/siae/SIAEBoxOfficeScreen';
+import SIAESubscriptionsScreen from '../screens/siae/SIAESubscriptionsScreen';
+import SIAENumberedSeatsScreen from '../screens/siae/SIAENumberedSeatsScreen';
+import SIAEAuditLogsScreen from '../screens/siae/SIAEAuditLogsScreen';
+import SIAEApprovalsScreen from '../screens/siae/SIAEApprovalsScreen';
+import SIAETablesScreen from '../screens/siae/SIAETablesScreen';
+import SIAETicketingConsoleScreen from '../screens/siae/SIAETicketingConsoleScreen';
+import SIAEReportC1Screen from '../screens/siae/SIAEReportC1Screen';
+import SIAEReportC2Screen from '../screens/siae/SIAEReportC2Screen';
 
 // Inventory Screens
 import InventoryHomeScreen from '../screens/inventory/InventoryHomeScreen';
@@ -72,6 +123,10 @@ import ProductListScreen from '../screens/inventory/ProductListScreen';
 import ProductDetailScreen from '../screens/inventory/ProductDetailScreen';
 import StockAdjustmentScreen from '../screens/inventory/StockAdjustmentScreen';
 import ConsumptionScreen from '../screens/inventory/ConsumptionScreen';
+import WarehouseScreen from '../screens/inventory/WarehouseScreen';
+import SuppliersScreen from '../screens/inventory/SuppliersScreen';
+import ReturnToWarehouseScreen from '../screens/inventory/ReturnToWarehouseScreen';
+import PurchaseOrdersScreen from '../screens/inventory/PurchaseOrdersScreen';
 
 // Analytics Screens
 import AnalyticsHomeScreen from '../screens/analytics/AnalyticsHomeScreen';
@@ -93,12 +148,51 @@ import GestoriListScreen from '../screens/admin/GestoriListScreen';
 import GestoreDetailScreen from '../screens/admin/GestoreDetailScreen';
 import CompaniesScreen from '../screens/admin/CompaniesScreen';
 import SystemSettingsScreen from '../screens/admin/SystemSettingsScreen';
+import { SuperAdminDashboardScreen } from '../screens/admin/SuperAdminDashboardScreen';
+import { UsersScreen } from '../screens/admin/UsersScreen';
+import { AdminSiteSettingsScreen } from '../screens/admin/AdminSiteSettingsScreen';
+import { AdminBillingPlansScreen } from '../screens/admin/AdminBillingPlansScreen';
+import { AdminBillingOrganizersScreen } from '../screens/admin/AdminBillingOrganizersScreen';
+import { AdminBillingOrganizerDetailScreen } from '../screens/admin/AdminBillingOrganizerDetailScreen';
+import { AdminBillingInvoicesScreen } from '../screens/admin/AdminBillingInvoicesScreen';
+import { AdminBillingReportsScreen } from '../screens/admin/AdminBillingReportsScreen';
+import { AdminGestoreCompaniesScreen } from '../screens/admin/AdminGestoreCompaniesScreen';
+import { AdminGestoreEventsScreen } from '../screens/admin/AdminGestoreEventsScreen';
+import { AdminGestoreUsersScreen } from '../screens/admin/AdminGestoreUsersScreen';
+import { AdminEventDetailScreen } from '../screens/admin/AdminEventDetailScreen';
+import { AdminNameChangesScreen } from '../screens/admin/AdminNameChangesScreen';
+import { StripeAdminScreen } from '../screens/admin/StripeAdminScreen';
 
 // Floor Plan Screens
 import { FloorPlanHomeScreen } from '../screens/floorplan/FloorPlanHomeScreen';
 import { FloorPlanViewerScreen } from '../screens/floorplan/FloorPlanViewerScreen';
 import { ZoneDetailScreen } from '../screens/floorplan/ZoneDetailScreen';
 import { FloorPlanEditorScreen } from '../screens/floorplan/FloorPlanEditorScreen';
+
+// Marketing Screens
+import MarketingDashboardScreen from '../screens/marketing/MarketingDashboardScreen';
+import MarketingEmailScreen from '../screens/marketing/MarketingEmailScreen';
+import LoyaltyAdminScreen from '../screens/marketing/LoyaltyAdminScreen';
+import ReferralAdminScreen from '../screens/marketing/ReferralAdminScreen';
+import BundlesAdminScreen from '../screens/marketing/BundlesAdminScreen';
+
+// School Badges Screens
+import { SchoolBadgeManagerScreen } from '../screens/schoolbadges/SchoolBadgeManagerScreen';
+import { SchoolBadgeLandingScreen } from '../screens/schoolbadges/SchoolBadgeLandingScreen';
+import { SchoolBadgeVerifyScreen } from '../screens/schoolbadges/SchoolBadgeVerifyScreen';
+import { SchoolBadgeViewScreen } from '../screens/schoolbadges/SchoolBadgeViewScreen';
+import { SchoolBadgeErrorScreen } from '../screens/schoolbadges/SchoolBadgeErrorScreen';
+import { SchoolBadgeScannerScreen } from '../screens/schoolbadges/SchoolBadgeScannerScreen';
+
+// Settings Screens
+import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { PrinterSettingsScreen } from '../screens/settings/PrinterSettingsScreen';
+import { TemplateBuilderScreen } from '../screens/settings/TemplateBuilderScreen';
+import { DigitalTemplateBuilderScreen } from '../screens/settings/DigitalTemplateBuilderScreen';
+import { DownloadSmartCardAppScreen } from '../screens/settings/DownloadSmartCardAppScreen';
+import { ImportScreen } from '../screens/settings/ImportScreen';
+import { PriceListsScreen } from '../screens/settings/PriceListsScreen';
+import { BeverageScreen } from '../screens/settings/BeverageScreen';
 
 // Type definitions
 export type RootStackParamList = {
@@ -124,6 +218,9 @@ export type DrawerParamList = {
   AccountingTabs: undefined;
   AdminTabs: undefined;
   FloorPlanTabs: undefined;
+  MarketingTabs: undefined;
+  SchoolBadgesTabs: undefined;
+  SettingsTabs: undefined;
 };
 
 export type FloorPlanTabParamList = {
@@ -144,14 +241,30 @@ export type AdminTabParamList = {
   Gestori: undefined;
   Companies: undefined;
   Settings: undefined;
+  Users: undefined;
+  Billing: undefined;
 };
 
 export type AdminStackParamList = {
   AdminDashboard: undefined;
+  SuperAdminDashboard: undefined;
   GestoriList: undefined;
   GestoreDetail: { gestoreId?: string; mode?: 'create' | 'edit' };
   Companies: undefined;
   SystemSettings: undefined;
+  Users: undefined;
+  AdminSiteSettings: undefined;
+  AdminBillingPlans: undefined;
+  AdminBillingOrganizers: undefined;
+  AdminBillingOrganizerDetail: { organizerId: string };
+  AdminBillingInvoices: undefined;
+  AdminBillingReports: undefined;
+  AdminGestoreCompanies: { gestoreId: string };
+  AdminGestoreEvents: { gestoreId: string };
+  AdminGestoreUsers: { gestoreId: string };
+  AdminEventDetail: { eventId: string };
+  AdminNameChanges: undefined;
+  StripeAdmin: undefined;
 };
 
 export type CustomerTabParamList = {
@@ -172,16 +285,20 @@ export type PRTabParamList = {
   PRHome: undefined;
   PREvents: undefined;
   PRWallet: undefined;
+  PRManagement: undefined;
 };
 
 export type CashierTabParamList = {
   CashierHome: undefined;
   CashierTicket: undefined;
+  CassaBiglietti: undefined;
 };
 
 export type ManagementTabParamList = {
   Dashboard: undefined;
   ManageEvents: undefined;
+  Locations: undefined;
+  Personnel: undefined;
 };
 
 export type PublicStackParamList = {
@@ -194,6 +311,9 @@ export type PublicStackParamList = {
   Cart: undefined;
   Checkout: undefined;
   CheckoutSuccess: { transactionId: string };
+  Landing: undefined;
+  TicketVerify: { ticketCode: string };
+  EventShortLink: { shortCode: string };
 };
 
 export type AccountStackParamList = {
@@ -205,6 +325,9 @@ export type AccountStackParamList = {
   NameChange: { ticketId: string };
   ResaleListing: { ticketId: string };
   MyResales: undefined;
+  AccountResaleSuccess: { resaleId: string };
+  AccountSubscriptions: undefined;
+  ClientWallet: undefined;
 };
 
 export type ScannerStackParamList = {
@@ -216,6 +339,9 @@ export type ScannerStackParamList = {
   OperatorDetail: { operatorId?: string; mode: 'create' | 'edit' };
   ScanActivity: undefined;
   LiveScanning: { eventId?: string; eventTitle?: string };
+  ScannerScanned: { eventId?: string };
+  ScannerTickets: { eventId?: string };
+  ScannerManagement: undefined;
 };
 
 export type PRStackParamList = {
@@ -224,18 +350,46 @@ export type PRStackParamList = {
   PRGuestLists: { eventId: string };
   PRTables: { eventId: string };
   PRWalletScreen: undefined;
+  PRStaff: undefined;
+  PRMyEvents: undefined;
+  PRManagement: undefined;
+  StaffPrHome: undefined;
+  StaffPrEventPanel: { eventId: string };
+  PRScanner: { eventId?: string };
+};
+
+export type CashierStackParamList = {
+  CashierDashboard: undefined;
+  CashierTicket: undefined;
+  CassaBiglietti: { eventId?: string };
+  CashierManagement: undefined;
+  EventCashierAllocations: { eventId: string };
 };
 
 export type ManagementStackParamList = {
   ManagementDashboard: undefined;
   ManagementEvents: undefined;
   EventHub: { eventId: string };
+  Locations: undefined;
+  LocationDetail: { locationId?: string; mode?: 'create' | 'edit' };
+  Stations: undefined;
+  StationDetail: { stationId?: string; mode?: 'create' | 'edit' };
+  EventWizard: { eventId?: string; step?: number };
+  EventDirectStock: { eventId: string };
+  BartenderDirectStock: { eventId: string; bartenderId?: string };
+  EventFormats: undefined;
+  NightFile: { eventId: string };
+  Personnel: undefined;
+  Staff: undefined;
+  Reports: undefined;
+  EventPageEditor: { eventId: string };
 };
 
 export type SIAETabParamList = {
   SIAEHome: undefined;
   SIAETransmissions: undefined;
   SIAEReports: undefined;
+  SIAEConfig: undefined;
 };
 
 export type SIAEStackParamList = {
@@ -243,12 +397,31 @@ export type SIAEStackParamList = {
   SIAETransmissions: undefined;
   SIAETransmissionDetail: { transmissionId: number };
   SIAEReports: { defaultType?: string };
+  SIAESystemConfig: undefined;
+  SIAEActivationCards: undefined;
+  SIAECustomers: undefined;
+  SIAETicketedEvents: undefined;
+  SIAETickets: { eventId?: string };
+  SIAETicketTypes: undefined;
+  SIAENameChanges: undefined;
+  SIAEResales: undefined;
+  SIAETransactions: undefined;
+  SIAEBoxOffice: { eventId?: string };
+  SIAESubscriptions: undefined;
+  SIAENumberedSeats: { eventId?: string };
+  SIAEAuditLogs: undefined;
+  SIAEApprovals: undefined;
+  SIAETables: undefined;
+  SIAETicketingConsole: { eventId?: string };
+  SIAEReportC1: { eventId?: string };
+  SIAEReportC2: { eventId?: string };
 };
 
 export type InventoryTabParamList = {
   InventoryHome: undefined;
   Products: undefined;
   Consumption: undefined;
+  Warehouse: undefined;
 };
 
 export type InventoryStackParamList = {
@@ -257,6 +430,10 @@ export type InventoryStackParamList = {
   ProductDetail: { productId: string };
   StockAdjustment: { productId?: string; type?: 'add' | 'remove' | 'set' };
   Consumption: undefined;
+  Warehouse: undefined;
+  Suppliers: undefined;
+  ReturnToWarehouse: { eventId?: string };
+  PurchaseOrders: undefined;
 };
 
 export type AnalyticsTabParamList = {
@@ -290,6 +467,52 @@ export type AccountingStackParamList = {
   FinancialReports: { export?: boolean };
 };
 
+export type MarketingTabParamList = {
+  MarketingHome: undefined;
+  Email: undefined;
+  Loyalty: undefined;
+  Referrals: undefined;
+};
+
+export type MarketingStackParamList = {
+  MarketingDashboard: undefined;
+  MarketingEmail: undefined;
+  LoyaltyAdmin: undefined;
+  ReferralAdmin: undefined;
+  BundlesAdmin: undefined;
+};
+
+export type SchoolBadgesTabParamList = {
+  SchoolBadgesHome: undefined;
+  SchoolBadgesScanner: undefined;
+};
+
+export type SchoolBadgesStackParamList = {
+  SchoolBadgeManager: undefined;
+  SchoolBadgeLanding: { badgeId?: string };
+  SchoolBadgeVerify: { badgeCode: string };
+  SchoolBadgeView: { badgeId: string };
+  SchoolBadgeError: { errorCode?: string };
+  SchoolBadgeScanner: undefined;
+};
+
+export type SettingsTabParamList = {
+  SettingsHome: undefined;
+  Printers: undefined;
+  Templates: undefined;
+};
+
+export type SettingsStackParamList = {
+  Settings: undefined;
+  PrinterSettings: undefined;
+  TemplateBuilder: { templateId?: string };
+  DigitalTemplateBuilder: { templateId?: string };
+  DownloadSmartCardApp: undefined;
+  Import: undefined;
+  PriceLists: undefined;
+  Beverage: undefined;
+};
+
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -307,8 +530,9 @@ const ScannerStack = createNativeStackNavigator<ScannerStackParamList>();
 const PRTab = createBottomTabNavigator<PRTabParamList>();
 const PRStack = createNativeStackNavigator<PRStackParamList>();
 
-// Cashier tabs
+// Cashier tabs and stacks
 const CashierTab = createBottomTabNavigator<CashierTabParamList>();
+const CashierStack = createNativeStackNavigator<CashierStackParamList>();
 
 // Management tabs and stacks
 const ManagementTab = createBottomTabNavigator<ManagementTabParamList>();
@@ -337,6 +561,18 @@ const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 // Floor Plan tabs and stacks
 const FloorPlanTab = createBottomTabNavigator<FloorPlanTabParamList>();
 const FloorPlanStack = createNativeStackNavigator<FloorPlanStackParamList>();
+
+// Marketing tabs and stacks
+const MarketingTab = createBottomTabNavigator<MarketingTabParamList>();
+const MarketingStack = createNativeStackNavigator<MarketingStackParamList>();
+
+// School Badges tabs and stacks
+const SchoolBadgesTab = createBottomTabNavigator<SchoolBadgesTabParamList>();
+const SchoolBadgesStack = createNativeStackNavigator<SchoolBadgesStackParamList>();
+
+// Settings tabs and stacks
+const SettingsTab = createBottomTabNavigator<SettingsTabParamList>();
+const SettingsStack = createNativeStackNavigator<SettingsStackParamList>();
 
 // ============= Auth Navigator =============
 function AuthNavigator() {
@@ -372,6 +608,9 @@ function HomeStack() {
       <PublicStack.Screen name="Cart" component={CartScreen} />
       <PublicStack.Screen name="Checkout" component={CheckoutScreen} />
       <PublicStack.Screen name="CheckoutSuccess" component={CheckoutSuccessScreen} />
+      <PublicStack.Screen name="Landing" component={LandingScreen} />
+      <PublicStack.Screen name="TicketVerify" component={TicketVerifyScreen} />
+      <PublicStack.Screen name="EventShortLink" component={EventShortLinkScreen} />
     </PublicStack.Navigator>
   );
 }
@@ -403,6 +642,7 @@ function TicketsStack() {
       <AccountStack.Screen name="NameChange" component={NameChangeScreen} />
       <AccountStack.Screen name="ResaleListing" component={ResaleListingScreen} />
       <AccountStack.Screen name="MyResales" component={MyResalesScreen} />
+      <AccountStack.Screen name="AccountResaleSuccess" component={AccountResaleSuccessScreen} />
     </AccountStack.Navigator>
   );
 }
@@ -419,6 +659,8 @@ function AccountNavigator() {
       <AccountStack.Screen name="Profile" component={ProfileScreen} />
       <AccountStack.Screen name="Wallet" component={WalletScreen} />
       <AccountStack.Screen name="MyResales" component={MyResalesScreen} />
+      <AccountStack.Screen name="AccountSubscriptions" component={AccountSubscriptionsScreen} />
+      <AccountStack.Screen name="ClientWallet" component={ClientWalletScreen} />
     </AccountStack.Navigator>
   );
 }
@@ -481,6 +723,9 @@ function ScannerHomeStack() {
       <ScannerStack.Screen name="OperatorDetail" component={OperatorDetailScreen} />
       <ScannerStack.Screen name="ScanActivity" component={ScanActivityScreen} />
       <ScannerStack.Screen name="LiveScanning" component={LiveScanningScreen} />
+      <ScannerStack.Screen name="ScannerScanned" component={ScannerScannedScreen} />
+      <ScannerStack.Screen name="ScannerTickets" component={ScannerTicketsScreen} />
+      <ScannerStack.Screen name="ScannerManagement" component={ScannerManagementScreen} />
     </ScannerStack.Navigator>
   );
 }
@@ -580,6 +825,11 @@ function PRHomeStack() {
       <PRStack.Screen name="PRDashboard" component={PRHomeScreen} />
       <PRStack.Screen name="PRGuestLists" component={PRGuestListsScreen} />
       <PRStack.Screen name="PRTables" component={PRTablesScreen} />
+      <PRStack.Screen name="PRStaff" component={PRStaffScreen} />
+      <PRStack.Screen name="PRMyEvents" component={PRMyEventsScreen} />
+      <PRStack.Screen name="StaffPrHome" component={StaffPrHomeScreen} />
+      <PRStack.Screen name="StaffPrEventPanel" component={StaffPrEventPanelScreen} />
+      <PRStack.Screen name="PRScanner" component={PRScannerScreen} />
     </PRStack.Navigator>
   );
 }
@@ -595,6 +845,20 @@ function PREventsStack() {
       <PRStack.Screen name="PREventsList" component={PREventsScreen} />
       <PRStack.Screen name="PRGuestLists" component={PRGuestListsScreen} />
       <PRStack.Screen name="PRTables" component={PRTablesScreen} />
+    </PRStack.Navigator>
+  );
+}
+
+function PRManagementStack() {
+  return (
+    <PRStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <PRStack.Screen name="PRManagement" component={PRManagementScreen} />
+      <PRStack.Screen name="PRStaff" component={PRStaffScreen} />
     </PRStack.Navigator>
   );
 }
@@ -625,6 +889,9 @@ function PRTabs() {
             case 'PRWallet':
               iconName = focused ? 'wallet' : 'wallet-outline';
               break;
+            case 'PRManagement':
+              iconName = focused ? 'people' : 'people-outline';
+              break;
             default:
               iconName = 'home-outline';
           }
@@ -635,11 +902,53 @@ function PRTabs() {
       <PRTab.Screen name="PRHome" component={PRHomeStack} options={{ tabBarLabel: 'Home' }} />
       <PRTab.Screen name="PREvents" component={PREventsStack} options={{ tabBarLabel: 'Eventi' }} />
       <PRTab.Screen name="PRWallet" component={PRWalletScreen} options={{ tabBarLabel: 'Wallet' }} />
+      <PRTab.Screen name="PRManagement" component={PRManagementStack} options={{ tabBarLabel: 'Gestione' }} />
     </PRTab.Navigator>
   );
 }
 
-// ============= Cashier Tabs =============
+// ============= Cashier Stacks =============
+function CashierHomeStack() {
+  return (
+    <CashierStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <CashierStack.Screen name="CashierDashboard" component={CashierHomeScreen} />
+      <CashierStack.Screen name="CashierManagement" component={CashierManagementScreen} />
+      <CashierStack.Screen name="EventCashierAllocations" component={EventCashierAllocationsScreen} />
+    </CashierStack.Navigator>
+  );
+}
+
+function CashierTicketStack() {
+  return (
+    <CashierStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <CashierStack.Screen name="CashierTicket" component={CashierTicketScreen} />
+    </CashierStack.Navigator>
+  );
+}
+
+function CassaBigliettiStackNav() {
+  return (
+    <CashierStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <CashierStack.Screen name="CassaBiglietti" component={CassaBigliettiScreen} />
+    </CashierStack.Navigator>
+  );
+}
+
 function CashierTabs() {
   return (
     <CashierTab.Navigator
@@ -663,6 +972,9 @@ function CashierTabs() {
             case 'CashierTicket':
               iconName = focused ? 'receipt' : 'receipt-outline';
               break;
+            case 'CassaBiglietti':
+              iconName = focused ? 'ticket' : 'ticket-outline';
+              break;
             default:
               iconName = 'home-outline';
           }
@@ -670,8 +982,9 @@ function CashierTabs() {
         },
       })}
     >
-      <CashierTab.Screen name="CashierHome" component={CashierHomeScreen} options={{ tabBarLabel: 'Dashboard' }} />
-      <CashierTab.Screen name="CashierTicket" component={CashierTicketScreen} options={{ tabBarLabel: 'Emetti Biglietto' }} />
+      <CashierTab.Screen name="CashierHome" component={CashierHomeStack} options={{ tabBarLabel: 'Dashboard' }} />
+      <CashierTab.Screen name="CashierTicket" component={CashierTicketStack} options={{ tabBarLabel: 'Emetti Biglietto' }} />
+      <CashierTab.Screen name="CassaBiglietti" component={CassaBigliettiStackNav} options={{ tabBarLabel: 'Cassa Biglietti' }} />
     </CashierTab.Navigator>
   );
 }
@@ -687,6 +1000,12 @@ function ManagementHomeStack() {
     >
       <ManagementStack.Screen name="ManagementDashboard" component={DashboardScreen} />
       <ManagementStack.Screen name="EventHub" component={EventHubScreen} />
+      <ManagementStack.Screen name="EventWizard" component={EventWizardScreen} />
+      <ManagementStack.Screen name="EventDirectStock" component={EventDirectStockScreen} />
+      <ManagementStack.Screen name="BartenderDirectStock" component={BartenderDirectStockScreen} />
+      <ManagementStack.Screen name="NightFile" component={NightFileScreen} />
+      <ManagementStack.Screen name="Reports" component={ReportsScreen} />
+      <ManagementStack.Screen name="EventPageEditor" component={EventPageEditorScreen} />
     </ManagementStack.Navigator>
   );
 }
@@ -701,6 +1020,38 @@ function ManagementEventsStack() {
     >
       <ManagementStack.Screen name="ManagementEvents" component={ManageEventsScreen} />
       <ManagementStack.Screen name="EventHub" component={EventHubScreen} />
+      <ManagementStack.Screen name="EventWizard" component={EventWizardScreen} />
+      <ManagementStack.Screen name="EventFormats" component={EventFormatsScreen} />
+    </ManagementStack.Navigator>
+  );
+}
+
+function ManagementLocationsStack() {
+  return (
+    <ManagementStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <ManagementStack.Screen name="Locations" component={LocationsScreen} />
+      <ManagementStack.Screen name="LocationDetail" component={LocationDetailScreen} />
+      <ManagementStack.Screen name="Stations" component={StationsScreen} />
+      <ManagementStack.Screen name="StationDetail" component={StationDetailScreen} />
+    </ManagementStack.Navigator>
+  );
+}
+
+function ManagementPersonnelStack() {
+  return (
+    <ManagementStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <ManagementStack.Screen name="Personnel" component={PersonnelScreen} />
+      <ManagementStack.Screen name="Staff" component={StaffScreen} />
     </ManagementStack.Navigator>
   );
 }
@@ -728,6 +1079,12 @@ function ManagementTabs() {
             case 'ManageEvents':
               iconName = focused ? 'calendar' : 'calendar-outline';
               break;
+            case 'Locations':
+              iconName = focused ? 'location' : 'location-outline';
+              break;
+            case 'Personnel':
+              iconName = focused ? 'people' : 'people-outline';
+              break;
             default:
               iconName = 'home-outline';
           }
@@ -737,6 +1094,8 @@ function ManagementTabs() {
     >
       <ManagementTab.Screen name="Dashboard" component={ManagementHomeStack} options={{ tabBarLabel: 'Dashboard' }} />
       <ManagementTab.Screen name="ManageEvents" component={ManagementEventsStack} options={{ tabBarLabel: 'Eventi' }} />
+      <ManagementTab.Screen name="Locations" component={ManagementLocationsStack} options={{ tabBarLabel: 'Location' }} />
+      <ManagementTab.Screen name="Personnel" component={ManagementPersonnelStack} options={{ tabBarLabel: 'Personale' }} />
     </ManagementTab.Navigator>
   );
 }
@@ -754,6 +1113,23 @@ function SIAEHomeStack() {
       <SIAEStack.Screen name="SIAETransmissions" component={SIAETransmissionsScreen} />
       <SIAEStack.Screen name="SIAETransmissionDetail" component={SIAETransmissionDetailScreen} />
       <SIAEStack.Screen name="SIAEReports" component={SIAEReportsScreen} />
+      <SIAEStack.Screen name="SIAEActivationCards" component={SIAEActivationCardsScreen} />
+      <SIAEStack.Screen name="SIAECustomers" component={SIAECustomersScreen} />
+      <SIAEStack.Screen name="SIAETicketedEvents" component={SIAETicketedEventsScreen} />
+      <SIAEStack.Screen name="SIAETickets" component={SIAETicketsScreen} />
+      <SIAEStack.Screen name="SIAETicketTypes" component={SIAETicketTypesScreen} />
+      <SIAEStack.Screen name="SIAENameChanges" component={SIAENameChangesScreen} />
+      <SIAEStack.Screen name="SIAEResales" component={SIAEResalesScreen} />
+      <SIAEStack.Screen name="SIAETransactions" component={SIAETransactionsScreen} />
+      <SIAEStack.Screen name="SIAEBoxOffice" component={SIAEBoxOfficeScreen} />
+      <SIAEStack.Screen name="SIAESubscriptions" component={SIAESubscriptionsScreen} />
+      <SIAEStack.Screen name="SIAENumberedSeats" component={SIAENumberedSeatsScreen} />
+      <SIAEStack.Screen name="SIAEAuditLogs" component={SIAEAuditLogsScreen} />
+      <SIAEStack.Screen name="SIAEApprovals" component={SIAEApprovalsScreen} />
+      <SIAEStack.Screen name="SIAETables" component={SIAETablesScreen} />
+      <SIAEStack.Screen name="SIAETicketingConsole" component={SIAETicketingConsoleScreen} />
+      <SIAEStack.Screen name="SIAEReportC1" component={SIAEReportC1Screen} />
+      <SIAEStack.Screen name="SIAEReportC2" component={SIAEReportC2Screen} />
     </SIAEStack.Navigator>
   );
 }
@@ -782,6 +1158,22 @@ function SIAEReportsStack() {
     >
       <SIAEStack.Screen name="SIAEReports" component={SIAEReportsScreen} />
       <SIAEStack.Screen name="SIAETransmissionDetail" component={SIAETransmissionDetailScreen} />
+      <SIAEStack.Screen name="SIAEReportC1" component={SIAEReportC1Screen} />
+      <SIAEStack.Screen name="SIAEReportC2" component={SIAEReportC2Screen} />
+    </SIAEStack.Navigator>
+  );
+}
+
+function SIAEConfigStack() {
+  return (
+    <SIAEStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SIAEStack.Screen name="SIAESystemConfig" component={SIAESystemConfigScreen} />
+      <SIAEStack.Screen name="SIAEActivationCards" component={SIAEActivationCardsScreen} />
     </SIAEStack.Navigator>
   );
 }
@@ -812,6 +1204,9 @@ function SIAETabs() {
             case 'SIAEReports':
               iconName = focused ? 'document-text' : 'document-text-outline';
               break;
+            case 'SIAEConfig':
+              iconName = focused ? 'settings' : 'settings-outline';
+              break;
             default:
               iconName = 'home-outline';
           }
@@ -822,6 +1217,7 @@ function SIAETabs() {
       <SIAETab.Screen name="SIAEHome" component={SIAEHomeStack} options={{ tabBarLabel: 'SIAE' }} />
       <SIAETab.Screen name="SIAETransmissions" component={SIAETransmissionsStack} options={{ tabBarLabel: 'Trasmissioni' }} />
       <SIAETab.Screen name="SIAEReports" component={SIAEReportsStack} options={{ tabBarLabel: 'Report' }} />
+      <SIAETab.Screen name="SIAEConfig" component={SIAEConfigStack} options={{ tabBarLabel: 'Config' }} />
     </SIAETab.Navigator>
   );
 }
@@ -840,6 +1236,9 @@ function InventoryHomeStack() {
       <InventoryStack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <InventoryStack.Screen name="StockAdjustment" component={StockAdjustmentScreen} />
       <InventoryStack.Screen name="Consumption" component={ConsumptionScreen} />
+      <InventoryStack.Screen name="Suppliers" component={SuppliersScreen} />
+      <InventoryStack.Screen name="ReturnToWarehouse" component={ReturnToWarehouseScreen} />
+      <InventoryStack.Screen name="PurchaseOrders" component={PurchaseOrdersScreen} />
     </InventoryStack.Navigator>
   );
 }
@@ -872,6 +1271,22 @@ function InventoryConsumptionStack() {
   );
 }
 
+function InventoryWarehouseStack() {
+  return (
+    <InventoryStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <InventoryStack.Screen name="Warehouse" component={WarehouseScreen} />
+      <InventoryStack.Screen name="Suppliers" component={SuppliersScreen} />
+      <InventoryStack.Screen name="PurchaseOrders" component={PurchaseOrdersScreen} />
+      <InventoryStack.Screen name="ReturnToWarehouse" component={ReturnToWarehouseScreen} />
+    </InventoryStack.Navigator>
+  );
+}
+
 function InventoryTabs() {
   return (
     <InventoryTab.Navigator
@@ -898,6 +1313,9 @@ function InventoryTabs() {
             case 'Consumption':
               iconName = focused ? 'remove-circle' : 'remove-circle-outline';
               break;
+            case 'Warehouse':
+              iconName = focused ? 'business' : 'business-outline';
+              break;
             default:
               iconName = 'grid-outline';
           }
@@ -908,6 +1326,7 @@ function InventoryTabs() {
       <InventoryTab.Screen name="InventoryHome" component={InventoryHomeStack} options={{ tabBarLabel: 'Magazzino' }} />
       <InventoryTab.Screen name="Products" component={InventoryProductsStack} options={{ tabBarLabel: 'Prodotti' }} />
       <InventoryTab.Screen name="Consumption" component={InventoryConsumptionStack} options={{ tabBarLabel: 'Consumo' }} />
+      <InventoryTab.Screen name="Warehouse" component={InventoryWarehouseStack} options={{ tabBarLabel: 'Deposito' }} />
     </InventoryTab.Navigator>
   );
 }
@@ -1142,10 +1561,18 @@ function AdminHomeStack() {
       }}
     >
       <AdminStack.Screen name="AdminDashboard" component={AdminHomeScreen} />
+      <AdminStack.Screen name="SuperAdminDashboard" component={SuperAdminDashboardScreen} />
       <AdminStack.Screen name="GestoriList" component={GestoriListScreen} />
       <AdminStack.Screen name="GestoreDetail" component={GestoreDetailScreen} />
       <AdminStack.Screen name="Companies" component={CompaniesScreen} />
       <AdminStack.Screen name="SystemSettings" component={SystemSettingsScreen} />
+      <AdminStack.Screen name="AdminSiteSettings" component={AdminSiteSettingsScreen} />
+      <AdminStack.Screen name="AdminNameChanges" component={AdminNameChangesScreen} />
+      <AdminStack.Screen name="StripeAdmin" component={StripeAdminScreen} />
+      <AdminStack.Screen name="AdminGestoreCompanies" component={AdminGestoreCompaniesScreen} />
+      <AdminStack.Screen name="AdminGestoreEvents" component={AdminGestoreEventsScreen} />
+      <AdminStack.Screen name="AdminGestoreUsers" component={AdminGestoreUsersScreen} />
+      <AdminStack.Screen name="AdminEventDetail" component={AdminEventDetailScreen} />
     </AdminStack.Navigator>
   );
 }
@@ -1160,6 +1587,9 @@ function AdminGestoriStack() {
     >
       <AdminStack.Screen name="GestoriList" component={GestoriListScreen} />
       <AdminStack.Screen name="GestoreDetail" component={GestoreDetailScreen} />
+      <AdminStack.Screen name="AdminGestoreCompanies" component={AdminGestoreCompaniesScreen} />
+      <AdminStack.Screen name="AdminGestoreEvents" component={AdminGestoreEventsScreen} />
+      <AdminStack.Screen name="AdminGestoreUsers" component={AdminGestoreUsersScreen} />
     </AdminStack.Navigator>
   );
 }
@@ -1186,6 +1616,39 @@ function AdminSettingsStack() {
       }}
     >
       <AdminStack.Screen name="SystemSettings" component={SystemSettingsScreen} />
+      <AdminStack.Screen name="AdminSiteSettings" component={AdminSiteSettingsScreen} />
+      <AdminStack.Screen name="StripeAdmin" component={StripeAdminScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
+function AdminUsersStack() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AdminStack.Screen name="Users" component={UsersScreen} />
+      <AdminStack.Screen name="AdminNameChanges" component={AdminNameChangesScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
+function AdminBillingStack() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AdminStack.Screen name="AdminBillingPlans" component={AdminBillingPlansScreen} />
+      <AdminStack.Screen name="AdminBillingOrganizers" component={AdminBillingOrganizersScreen} />
+      <AdminStack.Screen name="AdminBillingOrganizerDetail" component={AdminBillingOrganizerDetailScreen} />
+      <AdminStack.Screen name="AdminBillingInvoices" component={AdminBillingInvoicesScreen} />
+      <AdminStack.Screen name="AdminBillingReports" component={AdminBillingReportsScreen} />
     </AdminStack.Navigator>
   );
 }
@@ -1219,6 +1682,12 @@ function AdminTabs() {
             case 'Settings':
               iconName = focused ? 'settings' : 'settings-outline';
               break;
+            case 'Users':
+              iconName = focused ? 'person' : 'person-outline';
+              break;
+            case 'Billing':
+              iconName = focused ? 'card' : 'card-outline';
+              break;
             default:
               iconName = 'shield-outline';
           }
@@ -1228,7 +1697,8 @@ function AdminTabs() {
     >
       <AdminTab.Screen name="AdminHome" component={AdminHomeStack} options={{ tabBarLabel: 'Dashboard' }} />
       <AdminTab.Screen name="Gestori" component={AdminGestoriStack} options={{ tabBarLabel: 'Gestori' }} />
-      <AdminTab.Screen name="Companies" component={AdminCompaniesStack} options={{ tabBarLabel: 'Aziende' }} />
+      <AdminTab.Screen name="Users" component={AdminUsersStack} options={{ tabBarLabel: 'Utenti' }} />
+      <AdminTab.Screen name="Billing" component={AdminBillingStack} options={{ tabBarLabel: 'Billing' }} />
       <AdminTab.Screen name="Settings" component={AdminSettingsStack} options={{ tabBarLabel: 'Sistema' }} />
     </AdminTab.Navigator>
   );
@@ -1318,6 +1788,266 @@ function FloorPlanTabs() {
       <FloorPlanTab.Screen name="FloorPlanViewer" component={FloorPlanViewerStack} options={{ tabBarLabel: 'Visualizza' }} />
       <FloorPlanTab.Screen name="FloorPlanEditor" component={FloorPlanEditorStack} options={{ tabBarLabel: 'Modifica' }} />
     </FloorPlanTab.Navigator>
+  );
+}
+
+// ============= Marketing Stacks =============
+function MarketingHomeStack() {
+  return (
+    <MarketingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <MarketingStack.Screen name="MarketingDashboard" component={MarketingDashboardScreen} />
+      <MarketingStack.Screen name="MarketingEmail" component={MarketingEmailScreen} />
+      <MarketingStack.Screen name="LoyaltyAdmin" component={LoyaltyAdminScreen} />
+      <MarketingStack.Screen name="ReferralAdmin" component={ReferralAdminScreen} />
+      <MarketingStack.Screen name="BundlesAdmin" component={BundlesAdminScreen} />
+    </MarketingStack.Navigator>
+  );
+}
+
+function MarketingEmailStack() {
+  return (
+    <MarketingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <MarketingStack.Screen name="MarketingEmail" component={MarketingEmailScreen} />
+    </MarketingStack.Navigator>
+  );
+}
+
+function MarketingLoyaltyStack() {
+  return (
+    <MarketingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <MarketingStack.Screen name="LoyaltyAdmin" component={LoyaltyAdminScreen} />
+      <MarketingStack.Screen name="BundlesAdmin" component={BundlesAdminScreen} />
+    </MarketingStack.Navigator>
+  );
+}
+
+function MarketingReferralsStack() {
+  return (
+    <MarketingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <MarketingStack.Screen name="ReferralAdmin" component={ReferralAdminScreen} />
+    </MarketingStack.Navigator>
+  );
+}
+
+function MarketingTabs() {
+  return (
+    <MarketingTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'MarketingHome':
+              iconName = focused ? 'megaphone' : 'megaphone-outline';
+              break;
+            case 'Email':
+              iconName = focused ? 'mail' : 'mail-outline';
+              break;
+            case 'Loyalty':
+              iconName = focused ? 'heart' : 'heart-outline';
+              break;
+            case 'Referrals':
+              iconName = focused ? 'people' : 'people-outline';
+              break;
+            default:
+              iconName = 'megaphone-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <MarketingTab.Screen name="MarketingHome" component={MarketingHomeStack} options={{ tabBarLabel: 'Marketing' }} />
+      <MarketingTab.Screen name="Email" component={MarketingEmailStack} options={{ tabBarLabel: 'Email' }} />
+      <MarketingTab.Screen name="Loyalty" component={MarketingLoyaltyStack} options={{ tabBarLabel: 'Fidelity' }} />
+      <MarketingTab.Screen name="Referrals" component={MarketingReferralsStack} options={{ tabBarLabel: 'Referral' }} />
+    </MarketingTab.Navigator>
+  );
+}
+
+// ============= School Badges Stacks =============
+function SchoolBadgesHomeStack() {
+  return (
+    <SchoolBadgesStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SchoolBadgesStack.Screen name="SchoolBadgeManager" component={SchoolBadgeManagerScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeLanding" component={SchoolBadgeLandingScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeVerify" component={SchoolBadgeVerifyScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeView" component={SchoolBadgeViewScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeError" component={SchoolBadgeErrorScreen} />
+    </SchoolBadgesStack.Navigator>
+  );
+}
+
+function SchoolBadgesScannerStack() {
+  return (
+    <SchoolBadgesStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SchoolBadgesStack.Screen name="SchoolBadgeScanner" component={SchoolBadgeScannerScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeVerify" component={SchoolBadgeVerifyScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeView" component={SchoolBadgeViewScreen} />
+      <SchoolBadgesStack.Screen name="SchoolBadgeError" component={SchoolBadgeErrorScreen} />
+    </SchoolBadgesStack.Navigator>
+  );
+}
+
+function SchoolBadgesTabs() {
+  return (
+    <SchoolBadgesTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'SchoolBadgesHome':
+              iconName = focused ? 'school' : 'school-outline';
+              break;
+            case 'SchoolBadgesScanner':
+              iconName = focused ? 'scan' : 'scan-outline';
+              break;
+            default:
+              iconName = 'school-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <SchoolBadgesTab.Screen name="SchoolBadgesHome" component={SchoolBadgesHomeStack} options={{ tabBarLabel: 'Tessere' }} />
+      <SchoolBadgesTab.Screen name="SchoolBadgesScanner" component={SchoolBadgesScannerStack} options={{ tabBarLabel: 'Scanner' }} />
+    </SchoolBadgesTab.Navigator>
+  );
+}
+
+// ============= Settings Stacks =============
+function SettingsHomeStack() {
+  return (
+    <SettingsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SettingsStack.Screen name="Settings" component={SettingsScreen} />
+      <SettingsStack.Screen name="PrinterSettings" component={PrinterSettingsScreen} />
+      <SettingsStack.Screen name="TemplateBuilder" component={TemplateBuilderScreen} />
+      <SettingsStack.Screen name="DigitalTemplateBuilder" component={DigitalTemplateBuilderScreen} />
+      <SettingsStack.Screen name="DownloadSmartCardApp" component={DownloadSmartCardAppScreen} />
+      <SettingsStack.Screen name="Import" component={ImportScreen} />
+      <SettingsStack.Screen name="PriceLists" component={PriceListsScreen} />
+      <SettingsStack.Screen name="Beverage" component={BeverageScreen} />
+    </SettingsStack.Navigator>
+  );
+}
+
+function SettingsPrintersStack() {
+  return (
+    <SettingsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SettingsStack.Screen name="PrinterSettings" component={PrinterSettingsScreen} />
+    </SettingsStack.Navigator>
+  );
+}
+
+function SettingsTemplatesStack() {
+  return (
+    <SettingsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <SettingsStack.Screen name="TemplateBuilder" component={TemplateBuilderScreen} />
+      <SettingsStack.Screen name="DigitalTemplateBuilder" component={DigitalTemplateBuilderScreen} />
+    </SettingsStack.Navigator>
+  );
+}
+
+function SettingsTabs() {
+  return (
+    <SettingsTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'SettingsHome':
+              iconName = focused ? 'settings' : 'settings-outline';
+              break;
+            case 'Printers':
+              iconName = focused ? 'print' : 'print-outline';
+              break;
+            case 'Templates':
+              iconName = focused ? 'document' : 'document-outline';
+              break;
+            default:
+              iconName = 'settings-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <SettingsTab.Screen name="SettingsHome" component={SettingsHomeStack} options={{ tabBarLabel: 'Impostazioni' }} />
+      <SettingsTab.Screen name="Printers" component={SettingsPrintersStack} options={{ tabBarLabel: 'Stampanti' }} />
+      <SettingsTab.Screen name="Templates" component={SettingsTemplatesStack} options={{ tabBarLabel: 'Template' }} />
+    </SettingsTab.Navigator>
   );
 }
 
@@ -1480,6 +2210,48 @@ function AppDrawer() {
         />
       )}
 
+      {/* Marketing mode - for gestore/admin only */}
+      {(userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="MarketingTabs" 
+          component={MarketingTabs}
+          options={{
+            drawerLabel: 'Marketing',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="megaphone-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* School Badges mode - for gestore/admin only */}
+      {(userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="SchoolBadgesTabs" 
+          component={SchoolBadgesTabs}
+          options={{
+            drawerLabel: 'Tessere Scuola',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="school-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* Settings mode - for gestore/admin */}
+      {(userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="SettingsTabs" 
+          component={SettingsTabs}
+          options={{
+            drawerLabel: 'Impostazioni',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="cog-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
       {/* Admin mode - for super_admin only */}
       {userRole === 'super_admin' && (
         <Drawer.Screen 
@@ -1502,7 +2274,7 @@ export function MainNavigator() {
   const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
-    return null; // Could show splash screen
+    return null;
   }
 
   return (
