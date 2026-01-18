@@ -2176,7 +2176,7 @@ export function generateRCAXml(params: RCAParams): RCAResult {
     const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
     
     // Calcola valori autoritativi per ogni biglietto
-    const grossAmount = parseFloat(ticket.grossAmount || '0');
+    const grossAmount = parseFloat(String(ticket.grossAmount || '0'));
     totalGrossAmount += grossAmount;
     
     // Crea settore se non esiste
