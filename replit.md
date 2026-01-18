@@ -82,11 +82,12 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Ensures no structurally invalid XML can be transmitted to SIAE
 - Combined with auto-correction and system code validation for complete error prevention
 
-**System Code Fallback to Config (2026-01-18)**: Added fallback for `resolveSystemCodeForSmime()` when Desktop Bridge doesn't provide EFFF data:
-- If Smart Card is connected but `systemId` is not available from EFFF, falls back to `siaeConfig.systemCode`
-- If Smart Card is not connected at all, also falls back to configured system code
-- Displays warning to ensure user verifies the configured code matches the Smart Card
-- Enables operation with older Desktop Bridge versions that don't read EFFF file
+**Active EFFF Read for System Code (2026-01-18)**: Fixed system code resolution to actively read EFFF file from Smart Card:
+- The `systemId` is NOT included in automatic status updates from Desktop Bridge
+- Now calls `requestCardEfffData()` to send explicit `READ_EFFF` command before transmission
+- Desktop Bridge reads the EFFF file from Smart Card and returns `systemId`
+- Falls back to cached data or config only if active read fails
+- Ensures correct system code is always used for S/MIME signed transmissions
 
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.

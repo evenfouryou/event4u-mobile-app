@@ -5948,16 +5948,34 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // FIX 2026-01-14: Calcola il progressivo UNA SOLA VOLTA e riusa per XML e nome file
   let calculatedProgressivo: number;
   
-  // FIX 2026-01-17: Per RCA (S/MIME), codice sistema DEVE provenire dalla Smart Card
-  // Usare siaeConfig.systemCode con Smart Card diversa causa errore SIAE 0600
-  const { getCachedEfffData } = await import('./bridge-relay');
-  const cachedEfffData = getCachedEfffData();
+  // FIX 2026-01-18: Legge ATTIVAMENTE il file EFFF dalla Smart Card
+  // Il systemId non viene inviato nello status automatico, serve richiesta esplicita READ_EFFF
+  const { getCachedEfffData, requestCardEfffData } = await import('./bridge-relay');
+  
+  let efffData: { systemId?: string } | null = null;
+  
+  // Prima prova a leggere EFFF dalla Smart Card (richiesta attiva)
+  try {
+    console.log(`[SIAE-ROUTES] Requesting EFFF data from Smart Card...`);
+    const freshEfffData = await requestCardEfffData();
+    if (freshEfffData?.systemId) {
+      console.log(`[SIAE-ROUTES] EFFF read successful: systemId=${freshEfffData.systemId}`);
+      efffData = freshEfffData;
+    } else {
+      console.warn(`[SIAE-ROUTES] EFFF read returned but no systemId`);
+      efffData = getCachedEfffData(); // Fallback alla cache
+    }
+  } catch (efffError: any) {
+    console.warn(`[SIAE-ROUTES] EFFF read failed: ${efffError.message}`);
+    // Fallback alla cache se la lettura attiva fallisce
+    efffData = getCachedEfffData();
+  }
   
   // FIX 2026-01-18: TUTTI i report (RCA, RMG, RPM) sono firmati S/MIME
   // Quindi il system code DEVE provenire dalla Smart Card per TUTTI i tipi
   // Usare siaeConfig.systemCode con Smart Card diversa causa errore SIAE 0600
   let preResolvedSystemCode: string;
-  const smimeResult = resolveSystemCodeForSmime(cachedEfffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+  const smimeResult = resolveSystemCodeForSmime(efffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
   
   if (!smimeResult.success || !smimeResult.systemCode) {
     console.error(`[SIAE-ROUTES] BLOCCO ${type.toUpperCase()}: ${smimeResult.error}`);
