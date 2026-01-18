@@ -5063,24 +5063,20 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     const resendIsRca = original.transmissionType === 'rca';
     let resendResolvedSystemCode: string;
     
-    if (resendIsRca) {
-      const smimeResult = resolveSystemCodeForSmime(resendCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
-      if (!smimeResult.success || !smimeResult.systemCode) {
-        console.error(`[SIAE-ROUTES] Resend BLOCCO RCA: ${smimeResult.error}`);
-        return res.status(400).json({
-          message: smimeResult.error || 'Smart Card richiesta per reinvio RCA',
-          code: 'SMARTCARD_REQUIRED_FOR_RCA'
-        });
-      }
-      resendResolvedSystemCode = smimeResult.systemCode;
-      if (smimeResult.warning) {
-        console.warn(`[SIAE-ROUTES] Resend RCA Warning: ${smimeResult.warning}`);
-      }
-      console.log(`[SIAE-ROUTES] Resend: RCA systemCode from ${smimeResult.source}: ${resendResolvedSystemCode}`);
-    } else {
-      resendResolvedSystemCode = resolveSystemCode(resendCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
-      console.log(`[SIAE-ROUTES] Resend: systemCode=${resendResolvedSystemCode} for ${original.transmissionType}`);
+    // FIX 2026-01-18: TUTTI i report sono firmati S/MIME, usa resolveSystemCodeForSmime
+    const smimeResult = resolveSystemCodeForSmime(resendCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+    if (!smimeResult.success || !smimeResult.systemCode) {
+      console.error(`[SIAE-ROUTES] Resend BLOCCO ${original.transmissionType}: ${smimeResult.error}`);
+      return res.status(400).json({
+        message: smimeResult.error || 'Smart Card richiesta per reinvio trasmissioni S/MIME',
+        code: 'SMARTCARD_REQUIRED_FOR_SMIME'
+      });
     }
+    resendResolvedSystemCode = smimeResult.systemCode;
+    if (smimeResult.warning) {
+      console.warn(`[SIAE-ROUTES] Resend ${original.transmissionType} Warning: ${smimeResult.warning}`);
+    }
+    console.log(`[SIAE-ROUTES] Resend: ${original.transmissionType} systemCode from ${smimeResult.source}: ${resendResolvedSystemCode}`);
     
     // FIX 2026-01-18: Import correct generators based on transmission type
     const { generateRCAXml, generateC1Xml } = await import('./siae-utils');
@@ -5318,19 +5314,16 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
       const postIsRca = data.transmissionType === 'rca';
       let postResolvedSystemCode: string;
       
-      if (postIsRca) {
-        const smimeResult = resolveSystemCodeForSmime(postCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
-        if (!smimeResult.success || !smimeResult.systemCode) {
-          console.error(`[SIAE-ROUTES] POST BLOCCO RCA: ${smimeResult.error}`);
-          return res.status(400).json({
-            message: smimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
-            code: 'SMARTCARD_REQUIRED_FOR_RCA'
-          });
-        }
-        postResolvedSystemCode = smimeResult.systemCode;
-      } else {
-        postResolvedSystemCode = resolveSystemCode(postCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+      // FIX 2026-01-18: TUTTI i report sono firmati S/MIME, usa resolveSystemCodeForSmime
+      const smimeResult = resolveSystemCodeForSmime(postCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+      if (!smimeResult.success || !smimeResult.systemCode) {
+        console.error(`[SIAE-ROUTES] POST BLOCCO ${data.transmissionType}: ${smimeResult.error}`);
+        return res.status(400).json({
+          message: smimeResult.error || 'Smart Card richiesta per trasmissioni S/MIME',
+          code: 'SMARTCARD_REQUIRED_FOR_SMIME'
+        });
       }
+      postResolvedSystemCode = smimeResult.systemCode;
       
       const systemCodeValidation = validateSystemCodeConsistency(data.fileContent, postResolvedSystemCode);
       if (!systemCodeValidation.valid) {
@@ -5423,27 +5416,22 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       // Usa il systemCode salvato nella trasmissione (preferito per coerenza con XML esistente)
       resolvedSystemCodeForEmail = transmission.systemCode;
       console.log(`[SIAE-ROUTES] SendEmail: Using SAVED systemCode=${resolvedSystemCodeForEmail} from transmission record`);
-    } else if (isRcaTransmission) {
-      // FIX 2026-01-17: Per RCA LEGACY senza systemCode, DEVE usare Smart Card
+    } else {
+      // FIX 2026-01-18: TUTTI i report sono firmati S/MIME, DEVE usare Smart Card
       const sendEmailCachedEfff = getCachedEfffData();
       const smimeResult = resolveSystemCodeForSmime(sendEmailCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
       if (!smimeResult.success || !smimeResult.systemCode) {
-        console.error(`[SIAE-ROUTES] SendEmail BLOCCO RCA: ${smimeResult.error}`);
+        console.error(`[SIAE-ROUTES] SendEmail BLOCCO ${transmission.transmissionType}: ${smimeResult.error}`);
         return res.status(400).json({
-          message: smimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
-          code: 'SMARTCARD_REQUIRED_FOR_RCA'
+          message: smimeResult.error || 'Smart Card richiesta per trasmissioni S/MIME',
+          code: 'SMARTCARD_REQUIRED_FOR_SMIME'
         });
       }
       resolvedSystemCodeForEmail = smimeResult.systemCode;
       if (smimeResult.warning) {
-        console.warn(`[SIAE-ROUTES] SendEmail RCA Warning: ${smimeResult.warning}`);
+        console.warn(`[SIAE-ROUTES] SendEmail ${transmission.transmissionType} Warning: ${smimeResult.warning}`);
       }
-      console.log(`[SIAE-ROUTES] SendEmail: RCA systemCode from ${smimeResult.source}: ${resolvedSystemCodeForEmail}`);
-    } else {
-      // Per RMG/RPM legacy usa il vecchio metodo
-      const sendEmailCachedEfff = getCachedEfffData();
-      resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
-      console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (legacy ${transmission.transmissionType})`);
+      console.log(`[SIAE-ROUTES] SendEmail: ${transmission.transmissionType} systemCode from ${smimeResult.source}: ${resolvedSystemCodeForEmail}`);
     }
     
     // CRITICAL FIX: Rigenera SEMPRE l'XML obbligatoriamente per garantire formato corretto
@@ -5922,32 +5910,31 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const { getCachedEfffData } = await import('./bridge-relay');
   const cachedEfffData = getCachedEfffData();
   
-  // Per RCA usa resolveSystemCodeForSmime, per altri tipi usa resolveSystemCode
+  // FIX 2026-01-18: TUTTI i report (RCA, RMG, RPM) sono firmati S/MIME
+  // Quindi il system code DEVE provenire dalla Smart Card per TUTTI i tipi
+  // Usare siaeConfig.systemCode con Smart Card diversa causa errore SIAE 0600
   let preResolvedSystemCode: string;
-  if (isRCA) {
-    const smimeResult = resolveSystemCodeForSmime(cachedEfffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
-    if (!smimeResult.success || !smimeResult.systemCode) {
-      console.error(`[SIAE-ROUTES] BLOCCO RCA: ${smimeResult.error}`);
-      return {
-        success: false,
-        statusCode: 400,
-        error: smimeResult.error || 'Smart Card richiesta per trasmissioni RCA',
-        data: {
-          code: 'SMARTCARD_REQUIRED_FOR_RCA',
-          source: smimeResult.source,
-        }
-      };
-    }
-    preResolvedSystemCode = smimeResult.systemCode;
-    if (smimeResult.warning) {
-      console.warn(`[SIAE-ROUTES] RCA Warning: ${smimeResult.warning}`);
-    }
-    console.log(`[SIAE-ROUTES] FIX 2026-01-17: RCA system code from ${smimeResult.source}: ${preResolvedSystemCode}`);
-  } else {
-    // Per RMG/RPM usa il vecchio metodo (non richiede S/MIME)
-    preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
-    console.log(`[SIAE-ROUTES] Pre-resolved system code for ${type}: ${preResolvedSystemCode}`);
+  const smimeResult = resolveSystemCodeForSmime(cachedEfffData, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+  
+  if (!smimeResult.success || !smimeResult.systemCode) {
+    console.error(`[SIAE-ROUTES] BLOCCO ${type.toUpperCase()}: ${smimeResult.error}`);
+    return {
+      success: false,
+      statusCode: 400,
+      error: smimeResult.error || 'Smart Card richiesta per trasmissioni SIAE',
+      data: {
+        code: 'SMARTCARD_REQUIRED_FOR_SMIME',
+        reportType: type,
+        source: smimeResult.source,
+        suggestion: 'Collegare la Smart Card SIAE tramite Desktop Bridge prima di inviare report'
+      }
+    };
   }
+  preResolvedSystemCode = smimeResult.systemCode;
+  if (smimeResult.warning) {
+    console.warn(`[SIAE-ROUTES] ${type.toUpperCase()} Warning: ${smimeResult.warning}`);
+  }
+  console.log(`[SIAE-ROUTES] FIX 2026-01-18: ${type.toUpperCase()} system code from ${smimeResult.source}: ${preResolvedSystemCode}`)
   
   // FIX 2026-01-16: Valida codice sistema PRIMA della generazione XML
   // Il codice default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
@@ -8284,10 +8271,17 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     
     // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
     // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato (errore SIAE 0600)
-    // FIX 2026-01-14: Usa resolveSystemCode per coerenza codice sistema (errori SIAE 0600/0603)
+    // FIX 2026-01-18: TUTTI i report sono firmati S/MIME, usa resolveSystemCodeForSmime
     const { getCachedEfffData } = await import('./bridge-relay');
     const dailyEfffData = getCachedEfffData();
-    const dailyResolvedSystemCode = resolveSystemCode(dailyEfffData, systemConfig);
+    const dailySmimeResult = resolveSystemCodeForSmime(dailyEfffData, systemConfig);
+    if (!dailySmimeResult.success || !dailySmimeResult.systemCode) {
+      return res.status(400).json({
+        message: dailySmimeResult.error || 'Smart Card richiesta per preview report',
+        code: 'SMARTCARD_REQUIRED_FOR_SMIME'
+      });
+    }
+    const dailyResolvedSystemCode = dailySmimeResult.systemCode;
     const generatedFileName = generateSiaeFileName('giornaliero', reportDate, sequenceNumber, null, dailyResolvedSystemCode);
     
     // Generate RiepilogoGiornaliero XML using unified generateC1Xml

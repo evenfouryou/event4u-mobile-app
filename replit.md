@@ -60,13 +60,14 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Removed all `|| SIAE_SYSTEM_CODE_DEFAULT` fallback patterns from XML generation code paths
 - System code validation now blocks at generation time, not just at transmission time
 
-**S/MIME System Code Consistency Fix (2026-01-17)**: Added `resolveSystemCodeForSmime()` function to prevent error 0600 caused by Smart Card / configuration mismatch:
-- For RCA transmissions signed with S/MIME, the system code MUST come from the Smart Card's EFFF file
+**S/MIME System Code Consistency Fix (2026-01-17, extended 2026-01-18)**: Added `resolveSystemCodeForSmime()` function to prevent error 0600 caused by Smart Card / configuration mismatch:
+- **ALL transmissions** (RCA, RMG, RPM) are signed with S/MIME, therefore the system code MUST come from the Smart Card's EFFF file
 - SIAE verifies that the system code in the XML matches the one registered on the Smart Card used for signing
-- Using `siaeConfig.systemCode` when the Smart Card has a different code causes error 0600
-- New function blocks RCA transmission if Smart Card's systemId is not available or invalid
+- Using `siaeConfig.systemCode` when the Smart Card has a different code causes error 0600 "Nome del file contenente il riepilogo sbagliato"
+- FIX 2026-01-18: Extended `resolveSystemCodeForSmime()` to ALL transmission types (not just RCA)
+- All code paths (generate, resend, post, sendEmail, preview) now require Smart Card connection
+- Blocks transmission if Smart Card's systemId is not available or invalid
 - Logs warning if siaeConfig.systemCode differs from Smart Card code (uses Smart Card code anyway)
-- Scheduler RCA flow now uses `resolveSystemCodeForSmime()` instead of legacy `resolveSystemCode()`
 
 **RPM Future Event Blocking (2026-01-18)**: Added validation to prevent SIAE error 0603 caused by future event dates:
 - RPM (monthly reports) cannot be sent for a month that hasn't concluded yet
