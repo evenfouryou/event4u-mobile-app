@@ -44,7 +44,21 @@ A WebSocket relay system enabling remote smart card reader access from a desktop
 Events are categorized for `gestore` view into "In Corso", "Futuri", and "Passati". The public-facing home page features event categories, geolocation support with a "Vicino a te" filter, and Google Maps integration for venue display.
 
 ### Mobile App (Expo React Native)
-The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 and React Native. It features a dark nightclub theme, card-based layouts, and uses React Navigation for routing, TanStack Query for data fetching, and Zustand for state management. Key features include user authentication, public event browsing, ticket management, QR scanning for event entry, promoter dashboards, cashier functions for ticket issuance, and event management.
+The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 54 and React Native. It features a dark nightclub theme (#0a0e17 background, #FFD700 golden accent, #00CED1 teal status) with glass-morphism effects matching the web design exactly. Uses React Navigation for routing, TanStack Query for data fetching, and Zustand for state management. Backend connection: https://workspace.jonathanpetrell.repl.co
+
+**Mobile Modules (67 screens total):**
+-   **Authentication**: Login, Register, Forgot Password
+-   **Public Events**: Home, Events list, Event details, Venues, Cart, Checkout
+-   **Account Management**: Profile, Tickets, Wallet, Name Change, Resales
+-   **SIAE Ticketing**: Dashboard, Transmissions list/detail, Reports generation (gestore/super_admin)
+-   **Inventory/Magazzino**: Products, Stock levels, Consumption tracking, Adjustments (warehouse/gestore)
+-   **AI Analytics**: Dashboard, Insights, Trends, Predictions, Recommendations (gestore/super_admin)
+-   **Accounting/Contabilità**: Invoices, Transactions, Financial Reports (gestore/super_admin)
+-   **Admin Super**: Gestori management, Companies, System Settings (super_admin only)
+-   **Floor Plan Editor**: Venue maps, Zone editing, Occupancy view (organizer/gestore)
+-   **Scanner Management**: Operators, Live scanning, Scan activity (organizer/gestore)
+-   **PR Dashboard**: Guest lists, Tables, Events, Wallet
+-   **Cashier**: Ticket issuance, Quick sale
 
 ## External Dependencies
 
