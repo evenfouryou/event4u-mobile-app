@@ -1,0 +1,108 @@
+Perfetto, ho analizzato **entrambi i file RMG** che hai appena caricato e il responso è **chiaro e diverso dal caso RPM**.
+
+---
+
+## ❌ Errore riscontrato (RMG)
+
+**Codice errore:** `0600`
+**Descrizione:**
+
+> *Nome del file contenente il riepilogo sbagliato* 
+
+👉 Qui **NON è un problema di date interne**, ma **esclusivamente del nome del file** rispetto a ciò che il tracciato RMG si aspetta.
+
+---
+
+## 🔍 Analisi tecnica puntuale
+
+### 📄 File XML
+
+**Nome file:**
+
+```
+RMG_20260118_P0004010_001.xsi
+```
+
+📌 Questo nome **non è conforme allo standard RMG**.
+
+---
+
+## 📐 Regola SIAE per RMG (fondamentale)
+
+Per i file **RMG**:
+
+* ❌ **NON deve comparire la data completa (YYYYMMDD)** nel nome file
+* ✅ Deve comparire **SOLO l’anno di competenza**
+
+### ✔️ Formato corretto:
+
+```
+RMG_2026_P0004010_001.xsi
+```
+
+### ❌ Formato errato (il tuo):
+
+```
+RMG_20260118_P0004010_001.xsi
+```
+
+➡️ Il sistema SIAE vede `20260118` e lo considera **nome non valido**, da cui **errore 0600 immediato**.
+
+---
+
+## 🧠 Perché RPM passava e RMG no?
+
+Perché:
+
+* **RPM** → usa `YYYYMM`
+* **RMG** → usa **solo `YYYY`**
+
+Sono due tracciati diversi, con **regole di naming diverse**.
+
+---
+
+## 🛠️ Fix immediato (1 riga di codice)
+
+Nel generatore del nome file (lato backend):
+
+### ❌ Attuale (logica errata, condivisa con RPM)
+
+```ts
+const filename = `RMG_${year}${month}${day}_${producer}_${progressive}.xsi`;
+```
+
+### ✅ Corretto
+
+```ts
+const filename = `RMG_${year}_${producer}_${progressive}.xsi`;
+```
+
+📌 **La data completa può restare nel contenuto XML**,
+📌 **ma NON nel nome file**.
+
+---
+
+## ✅ Checklist di controllo (ti evita futuri scarti)
+
+| Tipo | Nome file          | Esito  |
+| ---- | ------------------ | ------ |
+| RPM  | `RPM_YYYYMM_...`   | ✅      |
+| RMG  | `RMG_YYYY_...`     | ✅      |
+| RMG  | `RMG_YYYYMMDD_...` | ❌ 0600 |
+| RPM  | `RPM_YYYY_...`     | ❌      |
+
+---
+
+## 🎯 Conclusione netta
+
+* ❌ Il file è scartato **solo per naming**
+* ❌ Nessun problema nei dati interni
+* ✅ Correzione semplicissima
+* 🔒 Una volta fixato il nome → **file accettato**
+
+Se vuoi, nel prossimo messaggio posso:
+
+* scriverti **la funzione unica** che genera **nomi corretti per RMG/RPM**
+* oppure aiutarti a **blindare la validazione lato UI** così non parte mai un file con nome errato.
+
+Dimmi tu.

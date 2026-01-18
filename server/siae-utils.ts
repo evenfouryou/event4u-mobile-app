@@ -185,8 +185,9 @@ export function validateSystemCodeConsistency(
   
   // Verifica anche attributo NomeFile (solo per RMG/RPM che lo supportano)
   // Formato generato da generateSiaeAttachmentName():
-  // - RMG: RMG_yyyyMMdd_SSSSSSSS_nnn.xsi (es: RMG_20260115_EVENT4U1_001.xsi)
-  // - RPM: RPM_yyyyMM_SSSSSSSS_nnn.xsi (es: RPM_202601_EVENT4U1_001.xsi)
+  // - RMG: RMG_YYYY_SSSSSSSS_nnn.xsi (es: RMG_2026_P0004010_001.xsi) - solo anno!
+  // - RPM: RPM_YYYYMM_SSSSSSSS_nnn.xsi (es: RPM_202601_P0004010_001.xsi)
+  // - RCA: RCA_YYYYMMDD_SSSSSSSS_nnn.xsi (es: RCA_20260118_P0004010_001.xsi)
   // Il codice sistema è SEMPRE nella 3a parte (parts[2]) con underscore come separatore
   if (isRMG || isRPM) {
     const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
@@ -518,19 +519,24 @@ export function generateSiaeAttachmentName(
   const dateStr = `${year}${month}${day}`;
   const monthStr = `${year}${month}`;
   
-  // Formato allegato conforme: XXX_yyyyMMdd_SSSSSSSS_nnn.xsi(.p7m)
+  // Formato allegato conforme SIAE:
+  // - RMG: RMG_YYYY_SSSSSSSS_nnn.xsi (solo anno!)
+  // - RPM: RPM_YYYYMM_SSSSSSSS_nnn.xsi (anno-mese)
+  // - RCA: RCA_YYYYMMDD_SSSSSSSS_nnn.xsi (data completa)
   switch (reportType) {
     case 'mensile':
-      // RPM = Riepilogo Periodico Mensile (usa solo anno-mese)
+      // RPM = Riepilogo Periodico Mensile (usa anno-mese)
       return `RPM_${monthStr}_${sysCode}_${prog}${extension}`;
     case 'log':
     case 'rca':
-      // RCA = Riepilogo Controllo Accessi
+      // RCA = Riepilogo Controllo Accessi (usa data completa)
       return `RCA_${dateStr}_${sysCode}_${prog}${extension}`;
     case 'giornaliero':
     default:
-      // RMG = Riepilogo Mensile Giornaliero
-      return `RMG_${dateStr}_${sysCode}_${prog}${extension}`;
+      // RMG = Riepilogo Mensile Giornaliero (usa SOLO anno!)
+      // FIX 2026-01-18: RMG usa SOLO l'anno, NON la data completa
+      // Errore 0600 se si usa YYYYMMDD invece di YYYY
+      return `RMG_${year}_${sysCode}_${prog}${extension}`;
   }
 }
 
