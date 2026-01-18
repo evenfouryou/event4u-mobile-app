@@ -5352,6 +5352,21 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
         });
       }
       console.log(`[SIAE-ROUTES] POST transmissions: SystemCode validated - XML=${systemCodeValidation.xmlSystemCode}, expected=${postResolvedSystemCode}`);
+      
+      // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria
+      const postValidationType: 'rca' | 'rmg' | 'rpm' = data.transmissionType === 'rca' ? 'rca' : (data.transmissionType === 'monthly' ? 'rpm' : 'rmg');
+      const postPreValidation = await validatePreTransmission(data.fileContent, postValidationType);
+      if (!postPreValidation.valid) {
+        console.error(`[SIAE-ROUTES] POST DTD validation failed: ${postPreValidation.errors.join('; ')}`);
+        return res.status(400).json({
+          message: `Errore validazione XML: ${postPreValidation.errors[0]}`,
+          errors: postPreValidation.errors,
+          code: 'DTD_VALIDATION_FAILED'
+        });
+      }
+      if (postPreValidation.warnings.length > 0) {
+        console.warn(`[SIAE-ROUTES] POST DTD warnings: ${postPreValidation.warnings.join('; ')}`);
+      }
     }
     
     const transmission = await siaeStorage.createSiaeTransmission(data);

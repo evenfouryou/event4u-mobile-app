@@ -573,6 +573,17 @@ async function sendDailyReports() {
         if (autoCorrectionDaily.uncorrectableErrors.length > 0) {
           log(`ERRORI NON CORREGGIBILI: ${autoCorrectionDaily.uncorrectableErrors.map(e => e.message).join('; ')}`);
         }
+        
+        // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per scheduler
+        const dailyDtdValidation = await validatePreTransmission(xmlContent, 'rmg');
+        if (!dailyDtdValidation.valid) {
+          log(`BLOCCO TRASMISSIONE RMG: Validazione DTD fallita - ${dailyDtdValidation.errors.join('; ')}`);
+          continue; // Salta - XML non valido
+        }
+        if (dailyDtdValidation.warnings.length > 0) {
+          log(`WARNING RMG DTD: ${dailyDtdValidation.warnings.join('; ')}`);
+        }
+        
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
@@ -836,6 +847,17 @@ async function sendMonthlyReports() {
           xmlReportType: 'mensile',
           nomeFile: fileName
         });
+        
+        // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per scheduler
+        const monthlyDtdValidation = await validatePreTransmission(xmlContent, 'rpm');
+        if (!monthlyDtdValidation.valid) {
+          log(`BLOCCO TRASMISSIONE RPM: Validazione DTD fallita - ${monthlyDtdValidation.errors.join('; ')}`);
+          continue; // Salta - XML non valido
+        }
+        if (monthlyDtdValidation.warnings.length > 0) {
+          log(`WARNING RPM DTD: ${monthlyDtdValidation.warnings.join('; ')}`);
+        }
+        
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
