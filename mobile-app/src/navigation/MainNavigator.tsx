@@ -69,6 +69,27 @@ import ProductDetailScreen from '../screens/inventory/ProductDetailScreen';
 import StockAdjustmentScreen from '../screens/inventory/StockAdjustmentScreen';
 import ConsumptionScreen from '../screens/inventory/ConsumptionScreen';
 
+// Analytics Screens
+import AnalyticsHomeScreen from '../screens/analytics/AnalyticsHomeScreen';
+import InsightsScreen from '../screens/analytics/InsightsScreen';
+import TrendsScreen from '../screens/analytics/TrendsScreen';
+import PredictionsScreen from '../screens/analytics/PredictionsScreen';
+import RecommendationsScreen from '../screens/analytics/RecommendationsScreen';
+
+// Accounting Screens
+import AccountingHomeScreen from '../screens/accounting/AccountingHomeScreen';
+import InvoicesScreen from '../screens/accounting/InvoicesScreen';
+import InvoiceDetailScreen from '../screens/accounting/InvoiceDetailScreen';
+import FinancialReportsScreen from '../screens/accounting/FinancialReportsScreen';
+import TransactionsScreen from '../screens/accounting/TransactionsScreen';
+
+// Admin Screens
+import AdminHomeScreen from '../screens/admin/AdminHomeScreen';
+import GestoriListScreen from '../screens/admin/GestoriListScreen';
+import GestoreDetailScreen from '../screens/admin/GestoreDetailScreen';
+import CompaniesScreen from '../screens/admin/CompaniesScreen';
+import SystemSettingsScreen from '../screens/admin/SystemSettingsScreen';
+
 // Type definitions
 export type RootStackParamList = {
   Auth: undefined;
@@ -89,6 +110,24 @@ export type DrawerParamList = {
   ManagementTabs: undefined;
   SIAETabs: undefined;
   InventoryTabs: undefined;
+  AnalyticsTabs: undefined;
+  AccountingTabs: undefined;
+  AdminTabs: undefined;
+};
+
+export type AdminTabParamList = {
+  AdminHome: undefined;
+  Gestori: undefined;
+  Companies: undefined;
+  Settings: undefined;
+};
+
+export type AdminStackParamList = {
+  AdminDashboard: undefined;
+  GestoriList: undefined;
+  GestoreDetail: { gestoreId?: string; mode?: 'create' | 'edit' };
+  Companies: undefined;
+  SystemSettings: undefined;
 };
 
 export type CustomerTabParamList = {
@@ -192,6 +231,37 @@ export type InventoryStackParamList = {
   Consumption: undefined;
 };
 
+export type AnalyticsTabParamList = {
+  AnalyticsHome: undefined;
+  Insights: undefined;
+  Trends: undefined;
+  Predictions: undefined;
+  Recommendations: undefined;
+};
+
+export type AnalyticsStackParamList = {
+  AnalyticsDashboard: undefined;
+  Insights: undefined;
+  Trends: undefined;
+  Predictions: undefined;
+  Recommendations: undefined;
+};
+
+export type AccountingTabParamList = {
+  AccountingHome: undefined;
+  Invoices: undefined;
+  Transactions: undefined;
+  FinancialReports: undefined;
+};
+
+export type AccountingStackParamList = {
+  AccountingDashboard: undefined;
+  Invoices: undefined;
+  InvoiceDetail: { invoiceId: string };
+  Transactions: undefined;
+  FinancialReports: { export?: boolean };
+};
+
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Drawer = createDrawerNavigator<DrawerParamList>();
@@ -223,6 +293,18 @@ const SIAEStack = createNativeStackNavigator<SIAEStackParamList>();
 // Inventory tabs and stacks
 const InventoryTab = createBottomTabNavigator<InventoryTabParamList>();
 const InventoryStack = createNativeStackNavigator<InventoryStackParamList>();
+
+// Analytics tabs and stacks
+const AnalyticsTab = createBottomTabNavigator<AnalyticsTabParamList>();
+const AnalyticsStack = createNativeStackNavigator<AnalyticsStackParamList>();
+
+// Accounting tabs and stacks
+const AccountingTab = createBottomTabNavigator<AccountingTabParamList>();
+const AccountingStack = createNativeStackNavigator<AccountingStackParamList>();
+
+// Admin tabs and stacks
+const AdminTab = createBottomTabNavigator<AdminTabParamList>();
+const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 
 // ============= Auth Navigator =============
 function AuthNavigator() {
@@ -794,6 +876,328 @@ function InventoryTabs() {
   );
 }
 
+// ============= Analytics Stacks =============
+function AnalyticsHomeStack() {
+  return (
+    <AnalyticsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AnalyticsStack.Screen name="AnalyticsDashboard" component={AnalyticsHomeScreen} />
+      <AnalyticsStack.Screen name="Insights" component={InsightsScreen} />
+      <AnalyticsStack.Screen name="Trends" component={TrendsScreen} />
+      <AnalyticsStack.Screen name="Predictions" component={PredictionsScreen} />
+      <AnalyticsStack.Screen name="Recommendations" component={RecommendationsScreen} />
+    </AnalyticsStack.Navigator>
+  );
+}
+
+function AnalyticsInsightsStack() {
+  return (
+    <AnalyticsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AnalyticsStack.Screen name="Insights" component={InsightsScreen} />
+    </AnalyticsStack.Navigator>
+  );
+}
+
+function AnalyticsTrendsStack() {
+  return (
+    <AnalyticsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AnalyticsStack.Screen name="Trends" component={TrendsScreen} />
+    </AnalyticsStack.Navigator>
+  );
+}
+
+function AnalyticsPredictionsStack() {
+  return (
+    <AnalyticsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AnalyticsStack.Screen name="Predictions" component={PredictionsScreen} />
+    </AnalyticsStack.Navigator>
+  );
+}
+
+function AnalyticsRecommendationsStack() {
+  return (
+    <AnalyticsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AnalyticsStack.Screen name="Recommendations" component={RecommendationsScreen} />
+    </AnalyticsStack.Navigator>
+  );
+}
+
+function AnalyticsTabs() {
+  return (
+    <AnalyticsTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'AnalyticsHome':
+              iconName = focused ? 'analytics' : 'analytics-outline';
+              break;
+            case 'Insights':
+              iconName = focused ? 'bulb' : 'bulb-outline';
+              break;
+            case 'Trends':
+              iconName = focused ? 'trending-up' : 'trending-up-outline';
+              break;
+            case 'Predictions':
+              iconName = focused ? 'sparkles' : 'sparkles-outline';
+              break;
+            case 'Recommendations':
+              iconName = focused ? 'checkmark-circle' : 'checkmark-circle-outline';
+              break;
+            default:
+              iconName = 'analytics-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <AnalyticsTab.Screen name="AnalyticsHome" component={AnalyticsHomeStack} options={{ tabBarLabel: 'Home' }} />
+      <AnalyticsTab.Screen name="Insights" component={AnalyticsInsightsStack} options={{ tabBarLabel: 'Insights' }} />
+      <AnalyticsTab.Screen name="Trends" component={AnalyticsTrendsStack} options={{ tabBarLabel: 'Trend' }} />
+      <AnalyticsTab.Screen name="Predictions" component={AnalyticsPredictionsStack} options={{ tabBarLabel: 'Previsioni' }} />
+      <AnalyticsTab.Screen name="Recommendations" component={AnalyticsRecommendationsStack} options={{ tabBarLabel: 'Azioni' }} />
+    </AnalyticsTab.Navigator>
+  );
+}
+
+// ============= Accounting Stacks =============
+function AccountingHomeStack() {
+  return (
+    <AccountingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AccountingStack.Screen name="AccountingDashboard" component={AccountingHomeScreen} />
+      <AccountingStack.Screen name="Invoices" component={InvoicesScreen} />
+      <AccountingStack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
+      <AccountingStack.Screen name="Transactions" component={TransactionsScreen} />
+      <AccountingStack.Screen name="FinancialReports" component={FinancialReportsScreen} />
+    </AccountingStack.Navigator>
+  );
+}
+
+function AccountingInvoicesStack() {
+  return (
+    <AccountingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AccountingStack.Screen name="Invoices" component={InvoicesScreen} />
+      <AccountingStack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
+    </AccountingStack.Navigator>
+  );
+}
+
+function AccountingTransactionsStack() {
+  return (
+    <AccountingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AccountingStack.Screen name="Transactions" component={TransactionsScreen} />
+    </AccountingStack.Navigator>
+  );
+}
+
+function AccountingReportsStack() {
+  return (
+    <AccountingStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AccountingStack.Screen name="FinancialReports" component={FinancialReportsScreen} />
+    </AccountingStack.Navigator>
+  );
+}
+
+function AccountingTabs() {
+  return (
+    <AccountingTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'AccountingHome':
+              iconName = focused ? 'calculator' : 'calculator-outline';
+              break;
+            case 'Invoices':
+              iconName = focused ? 'document-text' : 'document-text-outline';
+              break;
+            case 'Transactions':
+              iconName = focused ? 'swap-vertical' : 'swap-vertical-outline';
+              break;
+            case 'FinancialReports':
+              iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+              break;
+            default:
+              iconName = 'calculator-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <AccountingTab.Screen name="AccountingHome" component={AccountingHomeStack} options={{ tabBarLabel: 'Home' }} />
+      <AccountingTab.Screen name="Invoices" component={AccountingInvoicesStack} options={{ tabBarLabel: 'Fatture' }} />
+      <AccountingTab.Screen name="Transactions" component={AccountingTransactionsStack} options={{ tabBarLabel: 'Movimenti' }} />
+      <AccountingTab.Screen name="FinancialReports" component={AccountingReportsStack} options={{ tabBarLabel: 'Report' }} />
+    </AccountingTab.Navigator>
+  );
+}
+
+// ============= Admin Stacks =============
+function AdminHomeStack() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AdminStack.Screen name="AdminDashboard" component={AdminHomeScreen} />
+      <AdminStack.Screen name="GestoriList" component={GestoriListScreen} />
+      <AdminStack.Screen name="GestoreDetail" component={GestoreDetailScreen} />
+      <AdminStack.Screen name="Companies" component={CompaniesScreen} />
+      <AdminStack.Screen name="SystemSettings" component={SystemSettingsScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
+function AdminGestoriStack() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AdminStack.Screen name="GestoriList" component={GestoriListScreen} />
+      <AdminStack.Screen name="GestoreDetail" component={GestoreDetailScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
+function AdminCompaniesStack() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AdminStack.Screen name="Companies" component={CompaniesScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
+function AdminSettingsStack() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AdminStack.Screen name="SystemSettings" component={SystemSettingsScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
+function AdminTabs() {
+  return (
+    <AdminTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+          switch (route.name) {
+            case 'AdminHome':
+              iconName = focused ? 'shield' : 'shield-outline';
+              break;
+            case 'Gestori':
+              iconName = focused ? 'people' : 'people-outline';
+              break;
+            case 'Companies':
+              iconName = focused ? 'business' : 'business-outline';
+              break;
+            case 'Settings':
+              iconName = focused ? 'settings' : 'settings-outline';
+              break;
+            default:
+              iconName = 'shield-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <AdminTab.Screen name="AdminHome" component={AdminHomeStack} options={{ tabBarLabel: 'Dashboard' }} />
+      <AdminTab.Screen name="Gestori" component={AdminGestoriStack} options={{ tabBarLabel: 'Gestori' }} />
+      <AdminTab.Screen name="Companies" component={AdminCompaniesStack} options={{ tabBarLabel: 'Aziende' }} />
+      <AdminTab.Screen name="Settings" component={AdminSettingsStack} options={{ tabBarLabel: 'Sistema' }} />
+    </AdminTab.Navigator>
+  );
+}
+
 // ============= App Drawer =============
 function AppDrawer() {
   const { user } = useAuthStore();
@@ -906,6 +1310,48 @@ function AppDrawer() {
             drawerLabel: 'Magazzino',
             drawerIcon: ({ color, size }) => (
               <Ionicons name="cube-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* Analytics mode - for gestore/admin only */}
+      {(userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="AnalyticsTabs" 
+          component={AnalyticsTabs}
+          options={{
+            drawerLabel: 'AI Analytics',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="analytics-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* Accounting mode - for gestore/admin only */}
+      {(userRole === 'gestore' || userRole === 'super_admin') && (
+        <Drawer.Screen 
+          name="AccountingTabs" 
+          component={AccountingTabs}
+          options={{
+            drawerLabel: 'Contabilità',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="calculator-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
+      {/* Admin mode - for super_admin only */}
+      {userRole === 'super_admin' && (
+        <Drawer.Screen 
+          name="AdminTabs" 
+          component={AdminTabs}
+          options={{
+            drawerLabel: 'Amministrazione',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="shield-checkmark-outline" size={size} color={color} />
             ),
           }}
         />
