@@ -5188,18 +5188,24 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     }
     
     // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per tutti i flussi
-    const resendValidationType: 'rca' | 'rmg' | 'rpm' = filenameType === 'rca' ? 'rca' : (filenameType === 'mensile' ? 'rpm' : 'rmg');
-    const resendPreValidation = await validatePreTransmission(generatedXml, resendValidationType);
-    if (!resendPreValidation.valid) {
-      console.error(`[SIAE-ROUTES] Resend DTD validation failed: ${resendPreValidation.errors.join('; ')}`);
+    const resendPreValidation = await validatePreTransmission(
+      generatedXml,
+      resendResolvedSystemCode,
+      filenameType,
+      new Date(original.periodDate)
+    );
+    if (!resendPreValidation.canTransmit) {
+      console.error(`[SIAE-ROUTES] Resend DTD validation failed: ${resendPreValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; ')}`);
       return res.status(400).json({
-        message: `Errore validazione XML: ${resendPreValidation.errors[0]}`,
+        success: false,
+        error: 'Validazione pre-trasmissione fallita',
         errors: resendPreValidation.errors,
+        warnings: resendPreValidation.warnings,
         code: 'DTD_VALIDATION_FAILED'
       });
     }
     if (resendPreValidation.warnings.length > 0) {
-      console.warn(`[SIAE-ROUTES] Resend DTD warnings: ${resendPreValidation.warnings.join('; ')}`);
+      console.warn(`[SIAE-ROUTES] Resend DTD warnings: ${resendPreValidation.warnings.map(w => w.message).join('; ')}`);
     }
     
     // Calculate transmission statistics
@@ -5354,18 +5360,25 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
       console.log(`[SIAE-ROUTES] POST transmissions: SystemCode validated - XML=${systemCodeValidation.xmlSystemCode}, expected=${postResolvedSystemCode}`);
       
       // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria
-      const postValidationType: 'rca' | 'rmg' | 'rpm' = data.transmissionType === 'rca' ? 'rca' : (data.transmissionType === 'monthly' ? 'rpm' : 'rmg');
-      const postPreValidation = await validatePreTransmission(data.fileContent, postValidationType);
-      if (!postPreValidation.valid) {
-        console.error(`[SIAE-ROUTES] POST DTD validation failed: ${postPreValidation.errors.join('; ')}`);
+      const postReportType: 'giornaliero' | 'mensile' | 'rca' = data.transmissionType === 'rca' ? 'rca' : (data.transmissionType === 'monthly' ? 'mensile' : 'giornaliero');
+      const postPreValidation = await validatePreTransmission(
+        data.fileContent,
+        postResolvedSystemCode,
+        postReportType,
+        data.periodDate ? new Date(data.periodDate) : new Date()
+      );
+      if (!postPreValidation.canTransmit) {
+        console.error(`[SIAE-ROUTES] POST DTD validation failed: ${postPreValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; ')}`);
         return res.status(400).json({
-          message: `Errore validazione XML: ${postPreValidation.errors[0]}`,
+          success: false,
+          error: 'Validazione pre-trasmissione fallita',
           errors: postPreValidation.errors,
+          warnings: postPreValidation.warnings,
           code: 'DTD_VALIDATION_FAILED'
         });
       }
       if (postPreValidation.warnings.length > 0) {
-        console.warn(`[SIAE-ROUTES] POST DTD warnings: ${postPreValidation.warnings.join('; ')}`);
+        console.warn(`[SIAE-ROUTES] POST DTD warnings: ${postPreValidation.warnings.map(w => w.message).join('; ')}`);
       }
     }
     

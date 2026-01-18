@@ -76,6 +76,12 @@ The `validatePreTransmission` function is now async and integrates both simplifi
 - Events scheduled for dates after today are blocked from being included in riepiloghi
 - Pre-transmission validation returns actionable error messages with resolution guidance
 
+**Universal Pre-Transmission DTD Validation (2026-01-18)**: All transmission paths now execute `validatePreTransmission()` before signing/sending:
+- Manual routes (generate, resend, post, sendEmail) block with DTD_VALIDATION_FAILED if XML is invalid
+- Scheduler jobs (RMG daily, RPM monthly) skip transmission with detailed error logging if validation fails
+- Ensures no structurally invalid XML can be transmitted to SIAE
+- Combined with auto-correction and system code validation for complete error prevention
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 

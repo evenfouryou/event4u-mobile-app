@@ -575,13 +575,13 @@ async function sendDailyReports() {
         }
         
         // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per scheduler
-        const dailyDtdValidation = await validatePreTransmission(xmlContent, 'rmg');
-        if (!dailyDtdValidation.valid) {
-          log(`BLOCCO TRASMISSIONE RMG: Validazione DTD fallita - ${dailyDtdValidation.errors.join('; ')}`);
+        const dailyDtdValidation = await validatePreTransmission(xmlContent, systemCode, 'giornaliero', yesterday);
+        if (!dailyDtdValidation.canTransmit) {
+          log(`BLOCCO TRASMISSIONE RMG: Validazione DTD fallita - ${dailyDtdValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; ')}`);
           continue; // Salta - XML non valido
         }
         if (dailyDtdValidation.warnings.length > 0) {
-          log(`WARNING RMG DTD: ${dailyDtdValidation.warnings.join('; ')}`);
+          log(`WARNING RMG DTD: ${dailyDtdValidation.warnings.map(w => w.message).join('; ')}`);
         }
         
         let fileExtension = '.xsi'; // Default per non firmato
@@ -849,13 +849,13 @@ async function sendMonthlyReports() {
         });
         
         // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per scheduler
-        const monthlyDtdValidation = await validatePreTransmission(xmlContent, 'rpm');
-        if (!monthlyDtdValidation.valid) {
-          log(`BLOCCO TRASMISSIONE RPM: Validazione DTD fallita - ${monthlyDtdValidation.errors.join('; ')}`);
+        const monthlyDtdValidation = await validatePreTransmission(xmlContent, systemCode, 'mensile', previousMonth);
+        if (!monthlyDtdValidation.canTransmit) {
+          log(`BLOCCO TRASMISSIONE RPM: Validazione DTD fallita - ${monthlyDtdValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; ')}`);
           continue; // Salta - XML non valido
         }
         if (monthlyDtdValidation.warnings.length > 0) {
-          log(`WARNING RPM DTD: ${monthlyDtdValidation.warnings.join('; ')}`);
+          log(`WARNING RPM DTD: ${monthlyDtdValidation.warnings.map(w => w.message).join('; ')}`);
         }
         
         let fileExtension = '.xsi'; // Default per non firmato
