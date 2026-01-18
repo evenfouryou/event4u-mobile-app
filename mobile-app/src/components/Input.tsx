@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   TextInput,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius, spacing, fontSize } from '../lib/theme';
+import { colors, borderRadius, spacing, fontSize } from '../theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -29,11 +29,16 @@ export function Input({
   ...props
 }: InputProps) {
   const [isSecure, setIsSecure] = useState(secureTextEntry);
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputContainer, error && styles.inputError]}>
+      <View style={[
+        styles.inputContainer,
+        isFocused && styles.inputFocused,
+        error && styles.inputError,
+      ]}>
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
         <TextInput
           style={[
@@ -41,8 +46,10 @@ export function Input({
             leftIcon && styles.inputWithLeftIcon,
             (rightIcon || secureTextEntry) && styles.inputWithRightIcon,
           ]}
-          placeholderTextColor={colors.mutedForeground}
+          placeholderTextColor={colors.textSecondary}
           secureTextEntry={isSecure}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           {...props}
         />
         {secureTextEntry && (
@@ -53,7 +60,7 @@ export function Input({
             <Ionicons
               name={isSecure ? 'eye-outline' : 'eye-off-outline'}
               size={20}
-              color={colors.mutedForeground}
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
         )}
@@ -68,47 +75,52 @@ export function Input({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
-    color: colors.foreground,
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
     fontWeight: '500',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: colors.overlay.light,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
+    minHeight: 48,
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    borderWidth: 2,
   },
   inputError: {
-    borderColor: colors.destructive,
+    borderColor: colors.error,
   },
   input: {
     flex: 1,
-    color: colors.foreground,
+    color: colors.textPrimary,
     fontSize: fontSize.base,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
   inputWithLeftIcon: {
-    paddingLeft: spacing.xs,
-  },
-  inputWithRightIcon: {
-    paddingRight: spacing.xs,
-  },
-  iconLeft: {
     paddingLeft: spacing.md,
   },
-  iconRight: {
+  inputWithRightIcon: {
     paddingRight: spacing.md,
   },
+  iconLeft: {
+    paddingLeft: spacing.xl,
+  },
+  iconRight: {
+    paddingRight: spacing.xl,
+  },
   error: {
-    color: colors.destructive,
+    color: colors.error,
     fontSize: fontSize.xs,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
 });

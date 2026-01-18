@@ -1,8 +1,7 @@
-import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight } from '../lib/theme';
+import { colors, spacing, fontSize, fontWeight } from '../theme';
 
 interface HeaderProps {
   title: string;
@@ -25,15 +24,15 @@ export function Header({
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top + spacing.sm },
+        { paddingTop: insets.top + spacing.md },
         transparent && styles.transparent,
       ]}
     >
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <View style={styles.content}>
         {showBack ? (
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         ) : (
           <View style={styles.placeholder} />
@@ -52,9 +51,9 @@ export function Header({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
   },
   transparent: {
     backgroundColor: 'transparent',
@@ -63,21 +62,21 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   backButton: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: -spacing.sm,
+    marginLeft: -spacing.md,
   },
   placeholder: {
     width: 40,
   },
   title: {
     flex: 1,
-    color: colors.foreground,
+    color: colors.textPrimary,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     textAlign: 'center',

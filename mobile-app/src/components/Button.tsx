@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,12 +6,12 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors, borderRadius, spacing, fontSize, fontWeight } from '../lib/theme';
+import { colors, borderRadius, spacing, fontSize, fontWeight } from '../theme';
 
 interface ButtonProps {
   onPress: () => void;
   title: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'teal';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
@@ -48,6 +47,16 @@ export function Button({
     textStyle,
   ];
 
+  const getLoaderColor = () => {
+    if (variant === 'outline' || variant === 'ghost') {
+      return colors.primary;
+    }
+    if (variant === 'primary' || variant === 'teal') {
+      return colors.background;
+    }
+    return colors.foreground;
+  };
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -57,7 +66,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' || variant === 'ghost' ? colors.primary : colors.primaryForeground}
+          color={getLoaderColor()}
           size="small"
         />
       ) : (
@@ -82,12 +91,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   secondary: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -95,20 +106,26 @@ const styles = StyleSheet.create({
   destructive: {
     backgroundColor: colors.destructive,
   },
+  teal: {
+    backgroundColor: colors.teal,
+  },
   disabled: {
     opacity: 0.5,
   },
   size_sm: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    minHeight: 36,
   },
   size_md: {
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    minHeight: 44,
   },
   size_lg: {
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing['2xl'],
+    minHeight: 52,
   },
   text: {
     fontWeight: fontWeight.semibold,
@@ -117,7 +134,7 @@ const styles = StyleSheet.create({
     color: colors.primaryForeground,
   },
   text_secondary: {
-    color: colors.secondaryForeground,
+    color: colors.foreground,
   },
   text_outline: {
     color: colors.foreground,
@@ -127,6 +144,9 @@ const styles = StyleSheet.create({
   },
   text_destructive: {
     color: colors.destructiveForeground,
+  },
+  text_teal: {
+    color: colors.tealForeground,
   },
   textDisabled: {
     opacity: 0.7,

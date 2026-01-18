@@ -1,8 +1,7 @@
-import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, borderRadius, spacing, fontSize, fontWeight } from '../lib/theme';
+import { colors, borderRadius, spacing, fontSize, fontWeight } from '../theme';
 
 interface TicketCardProps {
   id: string;
@@ -27,8 +26,8 @@ export function TicketCard({
   onPress,
 }: TicketCardProps) {
   const statusColors = {
-    valid: colors.success,
-    used: colors.mutedForeground,
+    valid: colors.teal,
+    used: colors.textSecondary,
     cancelled: colors.destructive,
   };
 
@@ -39,7 +38,7 @@ export function TicketCard({
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <Text style={styles.eventTitle} numberOfLines={2}>{eventTitle}</Text>
@@ -56,15 +55,15 @@ export function TicketCard({
 
       <View style={styles.details}>
         <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
+          <Ionicons name="calendar-outline" size={16} color={colors.teal} />
           <Text style={styles.detailText}>{date}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
+          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.detailText}>{time}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Ionicons name="location-outline" size={16} color={colors.mutedForeground} />
+          <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.detailText} numberOfLines={1}>{location}</Text>
         </View>
       </View>
@@ -86,10 +85,12 @@ export function TicketCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius['2xl'],
+    padding: spacing.xl,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   header: {
     flexDirection: 'row',
@@ -98,13 +99,13 @@ const styles = StyleSheet.create({
   },
   headerInfo: {
     flex: 1,
-    marginRight: spacing.md,
+    marginRight: spacing.lg,
   },
   eventTitle: {
-    color: colors.foreground,
+    color: colors.textPrimary,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   ticketType: {
     color: colors.primary,
@@ -112,43 +113,44 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
   },
   statusText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
+    letterSpacing: 0.5,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
+    backgroundColor: colors.borderSubtle,
+    marginVertical: spacing.xl,
   },
   details: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   detailText: {
-    color: colors.mutedForeground,
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
     flex: 1,
   },
   qrContainer: {
     alignItems: 'center',
-    marginTop: spacing.lg,
-    padding: spacing.md,
+    marginTop: spacing['2xl'],
+    padding: spacing.xl,
     backgroundColor: 'white',
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
   },
   qrCode: {
-    color: colors.muted,
+    color: colors.background,
     fontSize: fontSize.xs,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     fontFamily: 'monospace',
   },
 });
