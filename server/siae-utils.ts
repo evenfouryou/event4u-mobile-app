@@ -4101,6 +4101,30 @@ export async function validatePreTransmission(
             siaeErrorCode: '0603'
           });
         }
+        
+        // FIX 2026-01-18: RPM non può essere inviato per un mese non ancora concluso
+        // La SIAE richiede che DataGenerazione sia nel mese SUCCESSIVO al periodo di riferimento
+        // Es: RPM per gennaio 2026 (Mese="202601") deve avere DataGenerazione >= febbraio 2026
+        const meseYear = parseInt(mese.substring(0, 4), 10);
+        const meseMonth = parseInt(mese.substring(4, 6), 10);
+        const dataGenYear = parseInt(actualToday.substring(0, 4), 10);
+        const dataGenMonth = parseInt(actualToday.substring(4, 6), 10);
+        
+        // Calcola se siamo nel mese successivo o oltre
+        const isAfterReportMonth = 
+          dataGenYear > meseYear || 
+          (dataGenYear === meseYear && dataGenMonth > meseMonth);
+        
+        if (!isAfterReportMonth) {
+          datesCoherent = false;
+          errors.push({
+            code: 'RPM_MONTH_NOT_CONCLUDED',
+            field: 'month',
+            message: `Impossibile inviare RPM per ${mese}: il mese non è ancora concluso. DataGenerazione=${actualToday} ma Mese=${mese}`,
+            resolution: `Attendere il primo giorno del mese successivo (${meseMonth === 12 ? meseYear + 1 : meseYear}${String((meseMonth % 12) + 1).padStart(2, '0')}) per inviare il riepilogo mensile`,
+            siaeErrorCode: '0603'
+          });
+        }
       }
     }
     
