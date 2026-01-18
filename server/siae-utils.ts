@@ -1105,15 +1105,33 @@ export function resolveSystemCodeForSmime(
   cachedEfff?: { systemId?: string } | null,
   systemConfig?: { systemCode?: string } | null
 ): ResolveSystemCodeForSmimeResult {
-  // Per S/MIME, la Smart Card è OBBLIGATORIA
+  // Per S/MIME, la Smart Card è OBBLIGATORIA (ma se non connessa, proviamo fallback a config)
   if (!cachedEfff) {
-    console.error(`[SIAE-UTILS] resolveSystemCodeForSmime: EFFF data non disponibile - Smart Card non connessa o non letta`);
+    console.warn(`[SIAE-UTILS] resolveSystemCodeForSmime: EFFF data non disponibile - Smart Card non connessa o non letta`);
+    
+    // FIX 2026-01-18: Fallback a systemConfig anche se Smart Card non connessa
+    // Questo permette di testare/usare il sistema senza Desktop Bridge attivo
+    // MA la firma S/MIME non sarà possibile senza Smart Card!
+    if (systemConfig?.systemCode && systemConfig.systemCode.length === 8) {
+      const validation = validateSiaeSystemCode(systemConfig.systemCode);
+      if (validation.valid) {
+        console.warn(`[SIAE-UTILS] resolveSystemCodeForSmime: FALLBACK a siaeConfig.systemCode = ${systemConfig.systemCode} (Smart Card non connessa)`);
+        return {
+          success: true,
+          systemCode: systemConfig.systemCode,
+          source: 'config',
+          warning: `Smart Card non connessa. Usato codice dalla configurazione (${systemConfig.systemCode}). ` +
+                   `Collegare la Smart Card per la firma S/MIME obbligatoria.`
+        };
+      }
+    }
+    
     return {
       success: false,
       systemCode: null,
       source: 'none',
-      error: 'SMART_CARD_REQUIRED: Per trasmissioni RCA (S/MIME) è necessario connettere una Smart Card SIAE. ' +
-             'Il codice sistema deve provenire dalla carta usata per la firma digitale.'
+      error: 'SMART_CARD_REQUIRED: Per trasmissioni SIAE è necessario connettere una Smart Card tramite Desktop Bridge, ' +
+             'oppure configurare il codice sistema in Impostazioni SIAE > Configurazione Sistema.'
     };
   }
   
@@ -1138,19 +1156,35 @@ export function resolveSystemCodeForSmime(
     return { success: true, systemCode: cachedEfff.systemId, source: 'smartcard' };
   }
   
-  // Smart Card connessa ma senza systemId valido
-  console.error(`[SIAE-UTILS] resolveSystemCodeForSmime: Smart Card connessa ma systemId non valido: "${cachedEfff.systemId || '(vuoto)'}"`);
+  // Smart Card connessa ma senza systemId valido (Desktop Bridge non legge EFFF)
+  console.warn(`[SIAE-UTILS] resolveSystemCodeForSmime: Smart Card connessa ma systemId non disponibile da EFFF: "${cachedEfff.systemId || '(vuoto)'}"`);
   
-  // NON usare siaeConfig come fallback per S/MIME - causa errore 0600!
-  // L'XML userebbe siaeConfig.systemCode ma la firma S/MIME è fatta con la Smart Card che ha un codice diverso
+  // FIX 2026-01-18: Fallback a systemConfig SE la Smart Card è connessa
+  // Questo permette di funzionare con Desktop Bridge che non leggono EFFF
+  // L'utente DEVE assicurarsi che il codice configurato corrisponda alla Smart Card inserita
+  if (systemConfig?.systemCode && systemConfig.systemCode.length === 8) {
+    const validation = validateSiaeSystemCode(systemConfig.systemCode);
+    if (validation.valid) {
+      console.warn(`[SIAE-UTILS] resolveSystemCodeForSmime: FALLBACK a siaeConfig.systemCode = ${systemConfig.systemCode}`);
+      console.warn(`[SIAE-UTILS] ATTENZIONE: Assicurarsi che questo codice corrisponda alla Smart Card inserita!`);
+      return {
+        success: true,
+        systemCode: systemConfig.systemCode,
+        source: 'config',
+        warning: `Smart Card connessa ma EFFF non letto. Usato codice dalla configurazione (${systemConfig.systemCode}). ` +
+                 `Assicurarsi che corrisponda alla Smart Card inserita per evitare errore SIAE 0600.`
+      };
+    }
+  }
+  
+  // Nessun fallback disponibile
   return {
     success: false,
     systemCode: null,
     source: 'none',
     error: `SMARTCARD_SYSTEMID_INVALID: La Smart Card non contiene un codice sistema valido (letto: "${cachedEfff.systemId || '(vuoto)'}"). ` +
-           `Verificare che la carta sia inserita correttamente e che sia una carta SIAE di attivazione valida. ` +
-           `Non è possibile usare il codice dalla configurazione (${systemConfig?.systemCode || 'non configurato'}) ` +
-           `perché SIAE verificherebbe la firma contro il codice della Smart Card.`
+           `Configurare il codice sistema in Impostazioni SIAE > Configurazione Sistema. ` +
+           `Il codice deve corrispondere alla Smart Card inserita.`
   };
 }
 
