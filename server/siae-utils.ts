@@ -4566,6 +4566,8 @@ export interface C1XmlParams {
   businessName: string;
   events: C1EventContext[];
   subscriptions?: C1SubscriptionData[];
+  /** Nome file per attributo NomeFile obbligatorio in RMG/RPM (Allegato C SIAE) */
+  nomeFile?: string;
 }
 
 /**
@@ -4682,7 +4684,8 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     taxId,
     businessName,
     events,
-    subscriptions = []
+    subscriptions = [],
+    nomeFile
   } = params;
 
   const isMonthly = reportKind === 'mensile';
@@ -4971,8 +4974,13 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const organizerType = 'G';
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
 
+  // FIX 2026-01-19: Attributo NomeFile OBBLIGATORIO per RMG/RPM (Allegato C SIAE sezione 1.4.1)
+  // Il nome file nell'attributo DEVE corrispondere esattamente al nome dell'allegato email
+  // per evitare errore SIAE 0600 "Nome del file contenente il riepilogo sbagliato"
+  const nomeFileAttr = nomeFile ? ` NomeFile="${escapeXml(nomeFile)}"` : '';
+  
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
+<${rootElement}${nomeFileAttr} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>

@@ -5169,8 +5169,18 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         console.warn('[SIAE-ROUTES] Report giornaliero (resend) senza eventi/abbonamenti - generazione consentita');
       }
       
+      // FIX 2026-01-19: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
+      const resendReportType: 'giornaliero' | 'mensile' = isMonthly ? 'mensile' : 'giornaliero';
+      const resendPreGeneratedFileName = generateSiaeFileName(
+        resendReportType,
+        reportDate,
+        nextProgressivo,
+        null, // senza firma - il nome .xsi è quello che va nell'attributo NomeFile
+        resendResolvedSystemCode
+      );
+      
       const c1Result = generateC1Xml({
-        reportKind: isMonthly ? 'mensile' : 'giornaliero',
+        reportKind: resendReportType,
         companyId: original.companyId,
         reportDate,
         resolvedSystemCode: resendResolvedSystemCode,
@@ -5179,6 +5189,8 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         businessName: company?.name || 'N/D',
         events: hydratedData.events,
         subscriptions: hydratedData.subscriptions,
+        // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
+        nomeFile: resendPreGeneratedFileName,
       });
       
       generatedXml = c1Result.xml;
@@ -6231,6 +6243,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       businessName: companyName,
       events: hydratedData.events,
       subscriptions: hydratedData.subscriptions,
+      // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
+      nomeFile: preGeneratedFileName,
     };
     
     const c1Result = generateC1Xml(c1Params);
@@ -8395,6 +8409,8 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       businessName: company?.name || 'N/D',
       events: hydratedDailyData.events,
       subscriptions: hydratedDailyData.subscriptions,
+      // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
+      nomeFile: generatedFileName,
     };
     
     const dailyC1Result = generateC1Xml(dailyC1Params);

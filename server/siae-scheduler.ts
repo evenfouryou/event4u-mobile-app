@@ -301,6 +301,8 @@ function generateXMLContent(reportData: any): string {
       businessName: businessName,
       events: [eventContext],
       subscriptions: c1Subscriptions,
+      // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
+      nomeFile: nomeFile || undefined,
     };
     
     const result = generateC1Xml(c1Params);
