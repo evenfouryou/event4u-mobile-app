@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useParams, Link } from "wouter";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
@@ -66,6 +67,7 @@ interface Event {
 }
 
 export default function ScannerScannedPage() {
+  const { t } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,11 +104,11 @@ export default function ScannerScannedPage() {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'list':
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30"><Users className="h-3 w-3 mr-1" /> Lista</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30"><Users className="h-3 w-3 mr-1" /> {t('scanner.scanned.list')}</Badge>;
       case 'table':
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30"><Armchair className="h-3 w-3 mr-1" /> Tavolo</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30"><Armchair className="h-3 w-3 mr-1" /> {t('scanner.scanned.table')}</Badge>;
       case 'ticket':
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30"><Ticket className="h-3 w-3 mr-1" /> Biglietto</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30"><Ticket className="h-3 w-3 mr-1" /> {t('scanner.scanned.ticket')}</Badge>;
       default:
         return <Badge variant="secondary">{type}</Badge>;
     }
@@ -125,7 +127,7 @@ export default function ScannerScannedPage() {
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <CheckCircle2 className="h-7 w-7 text-emerald-400" />
-                Utenti Scansionati
+                {t('scanner.scanned.title')}
               </h1>
               {event && (
                 <p className="text-muted-foreground">{event.name}</p>
@@ -133,7 +135,7 @@ export default function ScannerScannedPage() {
             </div>
           </div>
           <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xl px-4 py-2">
-            {checkedInPeople?.length || 0} totali
+            {checkedInPeople?.length || 0} {t('scanner.scanned.total')}
           </Badge>
         </div>
 
@@ -141,25 +143,25 @@ export default function ScannerScannedPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{checkedInPeople?.length || 0}</div>
-              <p className="text-sm text-muted-foreground">Totale</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.scanned.totalCount')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-purple-400">{listCount}</div>
-              <p className="text-sm text-muted-foreground">Liste</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.scanned.lists')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-amber-400">{tableCount}</div>
-              <p className="text-sm text-muted-foreground">Tavoli</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.scanned.tables')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-blue-400">{ticketCount}</div>
-              <p className="text-sm text-muted-foreground">Biglietti</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.scanned.tickets')}</p>
             </CardContent>
           </Card>
         </div>
@@ -167,12 +169,12 @@ export default function ScannerScannedPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>Elenco Check-in</CardTitle>
+              <CardTitle>{t('scanner.scanned.checkInList')}</CardTitle>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca per nome o telefono..."
+                    placeholder={t('scanner.scanned.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9 w-[300px]"
@@ -181,13 +183,13 @@ export default function ScannerScannedPage() {
                 </div>
                 <Select value={activeFilter} onValueChange={(val) => setActiveFilter(val as typeof activeFilter)}>
                   <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Filtra tipo" />
+                    <SelectValue placeholder={t('scanner.scanned.filterType')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutti i tipi</SelectItem>
-                    <SelectItem value="list">Liste</SelectItem>
-                    <SelectItem value="table">Tavoli</SelectItem>
-                    <SelectItem value="ticket">Biglietti</SelectItem>
+                    <SelectItem value="all">{t('scanner.scanned.allTypes')}</SelectItem>
+                    <SelectItem value="list">{t('scanner.scanned.lists')}</SelectItem>
+                    <SelectItem value="table">{t('scanner.scanned.tables')}</SelectItem>
+                    <SelectItem value="ticket">{t('scanner.scanned.tickets')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -202,12 +204,12 @@ export default function ScannerScannedPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Telefono</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Dettaglio</TableHead>
-                    <TableHead>Ora Check-in</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('scanner.scanned.name')}</TableHead>
+                    <TableHead>{t('scanner.scanned.phone')}</TableHead>
+                    <TableHead>{t('scanner.scanned.type')}</TableHead>
+                    <TableHead>{t('scanner.scanned.detail')}</TableHead>
+                    <TableHead>{t('scanner.scanned.checkInTime')}</TableHead>
+                    <TableHead className="text-right">{t('scanner.scanned.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -253,8 +255,8 @@ export default function ScannerScannedPage() {
                 </div>
                 <p className="text-muted-foreground">
                   {searchQuery || activeFilter !== 'all'
-                    ? "Nessun risultato trovato"
-                    : "Nessun utente scansionato"
+                    ? t('scanner.scanned.noResults')
+                    : t('scanner.scanned.noScannedUsers')
                   }
                 </p>
               </div>
@@ -265,9 +267,9 @@ export default function ScannerScannedPage() {
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Dettaglio Check-in</DialogTitle>
+              <DialogTitle>{t('scanner.scanned.checkInDetail')}</DialogTitle>
               <DialogDescription>
-                Informazioni sul check-in dell'utente
+                {t('scanner.scanned.checkInInfo')}
               </DialogDescription>
             </DialogHeader>
             {selectedPerson && (
@@ -299,11 +301,11 @@ export default function ScannerScannedPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Tipo</p>
+                    <p className="text-sm text-muted-foreground">{t('scanner.scanned.type')}</p>
                     <div className="mt-1">{getTypeBadge(selectedPerson.type)}</div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ora Check-in</p>
+                    <p className="text-sm text-muted-foreground">{t('scanner.scanned.checkInTime')}</p>
                     <p className="font-medium flex items-center gap-1 mt-1">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       {format(parseISO(selectedPerson.checkedInAt), "HH:mm:ss", { locale: it })}
@@ -312,7 +314,7 @@ export default function ScannerScannedPage() {
                   {(selectedPerson.listName || selectedPerson.tableName || selectedPerson.ticketType) && (
                     <div className="col-span-2">
                       <p className="text-sm text-muted-foreground">
-                        {selectedPerson.type === 'list' ? 'Lista' : selectedPerson.type === 'table' ? 'Tavolo' : 'Tipo Biglietto'}
+                        {selectedPerson.type === 'list' ? t('scanner.scanned.list') : selectedPerson.type === 'table' ? t('scanner.scanned.table') : t('scanner.scanned.ticketType')}
                       </p>
                       <p className="font-medium mt-1">
                         {selectedPerson.listName || selectedPerson.tableName || selectedPerson.ticketType}
@@ -321,7 +323,7 @@ export default function ScannerScannedPage() {
                   )}
                   {selectedPerson.sector && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Settore</p>
+                      <p className="text-sm text-muted-foreground">{t('scanner.scanned.sector')}</p>
                       <p className="font-medium mt-1">{selectedPerson.sector}</p>
                     </div>
                   )}
@@ -346,7 +348,7 @@ export default function ScannerScannedPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold flex items-center gap-2" data-testid="text-title">
               <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              Utenti Scansionati
+              {t('scanner.scanned.title')}
             </h1>
             {event && (
               <p className="text-xs text-muted-foreground truncate">
@@ -363,7 +365,7 @@ export default function ScannerScannedPage() {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Cerca per nome o telefono..."
+              placeholder={t('scanner.scanned.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-12 pl-12 rounded-xl bg-muted/30 border-white/10"
@@ -381,7 +383,7 @@ export default function ScannerScannedPage() {
               className="shrink-0 rounded-full"
               data-testid="filter-all"
             >
-              Tutti ({checkedInPeople?.length || 0})
+              {t('scanner.history.all')} ({checkedInPeople?.length || 0})
             </Button>
             <Button
               variant={activeFilter === 'list' ? 'default' : 'outline'}
@@ -391,7 +393,7 @@ export default function ScannerScannedPage() {
               data-testid="filter-lists"
             >
               <Users className="h-3.5 w-3.5 mr-1.5 text-purple-400" />
-              Liste ({listCount})
+              {t('scanner.scanned.lists')} ({listCount})
             </Button>
             <Button
               variant={activeFilter === 'table' ? 'default' : 'outline'}
@@ -401,7 +403,7 @@ export default function ScannerScannedPage() {
               data-testid="filter-tables"
             >
               <Armchair className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
-              Tavoli ({tableCount})
+              {t('scanner.scanned.tables')} ({tableCount})
             </Button>
             <Button
               variant={activeFilter === 'ticket' ? 'default' : 'outline'}
@@ -411,7 +413,7 @@ export default function ScannerScannedPage() {
               data-testid="filter-tickets"
             >
               <Ticket className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
-              Biglietti ({ticketCount})
+              {t('scanner.scanned.tickets')} ({ticketCount})
             </Button>
           </div>
         </div>
@@ -474,9 +476,9 @@ export default function ScannerScannedPage() {
                                   ? 'border-amber-500/30 text-amber-400'
                                   : 'border-blue-500/30 text-blue-400'
                             }`}>
-                              {person.type === 'list' && <><Users className="h-3 w-3 mr-1" /> Lista</>}
-                              {person.type === 'table' && <><Armchair className="h-3 w-3 mr-1" /> Tavolo</>}
-                              {person.type === 'ticket' && <><Ticket className="h-3 w-3 mr-1" /> Biglietto</>}
+                              {person.type === 'list' && <><Users className="h-3 w-3 mr-1" /> {t('scanner.scanned.list')}</>}
+                              {person.type === 'table' && <><Armchair className="h-3 w-3 mr-1" /> {t('scanner.scanned.table')}</>}
+                              {person.type === 'ticket' && <><Ticket className="h-3 w-3 mr-1" /> {t('scanner.scanned.ticket')}</>}
                             </Badge>
                             {person.listName && (
                               <span className="truncate">{person.listName}</span>
@@ -510,8 +512,8 @@ export default function ScannerScannedPage() {
               </div>
               <p className="text-muted-foreground">
                 {searchQuery || activeFilter !== 'all'
-                  ? "Nessun risultato trovato"
-                  : "Nessun utente scansionato"
+                  ? t('scanner.scanned.noResults')
+                  : t('scanner.scanned.noScannedUsers')
                 }
               </p>
             </CardContent>

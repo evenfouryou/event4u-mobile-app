@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,7 @@ type FilterType = "all" | "upcoming" | "today" | "past";
 
 export default function PrEventsPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [activeFilter, setActiveFilter] = useState<FilterType>("upcoming");
   const [showFilterSheet, setShowFilterSheet] = useState(false);
@@ -136,13 +138,13 @@ export default function PrEventsPage() {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'draft':
-        return { label: 'Bozza', bgClass: 'bg-muted/30', textClass: 'text-muted-foreground', borderClass: 'border-muted' };
+        return { label: t('pr.status.draft'), bgClass: 'bg-muted/30', textClass: 'text-muted-foreground', borderClass: 'border-muted' };
       case 'scheduled':
-        return { label: 'Programmato', bgClass: 'bg-blue-500/20', textClass: 'text-blue-400', borderClass: 'border-blue-500/30' };
+        return { label: t('pr.status.scheduled'), bgClass: 'bg-blue-500/20', textClass: 'text-blue-400', borderClass: 'border-blue-500/30' };
       case 'ongoing':
-        return { label: 'In Corso', bgClass: 'bg-emerald-500/20', textClass: 'text-emerald-400', borderClass: 'border-emerald-500/30' };
+        return { label: t('pr.status.ongoing'), bgClass: 'bg-emerald-500/20', textClass: 'text-emerald-400', borderClass: 'border-emerald-500/30' };
       case 'closed':
-        return { label: 'Concluso', bgClass: 'bg-gray-500/20', textClass: 'text-gray-400', borderClass: 'border-gray-500/30' };
+        return { label: t('pr.status.closed'), bgClass: 'bg-gray-500/20', textClass: 'text-gray-400', borderClass: 'border-gray-500/30' };
       default:
         return { label: status, bgClass: 'bg-muted/30', textClass: 'text-muted-foreground', borderClass: 'border-muted' };
     }
@@ -151,21 +153,21 @@ export default function PrEventsPage() {
   const getRoleConfig = (role: string) => {
     switch (role) {
       case 'gestore_covisione':
-        return { label: 'Co-Visione', bgClass: 'bg-purple-500/20', textClass: 'text-purple-400', borderClass: 'border-purple-500/30' };
+        return { label: t('pr.roles.gestore_covisione'), bgClass: 'bg-purple-500/20', textClass: 'text-purple-400', borderClass: 'border-purple-500/30' };
       case 'capo_staff':
-        return { label: 'Capo Staff', bgClass: 'bg-blue-500/20', textClass: 'text-blue-400', borderClass: 'border-blue-500/30' };
+        return { label: t('pr.roles.capo_staff'), bgClass: 'bg-blue-500/20', textClass: 'text-blue-400', borderClass: 'border-blue-500/30' };
       case 'pr':
-        return { label: 'PR', bgClass: 'bg-primary/20', textClass: 'text-primary', borderClass: 'border-primary/30' };
+        return { label: t('pr.roles.pr'), bgClass: 'bg-primary/20', textClass: 'text-primary', borderClass: 'border-primary/30' };
       default:
         return { label: role, bgClass: 'bg-muted/30', textClass: 'text-muted-foreground', borderClass: 'border-muted' };
     }
   };
 
   const getTimeLabel = (date: Date) => {
-    if (isToday(date)) return 'Oggi';
-    if (isTomorrow(date)) return 'Domani';
+    if (isToday(date)) return t('pr.today');
+    if (isTomorrow(date)) return t('pr.tomorrow');
     const days = differenceInDays(date, new Date());
-    if (days > 0 && days <= 7) return `Tra ${days} giorni`;
+    if (days > 0 && days <= 7) return t('pr.inDays', { days });
     return null;
   };
 
@@ -288,7 +290,7 @@ export default function PrEventsPage() {
               {roleConfig && (
                 <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
                   <div className="flex items-center gap-3 min-h-[44px]">
-                    <span className="text-base text-muted-foreground">Ruolo:</span>
+                    <span className="text-base text-muted-foreground">{t('pr.tableHeaders.role')}:</span>
                     <Badge 
                       className={`${roleConfig.bgClass} ${roleConfig.textClass} ${roleConfig.borderClass} text-base px-4 py-2 font-bold`}
                     >
@@ -306,13 +308,13 @@ export default function PrEventsPage() {
                   {(event.permissions.canAddToLists || event.permissions.canManageLists) && (
                     <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 min-h-[44px]">
                       <ListChecks className="w-5 h-5" />
-                      <span className="text-base font-semibold">Liste</span>
+                      <span className="text-base font-semibold">{t('pr.lists')}</span>
                     </div>
                   )}
                   {(event.permissions.canProposeTables || event.permissions.canManageTables) && (
                     <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-500/10 text-blue-400 min-h-[44px]">
                       <Armchair className="w-5 h-5" />
-                      <span className="text-base font-semibold">Tavoli</span>
+                      <span className="text-base font-semibold">{t('pr.tables')}</span>
                     </div>
                   )}
                 </div>
@@ -416,29 +418,29 @@ export default function PrEventsPage() {
         icon: Users,
         iconBg: 'bg-muted/20',
         iconColor: 'text-muted-foreground',
-        title: 'Nessun evento assegnato',
-        description: 'Non sei stato ancora assegnato a nessun evento. Contatta il tuo responsabile.',
+        title: t('pr.noEventsTitle'),
+        description: t('pr.noAssignedEventsMessage'),
       },
       upcoming: {
         icon: CalendarClock,
         iconBg: 'bg-blue-500/10',
         iconColor: 'text-blue-400',
-        title: 'Nessun evento in arrivo',
-        description: 'Non hai eventi programmati per il futuro.',
+        title: t('pr.noUpcomingEventsTitle'),
+        description: t('pr.noUpcomingEventsDescription'),
       },
       today: {
         icon: Sparkles,
         iconBg: 'bg-primary/10',
         iconColor: 'text-primary',
-        title: 'Nessun evento oggi',
-        description: 'Non hai eventi programmati per oggi.',
+        title: t('pr.noTodayEventsTitle'),
+        description: t('pr.noTodayEventsDescription'),
       },
       past: {
         icon: CheckCircle2,
         iconBg: 'bg-purple-500/10',
         iconColor: 'text-purple-400',
-        title: 'Nessun evento passato',
-        description: 'Non hai ancora completato nessun evento.',
+        title: t('pr.noPastEventsTitle'),
+        description: t('pr.noPastEventsDescription'),
       },
     };
 
@@ -460,7 +462,7 @@ export default function PrEventsPage() {
 
   const header = (
     <MobileHeader
-      title="I Miei Eventi"
+      title={t('pr.myEvents')}
       leftAction={
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
           <PartyPopper className="w-6 h-6 text-primary" />
@@ -519,8 +521,8 @@ export default function PrEventsPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-pr-events">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">I Miei Eventi</h1>
-            <p className="text-muted-foreground">Eventi a cui sei stato assegnato come staff</p>
+            <h1 className="text-3xl font-bold">{t('pr.myEvents')}</h1>
+            <p className="text-muted-foreground">{t('pr.eventsAssignedAsStaff')}</p>
           </div>
           <Button
             variant="outline"
@@ -529,7 +531,7 @@ export default function PrEventsPage() {
             data-testid="button-refresh"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Aggiorna
+            {t('common.refresh')}
           </Button>
         </div>
 
@@ -542,7 +544,7 @@ export default function PrEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{myEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">Totali</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.total')}</p>
                 </div>
               </div>
             </CardContent>
@@ -555,7 +557,7 @@ export default function PrEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-emerald-400">{todayEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">Oggi</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.today')}</p>
                 </div>
               </div>
             </CardContent>
@@ -568,7 +570,7 @@ export default function PrEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-blue-400">{upcomingEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">In Arrivo</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.upcoming')}</p>
                 </div>
               </div>
             </CardContent>
@@ -581,7 +583,7 @@ export default function PrEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-purple-400">{pastEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">Passati</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.past')}</p>
                 </div>
               </div>
             </CardContent>
@@ -591,7 +593,7 @@ export default function PrEventsPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <CardTitle>Eventi Assegnati</CardTitle>
+              <CardTitle>{t('pr.assignedEvents')}</CardTitle>
               <div className="flex gap-2">
                 <Button
                   variant={activeFilter === "upcoming" ? "default" : "outline"}
@@ -600,7 +602,7 @@ export default function PrEventsPage() {
                   data-testid="filter-upcoming"
                 >
                   <CalendarClock className="w-4 h-4 mr-2" />
-                  Prossimi ({upcomingEvents.length})
+                  {t('pr.filters.upcoming')} ({upcomingEvents.length})
                 </Button>
                 <Button
                   variant={activeFilter === "today" ? "default" : "outline"}
@@ -609,7 +611,7 @@ export default function PrEventsPage() {
                   data-testid="filter-today"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Oggi ({todayEvents.length})
+                  {t('pr.filters.today')} ({todayEvents.length})
                 </Button>
                 <Button
                   variant={activeFilter === "past" ? "default" : "outline"}
@@ -618,7 +620,7 @@ export default function PrEventsPage() {
                   data-testid="filter-past"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Passati ({pastEvents.length})
+                  {t('pr.filters.past')} ({pastEvents.length})
                 </Button>
                 <Button
                   variant={activeFilter === "all" ? "default" : "outline"}
@@ -627,7 +629,7 @@ export default function PrEventsPage() {
                   data-testid="filter-all"
                 >
                   <Calendar className="w-4 h-4 mr-2" />
-                  Tutti ({myEvents.length})
+                  {t('pr.filters.all')} ({myEvents.length})
                 </Button>
               </div>
             </div>
@@ -638,24 +640,24 @@ export default function PrEventsPage() {
                 <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto mb-4">
                   <Calendar className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nessun evento</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('pr.noEventsTitle')}</h3>
                 <p className="text-muted-foreground">
                   {activeFilter === "all" 
-                    ? "Non sei stato ancora assegnato a nessun evento."
-                    : `Non ci sono eventi ${activeFilter === "upcoming" ? "in arrivo" : activeFilter === "today" ? "oggi" : "passati"}.`}
+                    ? t('pr.noEventsDescription')
+                    : t('pr.noEventsFilterMessage', { filter: activeFilter === "upcoming" ? t('pr.filterIncoming') : activeFilter === "today" ? t('pr.filterToday') : t('pr.filterPassed') })}
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Orario</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Permessi</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('pr.tableHeaders.event')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.date')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.time')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.role')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.status')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.permissions')}</TableHead>
+                    <TableHead className="text-right">{t('pr.tableHeaders.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -718,13 +720,13 @@ export default function PrEventsPage() {
                             {(event.permissions?.canAddToLists || event.permissions?.canManageLists) && (
                               <Badge variant="secondary" className="text-xs">
                                 <ListChecks className="w-3 h-3 mr-1" />
-                                Liste
+                                {t('pr.lists')}
                               </Badge>
                             )}
                             {(event.permissions?.canProposeTables || event.permissions?.canManageTables) && (
                               <Badge variant="secondary" className="text-xs">
                                 <Armchair className="w-3 h-3 mr-1" />
-                                Tavoli
+                                {t('pr.tables')}
                               </Badge>
                             )}
                           </div>
@@ -741,7 +743,7 @@ export default function PrEventsPage() {
                             </Button>
                             <Link href={`/events/${event.id}/panel`}>
                               <Button size="sm" data-testid={`button-open-${event.id}`}>
-                                Apri
+                                {t('pr.open')}
                               </Button>
                             </Link>
                           </div>
@@ -759,20 +761,20 @@ export default function PrEventsPage() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{selectedEvent?.name}</DialogTitle>
-              <DialogDescription>Dettagli dell'evento e del tuo ruolo</DialogDescription>
+              <DialogDescription>{t('pr.eventDetailsAndRole')}</DialogDescription>
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Data</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.tableHeaders.date')}</p>
                     <p className="font-medium flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       {format(new Date(selectedEvent.startDatetime), "EEEE d MMMM yyyy", { locale: it })}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Orario</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.tableHeaders.time')}</p>
                     <p className="font-medium flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       {format(new Date(selectedEvent.startDatetime), "HH:mm", { locale: it })}
@@ -782,7 +784,7 @@ export default function PrEventsPage() {
 
                 {selectedEvent.locationId && (
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Location</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.locationAssigned')}</p>
                     <p className="font-medium flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
                       {selectedEvent.locationId}
@@ -791,7 +793,7 @@ export default function PrEventsPage() {
                 )}
 
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Stato Evento</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.eventStatus')}</p>
                   <Badge className={`${getStatusConfig(selectedEvent.status).bgClass} ${getStatusConfig(selectedEvent.status).textClass}`}>
                     {getStatusConfig(selectedEvent.status).label}
                   </Badge>
@@ -799,7 +801,7 @@ export default function PrEventsPage() {
 
                 {selectedEventRoleConfig && (
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Il Tuo Ruolo</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.yourRole')}</p>
                     <Badge className={`${selectedEventRoleConfig.bgClass} ${selectedEventRoleConfig.textClass} ${selectedEventRoleConfig.borderClass}`}>
                       {selectedEventRoleConfig.label}
                     </Badge>
@@ -808,18 +810,18 @@ export default function PrEventsPage() {
 
                 {selectedEventData?.permissions && (selectedEventData.permissions.canAddToLists || selectedEventData.permissions.canProposeTables || selectedEventData.permissions.canManageLists || selectedEventData.permissions.canManageTables) && (
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">I Tuoi Permessi</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.yourPermissions')}</p>
                     <div className="flex gap-2 flex-wrap">
                       {(selectedEventData.permissions.canAddToLists || selectedEventData.permissions.canManageLists) && (
                         <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
                           <ListChecks className="w-3 h-3 mr-1" />
-                          Gestione Liste
+                          {t('pr.manageLists')}
                         </Badge>
                       )}
                       {(selectedEventData.permissions.canProposeTables || selectedEventData.permissions.canManageTables) && (
                         <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/30">
                           <Armchair className="w-3 h-3 mr-1" />
-                          Gestione Tavoli
+                          {t('pr.manageTables')}
                         </Badge>
                       )}
                     </div>
@@ -829,7 +831,7 @@ export default function PrEventsPage() {
                 <div className="flex justify-end pt-4">
                   <Link href={`/events/${selectedEvent.id}/panel`}>
                     <Button data-testid="button-open-event">
-                      Vai all'Evento
+                      {t('pr.goToEvent')}
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                   </Link>
@@ -855,14 +857,14 @@ export default function PrEventsPage() {
             <StatsCard
               icon={Calendar}
               value={myEvents.length}
-              label="Totali"
+              label={t('pr.stats.total')}
               iconBg="bg-primary/10"
               iconColor="text-primary"
             />
             <StatsCard
               icon={Sparkles}
               value={todayEvents.length}
-              label="Oggi"
+              label={t('pr.stats.today')}
               iconBg="bg-emerald-500/10"
               iconColor="text-emerald-400"
               valueColor="text-emerald-400"
@@ -870,7 +872,7 @@ export default function PrEventsPage() {
             <StatsCard
               icon={CalendarClock}
               value={upcomingEvents.length}
-              label="In Arrivo"
+              label={t('pr.stats.upcoming')}
               iconBg="bg-blue-500/10"
               iconColor="text-blue-400"
               valueColor="text-blue-400"
@@ -880,13 +882,13 @@ export default function PrEventsPage() {
           <div className="flex gap-3">
             <FilterPill 
               filter="upcoming" 
-              label="Prossimi" 
+              label={t('pr.filters.upcoming')} 
               count={upcomingEvents.length}
               icon={CalendarClock}
             />
             <FilterPill 
               filter="past" 
-              label="Passati" 
+              label={t('pr.filters.past')} 
               count={pastEvents.length}
               icon={CheckCircle2}
             />

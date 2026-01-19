@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from 'react-i18next';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -64,6 +65,7 @@ interface EmailStats {
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#0088fe"];
 
 export default function MarketingDashboard() {
+  const { t } = useTranslation();
   const { data: loyaltyStats, isLoading: loyaltyLoading } = useQuery<LoyaltyStats>({
     queryKey: ["/api/loyalty/stats"],
   });
@@ -124,9 +126,9 @@ export default function MarketingDashboard() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <BarChart3 className="h-8 w-8" />
-            Dashboard Marketing
+            {t('marketing.dashboard.title')}
           </h1>
-          <p className="text-muted-foreground">Panoramica delle performance marketing</p>
+          <p className="text-muted-foreground">{t('marketing.dashboard.subtitle')}</p>
         </div>
       </div>
 
@@ -134,7 +136,7 @@ export default function MarketingDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Membri Fedeltà</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('marketing.dashboard.loyaltyMembers')}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -142,14 +144,14 @@ export default function MarketingDashboard() {
               {loyaltyStats?.totalMembers || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {loyaltyStats?.totalPointsIssued || 0} punti emessi
+              {loyaltyStats?.totalPointsIssued || 0} {t('marketing.dashboard.pointsIssued')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Referral Attivi</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('marketing.dashboard.activeReferrals')}</CardTitle>
             <Share2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -157,14 +159,14 @@ export default function MarketingDashboard() {
               {referralStats?.totalReferrals || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {(referralStats?.conversionRate || 0).toFixed(1)}% tasso conversione
+              {(referralStats?.conversionRate || 0).toFixed(1)}% {t('marketing.dashboard.conversionRate')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Bundle Venduti</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('marketing.dashboard.bundlesSold')}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -172,14 +174,14 @@ export default function MarketingDashboard() {
               {bundleStats?.totalSold || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              €{bundleStats?.totalRevenue || "0.00"} ricavo
+              €{bundleStats?.totalRevenue || "0.00"} {t('marketing.dashboard.revenue')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Email Inviate</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('marketing.dashboard.emailsSent')}</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -187,7 +189,7 @@ export default function MarketingDashboard() {
               {emailStats.totalSent}
             </div>
             <p className="text-xs text-muted-foreground">
-              {emailStats.openRate.toFixed(1)}% open rate
+              {emailStats.openRate.toFixed(1)}% {t('marketing.dashboard.openRate')}
             </p>
           </CardContent>
         </Card>
@@ -195,10 +197,10 @@ export default function MarketingDashboard() {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview" data-testid="tab-overview">Panoramica</TabsTrigger>
-          <TabsTrigger value="loyalty" data-testid="tab-loyalty">Fedeltà</TabsTrigger>
-          <TabsTrigger value="referral" data-testid="tab-referral">Referral</TabsTrigger>
-          <TabsTrigger value="bundles" data-testid="tab-bundles">Bundle</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview">{t('marketing.dashboard.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="loyalty" data-testid="tab-loyalty">{t('marketing.dashboard.tabs.loyalty')}</TabsTrigger>
+          <TabsTrigger value="referral" data-testid="tab-referral">{t('marketing.dashboard.tabs.referral')}</TabsTrigger>
+          <TabsTrigger value="bundles" data-testid="tab-bundles">{t('marketing.dashboard.tabs.bundles')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -206,8 +208,8 @@ export default function MarketingDashboard() {
             {/* Bundle Sales Chart */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Vendite Bundle</CardTitle>
-                <CardDescription>Performance per tipo di bundle</CardDescription>
+                <CardTitle className="text-lg">{t('marketing.dashboard.bundleSales')}</CardTitle>
+                <CardDescription>{t('marketing.dashboard.bundlePerformance')}</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px]">
                 {bundleSalesData.length > 0 ? (
@@ -217,12 +219,12 @@ export default function MarketingDashboard() {
                       <XAxis dataKey="bundleName" fontSize={12} />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="soldCount" fill="#8884d8" name="Venduti" />
+                      <Bar dataKey="soldCount" fill="#8884d8" name={t('marketing.dashboard.sold')} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
-                    Nessun dato disponibile
+                    {t('marketing.dashboard.noDataAvailable')}
                   </div>
                 )}
               </CardContent>
@@ -231,11 +233,11 @@ export default function MarketingDashboard() {
             {/* Tier Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Distribuzione Tier</CardTitle>
-                <CardDescription>Membri per livello fedeltà</CardDescription>
+                <CardTitle className="text-lg">{t('marketing.dashboard.tierDistribution')}</CardTitle>
+                <CardDescription>{t('marketing.dashboard.membersByTier')}</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px]">
-                {tierData.some(t => t.count > 0) ? (
+                {tierData.some(td => td.count > 0) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -258,7 +260,7 @@ export default function MarketingDashboard() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
-                    Nessun membro nel programma
+                    {t('marketing.dashboard.noMembersInProgram')}
                   </div>
                 )}
               </CardContent>
@@ -274,7 +276,7 @@ export default function MarketingDashboard() {
                     <Award className="h-6 w-6 text-purple-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Punti Riscattati</p>
+                    <p className="text-sm text-muted-foreground">{t('marketing.dashboard.pointsRedeemed')}</p>
                     <p className="text-2xl font-bold">{loyaltyStats?.totalPointsRedeemed || 0}</p>
                   </div>
                 </div>
@@ -288,7 +290,7 @@ export default function MarketingDashboard() {
                     <UserPlus className="h-6 w-6 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Premi Referral</p>
+                    <p className="text-sm text-muted-foreground">{t('marketing.dashboard.referralRewards')}</p>
                     <p className="text-2xl font-bold">{referralStats?.totalRewardsGiven || 0}</p>
                   </div>
                 </div>
@@ -302,7 +304,7 @@ export default function MarketingDashboard() {
                     <ShoppingBag className="h-6 w-6 text-blue-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Bundle Attivi</p>
+                    <p className="text-sm text-muted-foreground">{t('marketing.dashboard.activeBundles')}</p>
                     <p className="text-2xl font-bold">{bundleStats?.activeBundles || 0}</p>
                   </div>
                 </div>
@@ -315,7 +317,7 @@ export default function MarketingDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Membri Totali</CardDescription>
+                <CardDescription>{t('marketing.dashboard.totalMembers')}</CardDescription>
                 <CardTitle className="text-3xl">{loyaltyStats?.totalMembers || 0}</CardTitle>
               </CardHeader>
               <CardContent>
@@ -324,7 +326,7 @@ export default function MarketingDashboard() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Punti Emessi</CardDescription>
+                <CardDescription>{t('marketing.dashboard.pointsIssuedLabel')}</CardDescription>
                 <CardTitle className="text-3xl">{loyaltyStats?.totalPointsIssued || 0}</CardTitle>
               </CardHeader>
               <CardContent>
@@ -333,7 +335,7 @@ export default function MarketingDashboard() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Punti Riscattati</CardDescription>
+                <CardDescription>{t('marketing.dashboard.pointsRedeemed')}</CardDescription>
                 <CardTitle className="text-3xl">{loyaltyStats?.totalPointsRedeemed || 0}</CardTitle>
               </CardHeader>
               <CardContent>
@@ -344,7 +346,7 @@ export default function MarketingDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Distribuzione per Tier</CardTitle>
+              <CardTitle>{t('marketing.dashboard.distributionByTier')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4 flex-wrap">
@@ -367,7 +369,7 @@ export default function MarketingDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Referral Totali</CardDescription>
+                <CardDescription>{t('marketing.dashboard.totalReferrals')}</CardDescription>
                 <CardTitle className="text-3xl">{referralStats?.totalReferrals || 0}</CardTitle>
               </CardHeader>
               <CardContent>
@@ -376,7 +378,7 @@ export default function MarketingDashboard() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Tasso Conversione</CardDescription>
+                <CardDescription>{t('marketing.dashboard.conversionRateLabel')}</CardDescription>
                 <CardTitle className="text-3xl">{(referralStats?.conversionRate || 0).toFixed(1)}%</CardTitle>
               </CardHeader>
               <CardContent>
@@ -385,7 +387,7 @@ export default function MarketingDashboard() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Premi Assegnati</CardDescription>
+                <CardDescription>{t('marketing.dashboard.rewardsGiven')}</CardDescription>
                 <CardTitle className="text-3xl">{referralStats?.totalRewardsGiven || 0}</CardTitle>
               </CardHeader>
               <CardContent>
@@ -396,8 +398,8 @@ export default function MarketingDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Top Referrer</CardTitle>
-              <CardDescription>I migliori promotori</CardDescription>
+              <CardTitle>{t('marketing.dashboard.topReferrers')}</CardTitle>
+              <CardDescription>{t('marketing.dashboard.bestPromoters')}</CardDescription>
             </CardHeader>
             <CardContent>
               {referralStats?.topReferrers && referralStats.topReferrers.length > 0 ? (
@@ -408,12 +410,12 @@ export default function MarketingDashboard() {
                         <Badge variant={i === 0 ? "default" : "secondary"}>#{i + 1}</Badge>
                         <span>{referrer.name}</span>
                       </div>
-                      <Badge variant="outline">{referrer.conversions} conversioni</Badge>
+                      <Badge variant="outline">{referrer.conversions} {t('marketing.dashboard.conversions')}</Badge>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">Nessun referral registrato</p>
+                <p className="text-muted-foreground">{t('marketing.dashboard.noReferralsRegistered')}</p>
               )}
             </CardContent>
           </Card>
@@ -423,25 +425,25 @@ export default function MarketingDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Bundle Totali</CardDescription>
+                <CardDescription>{t('marketing.dashboard.totalBundles')}</CardDescription>
                 <CardTitle className="text-3xl">{bundleStats?.totalBundles || 0}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Bundle Attivi</CardDescription>
+                <CardDescription>{t('marketing.dashboard.activeBundles')}</CardDescription>
                 <CardTitle className="text-3xl">{bundleStats?.activeBundles || 0}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Vendite Totali</CardDescription>
+                <CardDescription>{t('marketing.dashboard.totalSales')}</CardDescription>
                 <CardTitle className="text-3xl">{bundleStats?.totalSold || 0}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Ricavo Totale</CardDescription>
+                <CardDescription>{t('marketing.dashboard.totalRevenue')}</CardDescription>
                 <CardTitle className="text-3xl">€{bundleStats?.totalRevenue || "0.00"}</CardTitle>
               </CardHeader>
             </Card>
@@ -449,7 +451,7 @@ export default function MarketingDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Performance per Bundle</CardTitle>
+              <CardTitle>{t('marketing.dashboard.performanceByBundle')}</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
               {bundleSalesData.length > 0 ? (
@@ -461,13 +463,13 @@ export default function MarketingDashboard() {
                     <Tooltip formatter={(value: number, name: string) => 
                       name === "revenue" ? `€${value.toFixed(2)}` : value
                     } />
-                    <Bar dataKey="soldCount" fill="#8884d8" name="Venduti" />
-                    <Bar dataKey="revenue" fill="#82ca9d" name="Ricavo" />
+                    <Bar dataKey="soldCount" fill="#8884d8" name={t('marketing.dashboard.sold')} />
+                    <Bar dataKey="revenue" fill="#82ca9d" name={t('marketing.dashboard.revenueLabel')} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Nessun bundle creato
+                  {t('marketing.dashboard.noBundlesCreated')}
                 </div>
               )}
             </CardContent>

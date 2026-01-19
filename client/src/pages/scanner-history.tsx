@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { format, parseISO, isBefore, subMonths, isAfter } from "date-fns";
 import { it } from "date-fns/locale";
 import { Link, useLocation } from "wouter";
@@ -66,19 +67,20 @@ const springTransition = {
   damping: 30,
 };
 
-const filters: { id: FilterType; label: string; icon: React.ElementType }[] = [
-  { id: 'all', label: 'Tutti', icon: Sparkles },
-  { id: 'week', label: 'Settimana', icon: CalendarDays },
-  { id: 'month', label: 'Mese', icon: Calendar },
-  { id: '3months', label: '3 Mesi', icon: CalendarRange },
-];
-
 export default function ScannerHistoryPage() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+  const filters: { id: FilterType; label: string; icon: React.ElementType }[] = [
+    { id: 'all', label: t('scanner.history.all'), icon: Sparkles },
+    { id: 'week', label: t('scanner.history.week'), icon: CalendarDays },
+    { id: 'month', label: t('scanner.history.month'), icon: Calendar },
+    { id: '3months', label: t('scanner.history.threeMonths'), icon: CalendarRange },
+  ];
 
   const { data: events, isLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
@@ -137,14 +139,14 @@ export default function ScannerHistoryPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3" data-testid="text-title">
               <History className="h-8 w-8 text-purple-400" />
-              Eventi Passati
+              {t('scanner.history.title')}
             </h1>
-            <p className="text-muted-foreground">Storico degli eventi scansionati</p>
+            <p className="text-muted-foreground">{t('scanner.history.subtitle')}</p>
           </div>
           <Link href="/scanner">
             <Button variant="outline" data-testid="button-back">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Torna allo Scanner
+              {t('scanner.history.backToScanner')}
             </Button>
           </Link>
         </div>
@@ -153,19 +155,19 @@ export default function ScannerHistoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-sm text-muted-foreground">Totale Eventi</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.history.totalEvents')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-purple-500">{stats.thisWeek}</div>
-              <p className="text-sm text-muted-foreground">Questa Settimana</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.history.thisWeek')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-emerald-500">{stats.thisMonth}</div>
-              <p className="text-sm text-muted-foreground">Questo Mese</p>
+              <p className="text-sm text-muted-foreground">{t('scanner.history.thisMonth')}</p>
             </CardContent>
           </Card>
         </div>
@@ -174,18 +176,18 @@ export default function ScannerHistoryPage() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle>Elenco Eventi</CardTitle>
-                <CardDescription>Eventi conclusi con dati di scansione</CardDescription>
+                <CardTitle>{t('scanner.history.eventList')}</CardTitle>
+                <CardDescription>{t('scanner.history.eventListDescription')}</CardDescription>
               </div>
               <Select value={activeFilter} onValueChange={(v) => setActiveFilter(v as FilterType)}>
                 <SelectTrigger className="w-[180px]" data-testid="select-filter">
-                  <SelectValue placeholder="Periodo" />
+                  <SelectValue placeholder={t('scanner.history.period')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  <SelectItem value="week">Ultima Settimana</SelectItem>
-                  <SelectItem value="month">Ultimo Mese</SelectItem>
-                  <SelectItem value="3months">Ultimi 3 Mesi</SelectItem>
+                  <SelectItem value="all">{t('scanner.history.all')}</SelectItem>
+                  <SelectItem value="week">{t('scanner.history.lastWeek')}</SelectItem>
+                  <SelectItem value="month">{t('scanner.history.lastMonth')}</SelectItem>
+                  <SelectItem value="3months">{t('scanner.history.lastThreeMonths')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -199,11 +201,11 @@ export default function ScannerHistoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('scanner.history.event')}</TableHead>
+                    <TableHead>{t('scanner.history.date')}</TableHead>
+                    <TableHead>{t('scanner.history.location')}</TableHead>
+                    <TableHead>{t('scanner.history.status')}</TableHead>
+                    <TableHead className="text-right">{t('scanner.history.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -219,7 +221,7 @@ export default function ScannerHistoryPage() {
                       <TableCell>
                         <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Concluso
+                          {t('scanner.history.concluded')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -249,11 +251,11 @@ export default function ScannerHistoryPage() {
             ) : (
               <div className="py-12 text-center">
                 <History className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nessun evento trovato</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('scanner.history.noEventsFound')}</h3>
                 <p className="text-muted-foreground text-sm">
                   {activeFilter === 'all' 
-                    ? "Non ci sono eventi passati nel tuo storico"
-                    : "Prova a selezionare un periodo diverso"
+                    ? t('scanner.history.noEventsInHistory')
+                    : t('scanner.history.tryDifferentPeriod')
                   }
                 </p>
               </div>
@@ -265,26 +267,26 @@ export default function ScannerHistoryPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{selectedEvent?.name}</DialogTitle>
-              <DialogDescription>Dettagli evento</DialogDescription>
+              <DialogDescription>{t('scanner.history.eventDetails')}</DialogDescription>
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Data</p>
+                    <p className="text-sm text-muted-foreground">{t('scanner.history.date')}</p>
                     <p className="font-medium">
                       {format(parseISO(selectedEvent.startDatetime), "d MMMM yyyy", { locale: it })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Orario</p>
+                    <p className="text-sm text-muted-foreground">{t('scanner.history.time')}</p>
                     <p className="font-medium">
                       {format(parseISO(selectedEvent.startDatetime), "HH:mm", { locale: it })}
                     </p>
                   </div>
                   {selectedEvent.location && (
                     <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Location</p>
+                      <p className="text-sm text-muted-foreground">{t('scanner.history.location')}</p>
                       <p className="font-medium flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
                         {selectedEvent.location.name}
@@ -294,10 +296,10 @@ export default function ScannerHistoryPage() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-                    Chiudi
+                    {t('scanner.history.close')}
                   </Button>
                   <Button onClick={() => handleGoToStats(selectedEvent.id)} data-testid="button-go-stats">
-                    Vedi Statistiche
+                    {t('scanner.history.viewStats')}
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -326,10 +328,10 @@ export default function ScannerHistoryPage() {
         <div className="flex-1">
           <h1 className="text-xl font-bold flex items-center gap-2" data-testid="text-title">
             <History className="h-6 w-6 text-purple-400" />
-            Eventi Passati
+            {t('scanner.history.title')}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Storico degli eventi scansionati
+            {t('scanner.history.subtitle')}
           </p>
         </div>
       </div>
@@ -430,7 +432,7 @@ export default function ScannerHistoryPage() {
                             <div className="min-w-0 flex-1 space-y-2">
                               <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs px-3 py-1">
                                 <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                                Concluso
+                                {t('scanner.history.concluded')}
                               </Badge>
                               <h3 className="text-lg font-semibold leading-tight" data-testid="text-event-name">
                                 {event.name}
@@ -481,11 +483,11 @@ export default function ScannerHistoryPage() {
                 >
                   <History className="h-10 w-10 text-muted-foreground/40" />
                 </motion.div>
-                <h3 className="text-lg font-semibold mb-2">Nessun evento trovato</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('scanner.history.noEventsFound')}</h3>
                 <p className="text-muted-foreground text-sm">
                   {activeFilter === 'all' 
-                    ? "Non ci sono eventi passati nel tuo storico"
-                    : "Prova a selezionare un periodo diverso"
+                    ? t('scanner.history.noEventsInHistory')
+                    : t('scanner.history.tryDifferentPeriod')
                   }
                 </p>
               </CardContent>

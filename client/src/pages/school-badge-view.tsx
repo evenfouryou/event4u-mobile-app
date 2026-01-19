@@ -15,11 +15,12 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { it, enUS, fr, de } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslation } from "react-i18next";
 
 interface BadgeData {
   id: string;
@@ -52,6 +53,16 @@ export default function SchoolBadgeView() {
   const { code } = useParams<{ code: string }>();
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { t, i18n } = useTranslation();
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'it': return it;
+      case 'fr': return fr;
+      case 'de': return de;
+      default: return enUS;
+    }
+  };
 
   const { data: badge, isLoading, error } = useQuery<BadgeData>({
     queryKey: ["/api/school-badges/badge", code],
@@ -63,7 +74,7 @@ export default function SchoolBadgeView() {
       try {
         await navigator.share({
           title: `Badge - ${badge?.request.firstName} ${badge?.request.lastName}`,
-          text: `Badge digitale verificato da ${badge?.request.landing.schoolName}`,
+          text: t('schoolBadgesView.shareText', { schoolName: badge?.request.landing.schoolName }),
           url: window.location.href,
         });
         triggerHaptic('success');
@@ -83,7 +94,7 @@ export default function SchoolBadgeView() {
       try {
         await navigator.share({
           title: `Badge - ${badge?.request.firstName} ${badge?.request.lastName}`,
-          text: `Badge digitale verificato da ${badge?.request.landing.schoolName}`,
+          text: t('schoolBadgesView.shareText', { schoolName: badge?.request.landing.schoolName }),
           url: window.location.href,
         });
       } catch {
@@ -133,16 +144,16 @@ export default function SchoolBadgeView() {
             data-testid="button-back-desktop"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Torna indietro
+            {t('schoolBadgesView.goBack')}
           </Button>
           <Card className="text-center" data-testid="card-badge-not-found-desktop">
             <CardContent className="p-12">
               <div className="w-20 h-20 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="h-10 w-10 text-destructive" />
               </div>
-              <h1 className="text-2xl font-bold mb-3">Badge non trovato</h1>
+              <h1 className="text-2xl font-bold mb-3">{t('schoolBadgesView.badgeNotFound')}</h1>
               <p className="text-muted-foreground">
-                Questo badge non esiste o non è più valido.
+                {t('schoolBadgesView.badgeNotFoundDescription')}
               </p>
             </CardContent>
           </Card>
@@ -159,7 +170,7 @@ export default function SchoolBadgeView() {
             data-testid="button-back-desktop"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Torna indietro
+            {t('schoolBadgesView.goBack')}
           </Button>
           <Button 
             variant="outline" 
@@ -167,7 +178,7 @@ export default function SchoolBadgeView() {
             data-testid="button-share-desktop"
           >
             <Share2 className="h-4 w-4 mr-2" />
-            Condividi
+            {t('schoolBadgesView.share')}
           </Button>
         </div>
 
@@ -201,7 +212,7 @@ export default function SchoolBadgeView() {
                 {badge.request.landing.schoolName}
               </h1>
               <p className="text-muted-foreground text-lg mt-2">
-                Badge Digitale Verificato
+                {t('schoolBadgesView.verifiedDigitalBadge')}
               </p>
             </div>
 
@@ -212,7 +223,7 @@ export default function SchoolBadgeView() {
                   className="text-base px-5 py-2.5 gap-2"
                 >
                   <XCircle className="h-5 w-5" />
-                  Badge Revocato
+                  {t('schoolBadgesView.badgeRevoked')}
                 </Badge>
               ) : (
                 <Badge 
@@ -221,7 +232,7 @@ export default function SchoolBadgeView() {
                   data-testid="badge-verified-desktop"
                 >
                   <CheckCircle2 className="h-5 w-5" />
-                  Verificato
+                  {t('schoolBadgesView.verified')}
                 </Badge>
               )}
             </div>
@@ -239,7 +250,7 @@ export default function SchoolBadgeView() {
 
             <div className="p-6 rounded-xl bg-muted/30 space-y-5">
               <div>
-                <p className="text-sm text-muted-foreground mb-1.5">Titolare</p>
+                <p className="text-sm text-muted-foreground mb-1.5">{t('schoolBadgesView.holder')}</p>
                 <p 
                   className="text-xl font-semibold flex items-center gap-3"
                   data-testid="text-holder-name-desktop"
@@ -249,17 +260,17 @@ export default function SchoolBadgeView() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1.5">Data di emissione</p>
+                <p className="text-sm text-muted-foreground mb-1.5">{t('schoolBadgesView.issueDate')}</p>
                 <p 
                   className="text-base font-medium flex items-center gap-3"
                   data-testid="text-issue-date-desktop"
                 >
                   <Calendar className="h-5 w-5 shrink-0" />
-                  {badge.createdAt && format(new Date(badge.createdAt), "dd MMMM yyyy", { locale: it })}
+                  {badge.createdAt && format(new Date(badge.createdAt), "dd MMMM yyyy", { locale: getDateLocale() })}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1.5">Codice Badge</p>
+                <p className="text-sm text-muted-foreground mb-1.5">{t('schoolBadgesView.badgeCode')}</p>
                 <p 
                   className="font-mono text-sm bg-background/50 px-3 py-2 rounded-lg inline-block"
                   data-testid="text-badge-code-desktop"
@@ -271,14 +282,14 @@ export default function SchoolBadgeView() {
 
             {isRevoked && badge.revokedReason && (
               <div className="p-5 rounded-xl bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive font-medium mb-2">Motivo revoca</p>
+                <p className="text-sm text-destructive font-medium mb-2">{t('schoolBadgesView.revokeReason')}</p>
                 <p className="text-base" data-testid="text-revoke-reason-desktop">{badge.revokedReason}</p>
               </div>
             )}
 
             {badge.qrCodeUrl && (
               <div className="flex flex-col items-center gap-3 pt-2">
-                <p className="text-sm text-muted-foreground">Scansiona per verificare</p>
+                <p className="text-sm text-muted-foreground">{t('schoolBadgesView.scanToVerify')}</p>
                 <img 
                   src={badge.qrCodeUrl} 
                   alt="QR Code" 
@@ -300,7 +311,7 @@ export default function SchoolBadgeView() {
         className="bg-background"
         header={
           <MobileHeader
-            title="Caricamento..."
+            title={t('common.loading')}
             transparent
           />
         }
@@ -378,7 +389,7 @@ export default function SchoolBadgeView() {
                 transition={{ ...springTransition, delay: 0.2 }}
                 className="text-2xl font-bold mb-3"
               >
-                Badge non trovato
+                {t('schoolBadgesView.badgeNotFound')}
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
@@ -386,7 +397,7 @@ export default function SchoolBadgeView() {
                 transition={{ ...springTransition, delay: 0.3 }}
                 className="text-muted-foreground text-base"
               >
-                Questo badge non esiste o non è più valido.
+                {t('schoolBadgesView.badgeNotFoundDescription')}
               </motion.p>
             </div>
           </motion.div>
@@ -487,7 +498,7 @@ export default function SchoolBadgeView() {
                   {badge.request.landing.schoolName}
                 </h1>
                 <p className="text-muted-foreground text-base mt-1">
-                  Badge Digitale Verificato
+                  {t('schoolBadgesView.verifiedDigitalBadge')}
                 </p>
               </motion.div>
 
@@ -503,7 +514,7 @@ export default function SchoolBadgeView() {
                     className="text-base px-5 py-2.5 gap-2 min-h-[44px]"
                   >
                     <XCircle className="h-5 w-5" />
-                    Badge Revocato
+                    {t('schoolBadgesView.badgeRevoked')}
                   </Badge>
                 ) : (
                   <Badge 
@@ -512,7 +523,7 @@ export default function SchoolBadgeView() {
                     data-testid="badge-verified"
                   >
                     <CheckCircle2 className="h-5 w-5" />
-                    Verificato
+                    {t('schoolBadgesView.verified')}
                   </Badge>
                 )}
               </motion.div>
@@ -540,7 +551,7 @@ export default function SchoolBadgeView() {
                 transition={{ ...springTransition, delay: 0.35 }}
               >
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1.5">Titolare</p>
+                  <p className="text-sm text-muted-foreground mb-1.5">{t('schoolBadgesView.holder')}</p>
                   <p 
                     className="text-xl font-semibold flex items-center gap-3"
                     data-testid="text-holder-name"
@@ -550,17 +561,17 @@ export default function SchoolBadgeView() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1.5">Data di emissione</p>
+                  <p className="text-sm text-muted-foreground mb-1.5">{t('schoolBadgesView.issueDate')}</p>
                   <p 
                     className="text-base font-medium flex items-center gap-3"
                     data-testid="text-issue-date"
                   >
                     <Calendar className="h-5 w-5 shrink-0" />
-                    {badge.createdAt && format(new Date(badge.createdAt), "dd MMMM yyyy", { locale: it })}
+                    {badge.createdAt && format(new Date(badge.createdAt), "dd MMMM yyyy", { locale: getDateLocale() })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1.5">Codice Badge</p>
+                  <p className="text-sm text-muted-foreground mb-1.5">{t('schoolBadgesView.badgeCode')}</p>
                   <p 
                     className="font-mono text-sm bg-background/50 px-3 py-2 rounded-lg inline-block"
                     data-testid="text-badge-code"
@@ -577,7 +588,7 @@ export default function SchoolBadgeView() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ...springTransition, delay: 0.4 }}
                 >
-                  <p className="text-sm text-destructive font-medium mb-2">Motivo revoca</p>
+                  <p className="text-sm text-destructive font-medium mb-2">{t('schoolBadgesView.revokeReason')}</p>
                   <p className="text-base" data-testid="text-revoke-reason">{badge.revokedReason}</p>
                 </motion.div>
               )}
@@ -589,7 +600,7 @@ export default function SchoolBadgeView() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ ...springTransition, delay: 0.45 }}
                 >
-                  <p className="text-sm text-muted-foreground">Scansiona per verificare</p>
+                  <p className="text-sm text-muted-foreground">{t('schoolBadgesView.scanToVerify')}</p>
                   <img 
                     src={badge.qrCodeUrl} 
                     alt="QR Code" 

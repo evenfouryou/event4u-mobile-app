@@ -1,5 +1,6 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -90,6 +91,7 @@ const staggerItem = {
 };
 
 export default function ScannerStatsPage() {
+  const { t } = useTranslation();
   const { eventId } = useParams<{ eventId?: string }>();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -139,7 +141,7 @@ export default function ScannerStatsPage() {
 
       const statsData = [
         {
-          label: "Liste Invitati",
+          label: t('scanner.stats.guestLists'),
           icon: Users,
           iconColor: "text-purple-400",
           bgColor: "bg-purple-500/20",
@@ -147,7 +149,7 @@ export default function ScannerStatsPage() {
           total: stats?.totalLists || 0,
         },
         {
-          label: "Tavoli / Prenotazioni",
+          label: t('scanner.stats.tablesReservations'),
           icon: Armchair,
           iconColor: "text-amber-400",
           bgColor: "bg-amber-500/20",
@@ -155,7 +157,7 @@ export default function ScannerStatsPage() {
           total: stats?.totalTables || 0,
         },
         {
-          label: "Biglietti SIAE",
+          label: t('scanner.stats.siaeTickets'),
           icon: Ticket,
           iconColor: "text-emerald-400",
           bgColor: "bg-emerald-500/20",
@@ -176,7 +178,7 @@ export default function ScannerStatsPage() {
               <div>
                 <h1 className="text-3xl font-bold flex items-center gap-2">
                   <Activity className="h-7 w-7 text-blue-400" />
-                  Statistiche Evento
+                  {t('scanner.stats.eventStats')}
                 </h1>
                 {event && (
                   <p className="text-muted-foreground">{event.name}</p>
@@ -185,7 +187,7 @@ export default function ScannerStatsPage() {
             </div>
             <Button variant="outline" onClick={handleDesktopRefresh} data-testid="button-refresh">
               <RefreshCw className="w-4 h-4 mr-2" />
-              Aggiorna
+              {t('scanner.stats.refresh')}
             </Button>
           </div>
 
@@ -198,7 +200,7 @@ export default function ScannerStatsPage() {
                   </div>
                   <div>
                     <div className="text-3xl font-bold text-blue-400">{overallProgress}%</div>
-                    <p className="text-sm text-muted-foreground">Progresso Totale</p>
+                    <p className="text-sm text-muted-foreground">{t('scanner.stats.totalProgress')}</p>
                   </div>
                 </div>
                 <Progress value={overallProgress} className="h-2 mt-4" />
@@ -207,27 +209,27 @@ export default function ScannerStatsPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{checkedAll}</div>
-                <p className="text-sm text-muted-foreground">Ingressi Registrati</p>
+                <p className="text-sm text-muted-foreground">{t('scanner.stats.registeredEntries')}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{totalAll}</div>
-                <p className="text-sm text-muted-foreground">Totale Previsti</p>
+                <p className="text-sm text-muted-foreground">{t('scanner.stats.totalExpected')}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{totalAll - checkedAll}</div>
-                <p className="text-sm text-muted-foreground">In Attesa</p>
+                <p className="text-sm text-muted-foreground">{t('scanner.stats.waiting')}</p>
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Dettaglio per Categoria</CardTitle>
-              <CardDescription>Statistiche di ingresso suddivise per tipologia</CardDescription>
+              <CardTitle>{t('scanner.stats.categoryDetail')}</CardTitle>
+              <CardDescription>{t('scanner.stats.categoryDetailDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {statsLoading ? (
@@ -240,11 +242,11 @@ export default function ScannerStatsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Entrati</TableHead>
-                      <TableHead className="text-right">Totale</TableHead>
-                      <TableHead className="text-right">Percentuale</TableHead>
-                      <TableHead className="w-[200px]">Progresso</TableHead>
+                      <TableHead>{t('scanner.stats.category')}</TableHead>
+                      <TableHead className="text-right">{t('scanner.stats.entered')}</TableHead>
+                      <TableHead className="text-right">{t('scanner.stats.total')}</TableHead>
+                      <TableHead className="text-right">{t('scanner.stats.percentage')}</TableHead>
+                      <TableHead className="w-[200px]">{t('scanner.stats.progress')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -285,13 +287,13 @@ export default function ScannerStatsPage() {
                       <CheckCircle2 className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <p className="text-lg font-semibold">Vedi Lista Entrati</p>
-                      <p className="text-sm text-muted-foreground">{checkedAll} persone registrate</p>
+                      <p className="text-lg font-semibold">{t('scanner.stats.viewEnteredList')}</p>
+                      <p className="text-sm text-muted-foreground">{checkedAll} {t('scanner.stats.peopleRegistered')}</p>
                     </div>
                   </div>
                   <Button variant="outline" data-testid="button-view-list">
                     <Eye className="w-4 h-4 mr-2" />
-                    Visualizza
+                    {t('scanner.stats.view')}
                   </Button>
                 </div>
               </CardContent>
@@ -313,14 +315,14 @@ export default function ScannerStatsPage() {
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <BarChart3 className="h-7 w-7 text-blue-400" />
-                Statistiche Generali
+                {t('scanner.stats.generalStats')}
               </h1>
-              <p className="text-muted-foreground">Panoramica delle scansioni complessive</p>
+              <p className="text-muted-foreground">{t('scanner.stats.generalStatsSubtitle')}</p>
             </div>
           </div>
           <Button variant="outline" onClick={handleDesktopRefresh} data-testid="button-refresh">
             <RefreshCw className="w-4 h-4 mr-2" />
-            Aggiorna
+            {t('scanner.stats.refresh')}
           </Button>
         </div>
 
@@ -348,7 +350,7 @@ export default function ScannerStatsPage() {
                       <div className="text-4xl font-bold text-emerald-400 tabular-nums">
                         {totalStats?.totalScans || 0}
                       </div>
-                      <p className="text-sm text-muted-foreground">Scansioni Totali</p>
+                      <p className="text-sm text-muted-foreground">{t('scanner.stats.totalScans')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -364,7 +366,7 @@ export default function ScannerStatsPage() {
                       <div className="text-4xl font-bold text-blue-400 tabular-nums">
                         {totalStats?.todayScans || 0}
                       </div>
-                      <p className="text-sm text-muted-foreground">Scansioni Oggi</p>
+                      <p className="text-sm text-muted-foreground">{t('scanner.stats.todayScans')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -380,7 +382,7 @@ export default function ScannerStatsPage() {
                       <div className="text-4xl font-bold text-purple-400 tabular-nums">
                         {totalStats?.totalEventsScanned || 0}
                       </div>
-                      <p className="text-sm text-muted-foreground">Eventi Scansionati</p>
+                      <p className="text-sm text-muted-foreground">{t('scanner.stats.eventsScanned')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -389,15 +391,15 @@ export default function ScannerStatsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Riepilogo Attività</CardTitle>
-                <CardDescription>Panoramica delle statistiche di scansione</CardDescription>
+                <CardTitle>{t('scanner.stats.activitySummary')}</CardTitle>
+                <CardDescription>{t('scanner.stats.activitySummaryDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Metrica</TableHead>
-                      <TableHead className="text-right">Valore</TableHead>
+                      <TableHead>{t('scanner.stats.metric')}</TableHead>
+                      <TableHead className="text-right">{t('scanner.stats.value')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -405,7 +407,7 @@ export default function ScannerStatsPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <Zap className="w-5 h-5 text-emerald-400" />
-                          Scansioni Totali
+                          {t('scanner.stats.totalScans')}
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-lg font-semibold tabular-nums">
@@ -416,7 +418,7 @@ export default function ScannerStatsPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <Clock className="w-5 h-5 text-blue-400" />
-                          Scansioni Oggi
+                          {t('scanner.stats.todayScans')}
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-lg font-semibold tabular-nums">
@@ -427,7 +429,7 @@ export default function ScannerStatsPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <CalendarDays className="w-5 h-5 text-purple-400" />
-                          Eventi Scansionati
+                          {t('scanner.stats.eventsScanned')}
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-lg font-semibold tabular-nums">
@@ -467,7 +469,7 @@ export default function ScannerStatsPage() {
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold flex items-center gap-2" data-testid="text-title">
                 <Activity className="h-6 w-6 text-blue-400" />
-                Statistiche
+                {t('scanner.stats.statistics')}
               </h1>
               {event && (
                 <p className="text-sm text-muted-foreground truncate">
@@ -510,7 +512,7 @@ export default function ScannerStatsPage() {
                   >
                     <Target className="w-12 h-12 text-blue-400" />
                   </motion.div>
-                  <p className="text-base text-muted-foreground mb-3">Progresso Totale</p>
+                  <p className="text-base text-muted-foreground mb-3">{t('scanner.stats.totalProgress')}</p>
                   <motion.div 
                     className="flex items-center justify-center gap-2"
                     initial={{ scale: 0.5, opacity: 0 }}
@@ -523,7 +525,7 @@ export default function ScannerStatsPage() {
                     <span className="text-3xl font-bold text-blue-400/60">%</span>
                   </motion.div>
                   <p className="text-base text-muted-foreground mt-3">
-                    <span className="font-semibold text-foreground">{checkedAll}</span> di {totalAll} ingressi
+                    <span className="font-semibold text-foreground">{checkedAll}</span> {t('scanner.stats.of')} {totalAll} {t('scanner.stats.entries')}
                   </p>
                 </div>
                 <div className="mt-8">
@@ -563,7 +565,7 @@ export default function ScannerStatsPage() {
                         <Users className="w-8 h-8 text-purple-400" />
                       </motion.div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-base text-muted-foreground mb-1">Liste Invitati</p>
+                        <p className="text-base text-muted-foreground mb-1">{t('scanner.stats.guestLists')}</p>
                         <div className="flex items-baseline gap-2 mb-3">
                           <span className="text-4xl font-bold tabular-nums">{stats?.checkedInLists || 0}</span>
                           <span className="text-lg text-muted-foreground">/ {stats?.totalLists || 0}</span>
@@ -589,7 +591,7 @@ export default function ScannerStatsPage() {
                         <Armchair className="w-8 h-8 text-amber-400" />
                       </motion.div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-base text-muted-foreground mb-1">Tavoli / Prenotazioni</p>
+                        <p className="text-base text-muted-foreground mb-1">{t('scanner.stats.tablesReservations')}</p>
                         <div className="flex items-baseline gap-2 mb-3">
                           <span className="text-4xl font-bold tabular-nums">{stats?.checkedInTables || 0}</span>
                           <span className="text-lg text-muted-foreground">/ {stats?.totalTables || 0}</span>
@@ -615,7 +617,7 @@ export default function ScannerStatsPage() {
                         <Ticket className="w-8 h-8 text-emerald-400" />
                       </motion.div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-base text-muted-foreground mb-1">Biglietti SIAE</p>
+                        <p className="text-base text-muted-foreground mb-1">{t('scanner.stats.siaeTickets')}</p>
                         <div className="flex items-baseline gap-2 mb-3">
                           <span className="text-4xl font-bold tabular-nums">{stats?.checkedInTickets || 0}</span>
                           <span className="text-lg text-muted-foreground">/ {stats?.totalTickets || 0}</span>
@@ -646,9 +648,9 @@ export default function ScannerStatsPage() {
                           <CheckCircle2 className="w-7 h-7 text-primary" />
                         </div>
                         <div>
-                          <p className="text-lg font-semibold">Vedi Lista Entrati</p>
+                          <p className="text-lg font-semibold">{t('scanner.stats.viewEnteredList')}</p>
                           <p className="text-base text-muted-foreground">
-                            {checkedAll} persone registrate
+                            {checkedAll} {t('scanner.stats.peopleRegistered')}
                           </p>
                         </div>
                       </div>
@@ -681,7 +683,7 @@ export default function ScannerStatsPage() {
           </Link>
           <h1 className="text-xl font-bold flex items-center gap-3" data-testid="text-title">
             <BarChart3 className="h-6 w-6 text-blue-400" />
-            Statistiche Generali
+            {t('scanner.stats.generalStats')}
           </h1>
         </div>
         <HapticButton 
@@ -744,7 +746,7 @@ export default function ScannerStatsPage() {
                   >
                     <Zap className="w-10 h-10 text-emerald-400" />
                   </motion.div>
-                  <p className="text-base text-muted-foreground mb-2">Scansioni Totali</p>
+                  <p className="text-base text-muted-foreground mb-2">{t('scanner.stats.totalScans')}</p>
                   <motion.span 
                     className="text-6xl font-bold text-emerald-400 tabular-nums block"
                     initial={{ scale: 0.5, opacity: 0 }}
@@ -769,7 +771,7 @@ export default function ScannerStatsPage() {
                         <Clock className="w-8 h-8 text-blue-400" />
                       </motion.div>
                       <div className="flex-1">
-                        <p className="text-base text-muted-foreground mb-1">Scansioni Oggi</p>
+                        <p className="text-base text-muted-foreground mb-1">{t('scanner.stats.todayScans')}</p>
                         <span className="text-4xl font-bold tabular-nums">{totalStats?.todayScans || 0}</span>
                       </div>
                     </div>
@@ -788,7 +790,7 @@ export default function ScannerStatsPage() {
                         <CalendarDays className="w-8 h-8 text-purple-400" />
                       </motion.div>
                       <div className="flex-1">
-                        <p className="text-base text-muted-foreground mb-1">Eventi Scansionati</p>
+                        <p className="text-base text-muted-foreground mb-1">{t('scanner.stats.eventsScanned')}</p>
                         <span className="text-4xl font-bold tabular-nums">{totalStats?.totalEventsScanned || 0}</span>
                       </div>
                     </div>

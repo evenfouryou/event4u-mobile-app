@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,7 @@ const cardVariants = {
 
 export default function PrMyEventsPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [activeFilter, setActiveFilter] = useState<"upcoming" | "past">("upcoming");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -120,13 +122,13 @@ export default function PrMyEventsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return <Badge variant="outline" className="text-sm">Bozza</Badge>;
+        return <Badge variant="outline" className="text-sm">{t('pr.status.draft')}</Badge>;
       case 'scheduled':
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm">Programmato</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm">{t('pr.status.scheduled')}</Badge>;
       case 'ongoing':
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-sm">In Corso</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-sm">{t('pr.status.ongoing')}</Badge>;
       case 'closed':
-        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-sm">Concluso</Badge>;
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-sm">{t('pr.status.closed')}</Badge>;
       default:
         return <Badge variant="outline" className="text-sm">{status}</Badge>;
     }
@@ -135,11 +137,11 @@ export default function PrMyEventsPage() {
   const getAssignmentTypeBadge = (type?: string) => {
     switch (type) {
       case 'owner':
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-sm font-semibold">Owner</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-sm font-semibold">{t('pr.roles.owner')}</Badge>;
       case 'staff':
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm font-semibold">Staff</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm font-semibold">{t('pr.roles.staff')}</Badge>;
       case 'pr':
-        return <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-semibold">PR</Badge>;
+        return <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-semibold">{t('pr.roles.pr')}</Badge>;
       default:
         return type ? <Badge variant="outline" className="text-sm">{type}</Badge> : null;
     }
@@ -197,7 +199,7 @@ export default function PrMyEventsPage() {
                   {isEventToday && (
                     <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-bold animate-pulse">
                       <Sparkles className="w-3 h-3 mr-1" />
-                      OGGI
+                      {t('pr.today').toUpperCase()}
                     </Badge>
                   )}
                 </div>
@@ -221,7 +223,7 @@ export default function PrMyEventsPage() {
               {event.assignmentType && (
                 <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Ruolo:</span>
+                    <span className="text-sm text-muted-foreground">{t('pr.tableHeaders.role')}:</span>
                     {getAssignmentTypeBadge(event.assignmentType)}
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -233,19 +235,19 @@ export default function PrMyEventsPage() {
                   {event.permissions?.canManageLists && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400">
                       <ListChecks className="w-4 h-4" />
-                      <span className="text-sm font-medium">Liste</span>
+                      <span className="text-sm font-medium">{t('pr.lists')}</span>
                     </div>
                   )}
                   {event.permissions?.canManageTables && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400">
                       <Armchair className="w-4 h-4" />
-                      <span className="text-sm font-medium">Tavoli</span>
+                      <span className="text-sm font-medium">{t('pr.tables')}</span>
                     </div>
                   )}
                   {event.permissions?.canAddToLists && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-400">
                       <ListChecks className="w-4 h-4" />
-                      <span className="text-sm font-medium">Aggiungi Liste</span>
+                      <span className="text-sm font-medium">{t('pr.addLists')}</span>
                     </div>
                   )}
                 </div>
@@ -277,9 +279,9 @@ export default function PrMyEventsPage() {
           <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6">
             <CalendarClock className="w-10 h-10 text-blue-400" />
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">Nessun evento in arrivo</h3>
+          <h3 className="text-xl font-bold text-foreground mb-2">{t('pr.noUpcomingEventsTitle')}</h3>
           <p className="text-base text-muted-foreground">
-            Non hai eventi programmati per il futuro
+            {t('pr.noUpcomingEventsDescription')}
           </p>
         </>
       )}
@@ -288,9 +290,9 @@ export default function PrMyEventsPage() {
           <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mb-6">
             <CheckCircle2 className="w-10 h-10 text-purple-400" />
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">Nessun evento passato</h3>
+          <h3 className="text-xl font-bold text-foreground mb-2">{t('pr.noPastEventsTitle')}</h3>
           <p className="text-base text-muted-foreground">
-            Non hai ancora completato nessun evento
+            {t('pr.noPastEventsDescription')}
           </p>
         </>
       )}
@@ -299,10 +301,9 @@ export default function PrMyEventsPage() {
           <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-6">
             <Users className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">Nessun evento assegnato</h3>
+          <h3 className="text-xl font-bold text-foreground mb-2">{t('pr.noEventsTitle')}</h3>
           <p className="text-base text-muted-foreground">
-            Non sei stato ancora assegnato a nessun evento.
-            Contatta il tuo responsabile.
+            {t('pr.noAssignedEventsMessage')}
           </p>
         </>
       )}
@@ -311,7 +312,7 @@ export default function PrMyEventsPage() {
 
   const header = (
     <MobileHeader
-      title="I Miei Eventi"
+      title={t('pr.myEvents')}
       leftAction={
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
           <PartyPopper className="w-5 h-5 text-primary" />
@@ -344,8 +345,8 @@ export default function PrMyEventsPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-pr-my-events">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">I Miei Eventi</h1>
-            <p className="text-muted-foreground">Eventi a cui sei assegnato come PR</p>
+            <h1 className="text-3xl font-bold">{t('pr.myEvents')}</h1>
+            <p className="text-muted-foreground">{t('pr.eventsAssignedAsPr')}</p>
           </div>
           <Button 
             variant="outline" 
@@ -354,7 +355,7 @@ export default function PrMyEventsPage() {
             data-testid="button-refresh-desktop"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Aggiorna
+            {t('common.refresh')}
           </Button>
         </div>
 
@@ -367,7 +368,7 @@ export default function PrMyEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{myEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">Totali</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.total')}</p>
                 </div>
               </div>
             </CardContent>
@@ -380,7 +381,7 @@ export default function PrMyEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-emerald-400">{todayEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">Oggi</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.today')}</p>
                 </div>
               </div>
             </CardContent>
@@ -393,7 +394,7 @@ export default function PrMyEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-blue-400">{upcomingEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">In Arrivo</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.upcoming')}</p>
                 </div>
               </div>
             </CardContent>
@@ -406,7 +407,7 @@ export default function PrMyEventsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-purple-400">{pastEvents.length}</div>
-                  <p className="text-sm text-muted-foreground">Passati</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.stats.past')}</p>
                 </div>
               </div>
             </CardContent>
@@ -420,7 +421,7 @@ export default function PrMyEventsPage() {
             data-testid="filter-upcoming-desktop"
           >
             <CalendarClock className="w-4 h-4 mr-2" />
-            In Arrivo ({upcomingEvents.length})
+            {t('pr.stats.upcoming')} ({upcomingEvents.length})
           </Button>
           <Button
             variant={activeFilter === "past" ? "default" : "outline"}
@@ -428,19 +429,19 @@ export default function PrMyEventsPage() {
             data-testid="filter-past-desktop"
           >
             <CheckCircle2 className="w-4 h-4 mr-2" />
-            Passati ({pastEvents.length})
+            {t('pr.stats.past')} ({pastEvents.length})
           </Button>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>
-              {activeFilter === "upcoming" ? "Eventi in Arrivo" : "Eventi Passati"}
+              {activeFilter === "upcoming" ? t('pr.upcomingEventsTitle') : t('pr.pastEventsTitle')}
             </CardTitle>
             <CardDescription>
               {activeFilter === "upcoming" 
-                ? "Lista degli eventi programmati a cui sei assegnato" 
-                : "Storico degli eventi completati"
+                ? t('pr.upcomingEventsDescription') 
+                : t('pr.pastEventsDescription')
               }
             </CardDescription>
           </CardHeader>
@@ -454,23 +455,23 @@ export default function PrMyEventsPage() {
             ) : displayedEvents.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 {myEvents.length === 0 
-                  ? "Non sei ancora assegnato a nessun evento. Contatta il tuo responsabile."
+                  ? t('pr.noAssignedEventsMessage')
                   : activeFilter === "upcoming" 
-                    ? "Nessun evento in arrivo"
-                    : "Nessun evento passato"
+                    ? t('pr.noUpcomingEventsTitle')
+                    : t('pr.noPastEventsTitle')
                 }
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Orario</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    <TableHead>Permessi</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('pr.tableHeaders.event')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.date')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.time')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.status')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.role')}</TableHead>
+                    <TableHead>{t('pr.tableHeaders.permissions')}</TableHead>
+                    <TableHead className="text-right">{t('pr.tableHeaders.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -490,7 +491,7 @@ export default function PrMyEventsPage() {
                             {isEventToday && (
                               <Badge className="bg-primary/20 text-primary border-primary/30">
                                 <Sparkles className="w-3 h-3 mr-1" />
-                                OGGI
+                                {t('pr.today').toUpperCase()}
                               </Badge>
                             )}
                           </div>
@@ -506,19 +507,19 @@ export default function PrMyEventsPage() {
                             {event.permissions?.canManageLists && (
                               <Badge variant="outline" className="text-xs">
                                 <ListChecks className="w-3 h-3 mr-1" />
-                                Liste
+                                {t('pr.lists')}
                               </Badge>
                             )}
                             {event.permissions?.canManageTables && (
                               <Badge variant="outline" className="text-xs">
                                 <Armchair className="w-3 h-3 mr-1" />
-                                Tavoli
+                                {t('pr.tables')}
                               </Badge>
                             )}
                             {event.permissions?.canAddToLists && (
                               <Badge variant="outline" className="text-xs">
                                 <ListChecks className="w-3 h-3 mr-1" />
-                                Aggiungi
+                                {t('pr.addPermission')}
                               </Badge>
                             )}
                           </div>
@@ -535,7 +536,7 @@ export default function PrMyEventsPage() {
                             </Button>
                             <Link href={`/events/${event.id}/panel`}>
                               <Button size="sm" data-testid={`button-open-${event.id}`}>
-                                Apri
+                                {t('pr.open')}
                                 <ChevronRight className="w-4 h-4 ml-1" />
                               </Button>
                             </Link>
@@ -554,29 +555,29 @@ export default function PrMyEventsPage() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{selectedEvent?.name}</DialogTitle>
-              <DialogDescription>Dettagli evento</DialogDescription>
+              <DialogDescription>{t('pr.eventDetails')}</DialogDescription>
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Data</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.tableHeaders.date')}</p>
                     <p className="font-medium">
                       {format(new Date(selectedEvent.startDatetime), "EEEE d MMMM yyyy", { locale: it })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Orario</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.tableHeaders.time')}</p>
                     <p className="font-medium">
                       {format(new Date(selectedEvent.startDatetime), "HH:mm", { locale: it })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Stato</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.tableHeaders.status')}</p>
                     <div className="mt-1">{getStatusBadge(selectedEvent.status)}</div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ruolo</p>
+                    <p className="text-sm text-muted-foreground">{t('pr.tableHeaders.role')}</p>
                     <div className="mt-1">
                       {(selectedEvent as MyEvent).assignmentType && getAssignmentTypeBadge((selectedEvent as MyEvent).assignmentType)}
                     </div>
@@ -589,21 +590,21 @@ export default function PrMyEventsPage() {
                   (selectedEvent as MyEvent).permissions!.canAddToLists
                 ) && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Permessi</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t('pr.permissions')}</p>
                     <div className="flex flex-wrap gap-2">
                       {(selectedEvent as MyEvent).permissions?.canManageLists && (
                         <Badge variant="outline">
-                          <ListChecks className="w-3 h-3 mr-1" />Gestione Liste
+                          <ListChecks className="w-3 h-3 mr-1" />{t('pr.manageLists')}
                         </Badge>
                       )}
                       {(selectedEvent as MyEvent).permissions?.canManageTables && (
                         <Badge variant="outline">
-                          <Armchair className="w-3 h-3 mr-1" />Gestione Tavoli
+                          <Armchair className="w-3 h-3 mr-1" />{t('pr.manageTables')}
                         </Badge>
                       )}
                       {(selectedEvent as MyEvent).permissions?.canAddToLists && (
                         <Badge variant="outline">
-                          <ListChecks className="w-3 h-3 mr-1" />Aggiungi Liste
+                          <ListChecks className="w-3 h-3 mr-1" />{t('pr.addLists')}
                         </Badge>
                       )}
                     </div>
@@ -612,11 +613,11 @@ export default function PrMyEventsPage() {
 
                 <div className="pt-4 border-t flex gap-2">
                   <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-                    Chiudi
+                    {t('common.close')}
                   </Button>
                   <Link href={`/events/${selectedEvent.id}/panel`}>
                     <Button>
-                      Apri Evento
+                      {t('pr.openEvent')}
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </Link>
@@ -656,7 +657,7 @@ export default function PrMyEventsPage() {
                   <Calendar className="w-6 h-6 text-primary" />
                 </div>
                 <span className="text-2xl font-bold text-foreground">{myEvents.length}</span>
-                <span className="text-xs text-muted-foreground">Totali</span>
+                <span className="text-xs text-muted-foreground">{t('pr.stats.total')}</span>
               </div>
             </motion.div>
 
@@ -669,7 +670,7 @@ export default function PrMyEventsPage() {
                   <CalendarCheck className="w-6 h-6 text-emerald-400" />
                 </div>
                 <span className="text-2xl font-bold text-emerald-400">{todayEvents.length}</span>
-                <span className="text-xs text-muted-foreground">Oggi</span>
+                <span className="text-xs text-muted-foreground">{t('pr.stats.today')}</span>
               </div>
             </motion.div>
 
@@ -682,7 +683,7 @@ export default function PrMyEventsPage() {
                   <CalendarClock className="w-6 h-6 text-blue-400" />
                 </div>
                 <span className="text-2xl font-bold text-blue-400">{upcomingEvents.length}</span>
-                <span className="text-xs text-muted-foreground">In arrivo</span>
+                <span className="text-xs text-muted-foreground">{t('pr.stats.upcoming')}</span>
               </div>
             </motion.div>
           </div>
@@ -699,7 +700,7 @@ export default function PrMyEventsPage() {
               data-testid="filter-upcoming"
             >
               <CalendarClock className="w-5 h-5 mr-2" />
-              In Arrivo ({upcomingEvents.length})
+              {t('pr.stats.upcoming')} ({upcomingEvents.length})
             </HapticButton>
             <HapticButton
               variant={activeFilter === "past" ? "default" : "ghost"}
@@ -712,7 +713,7 @@ export default function PrMyEventsPage() {
               data-testid="filter-past"
             >
               <CheckCircle2 className="w-5 h-5 mr-2" />
-              Passati ({pastEvents.length})
+              {t('pr.stats.past')} ({pastEvents.length})
             </HapticButton>
           </div>
         </motion.div>
