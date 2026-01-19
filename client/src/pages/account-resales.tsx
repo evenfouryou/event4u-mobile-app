@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -295,6 +296,7 @@ function LoadingState() {
 }
 
 export default function AccountResales() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedResale, setSelectedResale] = useState<ResaleListing | null>(null);
@@ -316,15 +318,15 @@ export default function AccountResales() {
       setIsCancelDialogOpen(false);
       setIsDetailDialogOpen(false);
       toast({
-        title: "Rivendita annullata",
-        description: "Il biglietto è stato rimosso dalla vendita.",
+        title: t("account.resalesPage.resaleCancelled"),
+        description: t("account.resalesPage.resaleCancelledDesc"),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile annullare la rivendita.",
+        title: t("account.resalesPage.error"),
+        description: error.message || t("account.resalesPage.cancelError"),
         variant: "destructive",
       });
     },
@@ -337,13 +339,13 @@ export default function AccountResales() {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "listed":
-        return { label: "In Vendita", variant: "default" as const };
+        return { label: t("account.resalesPage.statusListed"), variant: "default" as const };
       case "sold":
-        return { label: "Venduto", variant: "secondary" as const };
+        return { label: t("account.resalesPage.statusSold"), variant: "secondary" as const };
       case "cancelled":
-        return { label: "Annullato", variant: "destructive" as const };
+        return { label: t("account.resalesPage.statusCancelled"), variant: "destructive" as const };
       case "pending":
-        return { label: "In Attesa", variant: "outline" as const };
+        return { label: t("account.resalesPage.statusPending"), variant: "outline" as const };
       default:
         return { label: status, variant: "outline" as const };
     }
@@ -358,9 +360,9 @@ export default function AccountResales() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-account-resales">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">Rivendita Biglietti</h1>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">{t("account.resalesPage.title")}</h1>
             <p className="text-muted-foreground">
-              Gestisci i tuoi biglietti in vendita
+              {t("account.resalesPage.subtitle")}
             </p>
           </div>
         </div>
@@ -369,13 +371,13 @@ export default function AccountResales() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{resales.length}</div>
-              <p className="text-sm text-muted-foreground">Totale</p>
+              <p className="text-sm text-muted-foreground">{t("account.resalesPage.total")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-primary">{activeResales.length}</div>
-              <p className="text-sm text-muted-foreground">In Vendita</p>
+              <p className="text-sm text-muted-foreground">{t("account.resalesPage.forSale")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -383,7 +385,7 @@ export default function AccountResales() {
               <div className="text-2xl font-bold text-green-500">
                 {resales.filter(r => r.status === "sold").length}
               </div>
-              <p className="text-sm text-muted-foreground">Venduti</p>
+              <p className="text-sm text-muted-foreground">{t("account.resalesPage.sold")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -391,38 +393,38 @@ export default function AccountResales() {
               <div className="text-2xl font-bold text-muted-foreground">
                 {resales.filter(r => r.status === "cancelled").length}
               </div>
-              <p className="text-sm text-muted-foreground">Annullati</p>
+              <p className="text-sm text-muted-foreground">{t("account.resalesPage.cancelled")}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Elenco Rivendite</CardTitle>
+            <CardTitle>{t("account.resalesPage.listTitle")}</CardTitle>
             <CardDescription>
-              I tuoi biglietti in vendita e lo storico delle rivendite
+              {t("account.resalesPage.listSubtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {resales.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <ShoppingBag className="w-16 h-16 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nessun biglietto in vendita</h3>
+                <h3 className="text-lg font-semibold mb-2">{t("account.resalesPage.noResales")}</h3>
                 <p className="text-muted-foreground text-center max-w-sm">
-                  Metti in vendita i tuoi biglietti dalla pagina dettaglio del biglietto
+                  {t("account.resalesPage.noResalesDesc")}
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data Evento</TableHead>
-                    <TableHead>Settore</TableHead>
-                    <TableHead>Prezzo Originale</TableHead>
-                    <TableHead>Prezzo Rivendita</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t("account.resalesPage.event")}</TableHead>
+                    <TableHead>{t("account.resalesPage.eventDate")}</TableHead>
+                    <TableHead>{t("account.resalesPage.sector")}</TableHead>
+                    <TableHead>{t("account.resalesPage.originalPrice")}</TableHead>
+                    <TableHead>{t("account.resalesPage.resalePrice")}</TableHead>
+                    <TableHead>{t("account.resalesPage.status")}</TableHead>
+                    <TableHead className="text-right">{t("account.resalesPage.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -483,51 +485,51 @@ export default function AccountResales() {
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Dettaglio Rivendita</DialogTitle>
+              <DialogTitle>{t("account.resalesPage.detailTitle")}</DialogTitle>
               <DialogDescription>
-                Informazioni sulla rivendita del biglietto
+                {t("account.resalesPage.detailSubtitle")}
               </DialogDescription>
             </DialogHeader>
             {selectedResale && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Evento</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.event")}</p>
                     <p className="font-medium">{selectedResale.eventName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Data Evento</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.eventDate")}</p>
                     <p className="font-medium">
                       {format(new Date(selectedResale.eventStart), "d MMMM yyyy", { locale: it })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Settore</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.sectorLabel")}</p>
                     <p className="font-medium">{selectedResale.sectorName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Stato</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.status")}</p>
                     <Badge variant={getStatusConfig(selectedResale.status).variant}>
                       {getStatusConfig(selectedResale.status).label}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Prezzo Originale</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.originalPrice")}</p>
                     <p className="font-medium">€{parseFloat(selectedResale.originalPrice || "0").toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Prezzo Rivendita</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.resalePrice")}</p>
                     <p className="font-medium text-primary">€{parseFloat(selectedResale.resalePrice || "0").toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Data Inserimento</p>
+                    <p className="text-sm text-muted-foreground">{t("account.resalesPage.listedAt")}</p>
                     <p className="font-medium">
                       {format(new Date(selectedResale.listedAt), "d MMM yyyy HH:mm", { locale: it })}
                     </p>
                   </div>
                   {selectedResale.soldAt && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Data Vendita</p>
+                      <p className="text-sm text-muted-foreground">{t("account.resalesPage.soldAt")}</p>
                       <p className="font-medium">
                         {format(new Date(selectedResale.soldAt), "d MMM yyyy HH:mm", { locale: it })}
                       </p>
@@ -547,11 +549,11 @@ export default function AccountResales() {
                   data-testid="button-cancel-from-detail"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
-                  Annulla Rivendita
+                  {t("account.resalesPage.cancelResale")}
                 </Button>
               )}
               <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-                Chiudi
+                {t("account.resalesPage.close")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -560,22 +562,22 @@ export default function AccountResales() {
         <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Conferma Annullamento</DialogTitle>
+              <DialogTitle>{t("account.resalesPage.confirmCancelTitle")}</DialogTitle>
               <DialogDescription>
-                Sei sicuro di voler annullare la rivendita di questo biglietto?
+                {t("account.resalesPage.confirmCancelDesc")}
               </DialogDescription>
             </DialogHeader>
             {selectedResale && (
               <div className="py-4">
                 <p className="font-medium">{selectedResale.eventName}</p>
                 <p className="text-sm text-muted-foreground">
-                  Prezzo: €{parseFloat(selectedResale.resalePrice || "0").toFixed(2)}
+                  {t("account.resalesPage.price")}: €{parseFloat(selectedResale.resalePrice || "0").toFixed(2)}
                 </p>
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
-                Annulla
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -588,7 +590,7 @@ export default function AccountResales() {
                 ) : (
                   <XCircle className="w-4 h-4 mr-2" />
                 )}
-                Conferma Annullamento
+                {t("account.resalesPage.confirmCancel")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -627,7 +629,7 @@ export default function AccountResales() {
                 className="text-2xl font-bold text-foreground"
                 data-testid="text-page-title"
               >
-                Rivendita Biglietti
+                {t("account.resalesPage.title")}
               </h1>
               <p className="text-base text-muted-foreground">
                 {resales.length} {resales.length === 1 ? 'biglietto' : 'biglietti'}

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
 import { loadStripe, StripeElementsOptions } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -227,6 +228,7 @@ function NameChangePaymentForm({
 }
 
 export default function AccountNameChange() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -279,21 +281,21 @@ export default function AccountNameChange() {
         setPendingFee(data.fee);
         setShowPaymentDialog(true);
         toast({
-          title: "Richiesta creata",
-          description: "Per completare il cambio nominativo è richiesto il pagamento della commissione.",
+          title: t("account.nameChangePage.requestCreated"),
+          description: t("account.nameChangePage.requestCreatedDesc"),
         });
       } else {
         toast({
-          title: "Richiesta inviata",
-          description: "La tua richiesta di cambio nominativo è stata inviata con successo.",
+          title: t("account.nameChangePage.requestSent"),
+          description: t("account.nameChangePage.requestSentDesc"),
         });
         navigate(`/account/tickets/${id}`);
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile inviare la richiesta di cambio nominativo.",
+        title: t("account.nameChangePage.error"),
+        description: error.message || t("account.nameChangePage.submitError"),
         variant: "destructive",
       });
     },
@@ -317,8 +319,8 @@ export default function AccountNameChange() {
         })
         .catch((error) => {
           toast({
-            title: "Errore",
-            description: error.message || "Impossibile inizializzare il pagamento.",
+            title: t("account.nameChangePage.error"),
+            description: error.message || t("account.nameChangePage.paymentInitError"),
             variant: "destructive",
           });
           setShowPaymentDialog(false);
@@ -339,8 +341,8 @@ export default function AccountNameChange() {
     setShowPaymentDialog(false);
     setClientSecret(null);
     toast({
-      title: "Pagamento annullato",
-      description: "Puoi completare il pagamento in seguito dalla pagina del biglietto.",
+      title: t("account.nameChangePage.paymentCancelled"),
+      description: t("account.nameChangePage.paymentCancelledDesc"),
     });
     navigate(`/account/tickets/${id}`);
   };
@@ -349,7 +351,7 @@ export default function AccountNameChange() {
   const currentHolder = ticket
     ? [ticket.participantFirstName, ticket.participantLastName]
         .filter(Boolean)
-        .join(" ") || "Non nominativo"
+        .join(" ") || t("account.nameChangePage.noHolder")
     : "";
 
   if (!isMobile) {
@@ -368,10 +370,10 @@ export default function AccountNameChange() {
         <div className="container mx-auto p-6" data-testid="page-account-name-change">
           <div className="text-center py-16">
             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Biglietto non trovato</p>
+            <p className="text-muted-foreground">{t("account.nameChangePage.ticketNotFound")}</p>
             <Link href="/account/tickets">
               <Button variant="ghost" className="mt-4 text-primary" data-testid="button-back-to-tickets">
-                Torna ai biglietti
+                {t("account.nameChangePage.backToTickets")}
               </Button>
             </Link>
           </div>
@@ -386,7 +388,7 @@ export default function AccountNameChange() {
             <Link href={`/account/tickets/${id}`}>
               <Button variant="ghost" className="gap-2" data-testid="button-back">
                 <ArrowLeft className="w-4 h-4" />
-                Torna al biglietto
+                {t("account.nameChangePage.backToTicket")}
               </Button>
             </Link>
           </div>
@@ -395,12 +397,12 @@ export default function AccountNameChange() {
             <CardContent className="p-8 text-center">
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-foreground mb-2">
-                Cambio nominativo non disponibile
+                {t("account.nameChangePage.notAvailable")}
               </h2>
               <p className="text-muted-foreground">
                 {ticket.hoursToEvent < 24
-                  ? "Il cambio nominativo non è più disponibile (scadenza: 24h prima dell'evento)."
-                  : "Il cambio nominativo non è consentito per questo evento."}
+                  ? t("account.nameChangePage.notAvailableDeadline")
+                  : t("account.nameChangePage.notAllowed")}
               </p>
             </CardContent>
           </Card>
@@ -414,16 +416,16 @@ export default function AccountNameChange() {
           <Link href={`/account/tickets/${id}`}>
             <Button variant="ghost" className="gap-2" data-testid="button-back">
               <ArrowLeft className="w-4 h-4" />
-              Torna al biglietto
+              {t("account.nameChangePage.backToTicket")}
             </Button>
           </Link>
         </div>
 
         <Card>
           <CardHeader className="bg-gradient-to-r from-primary/20 to-primary/10 border-b">
-            <CardTitle className="text-xl font-bold">Cambio Nominativo</CardTitle>
+            <CardTitle className="text-xl font-bold">{t("account.nameChangePage.title")}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Modifica l'intestatario del biglietto
+              {t("account.nameChangePage.subtitle")}
             </p>
           </CardHeader>
 
@@ -445,7 +447,7 @@ export default function AccountNameChange() {
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <User className="w-4 h-4 text-primary" />
-                  <span>Attuale: {currentHolder}</span>
+                  <span>{t("account.nameChangePage.currentHolder")}: {currentHolder}</span>
                 </div>
               </div>
             </div>
@@ -456,10 +458,10 @@ export default function AccountNameChange() {
                   <Euro className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Commissione: €{fee.toFixed(2)}
+                      {t("account.nameChangePage.feeLabel")}: €{fee.toFixed(2)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Il pagamento sarà richiesto dopo l'invio della richiesta.
+                      {t("account.nameChangePage.feeNote")}
                     </p>
                   </div>
                 </div>
@@ -469,9 +471,9 @@ export default function AccountNameChange() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Cambio gratuito</p>
+                    <p className="text-sm font-medium text-foreground">{t("account.nameChangePage.freeChange")}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Nessun costo aggiuntivo per il cambio nominativo di questo biglietto.
+                      {t("account.nameChangePage.freeChangeNote")}
                     </p>
                   </div>
                 </div>
@@ -486,10 +488,10 @@ export default function AccountNameChange() {
                     name="newFirstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nuovo Nome</FormLabel>
+                        <FormLabel>{t("account.nameChangePage.newFirstName")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Inserisci il nome"
+                            placeholder={t("account.nameChangePage.newFirstNamePlaceholder")}
                             {...field}
                             data-testid="input-first-name"
                           />
@@ -504,10 +506,10 @@ export default function AccountNameChange() {
                     name="newLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nuovo Cognome</FormLabel>
+                        <FormLabel>{t("account.nameChangePage.newLastName")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Inserisci il cognome"
+                            placeholder={t("account.nameChangePage.newLastNamePlaceholder")}
                             {...field}
                             data-testid="input-last-name"
                           />
@@ -523,11 +525,11 @@ export default function AccountNameChange() {
                   name="newEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email del Nuovo Intestatario</FormLabel>
+                      <FormLabel>{t("account.nameChangePage.newEmail")}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="email@esempio.com"
+                          placeholder={t("account.nameChangePage.emailPlaceholder")}
                           {...field}
                           data-testid="input-new-email"
                         />
@@ -542,10 +544,10 @@ export default function AccountNameChange() {
                   name="newFiscalCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Codice Fiscale</FormLabel>
+                      <FormLabel>{t("account.nameChangePage.fiscalCode")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="RSSMRA85M01H501Z"
+                          placeholder={t("account.nameChangePage.fiscalCodePlaceholder")}
                           maxLength={16}
                           {...field}
                           onChange={(e) => field.onChange(e.target.value.toUpperCase())}
@@ -562,7 +564,7 @@ export default function AccountNameChange() {
                   name="newDateOfBirth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data di Nascita</FormLabel>
+                      <FormLabel>{t("account.nameChangePage.dateOfBirth")}</FormLabel>
                       <FormControl>
                         <Input
                           type="date"

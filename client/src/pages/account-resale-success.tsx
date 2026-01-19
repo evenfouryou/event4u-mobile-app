@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 
 export default function AccountResaleSuccess() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [confirmationStatus, setConfirmationStatus] = useState<'pending' | 'success' | 'error'>('pending');
@@ -29,7 +31,7 @@ export default function AccountResaleSuccess() {
   
   const confirmMutation = useMutation({
     mutationFn: async () => {
-      if (!resaleId) throw new Error("ID rivendita mancante");
+      if (!resaleId) throw new Error(t("account.resaleSuccessPage.resaleIdMissing"));
       // Include token in body for authentication when session cookies are lost after Stripe redirect
       const response = await apiRequest('POST', `/api/public/resales/${resaleId}/confirm`, { token: confirmToken });
       return await response.json();
@@ -40,8 +42,8 @@ export default function AccountResaleSuccess() {
       queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
       queryClient.invalidateQueries({ queryKey: ['/api/public/account/resales'] });
       toast({
-        title: "Acquisto completato!",
-        description: "Il tuo nuovo biglietto è pronto.",
+        title: t("account.resaleSuccessPage.toastSuccess"),
+        description: t("account.resaleSuccessPage.toastSuccessDesc"),
       });
     },
     onError: async (error: any) => {
@@ -64,10 +66,10 @@ export default function AccountResaleSuccess() {
             queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
             queryClient.invalidateQueries({ queryKey: ['/api/public/account/resales'] });
             toast({
-              title: "Acquisto completato!",
+              title: t("account.resaleSuccessPage.toastSuccess"),
               description: recoveryResult.recovered 
-                ? "Transazione recuperata con successo." 
-                : "Il tuo nuovo biglietto è pronto.",
+                ? t("account.resaleSuccessPage.recoveredDesc") 
+                : t("account.resaleSuccessPage.toastSuccessDesc"),
             });
             return; // Don't show error
           }
@@ -78,11 +80,11 @@ export default function AccountResaleSuccess() {
       
       // Recovery failed, show error
       setConfirmationStatus('error');
-      setErrorMessage(error.message || "Errore nella conferma dell'acquisto");
+      setErrorMessage(error.message || t("account.resaleSuccessPage.confirmError"));
       toast({
         variant: "destructive",
-        title: "Errore",
-        description: error.message || "Errore nella conferma dell'acquisto",
+        title: t("account.resaleSuccessPage.error"),
+        description: error.message || t("account.resaleSuccessPage.confirmError"),
       });
     },
   });
@@ -109,12 +111,12 @@ export default function AccountResaleSuccess() {
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <XCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Parametri mancanti</h2>
+            <h2 className="text-xl font-bold mb-2">{t("account.resaleSuccessPage.missingParams")}</h2>
             <p className="text-muted-foreground mb-6">
-              ID rivendita non trovato nella richiesta.
+              {t("account.resaleSuccessPage.missingResaleId")}
             </p>
             <Button onClick={() => setLocation("/account/tickets")} data-testid="button-go-tickets">
-              Vai ai miei biglietti
+              {t("account.resaleSuccessPage.goToTickets")}
             </Button>
           </CardContent>
         </Card>
@@ -136,19 +138,19 @@ export default function AccountResaleSuccess() {
               {confirmationStatus === 'pending' && (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  Elaborazione in corso...
+                  {t("account.resaleSuccessPage.processing")}
                 </>
               )}
               {confirmationStatus === 'success' && (
                 <>
                   <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  Acquisto completato!
+                  {t("account.resaleSuccessPage.purchaseComplete")}
                 </>
               )}
               {confirmationStatus === 'error' && (
                 <>
                   <AlertCircle className="w-6 h-6 text-destructive" />
-                  Errore
+                  {t("account.resaleSuccessPage.error")}
                 </>
               )}
             </CardTitle>
@@ -166,7 +168,7 @@ export default function AccountResaleSuccess() {
                   </div>
                 </div>
                 <p className="text-muted-foreground">
-                  Stiamo elaborando il tuo acquisto e generando il nuovo biglietto...
+                  {t("account.resaleSuccessPage.processingDesc")}
                 </p>
               </motion.div>
             )}
@@ -191,11 +193,10 @@ export default function AccountResaleSuccess() {
                 
                 <div className="space-y-2">
                   <p className="text-lg font-medium">
-                    Il tuo nuovo biglietto è pronto!
+                    {t("account.resaleSuccessPage.ticketReady")}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    Il biglietto originale è stato annullato e ne è stato emesso uno nuovo a tuo nome
-                    con un nuovo sigillo fiscale SIAE-compliant.
+                    {t("account.resaleSuccessPage.ticketReadyDesc")}
                   </p>
                 </div>
                 
@@ -207,7 +208,7 @@ export default function AccountResaleSuccess() {
                       data-testid="button-view-ticket"
                     >
                       <Ticket className="w-4 h-4 mr-2" />
-                      Visualizza biglietto
+                      {t("account.resaleSuccessPage.viewTicket")}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   )}
@@ -217,7 +218,7 @@ export default function AccountResaleSuccess() {
                     className="w-full"
                     data-testid="button-go-tickets-success"
                   >
-                    Vai ai miei biglietti
+                    {t("account.resaleSuccessPage.goToTickets")}
                   </Button>
                 </div>
               </motion.div>
@@ -237,10 +238,10 @@ export default function AccountResaleSuccess() {
                 
                 <div className="space-y-2">
                   <p className="text-lg font-medium">
-                    Si è verificato un errore
+                    {t("account.resaleSuccessPage.errorOccurred")}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    {errorMessage || "Non è stato possibile completare l'acquisto."}
+                    {errorMessage || t("account.resaleSuccessPage.purchaseError")}
                   </p>
                 </div>
                 
@@ -252,7 +253,7 @@ export default function AccountResaleSuccess() {
                     data-testid="button-retry"
                   >
                     {confirmMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Riprova
+                    {t("account.resaleSuccessPage.retry")}
                   </Button>
                   <Button 
                     variant="outline"
@@ -260,7 +261,7 @@ export default function AccountResaleSuccess() {
                     className="w-full"
                     data-testid="button-go-tickets-error"
                   >
-                    Vai ai miei biglietti
+                    {t("account.resaleSuccessPage.goToTickets")}
                   </Button>
                 </div>
               </motion.div>

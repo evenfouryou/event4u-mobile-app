@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,13 +24,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import { User, Mail, Phone, Save, Loader2, LogOut } from "lucide-react";
 
-const profileSchema = z.object({
-  firstName: z.string().min(1, "Il nome è obbligatorio"),
-  lastName: z.string().min(1, "Il cognome è obbligatorio"),
-  phone: z.string().min(1, "Il telefono è obbligatorio"),
+const createProfileSchema = (t: (key: string) => string) => z.object({
+  firstName: z.string().min(1, t("account.profilePage.validation.firstNameRequired")),
+  lastName: z.string().min(1, t("account.profilePage.validation.lastNameRequired")),
+  phone: z.string().min(1, t("account.profilePage.validation.phoneRequired")),
 });
 
-type ProfileFormData = z.infer<typeof profileSchema>;
+type ProfileFormData = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
 
 interface Customer {
   id: number;
@@ -65,9 +70,11 @@ const fadeInUp = {
 };
 
 export default function AccountProfile() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
+  const profileSchema = createProfileSchema(t);
 
   const { data: customer, isLoading } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
@@ -101,15 +108,15 @@ export default function AccountProfile() {
       queryClient.invalidateQueries({ queryKey: ["/api/public/customers/me"] });
       triggerHaptic('success');
       toast({
-        title: "Profilo aggiornato",
-        description: "Le tue informazioni sono state salvate.",
+        title: t("account.profilePage.profileUpdated"),
+        description: t("account.profilePage.profileUpdatedDesc"),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile aggiornare il profilo.",
+        title: t("account.profilePage.error"),
+        description: error.message || t("account.profilePage.updateError"),
         variant: "destructive",
       });
     },
@@ -157,8 +164,8 @@ export default function AccountProfile() {
     return (
       <div className="container mx-auto p-6 max-w-4xl" data-testid="page-account-profile">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Il Mio Profilo</h1>
-          <p className="text-muted-foreground">Gestisci le tue informazioni personali</p>
+          <h1 className="text-3xl font-bold">{t("account.profilePage.title")}</h1>
+          <p className="text-muted-foreground">{t("account.profilePage.subtitle")}</p>
         </div>
 
         <div className="grid gap-6">
@@ -188,7 +195,7 @@ export default function AccountProfile() {
                     <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
                       <User className="w-5 h-5 text-primary" />
                     </div>
-                    Dati Personali
+                    {t("account.profilePage.personalData")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -198,11 +205,11 @@ export default function AccountProfile() {
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome</FormLabel>
+                          <FormLabel>{t("account.profilePage.firstName")}</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
-                              placeholder="Il tuo nome"
+                              placeholder={t("account.profilePage.firstNamePlaceholder")}
                               data-testid="input-firstname"
                             />
                           </FormControl>
@@ -216,11 +223,11 @@ export default function AccountProfile() {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Cognome</FormLabel>
+                          <FormLabel>{t("account.profilePage.lastName")}</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
-                              placeholder="Il tuo cognome"
+                              placeholder={t("account.profilePage.lastNamePlaceholder")}
                               data-testid="input-lastname"
                             />
                           </FormControl>
@@ -238,7 +245,7 @@ export default function AccountProfile() {
                     <div className="w-10 h-10 rounded-full bg-teal-500/15 flex items-center justify-center">
                       <Mail className="w-5 h-5 text-teal-500" />
                     </div>
-                    Contatti
+                    {t("account.profilePage.contacts")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -248,7 +255,7 @@ export default function AccountProfile() {
                         <Mail className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="text-sm text-muted-foreground">{t("account.profilePage.email")}</p>
                         <p className="text-foreground truncate">{customer?.email}</p>
                       </div>
                     </div>
@@ -259,7 +266,7 @@ export default function AccountProfile() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Telefono</FormLabel>
+                        <FormLabel>{t("account.profilePage.phone")}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -268,7 +275,7 @@ export default function AccountProfile() {
                             <Input
                               {...field}
                               className="pl-16"
-                              placeholder="+39 333 1234567"
+                              placeholder={t("account.profilePage.phonePlaceholder")}
                               data-testid="input-phone"
                             />
                           </div>
@@ -289,7 +296,7 @@ export default function AccountProfile() {
                   data-testid="button-logout"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
-                  Esci dal tuo account
+                  {t("account.profilePage.logout")}
                 </Button>
 
                 <Button
@@ -302,7 +309,7 @@ export default function AccountProfile() {
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
                   )}
-                  Salva Modifiche
+                  {t("account.profilePage.saveChanges")}
                 </Button>
               </div>
             </form>
@@ -336,7 +343,7 @@ export default function AccountProfile() {
             >
               {customer?.firstName} {customer?.lastName}
             </h1>
-            <p className="text-muted-foreground text-lg mt-2">Il Mio Profilo</p>
+            <p className="text-muted-foreground text-lg mt-2">{t("account.profilePage.title")}</p>
           </div>
         </motion.div>
 
@@ -350,7 +357,7 @@ export default function AccountProfile() {
                 <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
                   <User className="w-6 h-6 text-primary" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground">Dati Personali</h2>
+                <h2 className="text-xl font-semibold text-foreground">{t("account.profilePage.personalData")}</h2>
               </div>
 
               <FormField
@@ -358,12 +365,12 @@ export default function AccountProfile() {
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-muted-foreground text-base">Nome</FormLabel>
+                    <FormLabel className="text-muted-foreground text-base">{t("account.profilePage.firstName")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         className="h-14 text-lg bg-muted border-border text-foreground rounded-xl px-5"
-                        placeholder="Il tuo nome"
+                        placeholder={t("account.profilePage.firstNamePlaceholder")}
                         data-testid="input-firstname"
                       />
                     </FormControl>
@@ -377,12 +384,12 @@ export default function AccountProfile() {
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-muted-foreground text-base">Cognome</FormLabel>
+                    <FormLabel className="text-muted-foreground text-base">{t("account.profilePage.lastName")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         className="h-14 text-lg bg-muted border-border text-foreground rounded-xl px-5"
-                        placeholder="Il tuo cognome"
+                        placeholder={t("account.profilePage.lastNamePlaceholder")}
                         data-testid="input-lastname"
                       />
                     </FormControl>
@@ -400,7 +407,7 @@ export default function AccountProfile() {
                 <div className="w-12 h-12 rounded-full bg-teal-500/15 flex items-center justify-center">
                   <Mail className="w-6 h-6 text-teal-500" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground">Contatti</h2>
+                <h2 className="text-xl font-semibold text-foreground">{t("account.profilePage.contacts")}</h2>
               </div>
 
               <div className="p-5 bg-muted/50 rounded-2xl border border-border">
@@ -409,7 +416,7 @@ export default function AccountProfile() {
                     <Mail className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="text-sm text-muted-foreground">{t("account.profilePage.email")}</p>
                     <p className="text-lg text-foreground truncate" data-testid="text-email">
                       {customer?.email}
                     </p>
@@ -422,7 +429,7 @@ export default function AccountProfile() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-muted-foreground text-base">Telefono</FormLabel>
+                    <FormLabel className="text-muted-foreground text-base">{t("account.profilePage.phone")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-muted flex items-center justify-center">
@@ -431,7 +438,7 @@ export default function AccountProfile() {
                         <Input
                           {...field}
                           className="h-14 text-lg pl-20 bg-muted border-border text-foreground rounded-xl"
-                          placeholder="+39 333 1234567"
+                          placeholder={t("account.profilePage.phonePlaceholder")}
                           data-testid="input-phone"
                         />
                       </div>
@@ -450,7 +457,7 @@ export default function AccountProfile() {
                 <div className="w-12 h-12 rounded-full bg-destructive/15 flex items-center justify-center">
                   <LogOut className="w-6 h-6 text-destructive" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground">Account</h2>
+                <h2 className="text-xl font-semibold text-foreground">{t("account.profilePage.accountSection")}</h2>
               </div>
 
               <HapticButton
@@ -462,7 +469,7 @@ export default function AccountProfile() {
                 data-testid="button-logout"
               >
                 <LogOut className="w-5 h-5 mr-2" />
-                Esci dal tuo account
+                {t("account.profilePage.logout")}
               </HapticButton>
             </motion.div>
           </form>
@@ -489,7 +496,7 @@ export default function AccountProfile() {
           ) : (
             <>
               <Save className="w-6 h-6 mr-2" />
-              Salva Modifiche
+              {t("account.profilePage.saveChanges")}
             </>
           )}
         </HapticButton>

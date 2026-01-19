@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
@@ -89,13 +90,13 @@ const transactionIcons: Record<string, typeof Wallet> = {
   refund: RefreshCw,
 };
 
-const transactionLabels: Record<string, string> = {
-  credit: "Ricarica",
-  debit: "Spesa",
-  hold: "Fondi Bloccati",
-  release: "Fondi Sbloccati",
-  refund: "Rimborso",
-};
+const getTransactionLabels = (t: (key: string) => string): Record<string, string> => ({
+  credit: t("account.walletPage.typeCredit"),
+  debit: t("account.walletPage.typeDebit"),
+  hold: t("account.walletPage.typeHold"),
+  release: t("account.walletPage.typeRelease"),
+  refund: t("account.walletPage.typeRefund"),
+});
 
 const quickAmounts = [10, 20, 50, 100];
 
@@ -125,11 +126,11 @@ function StripePaymentForm({
       queryClient.invalidateQueries({ queryKey: ["/api/public/account/wallet"] });
       queryClient.invalidateQueries({ queryKey: ["/api/public/account/wallet/transactions"] });
       triggerHaptic('success');
-      toast({ title: "Ricarica completata!", description: `€${amount.toFixed(2)} aggiunti al tuo wallet.` });
+      toast({ title: t("account.walletPage.topupCompleted"), description: t("account.walletPage.topupCompletedDesc", { amount: amount.toFixed(2) }) });
       onSuccess();
     },
     onError: (error: Error) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t("account.walletPage.error"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -145,7 +146,7 @@ function StripePaymentForm({
       });
 
       if (error) {
-        toast({ title: "Pagamento fallito", description: error.message, variant: "destructive" });
+        toast({ title: t("account.walletPage.paymentFailed"), description: error.message, variant: "destructive" });
         setIsProcessing(false);
         return;
       }
@@ -153,20 +154,21 @@ function StripePaymentForm({
       if (paymentIntent?.status === "succeeded") {
         confirmMutation.mutate(paymentIntent.id);
       } else {
-        toast({ title: "Pagamento non completato", description: "Riprova", variant: "destructive" });
+        toast({ title: t("account.walletPage.paymentNotCompleted"), description: t("account.walletPage.retry"), variant: "destructive" });
         setIsProcessing(false);
       }
     } catch (err: any) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t("account.walletPage.error"), description: err.message, variant: "destructive" });
       setIsProcessing(false);
     }
   };
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-6">
       <div className="text-center mb-4">
         <p className="text-3xl font-bold text-foreground">€{amount.toFixed(2)}</p>
-        <p className="text-muted-foreground">Ricarica wallet</p>
+        <p className="text-muted-foreground">{t("account.walletPage.topupWallet")}</p>
       </div>
       
       <div className="p-4 bg-muted/30 rounded-2xl border border-border">
@@ -185,7 +187,7 @@ function StripePaymentForm({
           data-testid="button-cancel-payment"
         >
           <X className="w-5 h-5 mr-2" />
-          Annulla
+          {t("account.walletPage.cancelPayment")}
         </HapticButton>
         <HapticButton
           className="flex-1 h-14 rounded-2xl"
@@ -199,7 +201,7 @@ function StripePaymentForm({
           ) : (
             <CreditCard className="w-5 h-5 mr-2" />
           )}
-          {isProcessing ? "Elaborazione..." : "Paga"}
+          {isProcessing ? t("account.walletPage.processing") : t("account.walletPage.pay")}
         </HapticButton>
       </div>
     </div>
@@ -232,6 +234,7 @@ const fadeInUp = {
 };
 
 export default function AccountWallet() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
@@ -263,9 +266,11 @@ export default function AccountWallet() {
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t("account.walletPage.error"), description: error.message, variant: "destructive" });
     },
   });
+  
+  const transactionLabels = getTransactionLabels(t);
 
   const isLoading = walletLoading || transactionsLoading;
 
@@ -285,11 +290,11 @@ export default function AccountWallet() {
 
   const handleRecharge = () => {
     if (currentAmount < 5) {
-      toast({ title: "Importo minimo €5", variant: "destructive" });
+      toast({ title: t("account.walletPage.minAmount"), variant: "destructive" });
       return;
     }
     if (currentAmount > 500) {
-      toast({ title: "Importo massimo €500", variant: "destructive" });
+      toast({ title: t("account.walletPage.maxAmount"), variant: "destructive" });
       return;
     }
     triggerHaptic('medium');
@@ -353,8 +358,8 @@ export default function AccountWallet() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-account-wallet">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Wallet</h1>
-            <p className="text-muted-foreground">Gestisci il tuo portafoglio digitale</p>
+            <h1 className="text-3xl font-bold">{t("account.walletPage.title")}</h1>
+            <p className="text-muted-foreground">{t("account.walletPage.subtitle")}</p>
           </div>
         </div>
 
@@ -363,7 +368,7 @@ export default function AccountWallet() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="w-5 h-5" />
-                Saldo Disponibile
+                {t("account.walletPage.availableBalance")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -380,9 +385,9 @@ export default function AccountWallet() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5" />
-                Ricarica Wallet
+                {t("account.walletPage.topupTitle")}
               </CardTitle>
-              <CardDescription>Seleziona un importo o inserisci un valore personalizzato</CardDescription>
+              <CardDescription>{t("account.walletPage.topupSubtitle")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
@@ -405,7 +410,7 @@ export default function AccountWallet() {
                   <Input
                     type="text"
                     inputMode="numeric"
-                    placeholder="Altro importo"
+                    placeholder={t("account.walletPage.customAmount")}
                     value={customAmount}
                     onChange={(e) => handleCustomAmountChange(e.target.value)}
                     className="pl-8"
@@ -422,7 +427,7 @@ export default function AccountWallet() {
                   ) : (
                     <CreditCard className="w-4 h-4 mr-2" />
                   )}
-                  {createTopupMutation.isPending ? "Caricamento..." : `Ricarica €${currentAmount > 0 ? currentAmount : "0"}`}
+                  {createTopupMutation.isPending ? t("account.walletPage.loading") : `${t("account.walletPage.topupButton")} €${currentAmount > 0 ? currentAmount : "0"}`}
                 </Button>
               </div>
             </CardContent>
@@ -433,26 +438,26 @@ export default function AccountWallet() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <RefreshCw className="w-5 h-5" />
-              Storico Transazioni
+              {t("account.walletPage.transactionsTitle")}
             </CardTitle>
-            <CardDescription>Le tue transazioni recenti</CardDescription>
+            <CardDescription>{t("account.walletPage.transactionsSubtitle")}</CardDescription>
           </CardHeader>
           <CardContent>
             {transactions.length === 0 ? (
               <div className="text-center py-12">
                 <Wallet className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">Nessuna transazione</p>
-                <p className="text-muted-foreground">Le tue transazioni appariranno qui</p>
+                <p className="text-lg font-medium">{t("account.walletPage.noTransactions")}</p>
+                <p className="text-muted-foreground">{t("account.walletPage.noTransactionsDesc")}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Descrizione</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
+                    <TableHead>{t("account.walletPage.typeLabel")}</TableHead>
+                    <TableHead>{t("account.walletPage.description")}</TableHead>
+                    <TableHead>{t("account.walletPage.date")}</TableHead>
+                    <TableHead className="text-right">{t("account.walletPage.amount")}</TableHead>
+                    <TableHead className="text-right">{t("account.walletPage.balance")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -501,7 +506,7 @@ export default function AccountWallet() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
-                Pagamento Sicuro
+                {t("account.walletPage.securePayment")}
               </DialogTitle>
             </DialogHeader>
             {elementsOptions && stripeLoaded && paymentIntentId ? (
@@ -554,7 +559,7 @@ export default function AccountWallet() {
                   <Wallet className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <p className="text-white/70 text-base font-medium">Saldo Disponibile</p>
+                  <p className="text-white/70 text-base font-medium">{t("account.walletPage.availableBalance")}</p>
                   {wallet?.currency && wallet.currency !== "EUR" && (
                     <p className="text-white/50 text-sm">{wallet.currency}</p>
                   )}
@@ -577,7 +582,7 @@ export default function AccountWallet() {
         <motion.div variants={fadeInUp} className="mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
             <Plus className="w-5 h-5 text-primary" />
-            Ricarica Wallet
+            {t("account.walletPage.topupTitle")}
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -611,7 +616,7 @@ export default function AccountWallet() {
             <Input
               type="text"
               inputMode="numeric"
-              placeholder="Altro importo"
+              placeholder={t("account.walletPage.customAmount")}
               value={customAmount}
               onChange={(e) => handleCustomAmountChange(e.target.value)}
               className="h-14 pl-10 text-xl font-semibold rounded-2xl border-2 bg-background"
@@ -635,7 +640,7 @@ export default function AccountWallet() {
               ) : (
                 <CreditCard className="w-5 h-5 mr-2" />
               )}
-              {createTopupMutation.isPending ? "Caricamento..." : `Ricarica €${currentAmount > 0 ? currentAmount : "0"}`}
+              {createTopupMutation.isPending ? t("account.walletPage.loading") : `${t("account.walletPage.topupButton")} €${currentAmount > 0 ? currentAmount : "0"}`}
             </HapticButton>
           </motion.div>
         </motion.div>
@@ -643,7 +648,7 @@ export default function AccountWallet() {
         <motion.div variants={fadeInUp}>
           <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
             <RefreshCw className="w-5 h-5 text-primary" />
-            Storico Transazioni
+            {t("account.walletPage.transactionsTitle")}
           </h2>
 
           {transactions.length === 0 ? (

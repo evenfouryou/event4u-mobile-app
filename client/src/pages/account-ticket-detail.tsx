@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,6 +123,7 @@ const scaleIn = {
 };
 
 export default function AccountTicketDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -195,15 +197,15 @@ export default function AccountTicketDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/public/account/resales"] });
       triggerHaptic('success');
       toast({
-        title: "Rivendita annullata",
-        description: "Il biglietto è stato rimosso dalla vendita.",
+        title: t("account.ticketDetailPage.resaleCancelled"),
+        description: t("account.ticketDetailPage.resaleCancelledDesc"),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile annullare la rivendita.",
+        title: t("account.ticketDetailPage.error"),
+        description: error.message || t("account.ticketDetailPage.cancelResaleError"),
         variant: "destructive",
       });
     },
@@ -235,14 +237,14 @@ export default function AccountTicketDetail() {
       
       triggerHaptic('success');
       toast({
-        title: "Download completato",
-        description: "Il biglietto è stato scaricato.",
+        title: t("account.ticketDetailPage.downloadCompleted"),
+        description: t("account.ticketDetailPage.downloadCompletedDesc"),
       });
     } catch (error: any) {
       triggerHaptic('error');
       toast({
-        title: "Errore download",
-        description: error.message || "Impossibile scaricare il PDF.",
+        title: t("account.ticketDetailPage.downloadError"),
+        description: error.message || t("account.ticketDetailPage.downloadErrorDesc"),
         variant: "destructive",
       });
     } finally {
@@ -273,7 +275,7 @@ export default function AccountTicketDetail() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/account/tickets")} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Caricamento...</h1>
+            <h1 className="text-2xl font-bold">{t("account.ticketDetailPage.loading")}</h1>
           </div>
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -296,7 +298,7 @@ export default function AccountTicketDetail() {
                 <ChevronLeft className="w-6 h-6" />
               </Button>
             }
-            title="Caricamento..."
+            title={t("account.ticketDetailPage.loading")}
           />
         }
       >
@@ -320,14 +322,14 @@ export default function AccountTicketDetail() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/account/tickets")} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Errore</h1>
+            <h1 className="text-2xl font-bold">{t("account.ticketDetailPage.error")}</h1>
           </div>
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
               <Ticket className="w-16 h-16 text-muted-foreground/50" />
-              <p className="text-lg text-muted-foreground text-center">Biglietto non trovato</p>
+              <p className="text-lg text-muted-foreground text-center">{t("account.ticketDetailPage.ticketNotFound")}</p>
               <Button onClick={() => navigate("/account/tickets")} data-testid="button-go-back">
-                Torna ai biglietti
+                {t("account.ticketDetailPage.backToTickets")}
               </Button>
             </CardContent>
           </Card>
@@ -349,20 +351,20 @@ export default function AccountTicketDetail() {
                 <ChevronLeft className="w-6 h-6" />
               </Button>
             }
-            title="Errore"
+            title={t("account.ticketDetailPage.error")}
           />
         }
       >
         <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
           <Ticket className="w-16 h-16 text-muted-foreground/50" />
-          <p className="text-lg text-muted-foreground text-center">Biglietto non trovato</p>
+          <p className="text-lg text-muted-foreground text-center">{t("account.ticketDetailPage.ticketNotFound")}</p>
           <HapticButton
             variant="default"
             onClick={() => navigate("/account/tickets")}
             className="min-h-[48px] px-8 text-base"
             data-testid="button-go-back"
           >
-            Torna ai biglietti
+            {t("account.ticketDetailPage.backToTickets")}
           </HapticButton>
         </div>
       </MobileAppLayout>
@@ -372,8 +374,8 @@ export default function AccountTicketDetail() {
   const eventDate = new Date(ticket.eventStart);
   // Se il biglietto proviene da un cambio nominativo, nascondere l'intestatario
   const holderName = ticket.isFromNameChange 
-    ? "Dati riservati" 
-    : ([ticket.participantFirstName, ticket.participantLastName].filter(Boolean).join(" ") || "Non nominativo");
+    ? t("account.ticketDetailPage.reservedData") 
+    : ([ticket.participantFirstName, ticket.participantLastName].filter(Boolean).join(" ") || t("account.ticketDetailPage.noHolder"));
   const price = parseFloat(ticket.ticketPrice || "0");
 
   const statusVariant = () => {
@@ -391,14 +393,14 @@ export default function AccountTicketDetail() {
   };
 
   const statusLabel = () => {
-    if (ticket.isListed) return "In Vendita";
+    if (ticket.isListed) return t("account.ticketDetailPage.statusForSale");
     switch (ticket.status) {
       case "emitted":
-        return "Valido";
+        return t("account.ticketDetailPage.statusValid");
       case "validated":
-        return "Usato";
+        return t("account.ticketDetailPage.statusUsed");
       case "cancelled":
-        return "Annullato";
+        return t("account.ticketDetailPage.statusCancelled");
       default:
         return ticket.status;
     }
@@ -437,8 +439,8 @@ export default function AccountTicketDetail() {
             <Clock className="w-5 h-5" />
             <span>
               {ticket.hoursToEvent < 24
-                ? `Mancano ${ticket.hoursToEvent} ore`
-                : `Mancano ${Math.floor(ticket.hoursToEvent / 24)} giorni`}
+                ? t("account.ticketDetailPage.hoursRemaining", { hours: ticket.hoursToEvent })
+                : t("account.ticketDetailPage.daysRemaining", { days: Math.floor(ticket.hoursToEvent / 24) })}
             </span>
           </div>
         )}
@@ -467,7 +469,7 @@ export default function AccountTicketDetail() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Informazioni Biglietto</CardTitle>
+                <CardTitle>{t("account.ticketDetailPage.ticketInfo")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -476,7 +478,7 @@ export default function AccountTicketDetail() {
                       <Ticket className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Tipo</p>
+                      <p className="text-sm text-muted-foreground">{t("account.ticketDetailPage.type")}</p>
                       <p className="text-base font-medium" data-testid="text-ticket-type">
                         {ticket.ticketType}
                       </p>
@@ -487,7 +489,7 @@ export default function AccountTicketDetail() {
                       <MapPin className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Settore</p>
+                      <p className="text-sm text-muted-foreground">{t("account.ticketDetailPage.sector")}</p>
                       <p className="text-base font-medium" data-testid="text-sector">
                         {ticket.sectorName}
                       </p>
@@ -498,7 +500,7 @@ export default function AccountTicketDetail() {
                       <Tag className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Prezzo</p>
+                      <p className="text-sm text-muted-foreground">{t("account.ticketDetailPage.price")}</p>
                       <p className="text-xl font-bold text-primary" data-testid="text-price">
                         €{price.toFixed(2)}
                       </p>
@@ -509,7 +511,7 @@ export default function AccountTicketDetail() {
                       <User className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Intestatario</p>
+                      <p className="text-sm text-muted-foreground">{t("account.ticketDetailPage.holder")}</p>
                       <p className="text-base font-medium" data-testid="text-holder">
                         {holderName}
                       </p>
