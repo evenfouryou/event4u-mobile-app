@@ -666,19 +666,35 @@ export function generateSiaeAttachmentName(
   // - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua)
   // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (anno-mese contiguo)
   // - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua)
+  let result: string;
   switch (reportType) {
     case 'mensile':
       // RPM = Riepilogo Periodico Mensile
-      return `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
+      result = `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
+      break;
     case 'log':
     case 'rca':
       // RCA = Riepilogo Controllo Accessi
-      return `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      result = `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      break;
     case 'giornaliero':
     default:
       // RMG = Riepilogo Giornaliero (report C1 giornaliero)
-      return `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      result = `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      break;
   }
+  
+  // FIX 2026-01-19: Log di debug per tracciare formato nome file
+  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, date=${date.toISOString()}, year=${year}, month=${month}, day=${day}, result=${result}`);
+  
+  // Validazione formato: verifica che non ci siano underscore extra nella data
+  const parts = result.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
+  if (parts.length !== 4) {
+    console.error(`[SIAE-UTILS] ERRORE CRITICO: Nome file generato con ${parts.length} parti invece di 4: ${result}`);
+    console.error(`[SIAE-UTILS] Questo causerebbe errore SIAE 0600!`);
+  }
+  
+  return result;
 }
 
 /**

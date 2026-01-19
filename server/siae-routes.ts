@@ -6201,7 +6201,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato email (errore SIAE 0600)
     // FIX 2026-01-15: Usa preResolvedSystemCode già calcolato all'inizio (non ridefinire!)
     const preReportTypeForFileName: 'giornaliero' | 'mensile' = isMonthly ? 'mensile' : 'giornaliero';
-    console.log(`[SIAE-ROUTES] Using pre-resolved system code for RMG/RPM: ${preResolvedSystemCode}`);
+    
+    // DEBUG 2026-01-19: Log parametri PRIMA della generazione nome file RMG/RPM
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] ====== GENERAZIONE NOME FILE RMG/RPM ======`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: preReportTypeForFileName=${preReportTypeForFileName}`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: effectiveReportDate=${effectiveReportDate?.toISOString?.() || effectiveReportDate}`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: preCalculatedProgressivo=${preCalculatedProgressivo}`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: preResolvedSystemCode=${preResolvedSystemCode}`);
     
     const preGeneratedFileName = generateSiaeFileName(
       preReportTypeForFileName,
@@ -6210,7 +6216,15 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       null, // senza firma - il nome .xsi è quello che va nell'attributo NomeFile
       preResolvedSystemCode
     );
-    console.log(`[SIAE-ROUTES] Pre-generated filename for XML NomeFile attribute: ${preGeneratedFileName}`);
+    
+    // DEBUG 2026-01-19: Verifica formato nome file generato
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] preGeneratedFileName GENERATO: ${preGeneratedFileName}`);
+    const preFileNameParts = preGeneratedFileName.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] preGeneratedFileName PARTI: ${preFileNameParts.length} parti -> [${preFileNameParts.join(', ')}]`);
+    if (preFileNameParts.length !== 4) {
+      console.error(`[SIAE-ROUTES] [DEBUG-0600] ERRORE CRITICO: Nome file ha ${preFileNameParts.length} parti invece di 4! Questo causa errore SIAE 0600!`);
+    }
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] ===========================================`);
     
     const hydratedData = await hydrateC1EventContextFromTickets(filteredTickets, companyId, effectiveReportDate, isMonthly);
     
@@ -6391,7 +6405,15 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // NON ricalcolare - la cache può cambiare tra le due chiamate causando errori SIAE 0600/0603
   // Il codice sistema DEVE essere identico in: NomeFile XML, nome file allegato, SistemaEmissione
   const effectiveSystemCode = preResolvedSystemCode;
-  console.log(`[SIAE-ROUTES] FIX 2026-01-15: Using preResolvedSystemCode for attachment filename: ${effectiveSystemCode}`);
+  
+  // DEBUG 2026-01-19: Log parametri PRIMA della generazione nome file finale
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] ====== GENERAZIONE NOME FILE FINALE ======`);
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: reportTypeForFileName=${reportTypeForFileName}`);
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: effectiveReportDateForCount=${effectiveReportDateForCount?.toISOString?.() || effectiveReportDateForCount}`);
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: sequenceNumber=${sequenceNumber}`);
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: effectiveSignatureFormat=${effectiveSignatureFormat}`);
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: effectiveSystemCode=${effectiveSystemCode}`);
+  
   const generatedFileName = generateSiaeFileName(
     reportTypeForFileName, 
     effectiveReportDateForCount, 
@@ -6399,6 +6421,16 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     effectiveSignatureFormat,
     effectiveSystemCode
   );
+  
+  // DEBUG 2026-01-19: Verifica formato nome file finale
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] generatedFileName FINALE: ${generatedFileName}`);
+  const finalFileNameParts = generatedFileName.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] generatedFileName PARTI: ${finalFileNameParts.length} parti -> [${finalFileNameParts.join(', ')}]`);
+  if (finalFileNameParts.length !== 4) {
+    console.error(`[SIAE-ROUTES] [DEBUG-0600] ERRORE CRITICO FINALE: Nome file ha ${finalFileNameParts.length} parti invece di 4! Questo causa errore SIAE 0600!`);
+  }
+  console.log(`[SIAE-ROUTES] [DEBUG-0600] ===========================================`);
+  
   const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
   
   // ==================== FILE NAME FORMAT VALIDATION (Fix SIAE Error 0600) ====================
