@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation, useParams } from "wouter";
 import { motion } from "framer-motion";
@@ -57,20 +58,21 @@ const cardVariants = {
   }),
 };
 
-function getSeasonFromMonth(month: number, year: number): string {
+function getSeasonFromMonth(month: number, year: number, t: (key: string) => string): string {
   if (month === 11 || month === 0 || month === 1) {
     const seasonYear = month === 11 ? year : year - 1;
-    return `Inverno ${seasonYear + 1}`;
+    return `${t('admin.gestoreEvents.seasons.winter')} ${seasonYear + 1}`;
   } else if (month >= 2 && month <= 4) {
-    return `Primavera ${year}`;
+    return `${t('admin.gestoreEvents.seasons.spring')} ${year}`;
   } else if (month >= 5 && month <= 7) {
-    return `Estate ${year}`;
+    return `${t('admin.gestoreEvents.seasons.summer')} ${year}`;
   } else {
-    return `Autunno ${year}`;
+    return `${t('admin.gestoreEvents.seasons.autumn')} ${year}`;
   }
 }
 
 export default function AdminGestoreEvents() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const params = useParams<{ gestoreId: string }>();
   const gestoreId = params.gestoreId;
@@ -149,7 +151,7 @@ export default function AdminGestoreEvents() {
       } else if (eventGroupingMode === "stagione") {
         const month = getMonth(date);
         const year = date.getFullYear();
-        groupKey = getSeasonFromMonth(month, year);
+        groupKey = getSeasonFromMonth(month, year, t);
       } else {
         groupKey = format(date, "EEEE d MMMM yyyy", { locale: it });
       }
@@ -207,11 +209,11 @@ export default function AdminGestoreEvents() {
                   data-testid={`badge-event-status-${event.id}`}
                 >
                   {event.status === "ongoing"
-                    ? "In corso"
+                    ? t('admin.gestoreEvents.status.ongoing')
                     : event.status === "scheduled"
-                    ? "Programmato"
+                    ? t('admin.gestoreEvents.status.scheduled')
                     : event.status === "closed"
-                    ? "Chiuso"
+                    ? t('admin.gestoreEvents.status.closed')
                     : event.status}
                 </Badge>
               </div>
@@ -235,10 +237,10 @@ export default function AdminGestoreEvents() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Eventi delle Aziende
+          {t('admin.gestoreEvents.companyEvents')}
         </CardTitle>
         <CardDescription>
-          Eventi di tutte le aziende associate a questo gestore
+          {t('admin.gestoreEvents.companyEventsDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -246,26 +248,26 @@ export default function AdminGestoreEvents() {
           <Tabs value={eventStatusFilter} onValueChange={setEventStatusFilter} className="flex-1">
             <TabsList>
               <TabsTrigger value="tutti" data-testid="tab-events-all">
-                Tutti ({gestoreEvents.length})
+                {t('admin.gestoreEvents.tabs.all')} ({gestoreEvents.length})
               </TabsTrigger>
               <TabsTrigger value="in_corso" data-testid="tab-events-ongoing">
-                In corso
+                {t('admin.gestoreEvents.tabs.ongoing')}
               </TabsTrigger>
               <TabsTrigger value="passati" data-testid="tab-events-past">
-                Passati
+                {t('admin.gestoreEvents.tabs.past')}
               </TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">Raggruppa per:</span>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">{t('admin.gestoreEvents.groupBy')}:</span>
             <Select value={eventGroupingMode} onValueChange={(v) => setEventGroupingMode(v as EventGroupingMode)}>
               <SelectTrigger className="w-32" data-testid="select-event-grouping">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mese" data-testid="select-grouping-mese">Mese</SelectItem>
-                <SelectItem value="stagione" data-testid="select-grouping-stagione">Stagione</SelectItem>
-                <SelectItem value="giorno" data-testid="select-grouping-giorno">Giorno</SelectItem>
+                <SelectItem value="mese" data-testid="select-grouping-mese">{t('admin.gestoreEvents.grouping.month')}</SelectItem>
+                <SelectItem value="stagione" data-testid="select-grouping-stagione">{t('admin.gestoreEvents.grouping.season')}</SelectItem>
+                <SelectItem value="giorno" data-testid="select-grouping-giorno">{t('admin.gestoreEvents.grouping.day')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -307,11 +309,11 @@ export default function AdminGestoreEvents() {
                               data-testid={`badge-event-status-${event.id}`}
                             >
                               {event.status === "ongoing"
-                                ? "In corso"
+                                ? t('admin.gestoreEvents.status.ongoing')
                                 : event.status === "scheduled"
-                                ? "Programmato"
+                                ? t('admin.gestoreEvents.status.scheduled')
                                 : event.status === "closed"
-                                ? "Chiuso"
+                                ? t('admin.gestoreEvents.status.closed')
                                 : event.status}
                             </Badge>
                             <Button
@@ -332,7 +334,7 @@ export default function AdminGestoreEvents() {
             </Accordion>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              Nessun evento trovato
+              {t('admin.gestoreEvents.noEventsFound')}
             </div>
           )}
         </div>
@@ -345,7 +347,7 @@ export default function AdminGestoreEvents() {
       <MobileAppLayout
         header={
           <MobileHeader
-            title={`Eventi di ${gestore?.firstName || ""}`}
+            title={`${t('admin.gestoreEvents.eventsOf')} ${gestore?.firstName || ""}`}
             leftAction={
               <HapticButton
                 variant="ghost"
@@ -363,9 +365,9 @@ export default function AdminGestoreEvents() {
           <div className="flex flex-col gap-3 mb-4">
             <Tabs value={eventStatusFilter} onValueChange={setEventStatusFilter}>
               <TabsList className="w-full">
-                <TabsTrigger value="tutti" className="flex-1">Tutti</TabsTrigger>
-                <TabsTrigger value="in_corso" className="flex-1">In corso</TabsTrigger>
-                <TabsTrigger value="passati" className="flex-1">Passati</TabsTrigger>
+                <TabsTrigger value="tutti" className="flex-1">{t('admin.gestoreEvents.tabs.all')}</TabsTrigger>
+                <TabsTrigger value="in_corso" className="flex-1">{t('admin.gestoreEvents.tabs.ongoing')}</TabsTrigger>
+                <TabsTrigger value="passati" className="flex-1">{t('admin.gestoreEvents.tabs.past')}</TabsTrigger>
               </TabsList>
             </Tabs>
             <Select value={eventGroupingMode} onValueChange={(v) => setEventGroupingMode(v as EventGroupingMode)}>
@@ -373,9 +375,9 @@ export default function AdminGestoreEvents() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mese">Raggruppa per Mese</SelectItem>
-                <SelectItem value="stagione">Raggruppa per Stagione</SelectItem>
-                <SelectItem value="giorno">Raggruppa per Giorno</SelectItem>
+                <SelectItem value="mese">{t('admin.gestoreEvents.grouping.byMonth')}</SelectItem>
+                <SelectItem value="stagione">{t('admin.gestoreEvents.grouping.bySeason')}</SelectItem>
+                <SelectItem value="giorno">{t('admin.gestoreEvents.grouping.byDay')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -392,7 +394,7 @@ export default function AdminGestoreEvents() {
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              Nessun evento trovato
+              {t('admin.gestoreEvents.noEventsFound')}
             </div>
           )}
         </div>
@@ -413,10 +415,10 @@ export default function AdminGestoreEvents() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">
-            Eventi di {gestore?.firstName} {gestore?.lastName}
+            {t('admin.gestoreEvents.eventsOf')} {gestore?.firstName} {gestore?.lastName}
           </h1>
           <p className="text-muted-foreground">
-            Eventi di tutte le aziende associate a questo gestore
+            {t('admin.gestoreEvents.companyEventsDescription')}
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import { Route, Switch, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { queryClient } from "@/lib/queryClient";
@@ -44,12 +45,12 @@ interface Customer {
   phone: string;
 }
 
-const navItems = [
-  { href: "/account/home", label: "Home", icon: Home },
-  { href: "/account/tickets", label: "Biglietti/Abbonamenti", icon: Ticket },
-  { href: "/account/wallet", label: "Wallet", icon: Wallet },
-  { href: "/account/resales", label: "Rivendita", icon: RefreshCw },
-  { href: "/account/profile", label: "Profilo", icon: User },
+const getNavItems = (t: (key: string) => string) => [
+  { href: "/account/home", label: t('account.nav.home'), icon: Home },
+  { href: "/account/tickets", label: t('account.nav.ticketsSubscriptions'), icon: Ticket },
+  { href: "/account/wallet", label: t('account.nav.wallet'), icon: Wallet },
+  { href: "/account/resales", label: t('account.nav.resale'), icon: RefreshCw },
+  { href: "/account/profile", label: t('account.nav.profile'), icon: User },
 ];
 
 const springTransition = {
@@ -73,6 +74,7 @@ const scaleIn = {
 };
 
 export default function AccountPage() {
+  const { t } = useTranslation();
   const [location, navigate] = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -118,13 +120,13 @@ export default function AccountPage() {
   }, [customer]);
 
   const getPageTitle = useCallback(() => {
-    if (location.includes('/account/home')) return 'Home';
-    if (location.includes('/account/profile')) return 'Profilo';
-    if (location.includes('/account/tickets')) return 'Biglietti/Abbonamenti';
-    if (location.includes('/account/wallet')) return 'Wallet';
-    if (location.includes('/account/resales')) return 'Rivendita';
-    return 'Account';
-  }, [location]);
+    if (location.includes('/account/home')) return t('account.nav.home');
+    if (location.includes('/account/profile')) return t('account.nav.profile');
+    if (location.includes('/account/tickets')) return t('account.nav.ticketsSubscriptions');
+    if (location.includes('/account/wallet')) return t('account.nav.wallet');
+    if (location.includes('/account/resales')) return t('account.nav.resale');
+    return t('account.title');
+  }, [location, t]);
 
   const showBackButton = location.includes('/account/tickets/') && 
     (location.includes('/name-change') || /\/account\/tickets\/[^/]+$/.test(location));
@@ -135,7 +137,7 @@ export default function AccountPage() {
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center space-y-4">
             <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
-            <p className="text-muted-foreground text-lg">Caricamento...</p>
+            <p className="text-muted-foreground text-lg">{t('account.loading')}</p>
           </div>
         </div>
       );
@@ -159,7 +161,7 @@ export default function AccountPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springTransition, delay: 0.2 }}
             >
-              Caricamento...
+              {t('account.loading')}
             </motion.p>
           </div>
         </motion.div>
@@ -173,7 +175,7 @@ export default function AccountPage() {
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center space-y-4">
             <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
-            <p className="text-muted-foreground text-lg">Reindirizzamento al login...</p>
+            <p className="text-muted-foreground text-lg">{t('account.redirectingToLogin')}</p>
           </div>
         </div>
       );
@@ -197,7 +199,7 @@ export default function AccountPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springTransition, delay: 0.2 }}
             >
-              Reindirizzamento al login...
+              {t('account.redirectingToLogin')}
             </motion.p>
           </div>
         </motion.div>
@@ -252,7 +254,7 @@ export default function AccountPage() {
 
   const footerContent = (
     <MobileBottomBar className="bg-card/95 backdrop-blur-xl border-t border-border">
-      {navItems.map((item) => {
+      {getNavItems(t).map((item) => {
         const isActive = location === item.href || 
           (item.href !== "/account/home" && location.startsWith(item.href));
         return (
@@ -283,7 +285,7 @@ export default function AccountPage() {
             </div>
 
             <nav className="flex items-center gap-1">
-              {navItems.map((item) => {
+              {getNavItems(t).map((item) => {
                 const isActive = location === item.href || 
                   (item.href !== "/account/home" && location.startsWith(item.href));
                 const Icon = item.icon;

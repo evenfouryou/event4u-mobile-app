@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -89,6 +90,7 @@ const scaleIn = {
 };
 
 export default function AccountHome() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { data: customer, isLoading: customerLoading } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
@@ -124,9 +126,9 @@ export default function AccountHome() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Buongiorno";
-    if (hour < 18) return "Buon pomeriggio";
-    return "Buonasera";
+    if (hour < 12) return t('account.greetings.morning');
+    if (hour < 18) return t('account.greetings.afternoon');
+    return t('account.greetings.evening');
   };
 
   const getInitials = () => {
@@ -160,7 +162,7 @@ export default function AccountHome() {
                 <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
                   <ShoppingBag className="w-7 h-7 text-primary" />
                 </div>
-                <span className="font-semibold text-foreground text-center">Acquista Biglietti</span>
+                <span className="font-semibold text-foreground text-center">{t('account.actions.buyTickets')}</span>
               </CardContent>
             </Card>
           </Link>
@@ -171,7 +173,7 @@ export default function AccountHome() {
                 <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
                   <QrCode className="w-7 h-7 text-emerald-500" />
                 </div>
-                <span className="font-semibold text-foreground text-center">I Miei QR</span>
+                <span className="font-semibold text-foreground text-center">{t('account.actions.myQR')}</span>
               </CardContent>
             </Card>
           </Link>
@@ -182,7 +184,7 @@ export default function AccountHome() {
                 <div className="w-14 h-14 rounded-full bg-blue-500/15 flex items-center justify-center">
                   <CreditCard className="w-7 h-7 text-blue-500" />
                 </div>
-                <span className="font-semibold text-foreground text-center">Ricarica Wallet</span>
+                <span className="font-semibold text-foreground text-center">{t('account.actions.topupWallet')}</span>
               </CardContent>
             </Card>
           </Link>
@@ -193,7 +195,7 @@ export default function AccountHome() {
                 <div className="w-14 h-14 rounded-full bg-purple-500/15 flex items-center justify-center">
                   <RefreshCw className="w-7 h-7 text-purple-500" />
                 </div>
-                <span className="font-semibold text-foreground text-center">Rivendi Biglietti</span>
+                <span className="font-semibold text-foreground text-center">{t('account.actions.resellTickets')}</span>
               </CardContent>
             </Card>
           </Link>
@@ -207,8 +209,8 @@ export default function AccountHome() {
                   <Wallet className="w-7 h-7 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Il Mio Wallet</h3>
-                  <p className="text-muted-foreground">Saldo disponibile</p>
+                  <h3 className="text-lg font-semibold text-foreground">{t('account.wallet.title')}</h3>
+                  <p className="text-muted-foreground">{t('account.wallet.availableBalance')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -218,7 +220,7 @@ export default function AccountHome() {
                 <Link href="/account/wallet">
                   <Button className="gap-2" data-testid="button-topup-desktop">
                     <Plus className="w-4 h-4" />
-                    Ricarica
+                    {t('account.actions.topup')}
                   </Button>
                 </Link>
               </div>
@@ -231,11 +233,11 @@ export default function AccountHome() {
             <div className="flex items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2">
                 <Ticket className="w-5 h-5 text-primary" />
-                Prossimi Eventi
+                {t('account.tickets.upcomingEvents')}
               </CardTitle>
               <Link href="/account/tickets">
                 <Button variant="ghost" className="gap-1" data-testid="button-view-tickets-desktop">
-                  Tutti ({totalTickets})
+                  {t('account.actions.viewAll')} ({totalTickets})
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -247,11 +249,11 @@ export default function AccountHome() {
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
                   <Ticket className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground mb-4">Nessun biglietto in programma</p>
+                <p className="text-muted-foreground mb-4">{t('account.tickets.noScheduledTickets')}</p>
                 <Link href="/acquista">
                   <Button className="gap-2">
                     <ShoppingBag className="w-4 h-4" />
-                    Esplora Eventi
+                    {t('account.actions.exploreEvents')}
                   </Button>
                 </Link>
               </div>
@@ -338,7 +340,7 @@ export default function AccountHome() {
             <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
               <ShoppingBag className="w-8 h-8 text-primary" />
             </div>
-            <span className="font-semibold text-base text-foreground text-center">Acquista Biglietti</span>
+            <span className="font-semibold text-base text-foreground text-center">{t('account.actions.buyTickets')}</span>
           </motion.div>
         </Link>
         
@@ -353,7 +355,7 @@ export default function AccountHome() {
             <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
               <QrCode className="w-8 h-8 text-emerald-500" />
             </div>
-            <span className="font-semibold text-base text-foreground text-center">I Miei QR</span>
+            <span className="font-semibold text-base text-foreground text-center">{t('account.actions.myQR')}</span>
           </motion.div>
         </Link>
         
@@ -368,7 +370,7 @@ export default function AccountHome() {
             <div className="w-16 h-16 rounded-full bg-blue-500/15 flex items-center justify-center">
               <CreditCard className="w-8 h-8 text-blue-500" />
             </div>
-            <span className="font-semibold text-base text-foreground text-center">Ricarica Wallet</span>
+            <span className="font-semibold text-base text-foreground text-center">{t('account.actions.topupWallet')}</span>
           </motion.div>
         </Link>
         
@@ -383,7 +385,7 @@ export default function AccountHome() {
             <div className="w-16 h-16 rounded-full bg-purple-500/15 flex items-center justify-center">
               <RefreshCw className="w-8 h-8 text-purple-500" />
             </div>
-            <span className="font-semibold text-base text-foreground text-center">Rivendi Biglietti</span>
+            <span className="font-semibold text-base text-foreground text-center">{t('account.actions.resellTickets')}</span>
           </motion.div>
         </Link>
       </motion.div>
@@ -401,7 +403,7 @@ export default function AccountHome() {
                 <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
                   <Wallet className="w-7 h-7 text-primary" />
                 </div>
-                <span className="text-xl font-semibold text-foreground">Il Mio Wallet</span>
+                <span className="text-xl font-semibold text-foreground">{t('account.wallet.title')}</span>
               </div>
               <ChevronRight className="w-6 h-6 text-muted-foreground" />
             </div>
@@ -411,7 +413,7 @@ export default function AccountHome() {
                 <p className="text-5xl font-bold text-foreground tabular-nums" data-testid="text-wallet-balance">
                   {balance.toFixed(2)} €
                 </p>
-                <p className="text-lg text-muted-foreground mt-2">Saldo disponibile</p>
+                <p className="text-lg text-muted-foreground mt-2">{t('account.wallet.availableBalance')}</p>
               </div>
               <HapticButton 
                 className="min-h-[48px] gap-2 rounded-xl px-5"
@@ -422,7 +424,7 @@ export default function AccountHome() {
                 data-testid="button-topup"
               >
                 <Plus className="w-5 h-5" />
-                Ricarica
+                {t('account.actions.topup')}
               </HapticButton>
             </div>
           </motion.div>
@@ -433,7 +435,7 @@ export default function AccountHome() {
         <div className="flex items-center justify-between gap-4 mb-5">
           <h2 className="text-xl font-bold text-foreground flex items-center gap-3">
             <Ticket className="w-6 h-6 text-primary" />
-            Prossimi Eventi
+            {t('account.tickets.upcomingEvents')}
           </h2>
           <Link href="/account/tickets">
             <HapticButton 
@@ -442,7 +444,7 @@ export default function AccountHome() {
               hapticType="light"
               data-testid="button-view-tickets"
             >
-              Tutti ({totalTickets})
+              {t('account.actions.viewAll')} ({totalTickets})
               <ChevronRight className="w-5 h-5" />
             </HapticButton>
           </Link>
@@ -456,14 +458,14 @@ export default function AccountHome() {
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-5">
               <Ticket className="w-10 h-10 text-muted-foreground" />
             </div>
-            <p className="text-xl text-muted-foreground mb-6">Nessun biglietto in programma</p>
+            <p className="text-xl text-muted-foreground mb-6">{t('account.tickets.noScheduledTickets')}</p>
             <Link href="/acquista">
               <HapticButton 
                 className="min-h-[52px] gap-2 text-base rounded-xl px-8"
                 hapticType="medium"
               >
                 <ShoppingBag className="w-5 h-5" />
-                Esplora Eventi
+                {t('account.actions.exploreEvents')}
               </HapticButton>
             </Link>
           </motion.div>

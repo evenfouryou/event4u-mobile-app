@@ -9,33 +9,35 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { triggerHaptic } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTranslation } from 'react-i18next';
 
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 export default function Landing() {
   const { isAuthenticated } = useCustomerAuth();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   
   const features = [
     {
       icon: Calendar,
-      title: "Eventi Esclusivi",
-      description: "Scopri le serate più hot della tua città"
+      title: t('public.landing.features.exclusiveEvents'),
+      description: t('public.landing.features.exclusiveEventsDesc')
     },
     {
       icon: Ticket,
-      title: "Biglietti Sicuri",
-      description: "Acquista in pochi tap, senza code"
+      title: t('public.landing.features.safeTickets'),
+      description: t('public.landing.features.safeTicketsDesc')
     },
     {
       icon: MapPin,
-      title: "Locali Top",
-      description: "I migliori club selezionati per te"
+      title: t('public.landing.features.topVenues'),
+      description: t('public.landing.features.topVenuesDesc')
     },
     {
       icon: Users,
-      title: "Lista VIP",
-      description: "Accesso prioritario e tavoli riservati"
+      title: t('public.landing.features.vipList'),
+      description: t('public.landing.features.vipListDesc')
     }
   ];
 
@@ -109,13 +111,13 @@ export default function Landing() {
               
               <nav className="flex items-center gap-6">
                 <Link href="/acquista" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-events">
-                  Eventi
+                  {t('public.nav.events')}
                 </Link>
                 <Link href="/rivendite" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-resales">
-                  Rivendite
+                  {t('public.nav.resales')}
                 </Link>
                 <Link href="/locali" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-venues">
-                  Locali
+                  {t('public.nav.venues')}
                 </Link>
                 <ThemeToggle />
                 {isAuthenticated ? (
@@ -129,10 +131,10 @@ export default function Landing() {
                 ) : (
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" asChild data-testid="button-login-desktop">
-                      <Link href="/login">Accedi</Link>
+                      <Link href="/login">{t('auth.login')}</Link>
                     </Button>
                     <Button asChild className="gradient-golden text-black" data-testid="button-register-desktop">
-                      <Link href="/register">Registrati</Link>
+                      <Link href="/register">{t('auth.register')}</Link>
                     </Button>
                   </div>
                 )}
@@ -154,17 +156,17 @@ export default function Landing() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-400"></span>
                   </span>
-                  <span className="text-sm font-medium text-teal">Eventi live questa sera</span>
+                  <span className="text-sm font-medium text-teal">{t('public.landing.liveEventsTonight')}</span>
                 </div>
                 
                 <h1 className="text-6xl font-bold leading-tight mb-6">
-                  La tua notte
+                  {t('public.landing.heroTitle')}
                   <br />
-                  <span className="gradient-golden-text">inizia qui</span>
+                  <span className="gradient-golden-text">{t('public.landing.heroTitleHighlight')}</span>
                 </h1>
                 
                 <p className="text-xl text-muted-foreground mb-10 max-w-lg leading-relaxed">
-                  Scopri i migliori eventi e club della città. Biglietti, liste VIP e tavoli in un click.
+                  {t('public.landing.heroDescription')}
                 </p>
                 
                 <div className="flex gap-4">
@@ -176,7 +178,7 @@ export default function Landing() {
                   >
                     <Link href="/acquista">
                       <Music className="mr-2 h-5 w-5" />
-                      Scopri Eventi
+                      {t('public.landing.discoverEvents')}
                     </Link>
                   </Button>
                   
@@ -189,7 +191,7 @@ export default function Landing() {
                   >
                     <Link href="/locali">
                       <MapPin className="mr-2 h-5 w-5" />
-                      Esplora Locali
+                      {t('public.landing.exploreVenues')}
                     </Link>
                   </Button>
                 </div>
@@ -235,9 +237,9 @@ export default function Landing() {
               transition={springConfig}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl font-bold mb-4">Perché sceglierci</h2>
+              <h2 className="text-4xl font-bold mb-4">{t('public.landing.whyChooseUs')}</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Tutto quello che ti serve per vivere la notte al meglio
+                {t('public.landing.whyChooseUsDesc')}
               </p>
             </motion.div>
 
@@ -276,9 +278,9 @@ export default function Landing() {
                 <CardContent className="p-12 text-center relative z-10">
                   <BrandLogo variant="monogram" className="h-20 w-auto mx-auto mb-8" />
                   
-                  <h2 className="text-4xl font-bold mb-4">Pronto per la serata?</h2>
+                  <h2 className="text-4xl font-bold mb-4">{t('public.landing.readyForNight')}</h2>
                   <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
-                    Registrati gratis e scopri eventi esclusivi nella tua città
+                    {t('public.landing.readyForNightDesc')}
                   </p>
                   
                   {!isAuthenticated ? (
@@ -289,7 +291,7 @@ export default function Landing() {
                       data-testid="button-register-cta-desktop"
                     >
                       <Link href="/register">
-                        Inizia Ora
+                        {t('public.landing.startNow')}
                         <ArrowRight className="ml-3 h-6 w-6" />
                       </Link>
                     </Button>
@@ -301,7 +303,7 @@ export default function Landing() {
                       data-testid="button-explore-cta-desktop"
                     >
                       <Link href="/acquista">
-                        Esplora Eventi
+                        {t('public.landing.exploreEvents')}
                         <ArrowRight className="ml-3 h-6 w-6" />
                       </Link>
                     </Button>
@@ -319,21 +321,21 @@ export default function Landing() {
               
               <div className="flex items-center gap-8">
                 <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-events-desktop">
-                  Eventi
+                  {t('public.nav.events')}
                 </Link>
                 <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-resales-desktop">
-                  Rivendite
+                  {t('public.nav.resales')}
                 </Link>
                 <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-venues-desktop">
-                  Locali
+                  {t('public.nav.venues')}
                 </Link>
                 <Link href="/login" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-login-desktop">
-                  Accedi
+                  {t('auth.login')}
                 </Link>
               </div>
               
               <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} Event Four You. Tutti i diritti riservati.
+                {t('public.footer.copyright', { year: new Date().getFullYear() })}
               </p>
             </div>
           </div>
@@ -417,7 +419,7 @@ export default function Landing() {
                     data-testid="button-login"
                     onClick={handleLinkPress}
                   >
-                    <Link href="/login">Accedi</Link>
+                    <Link href="/login">{t('auth.login')}</Link>
                   </Button>
                 </motion.div>
               )}
@@ -437,7 +439,7 @@ export default function Landing() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-400"></span>
               </span>
-              <span className="text-base font-medium text-teal">Eventi live questa sera</span>
+              <span className="text-base font-medium text-teal">{t('public.landing.liveEventsTonight')}</span>
             </div>
           </motion.div>
           
@@ -445,16 +447,16 @@ export default function Landing() {
             variants={itemVariants}
             className="text-5xl font-bold leading-tight mb-6"
           >
-            La tua notte
+            {t('public.landing.heroTitle')}
             <br />
-            <span className="gradient-golden-text">inizia qui</span>
+            <span className="gradient-golden-text">{t('public.landing.heroTitleHighlight')}</span>
           </motion.h1>
           
           <motion.p 
             variants={itemVariants}
             className="text-xl text-muted-foreground mb-12 leading-relaxed"
           >
-            Scopri i migliori eventi e club della città. Biglietti, liste VIP e tavoli in un tap.
+            {t('public.landing.heroDescriptionMobile')}
           </motion.p>
           
           <motion.div variants={itemVariants} className="space-y-5">
@@ -468,7 +470,7 @@ export default function Landing() {
               >
                 <Link href="/acquista">
                   <Music className="mr-3 h-6 w-6" />
-                  Scopri Eventi
+                  {t('public.landing.discoverEvents')}
                 </Link>
               </Button>
             </motion.div>
@@ -484,7 +486,7 @@ export default function Landing() {
               >
                 <Link href="/locali">
                   <MapPin className="mr-3 h-6 w-6" />
-                  Esplora Locali
+                  {t('public.landing.exploreVenues')}
                 </Link>
               </Button>
             </motion.div>
@@ -516,10 +518,10 @@ export default function Landing() {
           className="mb-12"
         >
           <h2 className="text-3xl font-bold mb-4">
-            Perché sceglierci
+            {t('public.landing.whyChooseUs')}
           </h2>
           <p className="text-lg text-muted-foreground">
-            Tutto quello che ti serve per vivere la notte
+            {t('public.landing.whyChooseUsDescMobile')}
           </p>
         </motion.div>
 
@@ -565,10 +567,10 @@ export default function Landing() {
             <BrandLogo variant="monogram" className="h-20 w-auto mx-auto mb-8" />
             
             <h2 className="text-3xl font-bold mb-4">
-              Pronto per la serata?
+              {t('public.landing.readyForNight')}
             </h2>
             <p className="text-lg text-muted-foreground mb-10">
-              Registrati gratis e scopri eventi esclusivi
+              {t('public.landing.readyForNightDescMobile')}
             </p>
             
             {!isAuthenticated && (
@@ -581,7 +583,7 @@ export default function Landing() {
                   onClick={handleButtonPress}
                 >
                   <Link href="/register">
-                    Inizia Ora
+                    {t('public.landing.startNow')}
                     <ArrowRight className="ml-3 h-6 w-6" />
                   </Link>
                 </Button>
@@ -598,7 +600,7 @@ export default function Landing() {
                   onClick={handleButtonPress}
                 >
                   <Link href="/acquista">
-                    Esplora Eventi
+                    {t('public.landing.exploreEvents')}
                     <ArrowRight className="ml-3 h-6 w-6" />
                   </Link>
                 </Button>
@@ -625,7 +627,7 @@ export default function Landing() {
               data-testid="link-footer-events"
               onClick={handleLinkPress}
             >
-              Eventi
+              {t('public.nav.events')}
             </Link>
             <Link 
               href="/rivendite" 
@@ -633,7 +635,7 @@ export default function Landing() {
               data-testid="link-footer-resales"
               onClick={handleLinkPress}
             >
-              Rivendite
+              {t('public.nav.resales')}
             </Link>
             <Link 
               href="/locali" 
@@ -641,7 +643,7 @@ export default function Landing() {
               data-testid="link-footer-venues"
               onClick={handleLinkPress}
             >
-              Locali
+              {t('public.nav.venues')}
             </Link>
             <Link 
               href="/login" 
@@ -649,14 +651,12 @@ export default function Landing() {
               data-testid="link-footer-login"
               onClick={handleLinkPress}
             >
-              Accedi
+              {t('auth.login')}
             </Link>
           </div>
           
           <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} Event Four You
-            <br />
-            Tutti i diritti riservati
+            {t('public.footer.copyrightMobile', { year: new Date().getFullYear() })}
           </p>
         </div>
       </motion.footer>

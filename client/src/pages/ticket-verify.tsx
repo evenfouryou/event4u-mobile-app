@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ interface TicketVerificationResponse {
 }
 
 export default function TicketVerify() {
+  const { t } = useTranslation();
   const { code } = useParams<{ code: string }>();
   const isMobile = useIsMobile();
 
@@ -65,7 +67,7 @@ export default function TicketVerify() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground mt-4">Verifica in corso...</p>
+          <p className="text-muted-foreground mt-4">{t('account.verify.loading')}</p>
         </div>
       </div>
     );
@@ -78,8 +80,8 @@ export default function TicketVerify() {
         iconColor: "text-destructive",
         bgColor: "bg-destructive/10",
         borderColor: "border-destructive/30",
-        title: "Errore di verifica",
-        subtitle: "Impossibile verificare il biglietto",
+        title: t('account.verify.errorTitle'),
+        subtitle: t('account.verify.errorSubtitle'),
       };
     }
 
@@ -90,8 +92,8 @@ export default function TicketVerify() {
           iconColor: "text-green-500",
           bgColor: "bg-green-500/10",
           borderColor: "border-green-500/30",
-          title: "Biglietto Valido",
-          subtitle: "Questo biglietto è autentico e non ancora utilizzato",
+          title: t('account.verify.validTitle'),
+          subtitle: t('account.verify.validSubtitle'),
         };
       case "used":
         return {
@@ -99,10 +101,10 @@ export default function TicketVerify() {
           iconColor: "text-yellow-500",
           bgColor: "bg-yellow-500/10",
           borderColor: "border-yellow-500/30",
-          title: "Biglietto Già Utilizzato",
+          title: t('account.verify.usedTitle'),
           subtitle: data.ticket?.usedAt 
-            ? `Utilizzato il ${format(new Date(data.ticket.usedAt), "d MMMM yyyy 'alle' HH:mm", { locale: it })}`
-            : "Questo biglietto è già stato validato",
+            ? `${t('account.verify.usedOn')} ${format(new Date(data.ticket.usedAt), "d MMMM yyyy 'alle' HH:mm", { locale: it })}`
+            : t('account.verify.alreadyValidated'),
         };
       case "cancelled":
         return {
@@ -110,8 +112,8 @@ export default function TicketVerify() {
           iconColor: "text-destructive",
           bgColor: "bg-destructive/10",
           borderColor: "border-destructive/30",
-          title: "Biglietto Annullato",
-          subtitle: "Questo biglietto è stato annullato e non è più valido",
+          title: t('account.verify.cancelledTitle'),
+          subtitle: t('account.verify.cancelledSubtitle'),
         };
       case "not_found":
         return {
@@ -119,8 +121,8 @@ export default function TicketVerify() {
           iconColor: "text-muted-foreground",
           bgColor: "bg-muted/50",
           borderColor: "border-muted",
-          title: "Biglietto Non Trovato",
-          subtitle: "Nessun biglietto corrisponde a questo codice",
+          title: t('account.verify.notFoundTitle'),
+          subtitle: t('account.verify.notFoundSubtitle'),
         };
       default:
         return {
@@ -128,8 +130,8 @@ export default function TicketVerify() {
           iconColor: "text-destructive",
           bgColor: "bg-destructive/10",
           borderColor: "border-destructive/30",
-          title: "Biglietto Non Valido",
-          subtitle: data.message || "Questo biglietto non è valido",
+          title: t('account.verify.invalidTitle'),
+          subtitle: data.message || t('account.verify.invalidSubtitle'),
         };
     }
   };
@@ -145,7 +147,7 @@ export default function TicketVerify() {
             <Link href="/acquista">
               <Button variant="ghost" data-testid="button-back">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Torna agli eventi
+                {t('account.verify.backToEvents')}
               </Button>
             </Link>
           </div>
@@ -171,7 +173,7 @@ export default function TicketVerify() {
                       {data.event.name}
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Codice: <span className="font-mono">{data.ticket.ticketCode}</span>
+                      {t('account.verify.code')}: <span className="font-mono">{data.ticket.ticketCode}</span>
                     </p>
                   </div>
 
@@ -179,7 +181,7 @@ export default function TicketVerify() {
                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                       <Calendar className="w-6 h-6 text-primary flex-shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Data Evento</p>
+                        <p className="text-xs text-muted-foreground">{t('account.verify.eventDate')}</p>
                         <p className="text-foreground font-medium" data-testid="text-event-date">
                           {format(new Date(data.event.startDate), "d MMMM yyyy", { locale: it })}
                         </p>
@@ -192,7 +194,7 @@ export default function TicketVerify() {
                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                       <MapPin className="w-6 h-6 text-primary flex-shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Luogo</p>
+                        <p className="text-xs text-muted-foreground">{t('account.verify.location')}</p>
                         <p className="text-foreground font-medium" data-testid="text-location">
                           {data.event.location.name}
                         </p>
@@ -205,7 +207,7 @@ export default function TicketVerify() {
                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                       <Ticket className="w-6 h-6 text-primary flex-shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Tipo Biglietto</p>
+                        <p className="text-xs text-muted-foreground">{t('account.verify.ticketType')}</p>
                         <p className="text-foreground font-medium" data-testid="text-ticket-type">
                           {data.ticket.ticketType}
                         </p>
@@ -217,7 +219,7 @@ export default function TicketVerify() {
                       <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                         <User className="w-6 h-6 text-primary flex-shrink-0" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Intestatario</p>
+                          <p className="text-xs text-muted-foreground">{t('account.verify.holder')}</p>
                           <p className="text-foreground font-medium" data-testid="text-participant">
                             {data.ticket.participantName}
                           </p>
@@ -229,7 +231,7 @@ export default function TicketVerify() {
                   {data.ticket.price && (
                     <div className="text-center pt-4 border-t border-border">
                       <Badge variant="secondary" className="text-base px-4 py-1">
-                        Prezzo: €{parseFloat(data.ticket.price).toFixed(2)}
+                        {t('account.verify.price')}: €{parseFloat(data.ticket.price).toFixed(2)}
                       </Badge>
                     </div>
                   )}
@@ -239,7 +241,7 @@ export default function TicketVerify() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Codice verificato: <span className="font-mono">{code}</span>
+                {t('account.verify.codeVerified')}: <span className="font-mono">{code}</span>
               </p>
             </div>
           </div>
@@ -255,7 +257,7 @@ export default function TicketVerify() {
           <Link href="/acquista">
             <Button variant="ghost" className="text-muted-foreground hover:text-foreground -ml-2" data-testid="button-home">
               <Home className="w-4 h-4 mr-2" />
-              Torna agli eventi
+              {t('account.verify.backToEvents')}
             </Button>
           </Link>
         </div>
@@ -280,7 +282,7 @@ export default function TicketVerify() {
                   {data.event.name}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Codice: <span className="font-mono">{data.ticket.ticketCode}</span>
+                  {t('account.verify.code')}: <span className="font-mono">{data.ticket.ticketCode}</span>
                 </p>
               </div>
 
@@ -338,7 +340,7 @@ export default function TicketVerify() {
               {data.ticket.price && (
                 <div className="text-center pt-4 border-t border-border">
                   <Badge variant="secondary" className="text-sm">
-                    Prezzo: €{parseFloat(data.ticket.price).toFixed(2)}
+                    {t('account.verify.price')}: €{parseFloat(data.ticket.price).toFixed(2)}
                   </Badge>
                 </div>
               )}
@@ -348,7 +350,7 @@ export default function TicketVerify() {
 
         <div className="mt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            Codice verificato: <span className="font-mono">{code}</span>
+            {t('account.verify.codeVerified')}: <span className="font-mono">{code}</span>
           </p>
         </div>
       </div>

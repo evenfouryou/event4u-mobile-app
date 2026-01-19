@@ -22,6 +22,7 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { triggerHaptic } from "@/components/mobile-primitives";
+import { useTranslation } from 'react-i18next';
 
 interface Sector {
   id: string;
@@ -98,6 +99,7 @@ export default function PublicVenueDetail() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const { data: venue, isLoading, error } = useQuery<VenueDetail>({
     queryKey: ["/api/public/venues", params.id],
@@ -179,15 +181,15 @@ export default function PublicVenueDetail() {
             <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
               <Building2 className="w-10 h-10 text-destructive" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Locale non trovato</h2>
-            <p className="text-muted-foreground mb-8">Il locale richiesto non è disponibile.</p>
+            <h2 className="text-xl font-bold text-foreground mb-2">{t('public.venueDetail.venueNotFound')}</h2>
+            <p className="text-muted-foreground mb-8">{t('public.venueDetail.venueNotFoundMessage')}</p>
             <Button 
               onClick={handleBack}
               className="min-h-[48px] px-8 rounded-full"
               data-testid="button-back-venues"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Torna ai locali
+              {t('public.venueDetail.backToVenues')}
             </Button>
           </motion.div>
         </div>
@@ -208,7 +210,7 @@ export default function PublicVenueDetail() {
               data-testid="button-back"
             >
               <ArrowLeft className="w-4 h-4" />
-              Torna ai locali
+              {t('public.venueDetail.backToVenues')}
             </Button>
           </div>
 
@@ -255,7 +257,7 @@ export default function PublicVenueDetail() {
                   <div className="flex items-center justify-between gap-4">
                     <CardTitle className="flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-primary" />
-                      Prossimi Eventi
+                      {t('public.venueDetail.upcomingEvents')}
                     </CardTitle>
                     <Badge variant="secondary">
                       {venue.upcomingEvents.length}
@@ -268,9 +270,9 @@ export default function PublicVenueDetail() {
                       <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
                         <Calendar className="w-8 h-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">Nessun evento</h3>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">{t('public.venueDetail.noEvents')}</h3>
                       <p className="text-muted-foreground text-sm">
-                        Non ci sono eventi in programma.
+                        {t('public.venueDetail.noEventsMessage')}
                       </p>
                     </div>
                   ) : (
@@ -290,7 +292,7 @@ export default function PublicVenueDetail() {
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Navigation className="w-4 h-4 text-primary" />
-                      Indirizzo
+                      {t('public.venueDetail.address')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
@@ -305,7 +307,7 @@ export default function PublicVenueDetail() {
                       data-testid="button-open-maps"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
-                      Apri in Google Maps
+                      {t('public.venueDetail.openInGoogleMaps')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -316,7 +318,7 @@ export default function PublicVenueDetail() {
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Clock className="w-4 h-4 text-primary" />
-                      Orari
+                      {t('public.venueDetail.hours')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
@@ -330,11 +332,11 @@ export default function PublicVenueDetail() {
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Ticket className="w-4 h-4 text-primary" />
-                      Capacità
+                      {t('public.venueDetail.capacityLabel')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <p className="text-foreground font-medium">{venue.capacity} posti</p>
+                    <p className="text-foreground font-medium">{t('public.venueDetail.capacitySeats', { count: venue.capacity })}</p>
                   </CardContent>
                 </Card>
               )}
@@ -347,7 +349,7 @@ export default function PublicVenueDetail() {
                       data-testid="button-all-events"
                     >
                       <Ticket className="w-4 h-4 mr-2" />
-                      Scopri tutti gli eventi
+                      {t('public.venueDetail.discoverAllEvents')}
                     </Button>
                   </Link>
                 </CardContent>
@@ -437,7 +439,7 @@ export default function PublicVenueDetail() {
                 <Navigation className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Indirizzo</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('public.venueDetail.address')}</p>
                 <p className="text-foreground font-medium" data-testid="text-venue-address">{venue.address}</p>
                 {venue.city && (
                   <p className="text-muted-foreground text-sm">{venue.city}</p>
@@ -464,7 +466,7 @@ export default function PublicVenueDetail() {
                 <Clock className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Orari</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('public.venueDetail.hours')}</p>
                 <p className="text-foreground font-medium" data-testid="text-hours">{venue.openingHours}</p>
               </div>
             </motion.div>
@@ -473,7 +475,7 @@ export default function PublicVenueDetail() {
           <motion.div variants={fadeInUp}>
             <div className="flex items-center gap-3 mb-4">
               <Calendar className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">Prossimi Eventi</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t('public.venueDetail.upcomingEvents')}</h2>
               <Badge variant="secondary" className="ml-auto">
                 {venue.upcomingEvents.length}
               </Badge>
@@ -492,9 +494,9 @@ export default function PublicVenueDetail() {
                   <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Nessun evento</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{t('public.venueDetail.noEvents')}</h3>
                   <p className="text-muted-foreground text-sm">
-                    Non ci sono eventi in programma.
+                    {t('public.venueDetail.noEventsMessage')}
                   </p>
                 </motion.div>
               ) : (
@@ -517,7 +519,7 @@ export default function PublicVenueDetail() {
                 data-testid="button-all-events"
               >
                 <Ticket className="w-5 h-5 mr-2" />
-                Scopri tutti gli eventi
+                {t('public.venueDetail.discoverAllEvents')}
               </Button>
             </Link>
           </motion.div>
@@ -528,6 +530,7 @@ export default function PublicVenueDetail() {
 }
 
 function EventCard({ event, index }: { event: VenueEvent; index: number }) {
+  const { t } = useTranslation();
   const eventDate = new Date(event.eventStart);
 
   return (
@@ -564,7 +567,7 @@ function EventCard({ event, index }: { event: VenueEvent; index: number }) {
                 
                 {event.requiresNominative && (
                   <Badge className="bg-purple-500/20 text-purple-400 border-0 mt-2 text-xs">
-                    Nominativo
+                    {t('public.venueDetail.nominative')}
                   </Badge>
                 )}
               </div>
@@ -572,7 +575,7 @@ function EventCard({ event, index }: { event: VenueEvent; index: number }) {
               <div className="text-right shrink-0">
                 {event.minPrice !== null && (
                   <>
-                    <p className="text-[10px] text-muted-foreground uppercase">Da</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">{t('public.venueDetail.from')}</p>
                     <p className="text-xl font-bold text-primary">
                       €{event.minPrice.toFixed(0)}
                     </p>
@@ -607,7 +610,7 @@ function EventCard({ event, index }: { event: VenueEvent; index: number }) {
           </div>
           
           <div className="px-4 py-3 bg-primary/5 border-t border-border flex items-center justify-between">
-            <span className="text-sm font-medium text-primary">Acquista biglietti</span>
+            <span className="text-sm font-medium text-primary">{t('public.venueDetail.buyTickets')}</span>
             <ChevronRight className="w-4 h-4 text-primary" />
           </div>
         </motion.div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
@@ -119,21 +120,34 @@ interface SiaeTicketData {
   };
 }
 
-function getStatusBadge(status: string, type: 'ticket' | 'list' | 'table') {
-  const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    valid: { label: 'Valido', variant: 'default' },
-    used: { label: 'Usato', variant: 'secondary' },
-    cancelled: { label: 'Annullato', variant: 'destructive' },
-    confirmed: { label: 'Confermato', variant: 'default' },
-    checked_in: { label: 'Check-in', variant: 'default' },
-    pending: { label: 'In Attesa', variant: 'outline' },
-    approved: { label: 'Approvato', variant: 'default' },
-    rejected: { label: 'Rifiutato', variant: 'destructive' },
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
+  const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    valid: 'default',
+    used: 'secondary',
+    cancelled: 'destructive',
+    confirmed: 'default',
+    checked_in: 'default',
+    pending: 'outline',
+    approved: 'default',
+    rejected: 'destructive',
   };
   
-  const statusInfo = statusMap[status] || { label: status, variant: 'outline' as const };
+  const statusKeys: Record<string, string> = {
+    valid: 'account.status.valid',
+    used: 'account.status.used',
+    cancelled: 'account.status.cancelled',
+    confirmed: 'account.status.confirmed',
+    checked_in: 'account.status.checkedIn',
+    pending: 'account.status.pending',
+    approved: 'account.status.approved',
+    rejected: 'account.status.rejected',
+  };
+  
+  const variant = statusVariants[status] || 'outline';
+  const label = statusKeys[status] ? t(statusKeys[status]) : status;
+  
   return (
-    <Badge variant={statusInfo.variant} data-testid={`badge-status-${status}`}>
+    <Badge variant={variant} data-testid={`badge-status-${status}`}>
       {status === 'valid' || status === 'confirmed' || status === 'approved' || status === 'checked_in' ? (
         <CheckCircle2 className="h-3 w-3 mr-1" />
       ) : status === 'pending' ? (
@@ -143,7 +157,7 @@ function getStatusBadge(status: string, type: 'ticket' | 'list' | 'table') {
       ) : (
         <AlertCircle className="h-3 w-3 mr-1" />
       )}
-      {statusInfo.label}
+      {label}
     </Badge>
   );
 }
@@ -172,7 +186,7 @@ function QRCodeDisplay({ code, size = 120 }: { code: string; size?: number }) {
   );
 }
 
-function TicketCard({ ticket, event, sector }: SiaeTicketData) {
+function TicketCard({ ticket, event, sector, t }: SiaeTicketData & { t: (key: string) => string }) {
   return (
     <Card className="overflow-hidden hover-elevate" data-testid={`ticket-card-${ticket.id}`}>
       <CardHeader className="pb-2">
@@ -192,26 +206,26 @@ function TicketCard({ ticket, event, sector }: SiaeTicketData) {
               </div>
             </div>
           </div>
-          {getStatusBadge(ticket.status, 'ticket')}
+          <StatusBadge status={ticket.status} t={t} />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-1 text-muted-foreground">
             <MapPin className="h-3 w-3" />
-            <span>{event.locationName || 'Sede evento'}</span>
+            <span>{event.locationName || t('account.wallet.eventVenue')}</span>
           </div>
           <span className="font-semibold text-primary">€{parseFloat(ticket.grossAmount).toFixed(2)}</span>
         </div>
         
         <div className="text-sm">
-          <span className="text-muted-foreground">Settore: </span>
+          <span className="text-muted-foreground">{t('account.wallet.sector')}: </span>
           <span>{sector.name}</span>
         </div>
         
         {ticket.participantFirstName && ticket.participantLastName && (
           <div className="text-sm">
-            <span className="text-muted-foreground">Intestatario: </span>
+            <span className="text-muted-foreground">{t('account.wallet.holder')}: </span>
             <span>{ticket.participantFirstName} {ticket.participantLastName}</span>
           </div>
         )}
@@ -226,7 +240,7 @@ function TicketCard({ ticket, event, sector }: SiaeTicketData) {
   );
 }
 
-function ListEntryCard({ entry, list, event }: E4UWalletData['listEntries'][0]) {
+function ListEntryCard({ entry, list, event, t }: E4UWalletData['listEntries'][0] & { t: (key: string) => string }) {
   return (
     <Card className="overflow-hidden hover-elevate" data-testid={`list-entry-card-${entry.id}`}>
       <CardHeader className="pb-2">
@@ -242,7 +256,7 @@ function ListEntryCard({ entry, list, event }: E4UWalletData['listEntries'][0]) 
               </div>
             </div>
           </div>
-          {getStatusBadge(entry.status, 'list')}
+          <StatusBadge status={entry.status} t={t} />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -252,13 +266,13 @@ function ListEntryCard({ entry, list, event }: E4UWalletData['listEntries'][0]) 
         </div>
         
         <div className="text-sm">
-          <span className="text-muted-foreground">Nome: </span>
+          <span className="text-muted-foreground">{t('account.wallet.name')}: </span>
           <span>{entry.firstName} {entry.lastName}</span>
         </div>
         
         {list.price && parseFloat(list.price) > 0 && (
           <div className="text-sm">
-            <span className="text-muted-foreground">Prezzo: </span>
+            <span className="text-muted-foreground">{t('account.wallet.price')}: </span>
             <span className="text-primary font-semibold">€{parseFloat(list.price).toFixed(2)}</span>
           </div>
         )}
@@ -273,7 +287,7 @@ function ListEntryCard({ entry, list, event }: E4UWalletData['listEntries'][0]) 
   );
 }
 
-function TableGuestCard({ guest, reservation, tableType, event }: E4UWalletData['tableGuests'][0]) {
+function TableGuestCard({ guest, reservation, tableType, event, t }: E4UWalletData['tableGuests'][0] & { t: (key: string) => string }) {
   return (
     <Card className="overflow-hidden hover-elevate" data-testid={`table-guest-card-${guest.id}`}>
       <CardHeader className="pb-2">
@@ -289,7 +303,7 @@ function TableGuestCard({ guest, reservation, tableType, event }: E4UWalletData[
               </div>
             </div>
           </div>
-          {getStatusBadge(guest.status === 'pending' ? reservation.status : guest.status, 'table')}
+          <StatusBadge status={guest.status === 'pending' ? reservation.status : guest.status} t={t} />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -299,7 +313,7 @@ function TableGuestCard({ guest, reservation, tableType, event }: E4UWalletData[
         </div>
         
         <div className="text-sm">
-          <span className="text-muted-foreground">Nome: </span>
+          <span className="text-muted-foreground">{t('account.wallet.name')}: </span>
           <span>{guest.firstName} {guest.lastName}</span>
         </div>
         
@@ -340,7 +354,7 @@ function LoadingSkeleton() {
   );
 }
 
-function EmptyState({ type }: { type: 'tickets' | 'e4u' }) {
+function EmptyState({ type, t }: { type: 'tickets' | 'e4u'; t: (key: string) => string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center" data-testid={`empty-state-${type}`}>
       <div className="p-4 rounded-full bg-muted/50 mb-4">
@@ -351,12 +365,12 @@ function EmptyState({ type }: { type: 'tickets' | 'e4u' }) {
         )}
       </div>
       <h3 className="text-lg font-semibold mb-2">
-        {type === 'tickets' ? 'Nessun biglietto' : 'Nessuna iscrizione'}
+        {type === 'tickets' ? t('account.wallet.noTickets') : t('account.wallet.noSubscription')}
       </h3>
       <p className="text-muted-foreground max-w-sm">
         {type === 'tickets' 
-          ? 'Non hai ancora acquistato biglietti. Scopri gli eventi disponibili!'
-          : 'Non sei ancora iscritto a nessuna lista o tavolo. Partecipa agli eventi!'
+          ? t('account.wallet.noTicketsDescription')
+          : t('account.wallet.noSubscriptionDescription')
         }
       </p>
     </div>
@@ -364,6 +378,7 @@ function EmptyState({ type }: { type: 'tickets' | 'e4u' }) {
 }
 
 export default function ClientWalletPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<string>("e4u");
@@ -392,8 +407,8 @@ export default function ClientWalletPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-client-wallet">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Il Mio Wallet</h1>
-            <p className="text-muted-foreground">I tuoi biglietti e iscrizioni agli eventi</p>
+            <h1 className="text-3xl font-bold">{t('account.wallet.title')}</h1>
+            <p className="text-muted-foreground">{t('account.wallet.description')}</p>
           </div>
         </div>
 
@@ -406,7 +421,7 @@ export default function ClientWalletPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{listEntries.length}</div>
-                  <p className="text-sm text-muted-foreground">Liste</p>
+                  <p className="text-sm text-muted-foreground">{t('account.wallet.lists')}</p>
                 </div>
               </div>
             </CardContent>
@@ -419,7 +434,7 @@ export default function ClientWalletPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{tableGuests.length}</div>
-                  <p className="text-sm text-muted-foreground">Tavoli</p>
+                  <p className="text-sm text-muted-foreground">{t('account.wallet.tables')}</p>
                 </div>
               </div>
             </CardContent>
@@ -432,7 +447,7 @@ export default function ClientWalletPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{siaeTickets.length}</div>
-                  <p className="text-sm text-muted-foreground">Biglietti</p>
+                  <p className="text-sm text-muted-foreground">{t('account.wallet.tickets')}</p>
                 </div>
               </div>
             </CardContent>
@@ -445,7 +460,7 @@ export default function ClientWalletPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{totalE4U + siaeTickets.length}</div>
-                  <p className="text-sm text-muted-foreground">Totale</p>
+                  <p className="text-sm text-muted-foreground">{t('account.wallet.total')}</p>
                 </div>
               </div>
             </CardContent>
@@ -456,14 +471,14 @@ export default function ClientWalletPage() {
           <TabsList data-testid="tabs-wallet-desktop">
             <TabsTrigger value="e4u" className="gap-2" data-testid="tab-e4u-desktop">
               <Users className="h-4 w-4" />
-              Liste & Tavoli
+              {t('account.wallet.listsTables')}
               {totalE4U > 0 && (
                 <Badge variant="secondary" className="ml-1">{totalE4U}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="tickets" className="gap-2" data-testid="tab-tickets-desktop">
               <Ticket className="h-4 w-4" />
-              Biglietti
+              {t('account.wallet.tickets')}
               {siaeTickets.length > 0 && (
                 <Badge variant="secondary" className="ml-1">{siaeTickets.length}</Badge>
               )}
@@ -491,7 +506,7 @@ export default function ClientWalletPage() {
             ) : totalE4U === 0 ? (
               <Card>
                 <CardContent className="py-12">
-                  <EmptyState type="e4u" />
+                  <EmptyState type="e4u" t={t} />
                 </CardContent>
               </Card>
             ) : (
@@ -501,20 +516,20 @@ export default function ClientWalletPage() {
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-cyan-400" />
-                        <CardTitle>Liste ({listEntries.length})</CardTitle>
+                        <CardTitle>{t('account.wallet.lists')} ({listEntries.length})</CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Lista</TableHead>
-                            <TableHead>Evento</TableHead>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Prezzo</TableHead>
-                            <TableHead>Stato</TableHead>
-                            <TableHead className="text-right">Azioni</TableHead>
+                            <TableHead>{t('account.wallet.list')}</TableHead>
+                            <TableHead>{t('account.wallet.event')}</TableHead>
+                            <TableHead>{t('account.wallet.name')}</TableHead>
+                            <TableHead>{t('account.wallet.date')}</TableHead>
+                            <TableHead>{t('account.wallet.price')}</TableHead>
+                            <TableHead>{t('account.wallet.status')}</TableHead>
+                            <TableHead className="text-right">{t('account.wallet.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -532,9 +547,9 @@ export default function ClientWalletPage() {
                               <TableCell>
                                 {item.list.price && parseFloat(item.list.price) > 0 
                                   ? `€${parseFloat(item.list.price).toFixed(2)}` 
-                                  : 'Gratuito'}
+                                  : t('account.wallet.free')}
                               </TableCell>
-                              <TableCell>{getStatusBadge(item.entry.status, 'list')}</TableCell>
+                              <TableCell><StatusBadge status={item.entry.status} t={t} /></TableCell>
                               <TableCell className="text-right">
                                 <Button 
                                   size="icon" 
@@ -558,20 +573,20 @@ export default function ClientWalletPage() {
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Armchair className="h-5 w-5 text-teal-400" />
-                        <CardTitle>Tavoli ({tableGuests.length})</CardTitle>
+                        <CardTitle>{t('account.wallet.tables')} ({tableGuests.length})</CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Tavolo</TableHead>
-                            <TableHead>Prenotazione</TableHead>
-                            <TableHead>Evento</TableHead>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Stato</TableHead>
-                            <TableHead className="text-right">Azioni</TableHead>
+                            <TableHead>{t('account.wallet.table')}</TableHead>
+                            <TableHead>{t('account.wallet.reservation')}</TableHead>
+                            <TableHead>{t('account.wallet.event')}</TableHead>
+                            <TableHead>{t('account.wallet.name')}</TableHead>
+                            <TableHead>{t('account.wallet.date')}</TableHead>
+                            <TableHead>{t('account.wallet.status')}</TableHead>
+                            <TableHead className="text-right">{t('account.wallet.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -588,7 +603,7 @@ export default function ClientWalletPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                {getStatusBadge(item.guest.status === 'pending' ? item.reservation.status : item.guest.status, 'table')}
+                                <StatusBadge status={item.guest.status === 'pending' ? item.reservation.status : item.guest.status} t={t} />
                               </TableCell>
                               <TableCell className="text-right">
                                 <Button 
@@ -632,7 +647,7 @@ export default function ClientWalletPage() {
             ) : siaeTickets.length === 0 ? (
               <Card>
                 <CardContent className="py-12">
-                  <EmptyState type="tickets" />
+                  <EmptyState type="tickets" t={t} />
                 </CardContent>
               </Card>
             ) : (
@@ -640,21 +655,21 @@ export default function ClientWalletPage() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Ticket className="h-5 w-5 text-purple-400" />
-                    <CardTitle>Biglietti ({siaeTickets.length})</CardTitle>
+                    <CardTitle>{t('account.wallet.tickets')} ({siaeTickets.length})</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Evento</TableHead>
-                        <TableHead>Settore</TableHead>
-                        <TableHead>Intestatario</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Luogo</TableHead>
-                        <TableHead>Prezzo</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead>{t('account.wallet.event')}</TableHead>
+                        <TableHead>{t('account.wallet.sector')}</TableHead>
+                        <TableHead>{t('account.wallet.holder')}</TableHead>
+                        <TableHead>{t('account.wallet.date')}</TableHead>
+                        <TableHead>{t('account.wallet.location')}</TableHead>
+                        <TableHead>{t('account.wallet.price')}</TableHead>
+                        <TableHead>{t('account.wallet.status')}</TableHead>
+                        <TableHead className="text-right">{t('account.wallet.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -677,11 +692,11 @@ export default function ClientWalletPage() {
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm">
                               <MapPin className="h-3 w-3" />
-                              {item.event.locationName || 'N/D'}
+                              {item.event.locationName || t('account.wallet.notAvailable')}
                             </div>
                           </TableCell>
                           <TableCell className="font-semibold">€{parseFloat(item.ticket.grossAmount).toFixed(2)}</TableCell>
-                          <TableCell>{getStatusBadge(item.ticket.status, 'ticket')}</TableCell>
+                          <TableCell><StatusBadge status={item.ticket.status} t={t} /></TableCell>
                           <TableCell className="text-right">
                             <Button 
                               size="icon" 
@@ -709,24 +724,24 @@ export default function ClientWalletPage() {
                 {selectedItem?.type === 'list' && (
                   <>
                     <Users className="h-5 w-5 text-cyan-400" />
-                    Dettaglio Iscrizione Lista
+                    {t('account.wallet.listDetailTitle')}
                   </>
                 )}
                 {selectedItem?.type === 'table' && (
                   <>
                     <Armchair className="h-5 w-5 text-teal-400" />
-                    Dettaglio Prenotazione Tavolo
+                    {t('account.wallet.tableDetailTitle')}
                   </>
                 )}
                 {selectedItem?.type === 'ticket' && (
                   <>
                     <Ticket className="h-5 w-5 text-purple-400" />
-                    Dettaglio Biglietto
+                    {t('account.wallet.ticketDetailTitle')}
                   </>
                 )}
               </DialogTitle>
               <DialogDescription>
-                Visualizza il QR code per l'accesso
+                {t('account.wallet.viewQrCode')}
               </DialogDescription>
             </DialogHeader>
             
@@ -735,26 +750,26 @@ export default function ClientWalletPage() {
                 <>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Lista:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.list')}:</span>
                       <span className="font-medium">{selectedItem.data.list.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Evento:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.event')}:</span>
                       <span className="font-medium">{selectedItem.data.event.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Nome:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.name')}:</span>
                       <span className="font-medium">{selectedItem.data.entry.firstName} {selectedItem.data.entry.lastName}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Data:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.date')}:</span>
                       <span className="font-medium">
                         {format(new Date(selectedItem.data.event.startDatetime), "d MMMM yyyy - HH:mm", { locale: it })}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground text-sm">Stato:</span>
-                      {getStatusBadge(selectedItem.data.entry.status, 'list')}
+                      <span className="text-muted-foreground text-sm">{t('account.wallet.status')}:</span>
+                      <StatusBadge status={selectedItem.data.entry.status} t={t} />
                     </div>
                   </div>
                   {selectedItem.data.entry.qrCode && (
@@ -769,35 +784,35 @@ export default function ClientWalletPage() {
                 <>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tavolo:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.table')}:</span>
                       <span className="font-medium">{selectedItem.data.tableType.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Prenotazione:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.reservation')}:</span>
                       <span className="font-medium">{selectedItem.data.reservation.reservationName}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Evento:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.event')}:</span>
                       <span className="font-medium">{selectedItem.data.event.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Nome:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.name')}:</span>
                       <span className="font-medium">{selectedItem.data.guest.firstName} {selectedItem.data.guest.lastName}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Data:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.date')}:</span>
                       <span className="font-medium">
                         {format(new Date(selectedItem.data.event.startDatetime), "d MMMM yyyy - HH:mm", { locale: it })}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground text-sm">Stato:</span>
-                      {getStatusBadge(
-                        selectedItem.data.guest.status === 'pending' 
+                      <span className="text-muted-foreground text-sm">{t('account.wallet.status')}:</span>
+                      <StatusBadge 
+                        status={selectedItem.data.guest.status === 'pending' 
                           ? selectedItem.data.reservation.status 
-                          : selectedItem.data.guest.status, 
-                        'table'
-                      )}
+                          : selectedItem.data.guest.status} 
+                        t={t}
+                      />
                     </div>
                   </div>
                   {selectedItem.data.guest.qrCode && (
@@ -812,39 +827,39 @@ export default function ClientWalletPage() {
                 <>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Evento:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.event')}:</span>
                       <span className="font-medium">{selectedItem.data.event.eventName}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Settore:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.sector')}:</span>
                       <span className="font-medium">{selectedItem.data.sector.name}</span>
                     </div>
                     {selectedItem.data.ticket.participantFirstName && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Intestatario:</span>
+                        <span className="text-muted-foreground">{t('account.wallet.holder')}:</span>
                         <span className="font-medium">
                           {selectedItem.data.ticket.participantFirstName} {selectedItem.data.ticket.participantLastName}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Data:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.date')}:</span>
                       <span className="font-medium">
                         {format(new Date(selectedItem.data.event.eventDate), "d MMMM yyyy", { locale: it })}
                         {selectedItem.data.event.eventTime && ` - ${selectedItem.data.event.eventTime}`}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Luogo:</span>
-                      <span className="font-medium">{selectedItem.data.event.locationName || 'N/D'}</span>
+                      <span className="text-muted-foreground">{t('account.wallet.location')}:</span>
+                      <span className="font-medium">{selectedItem.data.event.locationName || t('account.wallet.notAvailable')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Prezzo:</span>
+                      <span className="text-muted-foreground">{t('account.wallet.price')}:</span>
                       <span className="font-semibold text-primary">€{parseFloat(selectedItem.data.ticket.grossAmount).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground text-sm">Stato:</span>
-                      {getStatusBadge(selectedItem.data.ticket.status, 'ticket')}
+                      <span className="text-muted-foreground text-sm">{t('account.wallet.status')}:</span>
+                      <StatusBadge status={selectedItem.data.ticket.status} t={t} />
                     </div>
                   </div>
                   {selectedItem.data.ticket.qrCode && (
@@ -863,13 +878,13 @@ export default function ClientWalletPage() {
   
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Il Mio Wallet" showBackButton showMenuButton />}
+      header={<MobileHeader title={t('account.wallet.title')} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="container max-w-4xl py-6 space-y-6">
         <div className="flex items-center gap-3">
           <div>
-            <p className="text-muted-foreground">I tuoi biglietti e iscrizioni agli eventi</p>
+            <p className="text-muted-foreground">{t('account.wallet.description')}</p>
           </div>
         </div>
         
@@ -877,14 +892,14 @@ export default function ClientWalletPage() {
         <TabsList className="grid w-full grid-cols-2" data-testid="tabs-wallet">
           <TabsTrigger value="e4u" className="gap-2" data-testid="tab-e4u">
             <Users className="h-4 w-4" />
-            Liste & Tavoli
+            {t('account.wallet.listsTables')}
             {totalE4U > 0 && (
               <Badge variant="secondary" className="ml-1">{totalE4U}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="tickets" className="gap-2" data-testid="tab-tickets">
             <Ticket className="h-4 w-4" />
-            Biglietti
+            {t('account.wallet.tickets')}
             {siaeTickets.length > 0 && (
               <Badge variant="secondary" className="ml-1">{siaeTickets.length}</Badge>
             )}
@@ -896,18 +911,18 @@ export default function ClientWalletPage() {
             {loadingE4U ? (
               <LoadingSkeleton />
             ) : totalE4U === 0 ? (
-              <EmptyState type="e4u" />
+              <EmptyState type="e4u" t={t} />
             ) : (
               <div className="space-y-6">
                 {listEntries.length > 0 && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-cyan-400" />
-                      <h2 className="text-lg font-semibold">Liste ({listEntries.length})</h2>
+                      <h2 className="text-lg font-semibold">{t('account.wallet.lists')} ({listEntries.length})</h2>
                     </div>
                     <div className="grid gap-4">
                       {listEntries.map((item) => (
-                        <ListEntryCard key={item.entry.id} {...item} />
+                        <ListEntryCard key={item.entry.id} {...item} t={t} />
                       ))}
                     </div>
                   </div>
@@ -917,11 +932,11 @@ export default function ClientWalletPage() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Armchair className="h-5 w-5 text-teal-400" />
-                      <h2 className="text-lg font-semibold">Tavoli ({tableGuests.length})</h2>
+                      <h2 className="text-lg font-semibold">{t('account.wallet.tables')} ({tableGuests.length})</h2>
                     </div>
                     <div className="grid gap-4">
                       {tableGuests.map((item) => (
-                        <TableGuestCard key={item.guest.id} {...item} />
+                        <TableGuestCard key={item.guest.id} {...item} t={t} />
                       ))}
                     </div>
                   </div>
@@ -936,11 +951,11 @@ export default function ClientWalletPage() {
             {loadingSiae ? (
               <LoadingSkeleton />
             ) : siaeTickets.length === 0 ? (
-              <EmptyState type="tickets" />
+              <EmptyState type="tickets" t={t} />
             ) : (
               <div className="grid gap-4">
                 {siaeTickets.map((item) => (
-                  <TicketCard key={item.ticket.id} {...item} />
+                  <TicketCard key={item.ticket.id} {...item} t={t} />
                 ))}
               </div>
             )}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +41,7 @@ import type { SiaeTransaction, SiaeTicketedEvent, Event } from "@shared/schema";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 export default function StripeAdminPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
@@ -75,13 +77,13 @@ export default function StripeAdminPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Completata</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{t('admin.stripe.status.completed')}</Badge>;
       case "pending":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">In Attesa</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{t('admin.stripe.status.pending')}</Badge>;
       case "failed":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Fallita</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('admin.stripe.status.failed')}</Badge>;
       case "refunded":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Rimborsata</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{t('admin.stripe.status.refunded')}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -101,13 +103,13 @@ export default function StripeAdminPage() {
   const getPaymentLabel = (method: string | null) => {
     switch (method) {
       case "card":
-        return "Carta";
+        return t('admin.stripe.paymentMethods.card');
       case "cash":
-        return "Contanti";
+        return t('admin.stripe.paymentMethods.cash');
       case "bank_transfer":
-        return "Bonifico";
+        return t('admin.stripe.paymentMethods.bankTransfer');
       case "paypal":
-        return "PayPal";
+        return t('admin.stripe.paymentMethods.paypal');
       default:
         return method || "-";
     }
@@ -150,9 +152,9 @@ export default function StripeAdminPage() {
   const getEventName = (ticketedEventId: string | null) => {
     if (!ticketedEventId) return "-";
     const ticketedEvent = ticketedEvents?.find(e => e.id === ticketedEventId);
-    if (!ticketedEvent) return "Evento sconosciuto";
+    if (!ticketedEvent) return t('admin.stripe.unknownEvent');
     const event = events?.find(e => e.id === ticketedEvent.eventId);
-    return event?.name || "Evento sconosciuto";
+    return event?.name || t('admin.stripe.unknownEvent');
   };
 
   const openStripeDashboard = () => {
@@ -189,9 +191,9 @@ export default function StripeAdminPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <CreditCard className="w-8 h-8 text-[#FFD700]" />
-              Pagamenti Stripe
+              {t('admin.stripe.title')}
             </h1>
-            <p className="text-muted-foreground">Gestisci le transazioni e monitora i pagamenti</p>
+            <p className="text-muted-foreground">{t('admin.stripe.description')}</p>
           </div>
           <Button
             onClick={openStripeDashboard}
@@ -199,7 +201,7 @@ export default function StripeAdminPage() {
             data-testid="button-stripe-dashboard"
           >
             <ExternalLink className="w-4 h-4 mr-2" />
-            Apri Dashboard Stripe
+            {t('admin.stripe.openDashboard')}
           </Button>
         </div>
 
@@ -211,18 +213,18 @@ export default function StripeAdminPage() {
                   <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-sm font-medium mb-1 block">Filtra per Evento</label>
+                  <label className="text-sm font-medium mb-1 block">{t('admin.stripe.filterByEvent')}</label>
                   <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                     <SelectTrigger data-testid="select-event-filter">
-                      <SelectValue placeholder="Tutti gli eventi" />
+                      <SelectValue placeholder={t('admin.stripe.allEvents')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tutti gli eventi</SelectItem>
+                      <SelectItem value="all">{t('admin.stripe.allEvents')}</SelectItem>
                       {ticketedEvents?.map((te) => {
                         const event = events?.find(e => e.id === te.eventId);
                         return (
                           <SelectItem key={te.id} value={te.id}>
-                            {event?.name || "Evento sconosciuto"}
+                            {event?.name || t('admin.stripe.unknownEvent')}
                           </SelectItem>
                         );
                       })}
@@ -242,7 +244,7 @@ export default function StripeAdminPage() {
                   <CreditCard className={`w-5 h-5 ${isProduction ? "text-emerald-400" : "text-amber-400"}`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Connessione Stripe</h3>
+                  <h3 className="font-semibold">{t('admin.stripe.stripeConnection')}</h3>
                   <Badge 
                     className={`${
                       isProduction 
@@ -254,12 +256,12 @@ export default function StripeAdminPage() {
                     {isProduction ? (
                       <>
                         <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Produzione
+                        {t('admin.stripe.production')}
                       </>
                     ) : (
                       <>
                         <AlertCircle className="w-3 h-3 mr-1" />
-                        Modalità Sandbox
+                        {t('admin.stripe.sandbox')}
                       </>
                     )}
                   </Badge>
@@ -281,7 +283,7 @@ export default function StripeAdminPage() {
               <div className="text-2xl font-bold text-[#FFD700]" data-testid="stat-total-revenue">
                 €{stats.totalRevenue.toFixed(2)}
               </div>
-              <p className="text-sm text-muted-foreground">Incasso Totale</p>
+              <p className="text-sm text-muted-foreground">{t('admin.stripe.stats.totalRevenue')}</p>
             </CardContent>
           </Card>
 
@@ -295,7 +297,7 @@ export default function StripeAdminPage() {
               <div className="text-2xl font-bold" data-testid="stat-today-revenue">
                 €{stats.todayRevenue.toFixed(2)}
               </div>
-              <p className="text-sm text-muted-foreground">Incasso Oggi</p>
+              <p className="text-sm text-muted-foreground">{t('admin.stripe.stats.todayRevenue')}</p>
             </CardContent>
           </Card>
 
@@ -309,7 +311,7 @@ export default function StripeAdminPage() {
               <div className="text-2xl font-bold text-emerald-400" data-testid="stat-successful">
                 {stats.successfulTransactions}
               </div>
-              <p className="text-sm text-muted-foreground">Transazioni Riuscite</p>
+              <p className="text-sm text-muted-foreground">{t('admin.stripe.stats.successfulTransactions')}</p>
             </CardContent>
           </Card>
 
@@ -323,7 +325,7 @@ export default function StripeAdminPage() {
               <div className="text-2xl font-bold text-destructive" data-testid="stat-failed">
                 {stats.failedTransactions}
               </div>
-              <p className="text-sm text-muted-foreground">Transazioni Fallite</p>
+              <p className="text-sm text-muted-foreground">{t('admin.stripe.stats.failedTransactions')}</p>
             </CardContent>
           </Card>
 
@@ -337,7 +339,7 @@ export default function StripeAdminPage() {
               <div className="text-2xl font-bold text-amber-400" data-testid="stat-pending">
                 €{stats.pendingPayments.toFixed(2)}
               </div>
-              <p className="text-sm text-muted-foreground">Pagamenti in Attesa</p>
+              <p className="text-sm text-muted-foreground">{t('admin.stripe.stats.pendingPayments')}</p>
             </CardContent>
           </Card>
         </div>
@@ -346,10 +348,10 @@ export default function StripeAdminPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-[#FFD700]" />
-              Transazioni Recenti
+              {t('admin.stripe.recentTransactions')}
             </CardTitle>
             <CardDescription>
-              Ultimi pagamenti dalla biglietteria SIAE
+              {t('admin.stripe.recentTransactionsDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -358,21 +360,21 @@ export default function StripeAdminPage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
                   <CreditCard className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nessuna Transazione</h3>
-                <p className="text-muted-foreground">Non ci sono transazioni da visualizzare</p>
+                <h3 className="text-lg font-semibold mb-2">{t('admin.stripe.noTransactions')}</h3>
+                <p className="text-muted-foreground">{t('admin.stripe.noTransactionsDescription')}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>Data</TableHead>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Importo</TableHead>
-                    <TableHead>Biglietti</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Pagamento</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.date')}</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.event')}</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.amount')}</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.tickets')}</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.status')}</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.payment')}</TableHead>
+                    <TableHead>{t('admin.stripe.tableHeaders.customer')}</TableHead>
+                    <TableHead className="text-right">{t('admin.stripe.tableHeaders.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -425,7 +427,7 @@ export default function StripeAdminPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => navigate(`/siae/transactions?eventId=${transaction.ticketedEventId}`)}
-                          title="Vedi Dettagli"
+                          title={t('admin.stripe.viewDetails')}
                           data-testid={`button-view-${transaction.id}`}
                         >
                           <Eye className="w-4 h-4" />
@@ -444,7 +446,7 @@ export default function StripeAdminPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Stripe Admin" showBackButton showMenuButton showUserMenu />}
+      header={<MobileHeader title={t('admin.stripe.mobileTitle')} showBackButton showMenuButton showUserMenu />}
       contentClassName="pb-24"
     >
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-stripe-admin">
@@ -456,10 +458,10 @@ export default function StripeAdminPage() {
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
             <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-[#FFD700] flex-shrink-0" />
-            Pagamenti Stripe
+            {t('admin.stripe.title')}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Gestisci le transazioni e monitora i pagamenti
+            {t('admin.stripe.description')}
           </p>
         </div>
         <Button
@@ -468,7 +470,7 @@ export default function StripeAdminPage() {
           data-testid="button-stripe-dashboard"
         >
           <ExternalLink className="w-4 h-4 mr-2" />
-          Apri Dashboard Stripe
+          {t('admin.stripe.openDashboard')}
         </Button>
       </motion.div>
 
@@ -484,18 +486,18 @@ export default function StripeAdminPage() {
                 <Calendar className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1">
-                <label className="text-sm font-medium mb-1 block">Filtra per Evento</label>
+                <label className="text-sm font-medium mb-1 block">{t('admin.stripe.filterByEvent')}</label>
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                   <SelectTrigger className="h-10" data-testid="select-event-filter">
-                    <SelectValue placeholder="Tutti gli eventi" />
+                    <SelectValue placeholder={t('admin.stripe.allEvents')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutti gli eventi</SelectItem>
+                    <SelectItem value="all">{t('admin.stripe.allEvents')}</SelectItem>
                     {ticketedEvents?.map((te) => {
                       const event = events?.find(e => e.id === te.eventId);
                       return (
                         <SelectItem key={te.id} value={te.id}>
-                          {event?.name || "Evento sconosciuto"}
+                          {event?.name || t('admin.stripe.unknownEvent')}
                         </SelectItem>
                       );
                     })}
@@ -526,9 +528,9 @@ export default function StripeAdminPage() {
                   }`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Connessione Stripe</h3>
+                  <h3 className="font-semibold">{t('admin.stripe.stripeConnection')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Stato attuale della connessione
+                    {t('admin.stripe.connectionStatus')}
                   </p>
                 </div>
               </div>
@@ -543,12 +545,12 @@ export default function StripeAdminPage() {
                 {isProduction ? (
                   <>
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Produzione
+                    {t('admin.stripe.production')}
                   </>
                 ) : (
                   <>
                     <AlertCircle className="w-3 h-3 mr-1" />
-                    Modalità Sandbox
+                    {t('admin.stripe.sandbox')}
                   </>
                 )}
               </Badge>
@@ -574,7 +576,7 @@ export default function StripeAdminPage() {
               <div className="text-lg sm:text-2xl font-bold text-[#FFD700]" data-testid="stat-total-revenue">
                 €{stats.totalRevenue.toFixed(2)}
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">Incasso Totale</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">{t('admin.stripe.stats.totalRevenue')}</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -594,7 +596,7 @@ export default function StripeAdminPage() {
               <div className="text-lg sm:text-2xl font-bold" data-testid="stat-today-revenue">
                 €{stats.todayRevenue.toFixed(2)}
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">Incasso Oggi</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">{t('admin.stripe.stats.todayRevenue')}</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -614,7 +616,7 @@ export default function StripeAdminPage() {
               <div className="text-lg sm:text-2xl font-bold text-emerald-400" data-testid="stat-successful">
                 {stats.successfulTransactions}
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">Transazioni Riuscite</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">{t('admin.stripe.stats.successfulTransactions')}</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -634,7 +636,7 @@ export default function StripeAdminPage() {
               <div className="text-lg sm:text-2xl font-bold text-destructive" data-testid="stat-failed">
                 {stats.failedTransactions}
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">Transazioni Fallite</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">{t('admin.stripe.stats.failedTransactions')}</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -652,7 +654,7 @@ export default function StripeAdminPage() {
                 <Clock className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Pagamenti in Attesa</div>
+                <div className="text-sm text-muted-foreground">{t('admin.stripe.stats.pendingPayments')}</div>
                 <div className="text-xl font-bold text-amber-400" data-testid="stat-pending">
                   €{stats.pendingPayments.toFixed(2)}
                 </div>
@@ -671,10 +673,10 @@ export default function StripeAdminPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-[#FFD700]" />
-              Transazioni Recenti
+              {t('admin.stripe.recentTransactions')}
             </CardTitle>
             <CardDescription>
-              Ultimi pagamenti dalla biglietteria SIAE
+              {t('admin.stripe.recentTransactionsDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -683,9 +685,9 @@ export default function StripeAdminPage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
                   <CreditCard className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nessuna Transazione</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('admin.stripe.noTransactions')}</h3>
                 <p className="text-muted-foreground">
-                  Non ci sono transazioni da visualizzare
+                  {t('admin.stripe.noTransactionsDescription')}
                 </p>
               </div>
             ) : (
@@ -693,14 +695,14 @@ export default function StripeAdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead>Data</TableHead>
-                      <TableHead>Evento</TableHead>
-                      <TableHead>Importo</TableHead>
-                      <TableHead>Biglietti</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.date')}</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.event')}</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.amount')}</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.tickets')}</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.status')}</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.payment')}</TableHead>
+                      <TableHead>{t('admin.stripe.tableHeaders.customer')}</TableHead>
+                      <TableHead className="text-right">{t('admin.stripe.tableHeaders.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -753,7 +755,7 @@ export default function StripeAdminPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => navigate(`/siae/transactions?eventId=${transaction.ticketedEventId}`)}
-                            title="Vedi Dettagli"
+                            title={t('admin.stripe.viewDetails')}
                             data-testid={`button-view-${transaction.id}`}
                           >
                             <Eye className="w-4 h-4" />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ type CardUsageStats = {
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 export default function SiaeActivationCardsPage() {
+  const { t } = useTranslation();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
@@ -105,13 +107,13 @@ export default function SiaeActivationCardsPage() {
     try {
       await smartCardService.getRetriesStatus();
       toast({
-        title: "Stato PIN aggiornato",
-        description: "Tentativi rimasti aggiornati",
+        title: t('siae.activationCardsPage.toasts.pinStatusUpdated'),
+        description: t('siae.activationCardsPage.toasts.retriesUpdated'),
       });
     } catch (err: any) {
       toast({
-        title: "Errore",
-        description: err.message || "Impossibile leggere lo stato PIN",
+        title: t('siae.activationCardsPage.toasts.error'),
+        description: err.message || t('siae.activationCardsPage.toasts.cannotReadPinStatus'),
         variant: "destructive",
       });
     } finally {
@@ -122,8 +124,8 @@ export default function SiaeActivationCardsPage() {
   const handleVerifyPin = async () => {
     if (!pin || pin.length < 4) {
       toast({
-        title: "PIN non valido",
-        description: "Il PIN deve essere di almeno 4 cifre",
+        title: t('siae.activationCardsPage.toasts.invalidPin'),
+        description: t('siae.activationCardsPage.toasts.pinMinDigits'),
         variant: "destructive",
       });
       return;
@@ -134,17 +136,17 @@ export default function SiaeActivationCardsPage() {
       const result = await smartCardService.verifyPin(pin);
       if (result.success) {
         toast({
-          title: "PIN verificato",
-          description: "PIN corretto - carta sbloccata per le operazioni",
+          title: t('siae.activationCardsPage.toasts.pinVerified'),
+          description: t('siae.activationCardsPage.toasts.pinVerifiedDesc'),
         });
         setIsPinVerifyOpen(false);
         setPin("");
       } else {
         toast({
-          title: "PIN errato",
+          title: t('siae.activationCardsPage.toasts.pinWrong'),
           description: result.blocked 
-            ? "PIN bloccato! Usare il PUK per sbloccare."
-            : `PIN errato. Tentativi rimasti: ${result.retriesLeft}`,
+            ? t('siae.activationCardsPage.toasts.pinBlockedUsePuk')
+            : t('siae.activationCardsPage.toasts.pinWrongRetries', { retries: result.retriesLeft }),
           variant: "destructive",
         });
         if (result.blocked) {
@@ -154,7 +156,7 @@ export default function SiaeActivationCardsPage() {
       }
     } catch (err: any) {
       toast({
-        title: "Errore verifica PIN",
+        title: t('siae.activationCardsPage.toasts.pinVerifyError'),
         description: err.message,
         variant: "destructive",
       });
@@ -167,24 +169,24 @@ export default function SiaeActivationCardsPage() {
   const handleChangePin = async () => {
     if (!oldPin || oldPin.length < 4) {
       toast({
-        title: "PIN attuale non valido",
-        description: "Il PIN deve essere di almeno 4 cifre",
+        title: t('siae.activationCardsPage.toasts.currentPinInvalid'),
+        description: t('siae.activationCardsPage.toasts.pinMinDigits'),
         variant: "destructive",
       });
       return;
     }
     if (!newPin || newPin.length < 4 || newPin.length > 8) {
       toast({
-        title: "Nuovo PIN non valido",
-        description: "Il nuovo PIN deve essere di 4-8 cifre",
+        title: t('siae.activationCardsPage.toasts.newPinInvalid'),
+        description: t('siae.activationCardsPage.toasts.newPinLength'),
         variant: "destructive",
       });
       return;
     }
     if (newPin !== confirmPin) {
       toast({
-        title: "PIN non coincidenti",
-        description: "Il nuovo PIN e la conferma non coincidono",
+        title: t('siae.activationCardsPage.toasts.pinMismatch'),
+        description: t('siae.activationCardsPage.toasts.pinMismatchDesc'),
         variant: "destructive",
       });
       return;
@@ -195,8 +197,8 @@ export default function SiaeActivationCardsPage() {
       const result = await smartCardService.changePin(oldPin, newPin);
       if (result.success) {
         toast({
-          title: "PIN cambiato",
-          description: "Il PIN è stato modificato con successo",
+          title: t('siae.activationCardsPage.toasts.pinChanged'),
+          description: t('siae.activationCardsPage.toasts.pinChangedDesc'),
         });
         setIsPinChangeOpen(false);
         setOldPin("");
@@ -204,14 +206,14 @@ export default function SiaeActivationCardsPage() {
         setConfirmPin("");
       } else {
         toast({
-          title: "Errore cambio PIN",
-          description: result.error || "Impossibile cambiare il PIN",
+          title: t('siae.activationCardsPage.toasts.pinChangeError'),
+          description: result.error || t('siae.activationCardsPage.toasts.pinChangeError'),
           variant: "destructive",
         });
       }
     } catch (err: any) {
       toast({
-        title: "Errore cambio PIN",
+        title: t('siae.activationCardsPage.toasts.pinChangeError'),
         description: err.message,
         variant: "destructive",
       });
@@ -223,24 +225,24 @@ export default function SiaeActivationCardsPage() {
   const handleUnlockWithPuk = async () => {
     if (!puk || puk.length !== 8) {
       toast({
-        title: "PUK non valido",
-        description: "Il PUK deve essere di esattamente 8 cifre",
+        title: t('siae.activationCardsPage.toasts.pukInvalid'),
+        description: t('siae.activationCardsPage.toasts.pukLength'),
         variant: "destructive",
       });
       return;
     }
     if (!newPinForPuk || newPinForPuk.length < 4 || newPinForPuk.length > 8) {
       toast({
-        title: "Nuovo PIN non valido",
-        description: "Il nuovo PIN deve essere di 4-8 cifre",
+        title: t('siae.activationCardsPage.toasts.newPinInvalid'),
+        description: t('siae.activationCardsPage.toasts.newPinLength'),
         variant: "destructive",
       });
       return;
     }
     if (newPinForPuk !== confirmPinForPuk) {
       toast({
-        title: "PIN non coincidenti",
-        description: "Il nuovo PIN e la conferma non coincidono",
+        title: t('siae.activationCardsPage.toasts.pinMismatch'),
+        description: t('siae.activationCardsPage.toasts.pinMismatchDesc'),
         variant: "destructive",
       });
       return;
@@ -251,8 +253,8 @@ export default function SiaeActivationCardsPage() {
       const result = await smartCardService.unlockWithPuk(puk, newPinForPuk);
       if (result.success) {
         toast({
-          title: "Carta sbloccata",
-          description: "Il PIN è stato reimpostato con successo",
+          title: t('siae.activationCardsPage.toasts.cardUnlocked'),
+          description: t('siae.activationCardsPage.toasts.cardUnlockedDesc'),
         });
         setIsPukUnlockOpen(false);
         setPuk("");
@@ -260,14 +262,14 @@ export default function SiaeActivationCardsPage() {
         setConfirmPinForPuk("");
       } else {
         toast({
-          title: "Errore sblocco PUK",
-          description: result.error || "Impossibile sbloccare la carta",
+          title: t('siae.activationCardsPage.toasts.pukUnlockError'),
+          description: result.error || t('siae.activationCardsPage.toasts.pukUnlockError'),
           variant: "destructive",
         });
       }
     } catch (err: any) {
       toast({
-        title: "Errore sblocco PUK",
+        title: t('siae.activationCardsPage.toasts.pukUnlockError'),
         description: err.message,
         variant: "destructive",
       });
@@ -308,11 +310,11 @@ export default function SiaeActivationCardsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Attiva</Badge>;
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{t('siae.activationCardsPage.statuses.active')}</Badge>;
       case 'inactive':
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Inattiva</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('siae.activationCardsPage.statuses.inactive')}</Badge>;
       case 'expired':
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Scaduta</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{t('siae.activationCardsPage.statuses.expired')}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -328,8 +330,8 @@ export default function SiaeActivationCardsPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-activation-cards">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Lettore Carte SIAE</h1>
-            <p className="text-muted-foreground">Gestione carte di attivazione SIAE</p>
+            <h1 className="text-3xl font-bold">{t('siae.activationCardsPage.title')}</h1>
+            <p className="text-muted-foreground">{t('siae.activationCardsPage.subtitle')}</p>
           </div>
           <Button
             variant="outline"
@@ -338,7 +340,7 @@ export default function SiaeActivationCardsPage() {
             data-testid="button-refresh-main"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Aggiorna
+            {t('siae.activationCardsPage.refreshCard')}
           </Button>
         </div>
 
@@ -351,7 +353,7 @@ export default function SiaeActivationCardsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="text-total-cards">{cards.length}</div>
-                  <p className="text-sm text-muted-foreground">Carte Totali</p>
+                  <p className="text-sm text-muted-foreground">{t('siae.activationCardsPage.stats.totalCards')}</p>
                 </div>
               </div>
             </CardContent>
@@ -366,7 +368,7 @@ export default function SiaeActivationCardsPage() {
                   <div className="text-2xl font-bold text-green-500" data-testid="text-active-cards">
                     {cards.filter(c => c.status === 'active').length}
                   </div>
-                  <p className="text-sm text-muted-foreground">Carte Attive</p>
+                  <p className="text-sm text-muted-foreground">{t('siae.activationCardsPage.stats.activeCards')}</p>
                 </div>
               </div>
             </CardContent>
@@ -379,7 +381,7 @@ export default function SiaeActivationCardsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="text-companies-count">{companies.length}</div>
-                  <p className="text-sm text-muted-foreground">Aziende</p>
+                  <p className="text-sm text-muted-foreground">{t('siae.activationCardsPage.stats.companies')}</p>
                 </div>
               </div>
             </CardContent>
@@ -391,7 +393,7 @@ export default function SiaeActivationCardsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Monitor className="w-5 h-5" />
-                Stato Connessione Lettore
+                {t('siae.activationCardsPage.cardReader.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -400,7 +402,7 @@ export default function SiaeActivationCardsPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium">Server Relay</p>
                   <p className="text-xs text-muted-foreground">
-                    {smartCardStatus.relayConnected ? 'Connesso' : 'Non connesso'}
+                    {smartCardStatus.relayConnected ? t('siae.activationCardsPage.cardReader.connected') : t('siae.activationCardsPage.cardReader.disconnected')}
                   </p>
                 </div>
               </div>
@@ -409,7 +411,7 @@ export default function SiaeActivationCardsPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium">Bridge .NET</p>
                   <p className="text-xs text-muted-foreground">
-                    {smartCardStatus.bridgeConnected ? 'Attivo' : 'Non attivo'}
+                    {smartCardStatus.bridgeConnected ? t('siae.activationCardsPage.cardReader.connected') : t('siae.activationCardsPage.cardReader.disconnected')}
                   </p>
                 </div>
               </div>
@@ -420,9 +422,9 @@ export default function SiaeActivationCardsPage() {
                   <XCircle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Lettore</p>
+                  <p className="text-sm font-medium">{t('siae.activationCardsPage.cardReader.readerName')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {smartCardStatus.readerDetected ? (smartCardStatus.readerName || 'Rilevato') : 'Non rilevato'}
+                    {smartCardStatus.readerDetected ? (smartCardStatus.readerName || t('siae.activationCardsPage.cardReader.connected')) : t('siae.activationCardsPage.cardReader.noReader')}
                   </p>
                 </div>
               </div>
@@ -602,33 +604,33 @@ export default function SiaeActivationCardsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Gestione PIN/PUK
+                {t('siae.activationCardsPage.pinManagement.title')}
               </CardTitle>
               <CardDescription>
-                Verifica, modifica PIN o sblocca la carta con PUK
+                {t('siae.activationCardsPage.pinManagement.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <Key className="w-3 h-3" /> Tentativi PIN
+                    <Key className="w-3 h-3" /> {t('siae.activationCardsPage.pinManagement.pinRetries')}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`font-mono font-bold ${smartCardStatus.pinBlocked ? 'text-red-500' : smartCardStatus.pinRetriesLeft !== null && smartCardStatus.pinRetriesLeft <= 1 ? 'text-amber-500' : 'text-foreground'}`} data-testid="text-pin-retries">
                       {smartCardStatus.pinRetriesLeft !== null ? smartCardStatus.pinRetriesLeft : '-'}
                     </span>
                     {smartCardStatus.pinBlocked && (
-                      <Badge variant="destructive" className="text-xs">Bloccato</Badge>
+                      <Badge variant="destructive" className="text-xs">{t('siae.activationCardsPage.pinManagement.blocked')}</Badge>
                     )}
                     {smartCardStatus.pinVerified && (
-                      <Badge className="bg-green-500/20 text-green-500 text-xs">Verificato</Badge>
+                      <Badge className="bg-green-500/20 text-green-500 text-xs">{t('siae.activationCardsPage.pinManagement.verified')}</Badge>
                     )}
                   </div>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <KeyRound className="w-3 h-3" /> Tentativi PUK
+                    <KeyRound className="w-3 h-3" /> {t('siae.activationCardsPage.pinManagement.pukRetries')}
                   </div>
                   <div className="font-mono font-bold" data-testid="text-puk-retries">
                     {smartCardStatus.pukRetriesLeft !== null ? smartCardStatus.pukRetriesLeft : '-'}
@@ -645,7 +647,7 @@ export default function SiaeActivationCardsPage() {
                   data-testid="button-get-retries"
                 >
                   {retriesLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  Aggiorna Stato
+                  {t('siae.activationCardsPage.pinManagement.refreshStatus')}
                 </Button>
                 <Button
                   variant="outline"
@@ -655,7 +657,7 @@ export default function SiaeActivationCardsPage() {
                   data-testid="button-verify-pin"
                 >
                   <Lock className="w-4 h-4 mr-2" />
-                  Verifica PIN
+                  {t('siae.activationCardsPage.pinManagement.verifyPin')}
                 </Button>
                 <Button
                   variant="outline"
@@ -665,7 +667,7 @@ export default function SiaeActivationCardsPage() {
                   data-testid="button-change-pin"
                 >
                   <Key className="w-4 h-4 mr-2" />
-                  Cambia PIN
+                  {t('siae.activationCardsPage.pinManagement.changePin')}
                 </Button>
                 <Button
                   variant={smartCardStatus.pinBlocked ? "default" : "outline"}
@@ -674,7 +676,7 @@ export default function SiaeActivationCardsPage() {
                   data-testid="button-unlock-puk"
                 >
                   <KeyRound className="w-4 h-4 mr-2" />
-                  Sblocca con PUK
+                  {t('siae.activationCardsPage.pinManagement.unlockWithPuk')}
                 </Button>
               </div>
 
@@ -682,9 +684,9 @@ export default function SiaeActivationCardsPage() {
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-red-500">PIN Bloccato</p>
+                    <p className="text-sm font-medium text-red-500">{t('siae.activationCardsPage.pinManagement.pinBlocked')}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Il PIN è stato bloccato dopo troppi tentativi errati. Usa il codice PUK per sbloccare la carta e impostare un nuovo PIN.
+                      {t('siae.activationCardsPage.pinManagement.pinBlockedMessage')}
                     </p>
                   </div>
                 </div>
@@ -698,20 +700,20 @@ export default function SiaeActivationCardsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
-                Carte Registrate
+                {t('siae.activationCardsPage.registeredCards.title')}
               </CardTitle>
-              <CardDescription>Elenco delle carte SIAE registrate nel sistema</CardDescription>
+              <CardDescription>{t('siae.activationCardsPage.registeredCards.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Numero Carta</TableHead>
-                    <TableHead>Codice Fiscale</TableHead>
-                    <TableHead>Azienda</TableHead>
-                    <TableHead>Data Attivazione</TableHead>
-                    <TableHead>Scadenza</TableHead>
-                    <TableHead>Stato</TableHead>
+                    <TableHead>{t('siae.activationCardsPage.registeredCards.cardNumber')}</TableHead>
+                    <TableHead>{t('siae.activationCardsPage.registeredCards.fiscalCode')}</TableHead>
+                    <TableHead>{t('siae.activationCardsPage.registeredCards.company')}</TableHead>
+                    <TableHead>{t('siae.activationCardsPage.registeredCards.activationDate')}</TableHead>
+                    <TableHead>{t('siae.activationCardsPage.registeredCards.expirationDate')}</TableHead>
+                    <TableHead>{t('siae.activationCardsPage.registeredCards.status')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -744,22 +746,22 @@ export default function SiaeActivationCardsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Verifica PIN
+                {t('siae.activationCardsPage.dialogs.verifyPin.title')}
               </DialogTitle>
               <DialogDescription>
-                Inserisci il PIN della Smart Card per abilitare le operazioni protette.
+                {t('siae.activationCardsPage.dialogs.verifyPin.description')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="pin">PIN (4-8 cifre)</Label>
+                <Label htmlFor="pin">{t('siae.activationCardsPage.dialogs.verifyPin.pinLabel')}</Label>
                 <div className="relative">
                   <Input
                     id="pin"
                     type={showPin ? "text" : "password"}
                     value={pin}
                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="Inserisci PIN"
+                    placeholder={t('siae.activationCardsPage.dialogs.verifyPin.pinPlaceholder')}
                     className="pr-10 font-mono"
                     maxLength={8}
                     data-testid="input-pin"
@@ -778,17 +780,17 @@ export default function SiaeActivationCardsPage() {
               </div>
               {smartCardStatus.pinRetriesLeft !== null && (
                 <p className={`text-sm ${smartCardStatus.pinRetriesLeft <= 1 ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Tentativi rimasti: {smartCardStatus.pinRetriesLeft}
+                  {t('siae.activationCardsPage.pinManagement.retriesLeft')}: {smartCardStatus.pinRetriesLeft}
                 </p>
               )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPinVerifyOpen(false); }} data-testid="button-cancel-verify">
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleVerifyPin} disabled={isPinLoading || pin.length < 4} data-testid="button-confirm-verify">
                 {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Verifica
+                {t('siae.activationCardsPage.dialogs.verifyPin.verify')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -799,22 +801,22 @@ export default function SiaeActivationCardsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Key className="w-5 h-5" />
-                Cambia PIN
+                {t('siae.activationCardsPage.dialogs.changePin.title')}
               </DialogTitle>
               <DialogDescription>
-                Modifica il PIN della Smart Card inserendo il PIN attuale e il nuovo PIN.
+                {t('siae.activationCardsPage.dialogs.changePin.description')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="oldPin">PIN Attuale</Label>
+                <Label htmlFor="oldPin">{t('siae.activationCardsPage.dialogs.changePin.oldPin')}</Label>
                 <div className="relative">
                   <Input
                     id="oldPin"
                     type={showOldPin ? "text" : "password"}
                     value={oldPin}
                     onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="PIN attuale"
+                    placeholder={t('siae.activationCardsPage.dialogs.changePin.oldPinPlaceholder')}
                     className="pr-10 font-mono"
                     maxLength={8}
                     data-testid="input-old-pin"
@@ -831,14 +833,14 @@ export default function SiaeActivationCardsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="newPin">Nuovo PIN (4-8 cifre)</Label>
+                <Label htmlFor="newPin">{t('siae.activationCardsPage.dialogs.changePin.newPin')}</Label>
                 <div className="relative">
                   <Input
                     id="newPin"
                     type={showNewPin ? "text" : "password"}
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="Nuovo PIN"
+                    placeholder={t('siae.activationCardsPage.dialogs.changePin.newPinPlaceholder')}
                     className="pr-10 font-mono"
                     maxLength={8}
                     data-testid="input-new-pin"
@@ -855,25 +857,25 @@ export default function SiaeActivationCardsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPin">Conferma Nuovo PIN</Label>
+                <Label htmlFor="confirmPin">{t('siae.activationCardsPage.dialogs.changePin.confirmPin')}</Label>
                 <Input
                   id="confirmPin"
                   type={showNewPin ? "text" : "password"}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                  placeholder="Conferma PIN"
+                  placeholder={t('siae.activationCardsPage.dialogs.changePin.confirmPinPlaceholder')}
                   className="font-mono"
                   maxLength={8}
                   data-testid="input-confirm-pin"
                 />
                 {newPin && confirmPin && newPin !== confirmPin && (
-                  <p className="text-sm text-red-500">I PIN non coincidono</p>
+                  <p className="text-sm text-red-500">{t('siae.activationCardsPage.dialogs.changePin.pinMismatch')}</p>
                 )}
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPinChangeOpen(false); }} data-testid="button-cancel-change">
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button 
                 onClick={handleChangePin} 
@@ -881,7 +883,7 @@ export default function SiaeActivationCardsPage() {
                 data-testid="button-confirm-change"
               >
                 {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Cambia PIN
+                {t('siae.activationCardsPage.dialogs.changePin.change')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -892,28 +894,28 @@ export default function SiaeActivationCardsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <KeyRound className="w-5 h-5" />
-                Sblocca con PUK
+                {t('siae.activationCardsPage.dialogs.unlockPuk.title')}
               </DialogTitle>
               <DialogDescription>
-                Se il PIN è bloccato, inserisci il PUK per sbloccare la carta e impostare un nuovo PIN.
+                {t('siae.activationCardsPage.dialogs.unlockPuk.description')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               {smartCardStatus.pinBlocked && (
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                  <p className="text-sm text-red-500">PIN bloccato - Usa il PUK per sbloccare</p>
+                  <p className="text-sm text-red-500">{t('siae.activationCardsPage.dialogs.unlockPuk.pinBlockedWarning')}</p>
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="puk">PUK (8 cifre)</Label>
+                <Label htmlFor="puk">{t('siae.activationCardsPage.dialogs.unlockPuk.pukLabel')}</Label>
                 <div className="relative">
                   <Input
                     id="puk"
                     type={showPuk ? "text" : "password"}
                     value={puk}
                     onChange={(e) => setPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="Inserisci PUK"
+                    placeholder={t('siae.activationCardsPage.dialogs.unlockPuk.pukPlaceholder')}
                     className="pr-10 font-mono"
                     maxLength={8}
                     data-testid="input-puk"
@@ -930,43 +932,43 @@ export default function SiaeActivationCardsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="newPinForPuk">Nuovo PIN (4-8 cifre)</Label>
+                <Label htmlFor="newPinForPuk">{t('siae.activationCardsPage.dialogs.unlockPuk.newPin')}</Label>
                 <Input
                   id="newPinForPuk"
                   type="password"
                   value={newPinForPuk}
                   onChange={(e) => setNewPinForPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                  placeholder="Nuovo PIN"
+                  placeholder={t('siae.activationCardsPage.dialogs.unlockPuk.newPinPlaceholder')}
                   className="font-mono"
                   maxLength={8}
                   data-testid="input-new-pin-puk"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPinForPuk">Conferma Nuovo PIN</Label>
+                <Label htmlFor="confirmPinForPuk">{t('siae.activationCardsPage.dialogs.unlockPuk.confirmPin')}</Label>
                 <Input
                   id="confirmPinForPuk"
                   type="password"
                   value={confirmPinForPuk}
                   onChange={(e) => setConfirmPinForPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                  placeholder="Conferma PIN"
+                  placeholder={t('siae.activationCardsPage.dialogs.unlockPuk.confirmPinPlaceholder')}
                   className="font-mono"
                   maxLength={8}
                   data-testid="input-confirm-pin-puk"
                 />
                 {newPinForPuk && confirmPinForPuk && newPinForPuk !== confirmPinForPuk && (
-                  <p className="text-sm text-red-500">I PIN non coincidono</p>
+                  <p className="text-sm text-red-500">{t('siae.activationCardsPage.dialogs.unlockPuk.pinMismatch')}</p>
                 )}
               </div>
               {smartCardStatus.pukRetriesLeft !== null && (
                 <p className="text-sm text-muted-foreground">
-                  Tentativi PUK rimasti: {smartCardStatus.pukRetriesLeft}
+                  {t('siae.activationCardsPage.pinManagement.pukRetiesLeft')}: {smartCardStatus.pukRetriesLeft}
                 </p>
               )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPukUnlockOpen(false); }} data-testid="button-cancel-unlock">
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button 
                 onClick={handleUnlockWithPuk} 
@@ -974,7 +976,7 @@ export default function SiaeActivationCardsPage() {
                 data-testid="button-confirm-unlock"
               >
                 {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Sblocca Carta
+                {t('siae.activationCardsPage.dialogs.unlockPuk.unlock')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -985,7 +987,7 @@ export default function SiaeActivationCardsPage() {
 
   const header = (
     <MobileHeader
-      title="Lettore Carte SIAE"
+      title={t('siae.activationCardsPage.title')}
       showBackButton
       showUserMenu
       rightAction={
@@ -1021,7 +1023,7 @@ export default function SiaeActivationCardsPage() {
                     <CreditCard className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Carte Totali</p>
+                    <p className="text-sm text-muted-foreground">{t('siae.activationCardsPage.stats.totalCards')}</p>
                     <p className="text-2xl font-bold" data-testid="text-total-cards">{cards.length}</p>
                   </div>
                 </div>
@@ -1041,7 +1043,7 @@ export default function SiaeActivationCardsPage() {
                     <Shield className="w-6 h-6 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Carte Attive</p>
+                    <p className="text-sm text-muted-foreground">{t('siae.activationCardsPage.stats.activeCards')}</p>
                     <p className="text-2xl font-bold text-green-500" data-testid="text-active-cards">
                       {cards.filter(c => c.status === 'active').length}
                     </p>
@@ -1063,7 +1065,7 @@ export default function SiaeActivationCardsPage() {
                     <Building2 className="w-6 h-6 text-blue-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Aziende</p>
+                    <p className="text-sm text-muted-foreground">{t('siae.activationCardsPage.stats.companies')}</p>
                     <p className="text-2xl font-bold" data-testid="text-companies-count">{companies.length}</p>
                   </div>
                 </div>
@@ -1083,7 +1085,7 @@ export default function SiaeActivationCardsPage() {
                 <div className="p-2 rounded-xl bg-muted">
                   <Monitor className="w-5 h-5" />
                 </div>
-                Stato Connessione Lettore
+                {t('siae.activationCardsPage.connectionStatus.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -1094,9 +1096,9 @@ export default function SiaeActivationCardsPage() {
               >
                 <div className={`w-3 h-3 rounded-full ${smartCardStatus.relayConnected ? 'bg-green-500' : 'bg-red-500'}`} />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Server Relay</p>
+                  <p className="text-sm font-medium">{t('siae.activationCardsPage.connectionStatus.serverRelay')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {smartCardStatus.relayConnected ? 'Connesso' : 'Non connesso'}
+                    {smartCardStatus.relayConnected ? t('siae.activationCardsPage.connectionStatus.connected') : t('siae.activationCardsPage.connectionStatus.notConnected')}
                   </p>
                 </div>
               </motion.div>
@@ -1108,9 +1110,9 @@ export default function SiaeActivationCardsPage() {
               >
                 <div className={`w-3 h-3 rounded-full ${smartCardStatus.bridgeConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Bridge .NET</p>
+                  <p className="text-sm font-medium">{t('siae.activationCardsPage.connectionStatus.bridge')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {smartCardStatus.bridgeConnected ? 'Attivo' : 'Non attivo'}
+                    {smartCardStatus.bridgeConnected ? t('siae.activationCardsPage.connectionStatus.connected') : t('siae.activationCardsPage.connectionStatus.notConnected')}
                   </p>
                 </div>
               </motion.div>
@@ -1126,9 +1128,9 @@ export default function SiaeActivationCardsPage() {
                   <XCircle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Lettore</p>
+                  <p className="text-sm font-medium">{t('siae.activationCardsPage.connectionStatus.reader')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {smartCardStatus.readerDetected ? (smartCardStatus.readerName || 'Rilevato') : 'Non rilevato'}
+                    {smartCardStatus.readerDetected ? (smartCardStatus.readerName || t('siae.activationCardsPage.connectionStatus.connected')) : t('siae.activationCardsPage.connectionStatus.notConnected')}
                   </p>
                 </div>
               </motion.div>

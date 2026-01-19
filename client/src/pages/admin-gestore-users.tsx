@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation, useParams } from "wouter";
 import { motion } from "framer-motion";
@@ -55,6 +56,7 @@ const cardVariants = {
 };
 
 export default function AdminGestoreUsers() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const params = useParams<{ gestoreId: string }>();
   const gestoreId = params.gestoreId;
@@ -96,9 +98,9 @@ export default function AdminGestoreUsers() {
   }, [users, gestoreCompanyIds, gestoreId]);
 
   const getCompanyName = (companyId: string | null) => {
-    if (!companyId) return "Nessuna azienda";
+    if (!companyId) return t('admin.gestoreUsers.noCompany');
     const company = companies?.find((c) => c.id === companyId);
-    return company?.name || "Azienda sconosciuta";
+    return company?.name || t('admin.gestoreUsers.unknownCompany');
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -117,23 +119,23 @@ export default function AdminGestoreUsers() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "gestore":
-        return "Gestore";
+        return t('admin.gestoreUsers.roles.gestore');
       case "gestore_covisione":
-        return "Gestore Co-visione";
+        return t('admin.gestoreUsers.roles.gestoreCovisione');
       case "capo_staff":
-        return "Capo Staff";
+        return t('admin.gestoreUsers.roles.capoStaff');
       case "pr":
-        return "PR";
+        return t('admin.gestoreUsers.roles.pr');
       case "warehouse":
-        return "Magazzino";
+        return t('admin.gestoreUsers.roles.warehouse');
       case "bartender":
-        return "Bartender";
+        return t('admin.gestoreUsers.roles.bartender');
       case "cassiere":
-        return "Cassiere";
+        return t('admin.gestoreUsers.roles.cassiere');
       case "cliente":
-        return "Cliente";
+        return t('admin.gestoreUsers.roles.cliente');
       case "scanner":
-        return "Scanner";
+        return t('admin.gestoreUsers.roles.scanner');
       default:
         return role;
     }
@@ -187,10 +189,10 @@ export default function AdminGestoreUsers() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Utenti delle Aziende
+          {t('admin.gestoreUsers.companyUsers')}
         </CardTitle>
         <CardDescription>
-          Utenti appartenenti alle aziende associate a questo gestore
+          {t('admin.gestoreUsers.companyUsersDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -203,10 +205,10 @@ export default function AdminGestoreUsers() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Ruolo</TableHead>
-                <TableHead>Azienda</TableHead>
+                <TableHead>{t('admin.gestoreUsers.tableHeaders.name')}</TableHead>
+                <TableHead>{t('admin.gestoreUsers.tableHeaders.email')}</TableHead>
+                <TableHead>{t('admin.gestoreUsers.tableHeaders.role')}</TableHead>
+                <TableHead>{t('admin.gestoreUsers.tableHeaders.company')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -232,7 +234,7 @@ export default function AdminGestoreUsers() {
           </Table>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            Nessun utente trovato nelle aziende associate
+            {t('admin.gestoreUsers.noUsersInCompanies')}
           </div>
         )}
       </CardContent>
@@ -244,7 +246,7 @@ export default function AdminGestoreUsers() {
       <MobileAppLayout
         header={
           <MobileHeader
-            title={`Utenti di ${gestore?.firstName || ""}`}
+            title={`${t('admin.gestoreUsers.usersOf')} ${gestore?.firstName || ""}`}
             leftAction={
               <HapticButton
                 variant="ghost"
@@ -267,7 +269,7 @@ export default function AdminGestoreUsers() {
             gestoreUsers.map((user, index) => renderUserCard(user, index))
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              Nessun utente trovato
+              {t('admin.gestoreUsers.noUsersFound')}
             </div>
           )}
         </div>
@@ -288,10 +290,10 @@ export default function AdminGestoreUsers() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">
-            Utenti di {gestore?.firstName} {gestore?.lastName}
+            {t('admin.gestoreUsers.usersOf')} {gestore?.firstName} {gestore?.lastName}
           </h1>
           <p className="text-muted-foreground">
-            Utenti appartenenti alle aziende associate a questo gestore
+            {t('admin.gestoreUsers.companyUsersDescription')}
           </p>
         </div>
       </div>

@@ -154,13 +154,13 @@ export default function SiaeNumberedSeatsPage() {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('numbered-seats') || false });
       setIsCreateDialogOpen(false);
       toast({
-        title: "Posto Creato",
-        description: "Il posto è stato creato con successo.",
+        title: t('common.success'),
+        description: t('siae.numberedSeatsPage.dialogs.create'),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Errore",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -176,13 +176,13 @@ export default function SiaeNumberedSeatsPage() {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('numbered-seats') || false });
       setIsEditDialogOpen(false);
       toast({
-        title: "Posto Aggiornato",
-        description: "Il posto è stato aggiornato con successo.",
+        title: t('common.success'),
+        description: t('siae.numberedSeatsPage.dialogs.update'),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Errore",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -198,13 +198,13 @@ export default function SiaeNumberedSeatsPage() {
       setIsDeleteDialogOpen(false);
       setSelectedSeat(null);
       toast({
-        title: "Posto Eliminato",
-        description: "Il posto è stato eliminato con successo.",
+        title: t('common.success'),
+        description: t('common.deleted'),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Errore",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -214,13 +214,13 @@ export default function SiaeNumberedSeatsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Disponibile</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{t('siae.numberedSeatsPage.statuses.available')}</Badge>;
       case "sold":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Venduto</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('siae.numberedSeatsPage.statuses.sold')}</Badge>;
       case "reserved":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Riservato</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{t('siae.numberedSeatsPage.statuses.reserved')}</Badge>;
       case "blocked":
-        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Bloccato</Badge>;
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">{t('siae.numberedSeatsPage.statuses.blocked')}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -242,13 +242,13 @@ export default function SiaeNumberedSeatsPage() {
   const getCategoryBadge = (category: string | null) => {
     switch (category) {
       case "vip":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">VIP</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{t('siae.numberedSeatsPage.categories.vip')}</Badge>;
       case "premium":
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Premium</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">{t('siae.numberedSeatsPage.categories.premium')}</Badge>;
       case "accessibility":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Accessibilità</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{t('siae.numberedSeatsPage.categories.accessibility')}</Badge>;
       default:
-        return <Badge variant="secondary">Standard</Badge>;
+        return <Badge variant="secondary">{t('siae.numberedSeatsPage.categories.standard')}</Badge>;
     }
   };
 
@@ -316,11 +316,11 @@ export default function SiaeNumberedSeatsPage() {
                 name="sectorId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Settore</FormLabel>
+                    <FormLabel>{t('siae.numberedSeatsPage.selectSector')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || selectedSectorId}>
                       <FormControl>
                         <SelectTrigger className="bg-[#0a0e17] border-gray-700">
-                          <SelectValue placeholder="Seleziona settore" />
+                          <SelectValue placeholder={t('siae.numberedSeatsPage.selectSectorPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -342,7 +342,7 @@ export default function SiaeNumberedSeatsPage() {
                   name="rowNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fila</FormLabel>
+                      <FormLabel>{t('siae.numberedSeatsPage.row')}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="A, B, 1, 2..." className="bg-[#0a0e17] border-gray-700" />
                       </FormControl>
@@ -356,7 +356,7 @@ export default function SiaeNumberedSeatsPage() {
                   name="seatNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Numero Posto</FormLabel>
+                      <FormLabel>{t('siae.numberedSeatsPage.seat')}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="1, 2, 3..." className="bg-[#0a0e17] border-gray-700" />
                       </FormControl>
@@ -371,18 +371,18 @@ export default function SiaeNumberedSeatsPage() {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoria</FormLabel>
+                    <FormLabel>{t('siae.numberedSeatsPage.category')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-[#0a0e17] border-gray-700">
-                          <SelectValue placeholder="Seleziona categoria" />
+                          <SelectValue placeholder={t('siae.numberedSeatsPage.allCategories')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="vip">VIP</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                        <SelectItem value="accessibility">Accessibilità</SelectItem>
+                        <SelectItem value="standard">{t('siae.numberedSeatsPage.categories.standard')}</SelectItem>
+                        <SelectItem value="vip">{t('siae.numberedSeatsPage.categories.vip')}</SelectItem>
+                        <SelectItem value="premium">{t('siae.numberedSeatsPage.categories.premium')}</SelectItem>
+                        <SelectItem value="accessibility">{t('siae.numberedSeatsPage.categories.accessibility')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -395,7 +395,7 @@ export default function SiaeNumberedSeatsPage() {
                 name="priceMultiplier"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moltiplicatore Prezzo</FormLabel>
+                    <FormLabel>{t('siae.numberedSeatsPage.multiplier')}</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" step="0.01" min="0.1" max="10" className="bg-[#0a0e17] border-gray-700" />
                     </FormControl>
@@ -409,9 +409,9 @@ export default function SiaeNumberedSeatsPage() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Note</FormLabel>
+                    <FormLabel>{t('common.notes')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Note aggiuntive..." className="bg-[#0a0e17] border-gray-700" />
+                      <Textarea {...field} placeholder={t('common.notesPlaceholder')} className="bg-[#0a0e17] border-gray-700" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -457,7 +457,7 @@ export default function SiaeNumberedSeatsPage() {
                   name="rowNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fila</FormLabel>
+                      <FormLabel>{t('siae.numberedSeatsPage.row')}</FormLabel>
                       <FormControl>
                         <Input {...field} className="bg-[#0a0e17] border-gray-700" />
                       </FormControl>
@@ -471,7 +471,7 @@ export default function SiaeNumberedSeatsPage() {
                   name="seatNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Numero Posto</FormLabel>
+                      <FormLabel>{t('siae.numberedSeatsPage.seat')}</FormLabel>
                       <FormControl>
                         <Input {...field} className="bg-[#0a0e17] border-gray-700" />
                       </FormControl>
@@ -486,7 +486,7 @@ export default function SiaeNumberedSeatsPage() {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoria</FormLabel>
+                    <FormLabel>{t('siae.numberedSeatsPage.category')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-[#0a0e17] border-gray-700">
@@ -494,10 +494,10 @@ export default function SiaeNumberedSeatsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="vip">VIP</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                        <SelectItem value="accessibility">Accessibilità</SelectItem>
+                        <SelectItem value="standard">{t('siae.numberedSeatsPage.categories.standard')}</SelectItem>
+                        <SelectItem value="vip">{t('siae.numberedSeatsPage.categories.vip')}</SelectItem>
+                        <SelectItem value="premium">{t('siae.numberedSeatsPage.categories.premium')}</SelectItem>
+                        <SelectItem value="accessibility">{t('siae.numberedSeatsPage.categories.accessibility')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -518,10 +518,10 @@ export default function SiaeNumberedSeatsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="available">Disponibile</SelectItem>
-                        <SelectItem value="sold">Venduto</SelectItem>
-                        <SelectItem value="reserved">Riservato</SelectItem>
-                        <SelectItem value="blocked">Bloccato</SelectItem>
+                        <SelectItem value="available">{t('siae.numberedSeatsPage.statuses.available')}</SelectItem>
+                        <SelectItem value="sold">{t('siae.numberedSeatsPage.statuses.sold')}</SelectItem>
+                        <SelectItem value="reserved">{t('siae.numberedSeatsPage.statuses.reserved')}</SelectItem>
+                        <SelectItem value="blocked">{t('siae.numberedSeatsPage.statuses.blocked')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -534,7 +534,7 @@ export default function SiaeNumberedSeatsPage() {
                 name="priceMultiplier"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moltiplicatore Prezzo</FormLabel>
+                    <FormLabel>{t('siae.numberedSeatsPage.multiplier')}</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" step="0.01" min="0.1" max="10" className="bg-[#0a0e17] border-gray-700" />
                     </FormControl>
@@ -548,7 +548,7 @@ export default function SiaeNumberedSeatsPage() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Note</FormLabel>
+                    <FormLabel>{t('common.notes')}</FormLabel>
                     <FormControl>
                       <Textarea {...field} className="bg-[#0a0e17] border-gray-700" />
                     </FormControl>
@@ -589,37 +589,37 @@ export default function SiaeNumberedSeatsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Fila</label>
+                  <label className="text-sm text-gray-400">{t('siae.numberedSeatsPage.row')}</label>
                   <p className="text-white font-mono text-lg">{selectedSeat.rowNumber}</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Posto</label>
+                  <label className="text-sm text-gray-400">{t('siae.numberedSeatsPage.seat')}</label>
                   <p className="text-white font-mono text-lg font-bold">{selectedSeat.seatNumber}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Categoria</label>
+                  <label className="text-sm text-gray-400">{t('siae.numberedSeatsPage.category')}</label>
                   <div className="flex items-center gap-2">
                     {getCategoryIcon(selectedSeat.category)}
                     {getCategoryBadge(selectedSeat.category)}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Stato</label>
+                  <label className="text-sm text-gray-400">{t('common.status')}</label>
                   {getStatusBadge(selectedSeat.status)}
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">Moltiplicatore Prezzo</label>
+                <label className="text-sm text-gray-400">{t('siae.numberedSeatsPage.multiplier')}</label>
                 <p className="text-white">x{Number(selectedSeat.priceMultiplier || 1).toFixed(2)}</p>
               </div>
 
               {selectedSeat.xPosition && selectedSeat.yPosition && (
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Posizione Mappa</label>
+                  <label className="text-sm text-gray-400">{t('siae.numberedSeatsPage.position')}</label>
                   <p className="text-white flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     X: {Number(selectedSeat.xPosition).toFixed(2)}, Y: {Number(selectedSeat.yPosition).toFixed(2)}
@@ -629,14 +629,14 @@ export default function SiaeNumberedSeatsPage() {
 
               {selectedSeat.notes && (
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Note</label>
+                  <label className="text-sm text-gray-400">{t('common.notes')}</label>
                   <p className="text-gray-300 bg-gray-900 p-2 rounded">{selectedSeat.notes}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
-                  <label className="text-gray-400">Creato</label>
+                  <label className="text-gray-400">{t('common.createdAt')}</label>
                   <p className="text-gray-300">
                     {selectedSeat.createdAt ? format(new Date(selectedSeat.createdAt), "dd/MM/yyyy HH:mm", { locale: it }) : "-"}
                   </p>
@@ -984,7 +984,7 @@ export default function SiaeNumberedSeatsPage() {
           data-testid="button-create-seat"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Nuovo Posto
+          {t('siae.numberedSeatsPage.newSeat')}
         </Button>
       </div>
 
@@ -992,10 +992,10 @@ export default function SiaeNumberedSeatsPage() {
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-md">
-              <label className="text-sm text-gray-400 mb-2 block">Seleziona Settore</label>
+              <label className="text-sm text-gray-400 mb-2 block">{t('siae.numberedSeatsPage.selectSector')}</label>
               <Select value={selectedSectorId} onValueChange={setSelectedSectorId}>
                 <SelectTrigger className="bg-[#0a0e17] border-gray-700" data-testid="select-sector">
-                  <SelectValue placeholder="Seleziona un settore..." />
+                  <SelectValue placeholder={t('siae.numberedSeatsPage.selectSectorPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {sectors?.map((sector) => (
@@ -1095,7 +1095,7 @@ export default function SiaeNumberedSeatsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tutti gli stati</SelectItem>
-                      <SelectItem value="available">Disponibile</SelectItem>
+                      <SelectItem value="available">{t('siae.numberedSeatsPage.statuses.available')}</SelectItem>
                       <SelectItem value="sold">Venduto</SelectItem>
                       <SelectItem value="reserved">Riservato</SelectItem>
                       <SelectItem value="blocked">Bloccato</SelectItem>
@@ -1237,9 +1237,9 @@ export default function SiaeNumberedSeatsPage() {
         <Card className="bg-[#151922] border-gray-800">
           <CardContent className="p-12 text-center">
             <Grid3X3 className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Seleziona un Settore</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">{t('siae.numberedSeatsPage.selectASector')}</h3>
             <p className="text-gray-400">
-              Seleziona un settore per visualizzare e gestire i posti numerati
+              {t('siae.numberedSeatsPage.selectSectorToManage')}
             </p>
           </CardContent>
         </Card>

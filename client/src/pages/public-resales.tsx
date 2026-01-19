@@ -14,6 +14,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTranslation } from 'react-i18next';
 import { 
   RefreshCw, 
   Calendar, 
@@ -68,6 +69,7 @@ const cardVariants = {
 };
 
 function ResaleCard({ resale }: { resale: PublicResale }) {
+  const { t } = useTranslation();
   const eventDate = new Date(resale.eventStart);
   const originalPrice = parseFloat(resale.originalPrice);
   const resalePrice = parseFloat(resale.resalePrice);
@@ -103,7 +105,7 @@ function ResaleCard({ resale }: { resale: PublicResale }) {
             <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-10">
               <Badge className="bg-amber-500/90 text-white shadow-lg">
                 <RefreshCw className="w-3 h-3 mr-1" />
-                Rivendita
+                {t('public.resales.resaleBadge')}
               </Badge>
               {hasDiscount && (
                 <Badge className="bg-green-500/90 text-white shadow-lg">
@@ -141,7 +143,7 @@ function ResaleCard({ resale }: { resale: PublicResale }) {
                     {format(eventDate, "EEEE d MMMM", { locale: it })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Ore {format(eventDate, "HH:mm")}
+                    {t('public.resales.time', { time: format(eventDate, "HH:mm") })}
                   </p>
                 </div>
               </div>
@@ -174,7 +176,7 @@ function ResaleCard({ resale }: { resale: PublicResale }) {
                 data-testid={`button-buy-${resale.id}`}
               >
                 <Tag className="w-5 h-5 mr-2" />
-                Acquista
+                {t('public.resales.buy')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -225,6 +227,7 @@ export default function PublicResalesPage() {
   const { isAuthenticated } = useCustomerAuth();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const { data: resales, isLoading, error } = useQuery<PublicResale[]>({
     queryKey: ["/api/public/resales"],
@@ -248,13 +251,13 @@ export default function PublicResalesPage() {
 
               <nav className="flex items-center gap-6">
                 <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-                  Eventi
+                  {t('public.nav.events')}
                 </Link>
                 <Link href="/rivendite" className="text-foreground font-medium">
-                  Rivendite
+                  {t('public.nav.resales')}
                 </Link>
                 <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-                  Locali
+                  {t('public.nav.venues')}
                 </Link>
               </nav>
 
@@ -262,7 +265,7 @@ export default function PublicResalesPage() {
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca rivendite..."
+                    placeholder={t('public.resales.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-12 h-12 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 text-base rounded-xl"
@@ -294,7 +297,7 @@ export default function PublicResalesPage() {
                 ) : (
                   <Link href="/login">
                     <Button className="h-10 px-5 rounded-xl font-semibold" data-testid="button-login-desktop">
-                      Accedi
+                      {t('auth.login')}
                     </Button>
                   </Link>
                 )}
@@ -307,16 +310,16 @@ export default function PublicResalesPage() {
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <RefreshCw className="w-8 h-8 text-primary" />
-              <h1 className="text-3xl font-bold text-foreground">Rivendite</h1>
+              <h1 className="text-3xl font-bold text-foreground">{t('public.resales.title')}</h1>
             </div>
             <p className="text-muted-foreground">
-              Biglietti in rivendita da altri utenti a prezzi vantaggiosi
+              {t('public.resales.subtitle')}
             </p>
           </div>
 
           {error && (
             <Card className="p-6 text-center bg-red-500/10 border-red-500/20 rounded-2xl mb-6">
-              <p className="text-red-400">Errore nel caricamento delle rivendite. Riprova più tardi.</p>
+              <p className="text-red-400">{t('public.resales.loadError')}</p>
             </Card>
           )}
 
@@ -342,15 +345,15 @@ export default function PublicResalesPage() {
             <Card className="p-12 text-center rounded-2xl">
               <RefreshCw className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-foreground mb-2">
-                Nessuna rivendita disponibile
+                {t('public.resales.noResalesAvailable')}
               </h3>
               <p className="text-muted-foreground mb-6">
-                Al momento non ci sono biglietti in rivendita. Torna più tardi!
+                {t('public.resales.noResalesMessage')}
               </p>
               <Link href="/acquista">
                 <Button className="rounded-xl">
                   <Ticket className="w-5 h-5 mr-2" />
-                  Vai agli eventi
+                  {t('public.resales.goToEvents')}
                 </Button>
               </Link>
             </Card>
@@ -359,7 +362,7 @@ export default function PublicResalesPage() {
 
         <footer className="border-t border-border py-6 mt-12">
           <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} Event4U. Tutti i diritti riservati.</p>
+            <p>{t('public.footer.copyright', { year: new Date().getFullYear() })}</p>
           </div>
         </footer>
       </div>
@@ -392,7 +395,7 @@ export default function PublicResalesPage() {
               ) : (
                 <Link href="/login">
                   <Button size="sm" className="h-9 px-4 rounded-lg" data-testid="button-login-mobile">
-                    Accedi
+                    {t('auth.login')}
                   </Button>
                 </Link>
               )}
@@ -401,13 +404,13 @@ export default function PublicResalesPage() {
 
           <nav className="flex items-center gap-4 mt-3 text-sm">
             <Link href="/acquista" className="text-muted-foreground">
-              Eventi
+              {t('public.nav.events')}
             </Link>
             <Link href="/rivendite" className="text-foreground font-medium border-b-2 border-primary pb-1">
-              Rivendite
+              {t('public.nav.resales')}
             </Link>
             <Link href="/locali" className="text-muted-foreground">
-              Locali
+              {t('public.nav.venues')}
             </Link>
           </nav>
         </div>
@@ -417,7 +420,7 @@ export default function PublicResalesPage() {
         <div className="relative mb-6">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Cerca rivendite..."
+            placeholder={t('public.resales.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12 h-12 bg-muted/50 border-border text-foreground rounded-xl"
@@ -428,16 +431,16 @@ export default function PublicResalesPage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <RefreshCw className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Rivendite</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('public.resales.title')}</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Biglietti in rivendita da altri utenti
+            {t('public.resales.subtitleMobile')}
           </p>
         </div>
 
         {error && (
           <Card className="p-4 text-center bg-red-500/10 border-red-500/20 rounded-xl mb-4">
-            <p className="text-red-400 text-sm">Errore nel caricamento delle rivendite.</p>
+            <p className="text-red-400 text-sm">{t('public.resales.loadErrorMobile')}</p>
           </Card>
         )}
 
@@ -463,15 +466,15 @@ export default function PublicResalesPage() {
           <Card className="p-8 text-center rounded-xl">
             <RefreshCw className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              Nessuna rivendita
+              {t('public.resales.noResalesMobile')}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Al momento non ci sono biglietti in rivendita.
+              {t('public.resales.noResalesMessageMobile')}
             </p>
             <Link href="/acquista">
               <Button size="sm" className="rounded-lg">
                 <Ticket className="w-4 h-4 mr-2" />
-                Vai agli eventi
+                {t('public.resales.goToEvents')}
               </Button>
             </Link>
           </Card>

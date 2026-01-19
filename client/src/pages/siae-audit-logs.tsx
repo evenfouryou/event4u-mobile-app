@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -72,6 +73,7 @@ const springTransition = {
 };
 
 export default function SiaeAuditLogsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [selectedLog, setSelectedLog] = useState<SiaeAuditLog | null>(null);
@@ -121,19 +123,19 @@ export default function SiaeAuditLogsPage() {
   const getActionBadge = (action: string) => {
     switch (action) {
       case "create":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Creazione</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{t('siae.auditLogsPage.actions.create')}</Badge>;
       case "update":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Modifica</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{t('siae.auditLogsPage.actions.update')}</Badge>;
       case "delete":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Eliminazione</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('siae.auditLogsPage.actions.delete')}</Badge>;
       case "cancel":
-        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Annullamento</Badge>;
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">{t('siae.auditLogsPage.actions.cancel')}</Badge>;
       case "emit":
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Emissione</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">{t('siae.auditLogsPage.actions.emit')}</Badge>;
       case "validate":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Validazione</Badge>;
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{t('siae.auditLogsPage.actions.verify')}</Badge>;
       case "transmit":
-        return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">Trasmissione</Badge>;
+        return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">{t('siae.auditLogsPage.actions.transmit')}</Badge>;
       default:
         return <Badge variant="secondary">{action}</Badge>;
     }
@@ -142,21 +144,21 @@ export default function SiaeAuditLogsPage() {
   const getEntityBadge = (entityType: string) => {
     switch (entityType) {
       case "ticket":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Biglietto</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{t('siae.auditLogsPage.entities.ticket')}</Badge>;
       case "transaction":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Transazione</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{t('common.transaction')}</Badge>;
       case "customer":
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Cliente</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">{t('common.customer')}</Badge>;
       case "event":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Evento</Badge>;
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{t('siae.auditLogsPage.entities.event')}</Badge>;
       case "sector":
-        return <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30">Settore</Badge>;
+        return <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30">{t('common.sector')}</Badge>;
       case "subscription":
-        return <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30">Abbonamento</Badge>;
+        return <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30">{t('common.subscription')}</Badge>;
       case "name_change":
-        return <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30">Cambio Nome</Badge>;
+        return <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30">{t('common.nameChange')}</Badge>;
       case "resale":
-        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Rivendita</Badge>;
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">{t('siae.auditLogsPage.entities.resale')}</Badge>;
       default:
         return <Badge variant="secondary">{entityType}</Badge>;
     }
@@ -164,27 +166,27 @@ export default function SiaeAuditLogsPage() {
 
   const getActionLabel = (action: string): string => {
     switch (action) {
-      case "create": return "Creazione";
-      case "update": return "Modifica";
-      case "delete": return "Eliminazione";
-      case "cancel": return "Annullamento";
-      case "emit": return "Emissione";
-      case "validate": return "Validazione";
-      case "transmit": return "Trasmissione";
+      case "create": return t('siae.auditLogsPage.actions.create');
+      case "update": return t('siae.auditLogsPage.actions.update');
+      case "delete": return t('siae.auditLogsPage.actions.delete');
+      case "cancel": return t('siae.auditLogsPage.actions.cancel');
+      case "emit": return t('siae.auditLogsPage.actions.emit');
+      case "validate": return t('siae.auditLogsPage.actions.verify');
+      case "transmit": return t('siae.auditLogsPage.actions.transmit');
       default: return action;
     }
   };
 
   const getEntityLabel = (entity: string): string => {
     switch (entity) {
-      case "ticket": return "Biglietto";
-      case "transaction": return "Transazione";
-      case "customer": return "Cliente";
-      case "event": return "Evento";
-      case "sector": return "Settore";
-      case "subscription": return "Abbonamento";
-      case "name_change": return "Cambio Nome";
-      case "resale": return "Rivendita";
+      case "ticket": return t('siae.auditLogsPage.entities.ticket');
+      case "transaction": return t('common.transaction');
+      case "customer": return t('common.customer');
+      case "event": return t('siae.auditLogsPage.entities.event');
+      case "sector": return t('common.sector');
+      case "subscription": return t('common.subscription');
+      case "name_change": return t('common.nameChange');
+      case "resale": return t('siae.auditLogsPage.entities.resale');
       default: return entity;
     }
   };

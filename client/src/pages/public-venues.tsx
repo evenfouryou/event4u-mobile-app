@@ -36,6 +36,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
+import { useTranslation } from 'react-i18next';
 
 interface VenueEvent {
   id: string;
@@ -112,6 +113,7 @@ interface MapViewProps {
 }
 
 function MapView({ venues, userLocation, onVenueSelect, selectedVenue, onCloseSelected }: MapViewProps) {
+  const { t } = useTranslation();
   const center = userLocation || ITALY_CENTER;
   const zoom = userLocation ? 12 : 8;
 
@@ -119,10 +121,9 @@ function MapView({ venues, userLocation, onVenueSelect, selectedVenue, onCloseSe
     return (
       <Card className="p-8 text-center bg-muted/50 border-border">
         <MapIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-xl font-semibold text-foreground mb-2">Mappa non configurata</h3>
+        <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.venues.mapNotConfigured')}</h3>
         <p className="text-muted-foreground">
-          La visualizzazione mappa non è disponibile. 
-          Contatta l'amministratore per configurare Google Maps.
+          {t('public.venues.mapNotConfiguredMessage')}
         </p>
       </Card>
     );
@@ -164,7 +165,7 @@ function MapView({ venues, userLocation, onVenueSelect, selectedVenue, onCloseSe
           {userLocation && (
             <AdvancedMarker
               position={userLocation}
-              title="La tua posizione"
+              title={t('public.venues.yourLocation')}
             >
               <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse" />
             </AdvancedMarker>
@@ -218,11 +219,11 @@ function MapView({ venues, userLocation, onVenueSelect, selectedVenue, onCloseSe
                   )}
                   <div className="flex items-center gap-2 mt-3">
                     <Badge variant="secondary" className="text-xs">
-                      {selectedVenue.eventCount} {selectedVenue.eventCount === 1 ? "evento" : "eventi"}
+                      {selectedVenue.eventCount} {selectedVenue.eventCount === 1 ? t('common.event') : t('common.events')}
                     </Badge>
                     <Link href={`/locali/${selectedVenue.id}`} className="ml-auto" data-testid={`link-map-venue-${selectedVenue.id}`}>
                       <Button size="sm" className="min-h-[36px]" data-testid={`button-map-view-venue-${selectedVenue.id}`}>
-                        Scopri di più
+                        {t('public.venues.learnMore')}
                         <ArrowRight className="w-4 h-4 ml-1" />
                       </Button>
                     </Link>
@@ -243,6 +244,7 @@ interface ViewToggleProps {
 }
 
 function ViewToggle({ viewMode, onViewChange }: ViewToggleProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg border border-border">
       <Button
@@ -253,7 +255,7 @@ function ViewToggle({ viewMode, onViewChange }: ViewToggleProps) {
         data-testid="button-view-list"
       >
         <List className="w-4 h-4 mr-2" />
-        Lista
+        {t('public.venues.listView')}
       </Button>
       <Button
         variant={viewMode === 'map' ? 'default' : 'ghost'}
@@ -263,7 +265,7 @@ function ViewToggle({ viewMode, onViewChange }: ViewToggleProps) {
         data-testid="button-view-map"
       >
         <MapIcon className="w-4 h-4 mr-2" />
-        Mappa
+        {t('public.venues.mapView')}
       </Button>
     </div>
   );
@@ -280,6 +282,7 @@ export default function PublicVenues() {
   const [locationLoading, setLocationLoading] = useState(false);
   const { isAuthenticated } = useCustomerAuth();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const requestGeolocation = useCallback(() => {
     if (locationLoading) return;
@@ -340,13 +343,13 @@ export default function PublicVenues() {
 
               <nav className="flex items-center gap-6">
                 <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-events-desktop">
-                  Eventi
+                  {t('public.nav.events')}
                 </Link>
                 <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-resales-desktop">
-                  Rivendite
+                  {t('public.nav.resales')}
                 </Link>
                 <Link href="/locali" className="text-foreground font-medium" data-testid="nav-venues-desktop">
-                  Locali
+                  {t('public.nav.venues')}
                 </Link>
               </nav>
 
@@ -354,7 +357,7 @@ export default function PublicVenues() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca per città..."
+                    placeholder={t('public.venues.searchPlaceholder')}
                     value={searchCity}
                     onChange={(e) => setSearchCity(e.target.value)}
                     className="pl-10 h-10"
@@ -376,7 +379,7 @@ export default function PublicVenues() {
                   <Link href="/login" data-testid="link-login-desktop">
                     <Button variant="outline" data-testid="button-login">
                       <User className="w-4 h-4 mr-2" />
-                      Accedi
+                      {t('auth.login')}
                     </Button>
                   </Link>
                 )}
@@ -390,10 +393,10 @@ export default function PublicVenues() {
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">
-                Scopri i <span className="text-primary">Club</span>
+                {t('public.venues.title')} <span className="text-primary">{t('public.venues.titleHighlight')}</span>
               </h1>
               <p className="text-muted-foreground">
-                I migliori locali della tua città
+                {t('public.venues.subtitle')}
               </p>
             </div>
             
@@ -413,7 +416,7 @@ export default function PublicVenues() {
                 data-testid="button-nearby"
               >
                 <Navigation className={`w-4 h-4 ${locationLoading ? 'animate-pulse' : ''}`} />
-                {locationLoading ? "Caricamento..." : "Vicino a te"}
+                {locationLoading ? t('common.loading') : t('public.venues.nearYou')}
               </motion.button>
               
               <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
@@ -434,16 +437,16 @@ export default function PublicVenues() {
             </div>
           ) : error ? (
             <Card className="p-8 text-center bg-red-500/10 border-red-500/20">
-              <p className="text-red-400">Errore nel caricamento dei locali</p>
+              <p className="text-red-400">{t('public.venues.loadError')}</p>
             </Card>
           ) : venues?.length === 0 ? (
             <Card className="p-12 text-center">
               <Building2 className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-semibold text-foreground mb-2">Nessun locale trovato</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.venues.noVenuesFound')}</h3>
               <p className="text-muted-foreground">
                 {searchCity 
-                  ? `Non ci sono locali a "${searchCity}"`
-                  : "Non ci sono locali disponibili"}
+                  ? t('public.venues.noVenuesInCity', { city: searchCity })
+                  : t('public.venues.noVenuesAvailable')}
               </p>
             </Card>
           ) : viewMode === 'map' ? (
@@ -492,7 +495,7 @@ export default function PublicVenues() {
                         className="absolute top-3 right-3 bg-primary text-primary-foreground border-0"
                         data-testid={`badge-events-${venue.id}`}
                       >
-                        {venue.eventCount} {venue.eventCount === 1 ? "evento" : "eventi"}
+                        {venue.eventCount} {venue.eventCount === 1 ? t('common.event') : t('common.events')}
                       </Badge>
                     )}
                     
@@ -523,12 +526,12 @@ export default function PublicVenues() {
                     {venue.capacity && (
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
                         <Users className="w-3.5 h-3.5" />
-                        <span>Capienza: {venue.capacity}</span>
+                        <span>{t('public.venues.capacity')}: {venue.capacity}</span>
                       </div>
                     )}
                     {venue.eventCount === 0 && (
                       <p className="text-muted-foreground text-sm mt-2 italic">
-                        Nessun evento in programma
+                        {t('public.venues.noEvents')}
                       </p>
                     )}
                   </CardContent>
@@ -567,7 +570,7 @@ export default function PublicVenues() {
                     {selectedVenue.capacity && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>Capienza: {selectedVenue.capacity}</span>
+                        <span>{t('public.venues.capacity')}: {selectedVenue.capacity}</span>
                       </div>
                     )}
                     {selectedVenue.openingHours && (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +67,7 @@ interface Company {
 }
 
 export default function SiaeResalesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [selectedResale, setSelectedResale] = useState<ResaleWithDetails | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -98,19 +100,19 @@ export default function SiaeResalesPage() {
     switch (status) {
       case "fulfilled":
       case "sold":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Venduto</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{t('siae.resalesPage.statuses.sold')}</Badge>;
       case "paid":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Pagato</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{t('siae.resalesPage.statuses.paid')}</Badge>;
       case "reserved":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Prenotato</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{t('siae.resalesPage.statuses.pending')}</Badge>;
       case "listed":
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">In Vendita</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">{t('siae.resalesPage.statuses.listed')}</Badge>;
       case "cancelled":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Annullato</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('siae.resalesPage.statuses.cancelled')}</Badge>;
       case "expired":
-        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Scaduto</Badge>;
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">{t('siae.resalesPage.statuses.expired')}</Badge>;
       case "rejected":
-        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Rifiutato</Badge>;
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">{t('siae.resalesPage.statuses.rejected')}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -118,20 +120,20 @@ export default function SiaeResalesPage() {
 
   const getCausaleLabel = (causale: string | undefined) => {
     switch (causale) {
-      case "IMP": return "Impedimento";
-      case "VOL": return "Volontaria";
-      case "RIN": return "Rinuncia";
-      case "ERR": return "Errore Acquisto";
-      case "ALT": return "Altro";
+      case "IMP": return t('common.impediment');
+      case "VOL": return t('common.voluntary');
+      case "RIN": return t('common.waiver');
+      case "ERR": return t('common.purchaseError');
+      case "ALT": return t('common.other');
       default: return causale || "-";
     }
   };
 
   const getDocumentoLabel = (tipo: string | undefined) => {
     switch (tipo) {
-      case "CI": return "Carta d'Identità";
-      case "PASSAPORTO": return "Passaporto";
-      case "PATENTE": return "Patente";
+      case "CI": return t('siae.resalesPage.documents.identityCard');
+      case "PASSAPORTO": return t('siae.resalesPage.documents.passport');
+      case "PATENTE": return t('siae.resalesPage.documents.drivingLicense');
       default: return tipo || "-";
     }
   };
@@ -174,12 +176,10 @@ export default function SiaeResalesPage() {
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <RefreshCcw className="w-5 h-5 text-primary" />
-              {isSuperAdmin ? "Rivendite Globali" : "Rivendite"}
+              {t('siae.resalesPage.title')}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {isSuperAdmin 
-                ? "Vista globale marketplace secondary ticketing - tutte le aziende"
-                : "Marketplace per la rivendita di biglietti nominativi"}
+              {t('siae.resalesPage.subtitle')}
             </p>
           </div>
         </div>
@@ -187,14 +187,14 @@ export default function SiaeResalesPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
-              <div className="text-xs text-muted-foreground mb-1">Totale</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('siae.resalesPage.stats.totalResales')}</div>
               <div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
             </CardContent>
           </Card>
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Tag className="w-3 h-3" /> In Vendita
+                <Tag className="w-3 h-3" /> {t('siae.resalesPage.statuses.listed')}
               </div>
               <div className="text-2xl font-bold text-purple-400" data-testid="stat-available">{stats.available}</div>
             </CardContent>
@@ -202,7 +202,7 @@ export default function SiaeResalesPage() {
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Prenotati
+                <Clock className="w-3 h-3" /> {t('siae.resalesPage.statuses.pending')}
               </div>
               <div className="text-2xl font-bold text-amber-400" data-testid="stat-reserved">{stats.reserved}</div>
             </CardContent>
@@ -210,7 +210,7 @@ export default function SiaeResalesPage() {
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <ShoppingCart className="w-3 h-3" /> Venduti
+                <ShoppingCart className="w-3 h-3" /> {t('siae.resalesPage.statuses.sold')}
               </div>
               <div className="text-2xl font-bold text-emerald-400" data-testid="stat-sold">{stats.sold}</div>
             </CardContent>
@@ -218,7 +218,7 @@ export default function SiaeResalesPage() {
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> Valore
+                <TrendingUp className="w-3 h-3" /> {t('siae.resalesPage.stats.averagePrice')}
               </div>
               <div className="text-xl font-bold text-primary" data-testid="stat-value">
                 €{stats.totalValue.toFixed(2)}
@@ -229,7 +229,7 @@ export default function SiaeResalesPage() {
             <Card className="glass-card">
               <CardContent className="p-3 sm:p-4">
                 <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                  <Euro className="w-3 h-3" /> Commissioni
+                  <Euro className="w-3 h-3" /> {t('siae.resalesPage.stats.commission')}
                 </div>
                 <div className="text-xl font-bold text-emerald-400" data-testid="stat-fees">
                   €{stats.platformFees.toFixed(2)}

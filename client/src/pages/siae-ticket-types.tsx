@@ -109,12 +109,12 @@ const sectorFormSchema = z.object({
 
 type SectorFormData = z.infer<typeof sectorFormSchema>;
 
-const statusLabelOptions = [
-  { value: "available", label: "Disponibile", color: "text-emerald-400" },
-  { value: "sold_out", label: "Esaurito", color: "text-rose-400" },
-  { value: "coming_soon", label: "In arrivo", color: "text-amber-400" },
-  { value: "limited", label: "Ultimi posti", color: "text-orange-400" },
-  { value: "custom", label: "Personalizzato", color: "text-blue-400" },
+const getStatusLabelOptions = (t: (key: string) => string) => [
+  { value: "available", label: t('siae.ticketTypesPage.statusLabels.available'), color: "text-emerald-400" },
+  { value: "sold_out", label: t('siae.ticketTypesPage.statusLabels.soldOut'), color: "text-rose-400" },
+  { value: "coming_soon", label: t('siae.ticketTypesPage.statusLabels.comingSoon'), color: "text-amber-400" },
+  { value: "limited", label: t('siae.ticketTypesPage.statusLabels.limited'), color: "text-orange-400" },
+  { value: "custom", label: t('siae.ticketTypesPage.statusLabels.custom'), color: "text-blue-400" },
 ];
 
 export default function SiaeTicketTypes() {
@@ -201,12 +201,12 @@ export default function SiaeTicketTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId, "sectors"] });
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId] });
-      toast({ title: "Tipologia biglietto creata con successo" });
+      toast({ title: t('common.success') });
       setIsCreateDialogOpen(false);
       createForm.reset();
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -227,12 +227,12 @@ export default function SiaeTicketTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId, "sectors"] });
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId] });
-      toast({ title: "Tipologia biglietto aggiornata con successo" });
+      toast({ title: t('common.success') });
       setEditingSector(null);
       editForm.reset();
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -243,11 +243,11 @@ export default function SiaeTicketTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId, "sectors"] });
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId] });
-      toast({ title: "Tipologia biglietto eliminata con successo" });
+      toast({ title: t('common.success') });
       setDeletingSector(null);
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -257,42 +257,42 @@ export default function SiaeTicketTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId, "sectors"] });
-      toast({ title: "Stato aggiornato" });
+      toast({ title: t('common.success') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
   const toggleEventVisibilityMutation = useMutation({
     mutationFn: async (isPublic: boolean) => {
       if (!ticketedEvent?.eventId) {
-        throw new Error("ID evento non disponibile");
+        throw new Error(t('common.error'));
       }
       return await apiRequest("PATCH", `/api/events/${ticketedEvent.eventId}`, { isPublic });
     },
-    onSuccess: (_, isPublic) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", ticketedEvent?.eventId] });
-      toast({ title: isPublic ? "Evento visibile al pubblico" : "Evento nascosto" });
+      toast({ title: t('common.success') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
   const updateTicketingStatusMutation = useMutation({
     mutationFn: async (status: string) => {
       if (!eventId) {
-        throw new Error("ID evento biglietteria non disponibile");
+        throw new Error(t('common.error'));
       }
       return await apiRequest("PATCH", `/api/siae/ticketed-events/${eventId}`, { ticketingStatus: status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId] });
-      toast({ title: "Stato biglietteria aggiornato" });
+      toast({ title: t('common.success') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -325,11 +325,13 @@ export default function SiaeTicketTypes() {
     }
   };
 
+  const statusLabelOptions = getStatusLabelOptions(t);
+
   const getStatusBadge = (sector: SiaeEventSector) => {
     const option = statusLabelOptions.find(o => o.value === sector.statusLabel);
     const label = sector.statusLabel === "custom" && sector.customStatusText 
       ? sector.customStatusText 
-      : option?.label || "Disponibile";
+      : option?.label || t('siae.ticketTypesPage.statusLabels.available');
     return (
       <Badge variant="outline" className={option?.color}>
         {label}
@@ -526,7 +528,7 @@ export default function SiaeTicketTypes() {
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger data-testid="select-status-label">
-                      <SelectValue placeholder="Seleziona stato" />
+                      <SelectValue placeholder={t('siae.ticketTypesPage.selectStatus')} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -547,9 +549,9 @@ export default function SiaeTicketTypes() {
               name="customStatusText"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Testo Personalizzato</FormLabel>
+                  <FormLabel>{t('siae.ticketTypesPage.customStatusText')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="es. Prenotazione obbligatoria" {...field} value={field.value ?? ""} data-testid="input-custom-status" />
+                    <Input placeholder={t('siae.ticketTypesPage.customStatusPlaceholder')} {...field} value={field.value ?? ""} data-testid="input-custom-status" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

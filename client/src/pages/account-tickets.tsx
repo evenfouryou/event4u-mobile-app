@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,14 +124,14 @@ function getTicketStatusVariant(status: string) {
   }
 }
 
-function getTicketStatusLabel(status: string) {
+function getTicketStatusLabel(status: string, t: (key: string) => string) {
   switch (status) {
     case "emitted":
-      return "Valido";
+      return t('account.status.valid');
     case "validated":
-      return "Usato";
+      return t('account.status.used');
     case "cancelled":
-      return "Annullato";
+      return t('account.status.cancelled');
     default:
       return status;
   }
@@ -149,20 +150,20 @@ function getSubscriptionStatusVariant(status: string) {
   }
 }
 
-function getSubscriptionStatusLabel(status: string) {
+function getSubscriptionStatusLabel(status: string, t: (key: string) => string) {
   switch (status) {
     case "active":
-      return "Attivo";
+      return t('account.status.active');
     case "expired":
-      return "Scaduto";
+      return t('account.status.expired');
     case "cancelled":
-      return "Annullato";
+      return t('account.status.cancelled');
     default:
       return status;
   }
 }
 
-function MobileTicketCard({ ticket, index }: { ticket: TicketItem; index: number }) {
+function MobileTicketCard({ ticket, index, t }: { ticket: TicketItem; index: number; t: (key: string) => string }) {
   const eventDate = new Date(ticket.eventStart);
   const isExpired = isPast(eventDate);
 
@@ -185,7 +186,7 @@ function MobileTicketCard({ ticket, index }: { ticket: TicketItem; index: number
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <Badge variant={getTicketStatusVariant(ticket.status)} className="text-sm">
-                {getTicketStatusLabel(ticket.status)}
+                {getTicketStatusLabel(ticket.status, t)}
               </Badge>
               {ticket.qrCode && (
                 <div className="flex items-center gap-1 text-primary">
@@ -225,7 +226,7 @@ function MobileTicketCard({ ticket, index }: { ticket: TicketItem; index: number
   );
 }
 
-function MobileSubscriptionCard({ subscription, index, onClick }: { subscription: SubscriptionItem; index: number; onClick: () => void }) {
+function MobileSubscriptionCard({ subscription, index, onClick, t }: { subscription: SubscriptionItem; index: number; onClick: () => void; t: (key: string) => string }) {
   const validTo = subscription.validTo ? new Date(subscription.validTo) : null;
   const isExpired = validTo ? isPast(validTo) : false;
 
@@ -250,7 +251,7 @@ function MobileSubscriptionCard({ subscription, index, onClick }: { subscription
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <Badge variant={getSubscriptionStatusVariant(subscription.status)} className="text-sm">
-              {getSubscriptionStatusLabel(subscription.status)}
+              {getSubscriptionStatusLabel(subscription.status, t)}
             </Badge>
             {subscription.qrCode && (
               <div className="flex items-center gap-1 text-primary">
@@ -260,7 +261,7 @@ function MobileSubscriptionCard({ subscription, index, onClick }: { subscription
           </div>
           
           <h3 className="font-semibold text-foreground text-lg leading-tight mb-3" data-testid="text-subscription-name">
-            {subscription.subscriptionTypeName || subscription.eventName || "Abbonamento"}
+            {subscription.subscriptionTypeName || subscription.eventName || t('account.subscriptions.subscription')}
           </h3>
           
           <div className="flex flex-col gap-2 text-base text-muted-foreground">
@@ -273,14 +274,14 @@ function MobileSubscriptionCard({ subscription, index, onClick }: { subscription
             <div className="flex items-center gap-3">
               <CalendarCheck className="w-5 h-5 flex-shrink-0" />
               <span data-testid="text-events-used">
-                {subscription.eventsUsed}/{subscription.eventsCount} eventi utilizzati
+                {subscription.eventsUsed}/{subscription.eventsCount} {t('account.subscriptions.eventsUsed')}
               </span>
             </div>
             {validTo && (
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 flex-shrink-0" />
                 <span data-testid="text-valid-to">
-                  Valido fino al {format(validTo, "d MMM yyyy", { locale: it })}
+                  {t('account.subscriptions.validUntil')} {format(validTo, "d MMM yyyy", { locale: it })}
                 </span>
               </div>
             )}
@@ -303,17 +304,17 @@ function MobileSubscriptionCard({ subscription, index, onClick }: { subscription
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   {subscription.progressiveNumber !== null && (
                     <span className="font-mono" data-testid="text-progressive">
-                      Prog: {subscription.progressiveNumber}
+                      {t('account.subscriptions.prog')}: {subscription.progressiveNumber}
                     </span>
                   )}
                   {subscription.cardCode && (
                     <span className="font-mono" data-testid="text-card-code">
-                      Carta: {subscription.cardCode}
+                      {t('account.subscriptions.card')}: {subscription.cardCode}
                     </span>
                   )}
                   {subscription.fiscalSealCounter !== null && (
                     <span className="font-mono" data-testid="text-seal-counter">
-                      Cont: {subscription.fiscalSealCounter}
+                      {t('account.subscriptions.counter')}: {subscription.fiscalSealCounter}
                     </span>
                   )}
                 </div>
@@ -321,7 +322,7 @@ function MobileSubscriptionCard({ subscription, index, onClick }: { subscription
                   <div className="flex items-center gap-3">
                     <Clock className="w-5 h-5 flex-shrink-0" />
                     <span data-testid="text-emission-date">
-                      Emesso: {format(new Date(subscription.emissionDate), "d MMM yyyy, HH:mm", { locale: it })}
+                      {t('account.subscriptions.emitted')}: {format(new Date(subscription.emissionDate), "d MMM yyyy, HH:mm", { locale: it })}
                     </span>
                   </div>
                 )}
@@ -338,7 +339,7 @@ function MobileSubscriptionCard({ subscription, index, onClick }: { subscription
   );
 }
 
-function TicketEmptyState({ type }: { type: 'upcoming' | 'past' }) {
+function TicketEmptyState({ type, t }: { type: 'upcoming' | 'past'; t: (key: string) => string }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -356,12 +357,12 @@ function TicketEmptyState({ type }: { type: 'upcoming' | 'past' }) {
       </motion.div>
       
       <h3 className="text-xl font-semibold text-foreground mb-2 text-center">
-        {type === 'upcoming' ? 'Nessun biglietto' : 'Nessun evento passato'}
+        {type === 'upcoming' ? t('account.tickets.noTickets') : t('account.tickets.noPastEvents')}
       </h3>
       <p className="text-base text-muted-foreground text-center mb-6">
         {type === 'upcoming' 
-          ? 'Non hai biglietti per eventi futuri'
-          : 'Non hai ancora partecipato a nessun evento'
+          ? t('account.tickets.noFutureTickets')
+          : t('account.tickets.noParticipatedEvents')
         }
       </p>
       
@@ -372,7 +373,7 @@ function TicketEmptyState({ type }: { type: 'upcoming' | 'past' }) {
             onClick={() => triggerHaptic('medium')}
             className="min-h-[48px] px-6 bg-primary text-primary-foreground rounded-xl font-semibold text-base"
           >
-            Scopri gli eventi
+            {t('account.actions.discoverEvents')}
           </motion.button>
         </Link>
       )}
@@ -380,7 +381,7 @@ function TicketEmptyState({ type }: { type: 'upcoming' | 'past' }) {
   );
 }
 
-function SubscriptionEmptyState({ type }: { type: 'upcoming' | 'past' }) {
+function SubscriptionEmptyState({ type, t }: { type: 'upcoming' | 'past'; t: (key: string) => string }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -399,12 +400,12 @@ function SubscriptionEmptyState({ type }: { type: 'upcoming' | 'past' }) {
       </motion.div>
       
       <h3 className="text-xl font-semibold text-foreground mb-2 text-center">
-        {type === 'upcoming' ? 'Nessun abbonamento attivo' : 'Nessun abbonamento scaduto'}
+        {type === 'upcoming' ? t('account.subscriptions.noActiveSubscriptions') : t('account.subscriptions.noExpiredSubscriptions')}
       </h3>
       <p className="text-base text-muted-foreground text-center mb-6">
         {type === 'upcoming' 
-          ? 'Non hai abbonamenti attivi al momento'
-          : 'Non hai abbonamenti scaduti'
+          ? t('account.subscriptions.noActiveDescription')
+          : t('account.subscriptions.noExpiredDescription')
         }
       </p>
       
@@ -415,7 +416,7 @@ function SubscriptionEmptyState({ type }: { type: 'upcoming' | 'past' }) {
             onClick={() => triggerHaptic('medium')}
             className="min-h-[48px] px-6 bg-primary text-primary-foreground rounded-xl font-semibold text-base"
           >
-            Scopri gli eventi
+            {t('account.actions.discoverEvents')}
           </motion.button>
         </Link>
       )}
@@ -485,7 +486,7 @@ function TopLevelTabButton({
   );
 }
 
-function SubscriptionDetailDialog({ subscription, open, onClose }: { subscription: SubscriptionItem | null; open: boolean; onClose: () => void }) {
+function SubscriptionDetailDialog({ subscription, open, onClose, t }: { subscription: SubscriptionItem | null; open: boolean; onClose: () => void; t: (key: string) => string }) {
   if (!subscription) return null;
 
   const subscriptionDetail: SubscriptionDetail = {
@@ -514,10 +515,10 @@ function SubscriptionDetailDialog({ subscription, open, onClose }: { subscriptio
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle data-testid="text-subscription-detail-title">
-            {subscription.subscriptionTypeName || subscription.eventName || "Abbonamento"}
+            {subscription.subscriptionTypeName || subscription.eventName || t('account.subscriptions.subscription')}
           </DialogTitle>
           <DialogDescription>
-            Dettagli del tuo abbonamento
+            {t('account.subscriptions.details')}
           </DialogDescription>
         </DialogHeader>
 
@@ -530,6 +531,7 @@ function SubscriptionDetailDialog({ subscription, open, onClose }: { subscriptio
 }
 
 export default function AccountTickets() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [mainTab, setMainTab] = useState<'biglietti' | 'abbonamenti'>('biglietti');
   const [ticketTimeTab, setTicketTimeTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -573,13 +575,13 @@ export default function AccountTickets() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-account-tickets">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Biglietti/Abbonamenti</h1>
-            <p className="text-muted-foreground">Gestisci i tuoi biglietti e abbonamenti</p>
+            <h1 className="text-3xl font-bold">{t('account.nav.ticketsSubscriptions')}</h1>
+            <p className="text-muted-foreground">{t('account.tickets.manageTicketsAndSubscriptions')}</p>
           </div>
           <Link href="/acquista">
             <Button data-testid="button-discover-events">
               <Ticket className="w-4 h-4 mr-2" />
-              Scopri gli eventi
+              {t('account.actions.discoverEvents')}
             </Button>
           </Link>
         </div>
@@ -588,11 +590,11 @@ export default function AccountTickets() {
           <TabsList className="mb-6">
             <TabsTrigger value="biglietti" data-testid="tab-biglietti-desktop">
               <Ticket className="w-4 h-4 mr-2" />
-              Biglietti ({ticketStats.total})
+              {t('account.tickets.tickets')} ({ticketStats.total})
             </TabsTrigger>
             <TabsTrigger value="abbonamenti" data-testid="tab-abbonamenti-desktop">
               <CreditCard className="w-4 h-4 mr-2" />
-              Abbonamenti ({subscriptionStats.total})
+              {t('account.subscriptions.title')} ({subscriptionStats.total})
             </TabsTrigger>
           </TabsList>
 
@@ -606,7 +608,7 @@ export default function AccountTickets() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold">{ticketStats.total}</div>
-                      <p className="text-sm text-muted-foreground">Totale Biglietti</p>
+                      <p className="text-sm text-muted-foreground">{t('account.tickets.totalTickets')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -619,7 +621,7 @@ export default function AccountTickets() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-green-500">{ticketStats.upcoming}</div>
-                      <p className="text-sm text-muted-foreground">Prossimi Eventi</p>
+                      <p className="text-sm text-muted-foreground">{t('account.tickets.upcomingEvents')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -632,7 +634,7 @@ export default function AccountTickets() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-muted-foreground">{ticketStats.past}</div>
-                      <p className="text-sm text-muted-foreground">Eventi Passati</p>
+                      <p className="text-sm text-muted-foreground">{t('account.tickets.pastEvents')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -641,16 +643,16 @@ export default function AccountTickets() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Elenco Biglietti</CardTitle>
+                <CardTitle>{t('account.tickets.ticketList')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Tabs value={ticketTimeTab} onValueChange={(v) => setTicketTimeTab(v as 'upcoming' | 'past')}>
                   <TabsList className="mb-4">
                     <TabsTrigger value="upcoming" data-testid="tab-tickets-upcoming-desktop">
-                      Prossimi ({upcomingTickets.length})
+                      {t('account.tickets.upcoming')} ({upcomingTickets.length})
                     </TabsTrigger>
                     <TabsTrigger value="past" data-testid="tab-tickets-past-desktop">
-                      Passati ({pastTickets.length})
+                      {t('account.tickets.past')} ({pastTickets.length})
                     </TabsTrigger>
                   </TabsList>
 
@@ -662,23 +664,23 @@ export default function AccountTickets() {
                     ) : upcomingTickets.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <TicketX className="w-16 h-16 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">Nessun biglietto</h3>
-                        <p className="text-muted-foreground mb-4">Non hai biglietti per eventi futuri</p>
+                        <h3 className="text-lg font-semibold mb-2">{t('account.tickets.noTickets')}</h3>
+                        <p className="text-muted-foreground mb-4">{t('account.tickets.noFutureTickets')}</p>
                         <Link href="/acquista">
-                          <Button>Scopri gli eventi</Button>
+                          <Button>{t('account.actions.discoverEvents')}</Button>
                         </Link>
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Evento</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Luogo</TableHead>
-                            <TableHead>Settore</TableHead>
-                            <TableHead>Stato</TableHead>
-                            <TableHead>Prezzo</TableHead>
-                            <TableHead className="text-right">Azioni</TableHead>
+                            <TableHead>{t('account.tickets.event')}</TableHead>
+                            <TableHead>{t('account.tickets.date')}</TableHead>
+                            <TableHead>{t('account.tickets.location')}</TableHead>
+                            <TableHead>{t('account.tickets.sector')}</TableHead>
+                            <TableHead>{t('account.tickets.status')}</TableHead>
+                            <TableHead>{t('account.tickets.price')}</TableHead>
+                            <TableHead className="text-right">{t('account.tickets.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -692,7 +694,7 @@ export default function AccountTickets() {
                               <TableCell>{ticket.sectorName}</TableCell>
                               <TableCell>
                                 <Badge variant={getTicketStatusVariant(ticket.status)}>
-                                  {getTicketStatusLabel(ticket.status)}
+                                  {getTicketStatusLabel(ticket.status, t)}
                                 </Badge>
                               </TableCell>
                               <TableCell>€{Number(ticket.ticketPrice || 0).toFixed(2)}</TableCell>
@@ -731,20 +733,20 @@ export default function AccountTickets() {
                     ) : pastTickets.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <TicketX className="w-16 h-16 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">Nessun evento passato</h3>
-                        <p className="text-muted-foreground">Non hai ancora partecipato a nessun evento</p>
+                        <h3 className="text-lg font-semibold mb-2">{t('account.tickets.noPastEvents')}</h3>
+                        <p className="text-muted-foreground">{t('account.tickets.noParticipatedEvents')}</p>
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Evento</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Luogo</TableHead>
-                            <TableHead>Settore</TableHead>
-                            <TableHead>Stato</TableHead>
-                            <TableHead>Prezzo</TableHead>
-                            <TableHead className="text-right">Azioni</TableHead>
+                            <TableHead>{t('account.tickets.event')}</TableHead>
+                            <TableHead>{t('account.tickets.date')}</TableHead>
+                            <TableHead>{t('account.tickets.location')}</TableHead>
+                            <TableHead>{t('account.tickets.sector')}</TableHead>
+                            <TableHead>{t('account.tickets.status')}</TableHead>
+                            <TableHead>{t('account.tickets.price')}</TableHead>
+                            <TableHead className="text-right">{t('account.tickets.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -758,7 +760,7 @@ export default function AccountTickets() {
                               <TableCell>{ticket.sectorName}</TableCell>
                               <TableCell>
                                 <Badge variant={getTicketStatusVariant(ticket.status)}>
-                                  {getTicketStatusLabel(ticket.status)}
+                                  {getTicketStatusLabel(ticket.status, t)}
                                 </Badge>
                               </TableCell>
                               <TableCell>€{Number(ticket.ticketPrice || 0).toFixed(2)}</TableCell>
@@ -803,7 +805,7 @@ export default function AccountTickets() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold">{subscriptionStats.total}</div>
-                      <p className="text-sm text-muted-foreground">Totale Abbonamenti</p>
+                      <p className="text-sm text-muted-foreground">{t('account.subscriptions.totalSubscriptions')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -816,7 +818,7 @@ export default function AccountTickets() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-green-500">{subscriptionStats.upcoming}</div>
-                      <p className="text-sm text-muted-foreground">Attivi</p>
+                      <p className="text-sm text-muted-foreground">{t('account.tickets.active')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -829,7 +831,7 @@ export default function AccountTickets() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-muted-foreground">{subscriptionStats.past}</div>
-                      <p className="text-sm text-muted-foreground">Scaduti</p>
+                      <p className="text-sm text-muted-foreground">{t('account.status.expired')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -838,16 +840,16 @@ export default function AccountTickets() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Elenco Abbonamenti</CardTitle>
+                <CardTitle>{t('account.subscriptions.subscriptionList')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Tabs value={subscriptionTimeTab} onValueChange={(v) => setSubscriptionTimeTab(v as 'upcoming' | 'past')}>
                   <TabsList className="mb-4">
                     <TabsTrigger value="upcoming" data-testid="tab-subscriptions-upcoming-desktop">
-                      Attivi ({upcomingSubscriptions.length})
+                      {t('account.tickets.active')} ({upcomingSubscriptions.length})
                     </TabsTrigger>
                     <TabsTrigger value="past" data-testid="tab-subscriptions-past-desktop">
-                      Passati ({pastSubscriptions.length})
+                      {t('account.tickets.past')} ({pastSubscriptions.length})
                     </TabsTrigger>
                   </TabsList>
 
@@ -857,7 +859,7 @@ export default function AccountTickets() {
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
                       </div>
                     ) : upcomingSubscriptions.length === 0 ? (
-                      <SubscriptionEmptyState type="upcoming" />
+                      <SubscriptionEmptyState type="upcoming" t={t} />
                     ) : (
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {upcomingSubscriptions.map((subscription) => (
@@ -870,12 +872,12 @@ export default function AccountTickets() {
                             <CardHeader className="pb-3">
                               <div className="flex items-center justify-between gap-2">
                                 <Badge variant={getSubscriptionStatusVariant(subscription.status)}>
-                                  {getSubscriptionStatusLabel(subscription.status)}
+                                  {getSubscriptionStatusLabel(subscription.status, t)}
                                 </Badge>
                                 {subscription.qrCode && <QrCode className="w-4 h-4 text-primary" />}
                               </div>
                               <CardTitle className="text-lg" data-testid="text-subscription-name">
-                                {subscription.subscriptionTypeName || subscription.eventName || "Abbonamento"}
+                                {subscription.subscriptionTypeName || subscription.eventName || t('account.subscriptions.subscription')}
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -885,12 +887,12 @@ export default function AccountTickets() {
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <CalendarCheck className="w-4 h-4" />
-                                <span>{subscription.eventsUsed}/{subscription.eventsCount} eventi utilizzati</span>
+                                <span>{subscription.eventsUsed}/{subscription.eventsCount} {t('account.subscriptions.eventsUsed')}</span>
                               </div>
                               {subscription.validTo && (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <Calendar className="w-4 h-4" />
-                                  <span>Valido fino al {format(new Date(subscription.validTo), "d MMM yyyy", { locale: it })}</span>
+                                  <span>{t('account.subscriptions.validUntil')} {format(new Date(subscription.validTo), "d MMM yyyy", { locale: it })}</span>
                                 </div>
                               )}
                               {subscription.locationName && (
@@ -912,7 +914,7 @@ export default function AccountTickets() {
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
                       </div>
                     ) : pastSubscriptions.length === 0 ? (
-                      <SubscriptionEmptyState type="past" />
+                      <SubscriptionEmptyState type="past" t={t} />
                     ) : (
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {pastSubscriptions.map((subscription) => (
@@ -925,12 +927,12 @@ export default function AccountTickets() {
                             <CardHeader className="pb-3">
                               <div className="flex items-center justify-between gap-2">
                                 <Badge variant={getSubscriptionStatusVariant(subscription.status)}>
-                                  {getSubscriptionStatusLabel(subscription.status)}
+                                  {getSubscriptionStatusLabel(subscription.status, t)}
                                 </Badge>
                                 {subscription.qrCode && <QrCode className="w-4 h-4 text-primary" />}
                               </div>
                               <CardTitle className="text-lg" data-testid="text-subscription-name">
-                                {subscription.subscriptionTypeName || subscription.eventName || "Abbonamento"}
+                                {subscription.subscriptionTypeName || subscription.eventName || t('account.subscriptions.subscription')}
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -940,12 +942,12 @@ export default function AccountTickets() {
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <CalendarCheck className="w-4 h-4" />
-                                <span>{subscription.eventsUsed}/{subscription.eventsCount} eventi utilizzati</span>
+                                <span>{subscription.eventsUsed}/{subscription.eventsCount} {t('account.subscriptions.eventsUsed')}</span>
                               </div>
                               {subscription.validTo && (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <Calendar className="w-4 h-4" />
-                                  <span>Valido fino al {format(new Date(subscription.validTo), "d MMM yyyy", { locale: it })}</span>
+                                  <span>{t('account.subscriptions.validUntil')} {format(new Date(subscription.validTo), "d MMM yyyy", { locale: it })}</span>
                                 </div>
                               )}
                               {subscription.locationName && (
@@ -969,52 +971,52 @@ export default function AccountTickets() {
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Dettagli Biglietto</DialogTitle>
+              <DialogTitle>{t('account.tickets.ticketDetails')}</DialogTitle>
               <DialogDescription>
-                Informazioni sul biglietto selezionato
+                {t('account.tickets.ticketInfo')}
               </DialogDescription>
             </DialogHeader>
             {selectedTicket && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Evento</span>
+                  <span className="text-muted-foreground">{t('account.tickets.event')}</span>
                   <span className="font-medium">{selectedTicket.eventName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Data</span>
+                  <span className="text-muted-foreground">{t('account.tickets.date')}</span>
                   <span className="font-medium">
                     {format(new Date(selectedTicket.eventStart), "dd MMMM yyyy, HH:mm", { locale: it })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Luogo</span>
+                  <span className="text-muted-foreground">{t('account.tickets.location')}</span>
                   <span className="font-medium">{selectedTicket.locationName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Settore</span>
+                  <span className="text-muted-foreground">{t('account.tickets.sector')}</span>
                   <span className="font-medium">{selectedTicket.sectorName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Tipo</span>
+                  <span className="text-muted-foreground">{t('account.tickets.type')}</span>
                   <span className="font-medium">{selectedTicket.ticketType}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Codice</span>
+                  <span className="text-muted-foreground">{t('account.tickets.code')}</span>
                   <span className="font-mono text-sm">{selectedTicket.ticketCode}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Stato</span>
+                  <span className="text-muted-foreground">{t('account.tickets.status')}</span>
                   <Badge variant={getTicketStatusVariant(selectedTicket.status)}>
                     {getTicketStatusLabel(selectedTicket.status)}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Prezzo</span>
+                  <span className="text-muted-foreground">{t('account.tickets.price')}</span>
                   <span className="font-medium text-lg">€{Number(selectedTicket.ticketPrice || 0).toFixed(2)}</span>
                 </div>
                 {selectedTicket.participantFirstName && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Partecipante</span>
+                    <span className="text-muted-foreground">{t('account.tickets.participant')}</span>
                     <span className="font-medium">
                       {selectedTicket.participantFirstName} {selectedTicket.participantLastName}
                     </span>
@@ -1024,7 +1026,7 @@ export default function AccountTickets() {
                   <Link href={`/account/tickets/${selectedTicket.id}`} className="flex-1">
                     <Button className="w-full" data-testid="button-view-full-details">
                       <Eye className="w-4 h-4 mr-2" />
-                      Visualizza Biglietto
+                      {t('account.tickets.viewTicket')}
                     </Button>
                   </Link>
                 </div>
@@ -1037,6 +1039,7 @@ export default function AccountTickets() {
           subscription={selectedSubscription}
           open={!!selectedSubscription}
           onClose={() => setSelectedSubscription(null)}
+          t={t}
         />
       </div>
     );
@@ -1073,7 +1076,7 @@ export default function AccountTickets() {
         className="px-4 pt-4 pb-2"
       >
         <h1 className="text-2xl font-bold text-foreground" data-testid="text-page-title">
-          Biglietti/Abbonamenti
+          {t('account.nav.ticketsSubscriptions')}
         </h1>
       </motion.header>
 
@@ -1089,14 +1092,14 @@ export default function AccountTickets() {
             onClick={() => setMainTab('biglietti')}
             testId="tab-biglietti"
           >
-            Biglietti
+            {t('account.tickets.tickets')}
           </TopLevelTabButton>
           <TopLevelTabButton 
             active={mainTab === 'abbonamenti'} 
             onClick={() => setMainTab('abbonamenti')}
             testId="tab-abbonamenti"
           >
-            Abbonamenti
+            {t('account.subscriptions.title')}
           </TopLevelTabButton>
         </div>
       </motion.div>
