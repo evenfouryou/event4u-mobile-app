@@ -183,36 +183,9 @@ export function validateSystemCodeConsistency(
     };
   }
   
-  // Verifica anche attributo NomeFile (solo per RMG/RPM che lo supportano)
-  // FIX 2026-01-19: Formato SIAE Allegato C sezione 1.4.1 con DATA CONTIGUA
-  // - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RMG_20260118_P0004010_001.xsi) - 4 parti
-  // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (es: RPM_202601_P0004010_001.xsi) - 4 parti
-  // - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RCA_20260118_P0004010_001.xsi) - 4 parti
-  // Il codice sistema è SEMPRE in posizione parts[2] (terzo elemento)
-  if (isRMG || isRPM) {
-    const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
-    if (nomeFileMatch) {
-      const nomeFileValue = nomeFileMatch[1];
-      const parts = nomeFileValue.split('_');
-      // FIX 2026-01-19: Formato con data contigua (4 parti totali)
-      // RMG: RMG_YYYYMMDD_SSSSSSSS_PPP.xsi (4 parti: tipo, data, codice, prog)
-      // RPM: RPM_YYYYMM_SSSSSSSS_PPP.xsi (4 parti: tipo, mese, codice, prog)
-      // Il codice sistema è sempre in posizione parts[2]
-      let nomeFileSystemCode: string | null = null;
-      if ((parts[0] === 'RMG' || parts[0] === 'RPM') && parts.length >= 4) {
-        nomeFileSystemCode = parts[2]; // XXX_DATACONTIGUA_SSSSSSSS_PPP
-      }
-      
-      if (nomeFileSystemCode && nomeFileSystemCode !== expectedSystemCode) {
-        return {
-          valid: false,
-          xmlSystemCode: nomeFileSystemCode,
-          filenameSystemCode: expectedSystemCode,
-          error: `ERRORE COERENZA ATTRIBUTO NOMEFILE: Il codice sistema nell'attributo NomeFile (${nomeFileSystemCode}) non corrisponde a quello atteso (${expectedSystemCode}). Questo causerebbe errore SIAE 0600.`,
-        };
-      }
-    }
-  }
+  // FIX 2026-01-19: Rimossa verifica attributo NomeFile - non più usato nell'XML per conformità DTD
+  // L'attributo NomeFile è stato rimosso dall'XML perché NON fa parte della DTD ufficiale SIAE v0039
+  // Il nome file corretto viene usato SOLO per l'allegato email
   
   return {
     valid: true,
@@ -4566,7 +4539,7 @@ export interface C1XmlParams {
   businessName: string;
   events: C1EventContext[];
   subscriptions?: C1SubscriptionData[];
-  /** Nome file per attributo NomeFile obbligatorio in RMG/RPM (Allegato C SIAE) */
+  /** Nome file per allegato email (NON inserito nell'XML per conformità DTD SIAE) */
   nomeFile?: string;
 }
 
@@ -4974,13 +4947,13 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const organizerType = 'G';
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
 
-  // FIX 2026-01-19: Attributo NomeFile OBBLIGATORIO per RMG/RPM (Allegato C SIAE sezione 1.4.1)
-  // Il nome file nell'attributo DEVE corrispondere esattamente al nome dell'allegato email
-  // per evitare errore SIAE 0600 "Nome del file contenente il riepilogo sbagliato"
-  const nomeFileAttr = nomeFile ? ` NomeFile="${escapeXml(nomeFile)}"` : '';
+  // FIX 2026-01-19: Rimosso attributo NomeFile dall'XML per conformità DTD ufficiale SIAE
+  // La DTD RiepilogoGiornaliero_v0039_20040209.dtd e RiepilogoMensile_v0039_20040209.dtd
+  // NON includono l'attributo NomeFile - solo: Sostituzione, Data, DataGenerazione, OraGenerazione, ProgressivoGenerazione
+  // Il nome file corretto viene usato SOLO per l'allegato email (parametro nomeFile ignorato nell'XML)
   
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement}${nomeFileAttr} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
+<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>

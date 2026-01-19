@@ -387,15 +387,8 @@ export function validateRMG(xml: string): ValidationResult {
     }
   }
 
-  // Check for invalid NomeFile attribute (not in official DTD)
-  if (rootAttrs['NomeFile']) {
-    warnings.push({
-      code: 'INVALID_ATTRIBUTE',
-      message: 'NomeFile attribute is not in official DTD v0039 - may cause validation errors',
-      element: 'RiepilogoGiornaliero',
-      found: 'NomeFile'
-    });
-  }
+  // FIX 2026-01-19: Rimosso warning per NomeFile - ora non usiamo più questo attributo nell'XML
+  // per conformità alla DTD ufficiale SIAE v0039
 
   // Validate Sostituzione value
   if (rootAttrs['Sostituzione'] && !['N', 'S'].includes(rootAttrs['Sostituzione'])) {
@@ -513,15 +506,8 @@ export function validateRPM(xml: string): ValidationResult {
     }
   }
 
-  // Check for invalid NomeFile attribute
-  if (rootAttrs['NomeFile']) {
-    warnings.push({
-      code: 'INVALID_ATTRIBUTE',
-      message: 'NomeFile attribute is not in official DTD v0039 - may cause validation errors',
-      element: 'RiepilogoMensile',
-      found: 'NomeFile'
-    });
-  }
+  // FIX 2026-01-19: Rimosso warning per NomeFile - ora non usiamo più questo attributo nell'XML
+  // per conformità alla DTD ufficiale SIAE v0039
 
   // Validate Sostituzione value
   if (rootAttrs['Sostituzione'] && !['N', 'S'].includes(rootAttrs['Sostituzione'])) {

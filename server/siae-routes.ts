@@ -5769,28 +5769,18 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     // Send the email to SIAE test environment
     const destinationEmail = getSiaeDestinationEmail(toEmail);
     
-    // FIX 2026-01-19: ESTRAI nome file dall'attributo NomeFile nell'XML esistente (errore 0600)
-    // NON generare un nuovo nome file - deve corrispondere ESATTAMENTE a quello nell'XML
-    const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
-    let sendEmailFileName: string;
-    
-    if (nomeFileMatch && nomeFileMatch[1]) {
-      // Usa il nome file ESATTO dall'attributo NomeFile nell'XML
-      sendEmailFileName = nomeFileMatch[1];
-      console.log(`[SIAE-ROUTES] FIX 0600: Estratto NomeFile dall'XML: ${sendEmailFileName}`);
-    } else {
-      // Fallback: genera nome file (solo se attributo NomeFile non presente nell'XML legacy)
-      // Usa progressivoInvio se disponibile, altrimenti fallback a 1
-      const fallbackProgressivo = (transmission as any).progressivoInvio || 1;
-      sendEmailFileName = generateSiaeFileName(
-        transmissionReportType,
-        new Date(transmission.periodDate),
-        fallbackProgressivo,
-        null,
-        resolvedSystemCodeForEmail
-      );
-      console.warn(`[SIAE-ROUTES] WARNING: Attributo NomeFile non trovato nell'XML, generato: ${sendEmailFileName}`);
-    }
+    // FIX 2026-01-19: Genera nome file allegato email conforme Allegato C SIAE
+    // L'attributo NomeFile è stato rimosso dall'XML per conformità DTD ufficiale
+    // Il nome file corretto viene usato SOLO per l'allegato email
+    const progressivoInvio = (transmission as any).progressivoInvio || transmission.sequenceNumber || 1;
+    const sendEmailFileName = generateSiaeFileName(
+      transmissionReportType,
+      new Date(transmission.periodDate),
+      progressivoInvio,
+      null,
+      resolvedSystemCodeForEmail
+    );
+    console.log(`[SIAE-ROUTES] Nome file allegato email generato: ${sendEmailFileName}`);
     
     const emailResult = await sendSiaeTransmissionEmail({
       to: destinationEmail,
@@ -5806,7 +5796,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
       signWithSmime: true,
       requireSignature: true,
-      // FIX 2026-01-19: Nome file allegato ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+      // FIX 2026-01-19: Nome file allegato ESPLICITO conforme Allegato C SIAE
       explicitFileName: sendEmailFileName,
     });
     
