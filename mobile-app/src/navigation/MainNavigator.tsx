@@ -13,38 +13,38 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 // Public Screens
-import HomeScreen from '../screens/public/HomeScreen';
-import EventsScreen from '../screens/public/EventsScreen';
-import EventDetailScreen from '../screens/public/EventDetailScreen';
-import VenuesScreen from '../screens/public/VenuesScreen';
-import VenueDetailScreen from '../screens/public/VenueDetailScreen';
-import ResalesScreen from '../screens/public/ResalesScreen';
-import ResaleCheckoutScreen from '../screens/public/ResaleCheckoutScreen';
-import CartScreen from '../screens/public/CartScreen';
-import CheckoutScreen from '../screens/public/CheckoutScreen';
-import CheckoutSuccessScreen from '../screens/public/CheckoutSuccessScreen';
+import { HomeScreen } from '../screens/public/HomeScreen';
+import { EventsScreen } from '../screens/public/EventsScreen';
+import { EventDetailScreen } from '../screens/public/EventDetailScreen';
+import { VenuesScreen } from '../screens/public/VenuesScreen';
+import { VenueDetailScreen } from '../screens/public/VenueDetailScreen';
+import { ResalesScreen } from '../screens/public/ResalesScreen';
+import { ResaleCheckoutScreen } from '../screens/public/ResaleCheckoutScreen';
+import { CartScreen } from '../screens/public/CartScreen';
+import { CheckoutScreen } from '../screens/public/CheckoutScreen';
+import { CheckoutSuccessScreen } from '../screens/public/CheckoutSuccessScreen';
 import { LandingScreen } from '../screens/public/LandingScreen';
 import { TicketVerifyScreen } from '../screens/public/TicketVerifyScreen';
 import { EventShortLinkScreen } from '../screens/public/EventShortLinkScreen';
 
 // Account Screens
-import AccountHomeScreen from '../screens/account/AccountHomeScreen';
-import MyTicketsScreen from '../screens/account/MyTicketsScreen';
-import TicketDetailScreen from '../screens/account/TicketDetailScreen';
-import ProfileScreen from '../screens/account/ProfileScreen';
-import WalletScreen from '../screens/account/WalletScreen';
-import NameChangeScreen from '../screens/account/NameChangeScreen';
-import ResaleListingScreen from '../screens/account/ResaleListingScreen';
-import MyResalesScreen from '../screens/account/MyResalesScreen';
+import { AccountHomeScreen } from '../screens/account/AccountHomeScreen';
+import { MyTicketsScreen } from '../screens/account/MyTicketsScreen';
+import { TicketDetailScreen } from '../screens/account/TicketDetailScreen';
+import { ProfileScreen } from '../screens/account/ProfileScreen';
+import { WalletScreen } from '../screens/account/WalletScreen';
+import { NameChangeScreen } from '../screens/account/NameChangeScreen';
+import { ResaleListingScreen } from '../screens/account/ResaleListingScreen';
+import { MyResalesScreen } from '../screens/account/MyResalesScreen';
 import { AccountResaleSuccessScreen } from '../screens/account/AccountResaleSuccessScreen';
 import { AccountSubscriptionsScreen } from '../screens/account/AccountSubscriptionsScreen';
 import { ClientWalletScreen } from '../screens/account/ClientWalletScreen';
 
 // Scanner Screens
-import ScannerHomeScreen from '../screens/scanner/ScannerHomeScreen';
-import ScannerScanScreen from '../screens/scanner/ScannerScanScreen';
-import ScannerHistoryScreen from '../screens/scanner/ScannerHistoryScreen';
-import ScannerStatsScreen from '../screens/scanner/ScannerStatsScreen';
+import { ScannerHomeScreen } from '../screens/scanner/ScannerHomeScreen';
+import { ScannerScanScreen } from '../screens/scanner/ScannerScanScreen';
+import { ScannerHistoryScreen } from '../screens/scanner/ScannerHistoryScreen';
+import { ScannerStatsScreen } from '../screens/scanner/ScannerStatsScreen';
 import { ScannerOperatorsScreen } from '../screens/scanner/ScannerOperatorsScreen';
 import { OperatorDetailScreen } from '../screens/scanner/OperatorDetailScreen';
 import { ScanActivityScreen } from '../screens/scanner/ScanActivityScreen';
@@ -54,11 +54,11 @@ import ScannerTicketsScreen from '../screens/scanner/ScannerTicketsScreen';
 import ScannerManagementScreen from '../screens/scanner/ScannerManagementScreen';
 
 // PR Screens
-import PRHomeScreen from '../screens/pr/PRHomeScreen';
-import PREventsScreen from '../screens/pr/PREventsScreen';
-import PRGuestListsScreen from '../screens/pr/PRGuestListsScreen';
-import PRTablesScreen from '../screens/pr/PRTablesScreen';
-import PRWalletScreen from '../screens/pr/PRWalletScreen';
+import { PRHomeScreen } from '../screens/pr/PRHomeScreen';
+import { PREventsScreen } from '../screens/pr/PREventsScreen';
+import { PRGuestListsScreen } from '../screens/pr/PRGuestListsScreen';
+import { PRTablesScreen } from '../screens/pr/PRTablesScreen';
+import { PRWalletScreen } from '../screens/pr/PRWalletScreen';
 import { PRDashboardScreen } from '../screens/pr/PRDashboardScreen';
 import { PRStaffScreen } from '../screens/pr/PRStaffScreen';
 import { PRMyEventsScreen } from '../screens/pr/PRMyEventsScreen';
@@ -68,17 +68,17 @@ import { StaffPrEventPanelScreen } from '../screens/pr/StaffPrEventPanelScreen';
 import { PRScannerScreen } from '../screens/pr/PRScannerScreen';
 
 // Cashier Screens
-import CashierHomeScreen from '../screens/cashier/CashierHomeScreen';
-import CashierTicketScreen from '../screens/cashier/CashierTicketScreen';
+import { CashierHomeScreen } from '../screens/cashier/CashierHomeScreen';
+import { CashierTicketScreen } from '../screens/cashier/CashierTicketScreen';
 import { CassaBigliettiScreen } from '../screens/cashier/CassaBigliettiScreen';
 import { CashierManagementScreen } from '../screens/cashier/CashierManagementScreen';
 import { CashierDashboardScreen } from '../screens/cashier/CashierDashboardScreen';
 import { EventCashierAllocationsScreen } from '../screens/cashier/EventCashierAllocationsScreen';
 
 // Management Screens
-import DashboardScreen from '../screens/management/DashboardScreen';
-import ManageEventsScreen from '../screens/management/ManageEventsScreen';
-import EventHubScreen from '../screens/management/EventHubScreen';
+import { DashboardScreen } from '../screens/management/DashboardScreen';
+import { ManageEventsScreen } from '../screens/management/ManageEventsScreen';
+import { EventHubScreen } from '../screens/management/EventHubScreen';
 import { LocationsScreen } from '../screens/management/LocationsScreen';
 import { LocationDetailScreen } from '../screens/management/LocationDetailScreen';
 import { StationsScreen } from '../screens/management/StationsScreen';

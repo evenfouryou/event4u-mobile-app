@@ -47,6 +47,15 @@ export function EventsScreen() {
 
   const { data: events, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['/api/public/events', { filter: activeFilter, categoryId: activeCategory, search: searchQuery }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (activeFilter) params.append('filter', activeFilter);
+      if (activeCategory) params.append('categoryId', activeCategory);
+      if (searchQuery) params.append('search', searchQuery);
+      const queryString = params.toString();
+      const url = `/api/public/events${queryString ? `?${queryString}` : ''}`;
+      return api.get<Event[]>(url).catch(() => []);
+    },
   });
 
   const handleEventPress = useCallback((eventId: string) => {

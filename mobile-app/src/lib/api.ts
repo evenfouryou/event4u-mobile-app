@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://workspace.jonathanpetrell.repl.co';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manage.eventfouryou.com';
 
 interface RequestOptions extends RequestInit {
   skipAuth?: boolean;

@@ -1,4 +1,4 @@
-export {
+import {
   colors,
   spacing,
   borderRadius,
@@ -9,6 +9,18 @@ export {
   letterSpacing,
   theme,
 } from '../theme';
+
+export {
+  colors,
+  spacing,
+  borderRadius,
+  fontFamily,
+  fontSize,
+  fontWeight,
+  lineHeight,
+  letterSpacing,
+  theme,
+};
 
 export type {
   ColorKeys,

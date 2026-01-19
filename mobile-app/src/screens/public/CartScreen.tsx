@@ -36,6 +36,9 @@ export function CartScreen() {
 
   const { data: cart, isLoading } = useQuery<Cart>({
     queryKey: ['/api/cart'],
+    queryFn: async () => {
+      return api.get<Cart>('/api/cart').catch(() => ({ items: [], subtotal: 0, serviceFee: 0, total: 0 }));
+    },
   });
 
   const updateQuantityMutation = useMutation({

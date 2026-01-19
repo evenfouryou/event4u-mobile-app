@@ -45,12 +45,15 @@ export function EventDetailScreen() {
 
   const { data: event, isLoading } = useQuery<Event>({
     queryKey: ['/api/public/events', eventId],
+    queryFn: async () => {
+      return api.get<Event>(`/api/public/events/${eventId}`);
+    },
   });
 
   const handleTicketQuantityChange = (ticketId: string, delta: number) => {
     setSelectedTickets((prev) => {
       const current = prev[ticketId] || 0;
-      const ticket = event?.ticketTypes.find((t) => t.id === ticketId);
+      const ticket = event?.ticketTypes?.find((t) => t.id === ticketId);
       const max = ticket?.maxPerOrder || 10;
       const newValue = Math.max(0, Math.min(max, current + delta));
       return { ...prev, [ticketId]: newValue };
@@ -62,7 +65,7 @@ export function EventDetailScreen() {
   };
 
   const getTotalPrice = () => {
-    if (!event) return 0;
+    if (!event || !event.ticketTypes) return 0;
     return event.ticketTypes.reduce((sum, ticket) => {
       const qty = selectedTickets[ticket.id] || 0;
       return sum + ticket.price * qty;
@@ -187,7 +190,7 @@ export function EventDetailScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Biglietti</Text>
-            {event.ticketTypes.map((ticket) => (
+            {(event.ticketTypes || []).map((ticket) => (
               <Card key={ticket.id} style={styles.ticketCard}>
                 <View style={styles.ticketInfo}>
                   <Text style={styles.ticketName}>{ticket.name}</Text>
