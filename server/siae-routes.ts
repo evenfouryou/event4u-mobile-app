@@ -5219,7 +5219,23 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     const resendFileHash = calculateFileHash(generatedXml);
     
     // FIX 2026-01-18: Use correct filename type based on transmissionType
+    // DEBUG 2026-01-19: Log parametri generazione nome file RESEND
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] ====== RESEND GENERAZIONE NOME FILE ======`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: filenameType=${filenameType}`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: periodDate=${new Date(original.periodDate).toISOString()}`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: nextProgressivo=${nextProgressivo}`);
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] Input: resendResolvedSystemCode=${resendResolvedSystemCode}`);
+    
     const resendFileName = generateSiaeAttachmentName(filenameType, new Date(original.periodDate), nextProgressivo, null, resendResolvedSystemCode);
+    
+    // DEBUG 2026-01-19: Verifica formato nome file RESEND
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] resendFileName GENERATO: ${resendFileName}`);
+    const resendFileNameParts = resendFileName.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] resendFileName PARTI: ${resendFileNameParts.length} parti -> [${resendFileNameParts.join(', ')}]`);
+    if (resendFileNameParts.length !== 4) {
+      console.error(`[SIAE-ROUTES] [DEBUG-0600] ERRORE CRITICO RESEND: Nome file ha ${resendFileNameParts.length} parti invece di 4!`);
+    }
+    console.log(`[SIAE-ROUTES] [DEBUG-0600] ===========================================`);
     
     // FIX 2026-01-19: Validate file name format before transmission
     const resendFileNameValidation = validateSiaeFileName(resendFileName);
