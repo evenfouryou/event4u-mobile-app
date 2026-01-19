@@ -221,6 +221,141 @@ export function validateSystemCodeConsistency(
   };
 }
 
+// ==================== SIAE File Name Format Validation ====================
+
+/**
+ * Interfaccia per risultato validazione formato nome file SIAE
+ */
+export interface SiaeFileNameValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  parsedData?: {
+    reportType: 'RMG' | 'RPM' | 'RCA' | null;
+    date: string | null;
+    systemCode: string | null;
+    progressivo: string | null;
+    extension: string | null;
+  };
+}
+
+/**
+ * Valida il formato del nome file SIAE secondo Allegato C sezione 1.4.1
+ * 
+ * FORMATI VALIDI (data CONTIGUA senza underscore):
+ * - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RMG_20260118_P0004010_001.xsi)
+ * - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (es: RPM_202601_P0004010_001.xsi)
+ * - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RCA_20260118_P0004010_001.xsi)
+ * 
+ * FORMATI NON VALIDI (data con underscore - causa errore SIAE 0600):
+ * - RMG_2026_01_18_P0004010_001.xsi (SBAGLIATO!)
+ * - RPM_2026_01_P0004010_001.xsi (SBAGLIATO!)
+ * 
+ * @param fileName - Nome file da validare (con o senza estensione)
+ * @returns Risultato validazione con eventuali errori
+ */
+export function validateSiaeFileName(fileName: string): SiaeFileNameValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Rimuovi estensione per analisi
+  const nameWithoutExt = fileName.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '');
+  const extension = fileName.match(/\.(xsi|xsi\.p7m|p7m)$/i)?.[0] || null;
+  
+  // Split per underscore
+  const parts = nameWithoutExt.split('_');
+  
+  // Verifica numero parti (deve essere esattamente 4 per tutti i tipi)
+  if (parts.length !== 4) {
+    // Potrebbe essere il vecchio formato sbagliato con underscore nella data
+    if (parts.length === 6 && (parts[0] === 'RMG' || parts[0] === 'RCA')) {
+      errors.push(
+        `FORMATO NOME FILE ERRATO: Rilevato formato con data separata da underscore (${fileName}). ` +
+        `Il formato corretto usa data CONTIGUA: ${parts[0]}_${parts[1]}${parts[2]}${parts[3]}_${parts[4]}_${parts[5]}.xsi. ` +
+        `Questo errore causa SIAE 0600 "Nome del file contenente il riepilogo sbagliato".`
+      );
+    } else if (parts.length === 5 && parts[0] === 'RPM') {
+      errors.push(
+        `FORMATO NOME FILE ERRATO: Rilevato formato con data separata da underscore (${fileName}). ` +
+        `Il formato corretto usa data CONTIGUA: ${parts[0]}_${parts[1]}${parts[2]}_${parts[3]}_${parts[4]}.xsi. ` +
+        `Questo errore causa SIAE 0600 "Nome del file contenente il riepilogo sbagliato".`
+      );
+    } else {
+      errors.push(
+        `FORMATO NOME FILE NON VALIDO: Il nome file deve avere esattamente 4 parti separate da underscore ` +
+        `(es: RMG_20260118_P0004010_001.xsi). Trovate ${parts.length} parti in "${fileName}".`
+      );
+    }
+    
+    return { valid: false, errors, warnings };
+  }
+  
+  const [prefix, datePart, systemCode, progressivo] = parts;
+  
+  // Verifica prefisso valido
+  if (!['RMG', 'RPM', 'RCA'].includes(prefix)) {
+    errors.push(
+      `PREFISSO NON VALIDO: Il prefisso "${prefix}" non è riconosciuto. ` +
+      `Prefissi validi: RMG (giornaliero), RPM (mensile), RCA (evento).`
+    );
+  }
+  
+  // Verifica formato data (deve essere contigua, non con underscore)
+  if (prefix === 'RPM') {
+    // RPM usa YYYYMM (6 cifre)
+    if (!/^\d{6}$/.test(datePart)) {
+      errors.push(
+        `FORMATO DATA RPM NON VALIDO: La data per RPM deve essere YYYYMM (6 cifre contigue). ` +
+        `Trovato: "${datePart}". Esempio corretto: 202601`
+      );
+    }
+  } else {
+    // RMG e RCA usano YYYYMMDD (8 cifre)
+    if (!/^\d{8}$/.test(datePart)) {
+      errors.push(
+        `FORMATO DATA ${prefix} NON VALIDO: La data per ${prefix} deve essere YYYYMMDD (8 cifre contigue). ` +
+        `Trovato: "${datePart}". Esempio corretto: 20260118`
+      );
+    }
+  }
+  
+  // Verifica codice sistema (8 caratteri alfanumerici)
+  if (!/^[A-Z0-9]{8}$/.test(systemCode)) {
+    errors.push(
+      `CODICE SISTEMA NON VALIDO: Il codice sistema deve essere di 8 caratteri alfanumerici maiuscoli. ` +
+      `Trovato: "${systemCode}". Esempio corretto: P0004010`
+    );
+  }
+  
+  // Verifica progressivo (3 cifre)
+  if (!/^\d{3}$/.test(progressivo)) {
+    errors.push(
+      `PROGRESSIVO NON VALIDO: Il progressivo deve essere di 3 cifre. ` +
+      `Trovato: "${progressivo}". Esempio corretto: 001`
+    );
+  }
+  
+  // Warning se estensione mancante o non standard
+  if (!extension) {
+    warnings.push('Estensione file mancante. Attesa: .xsi o .xsi.p7m');
+  } else if (extension.toLowerCase() !== '.xsi' && extension.toLowerCase() !== '.xsi.p7m') {
+    warnings.push(`Estensione non standard: "${extension}". Attesa: .xsi o .xsi.p7m`);
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    parsedData: {
+      reportType: ['RMG', 'RPM', 'RCA'].includes(prefix) ? prefix as 'RMG' | 'RPM' | 'RCA' : null,
+      date: datePart,
+      systemCode: systemCode,
+      progressivo: progressivo,
+      extension: extension,
+    }
+  };
+}
+
 // ==================== XML Character Escaping ====================
 
 /**

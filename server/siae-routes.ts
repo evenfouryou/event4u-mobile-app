@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode, validateSiaeFileName } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5221,6 +5221,19 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     // FIX 2026-01-18: Use correct filename type based on transmissionType
     const resendFileName = generateSiaeAttachmentName(filenameType, new Date(original.periodDate), nextProgressivo, null, resendResolvedSystemCode);
     
+    // FIX 2026-01-19: Validate file name format before transmission
+    const resendFileNameValidation = validateSiaeFileName(resendFileName);
+    if (!resendFileNameValidation.valid) {
+      console.error(`[SIAE-ROUTES] ERRORE FORMATO NOME FILE RESEND: ${resendFileNameValidation.errors.join('; ')}`);
+      return res.status(400).json({
+        success: false,
+        error: `Formato nome file non valido: ${resendFileNameValidation.errors.join('; ')}`,
+        code: 'FILE_NAME_FORMAT_ERROR',
+        fileName: resendFileName,
+        errors: resendFileNameValidation.errors
+      });
+    }
+    
     // Create new transmission with substitution flag
     const newTransmission = await siaeStorage.createSiaeTransmission({
       companyId: original.companyId,
@@ -6387,6 +6400,31 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     effectiveSystemCode
   );
   const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
+  
+  // ==================== FILE NAME FORMAT VALIDATION (Fix SIAE Error 0600) ====================
+  // FIX 2026-01-19: Validazione formato nome file SIAE prima dell'invio
+  // Previene errore 0600 "Nome del file contenente il riepilogo sbagliato"
+  const fileNameValidation = validateSiaeFileName(generatedFileName);
+  if (!fileNameValidation.valid) {
+    console.error(`[SIAE-ROUTES] ERRORE FORMATO NOME FILE: ${fileNameValidation.errors.join('; ')}`);
+    return {
+      success: false,
+      statusCode: 400,
+      error: `Formato nome file non valido: ${fileNameValidation.errors.join('; ')}`,
+      data: {
+        code: 'FILE_NAME_FORMAT_ERROR',
+        fileName: generatedFileName,
+        errors: fileNameValidation.errors,
+        warnings: fileNameValidation.warnings,
+        suggestion: 'Il nome file SIAE deve seguire il formato esatto: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua senza underscore)'
+      }
+    };
+  }
+  if (fileNameValidation.warnings.length > 0) {
+    console.log(`[SIAE-ROUTES] Avvisi formato nome file:`, fileNameValidation.warnings);
+  }
+  console.log(`[SIAE-ROUTES] Formato nome file validato: ${generatedFileName} (tipo: ${fileNameValidation.parsedData?.reportType})`);
+  // ===========================================================================================
   
   // Calculate transmission statistics
   // For RCA, get tipoTassazione and entertainmentIncidence from the ticketed event

@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, resolveSystemCodeForSmime, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, resolveSystemCodeForSmime, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, validateSiaeFileName, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
 import { calculateTransmissionStats, calculateFileHash } from './siae-routes';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
@@ -550,6 +550,13 @@ async function sendDailyReports() {
         // RMG = Riepilogo Giornaliero: genera nome file PRIMA di generateXMLContent per coerenza
         let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
         
+        // FIX 2026-01-19: Validazione formato nome file SIAE prima dell'invio
+        const fileNameValidation = validateSiaeFileName(fileName);
+        if (!fileNameValidation.valid) {
+          log(`ERRORE FORMATO NOME FILE: ${fileNameValidation.errors.join('; ')}`);
+          continue; // Skip this event, don't send with invalid filename
+        }
+        
         // FIX 2026-01-16: Passa xmlReportType='giornaliero' e nomeFile per generare RiepilogoGiornaliero
         // invece di RiepilogoControlloAccessi (previene errori SIAE 0600/0603)
         // NOTA: fileName già contiene l'estensione .xsi, non aggiungere di nuovo!
@@ -836,6 +843,13 @@ async function sendMonthlyReports() {
         
         // RPM = Riepilogo Mensile: genera nome file PRIMA di generateXMLContent per coerenza
         let fileName = generateSiaeFileName('mensile', previousMonth, progressivo, null, systemCode);
+        
+        // FIX 2026-01-19: Validazione formato nome file SIAE prima dell'invio
+        const fileNameValidationMonthly = validateSiaeFileName(fileName);
+        if (!fileNameValidationMonthly.valid) {
+          log(`ERRORE FORMATO NOME FILE RPM: ${fileNameValidationMonthly.errors.join('; ')}`);
+          continue; // Skip this event, don't send with invalid filename
+        }
         
         // FIX 2026-01-16: Passa xmlReportType='mensile' e nomeFile per generare RiepilogoMensile
         // invece di RiepilogoControlloAccessi (previene errori SIAE 0600/0603)
@@ -1212,6 +1226,14 @@ async function sendRCAReports() {
         
         // Nome file - usa lo stesso systemCode pre-risolto
         let fileName = generateSiaeFileName('rca', eventDate, progressivo, null, systemCode);
+        
+        // FIX 2026-01-19: Validazione formato nome file SIAE prima dell'invio
+        const fileNameValidationRca = validateSiaeFileName(fileName);
+        if (!fileNameValidationRca.valid) {
+          log(`ERRORE FORMATO NOME FILE RCA: ${fileNameValidationRca.errors.join('; ')}`);
+          continue; // Skip this event, don't send with invalid filename
+        }
+        
         let fileExtension = '.xsi';
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
         
