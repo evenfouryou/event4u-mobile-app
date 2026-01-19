@@ -448,8 +448,8 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   
   // Mappa transmissionType al formato richiesto da generateSiaeFileName (Allegato C SIAE)
   const reportTypeMap: Record<string, 'giornaliero' | 'mensile' | 'rca' | 'log'> = {
-    'daily': 'giornaliero',     // RMG - Riepilogo Mensile Giornaliero (silenzioso)
-    'monthly': 'mensile',       // RPM - Riepilogo Periodico Mensile (silenzioso)
+    'daily': 'giornaliero',     // RMG - Riepilogo Giornaliero (report C1 giornaliero)
+    'monthly': 'mensile',       // RPM - Riepilogo Periodico Mensile
     'rca': 'rca',               // RCA - Riepilogo Controllo Accessi (genera risposta SIAE)
     'corrective': 'giornaliero', // Correttivo usa stesso formato di giornaliero
   };

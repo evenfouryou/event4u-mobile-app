@@ -541,7 +541,7 @@ export function generateSiaeAttachmentName(
       return `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
     case 'giornaliero':
     default:
-      // RMG = Riepilogo Mensile Giornaliero
+      // RMG = Riepilogo Giornaliero (report C1 giornaliero)
       return `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
   }
 }
