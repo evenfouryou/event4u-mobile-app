@@ -7,8 +7,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../../navigation/MainNavigator';
@@ -16,11 +17,15 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { useAuthStore } from '../../store/auth';
-import { colors, spacing, fontSize, borderRadius, fontWeight } from '../../lib/theme';
+import { colors, spacing, fontSize, borderRadius, fontWeight } from '../../theme';
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -43,7 +48,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     let isValid = true;
 
     if (!email.trim()) {
-      setEmailError('Email è obbligatorio');
+      setEmailError('Email è obbligatoria');
       isValid = false;
     } else if (!validateEmail(email)) {
       setEmailError('Inserisci un email valido');
@@ -69,171 +74,250 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
+  const cardMaxWidth = isTablet ? 480 : isLandscape ? 400 : '100%';
+  const contentPadding = isTablet ? spacing['3xl'] : spacing.xl;
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header with Logo */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons
-              name="ticket-outline"
-              size={40}
-              color={colors.primary}
-            />
-            <Text style={styles.logoText}>Event4U</Text>
-          </View>
-          <Text style={styles.subtitle}>Accedi al tuo account</Text>
-        </View>
-
-        {/* Form Card */}
-        <Card style={styles.card}>
-          {error && (
-            <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle" size={20} color={colors.destructive} />
-              <Text style={styles.errorText}>{error}</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            isLandscape && styles.scrollContentLandscape,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[
+            styles.innerContainer,
+            { maxWidth: typeof cardMaxWidth === 'number' ? cardMaxWidth : undefined },
+            isLandscape && styles.innerContainerLandscape,
+          ]}>
+            {/* Header con Logo */}
+            <View style={[
+              styles.header,
+              isLandscape && styles.headerLandscape,
+            ]}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoIcon}>
+                  <Ionicons
+                    name="ticket-outline"
+                    size={isTablet ? 48 : 40}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={[
+                  styles.logoText,
+                  isTablet && styles.logoTextTablet,
+                ]}>Event4U</Text>
+              </View>
+              <Text style={[
+                styles.subtitle,
+                isTablet && styles.subtitleTablet,
+              ]}>Accedi al tuo account</Text>
             </View>
-          )}
 
-          {/* Email Input */}
-          <Input
-            label="Email"
-            placeholder="nome@example.com"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setEmailError('');
-            }}
-            error={emailError}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            leftIcon={
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color={colors.mutedForeground}
+            {/* Form Card */}
+            <Card style={[
+              styles.card,
+              { padding: contentPadding },
+            ]} variant="elevated">
+              {/* Error Banner */}
+              {error ? (
+                <View style={styles.errorBanner} data-testid="error-banner">
+                  <Ionicons name="alert-circle" size={20} color={colors.destructive} />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              {/* Email Input */}
+              <Input
+                label="Email"
+                placeholder="nome@example.com"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setEmailError('');
+                }}
+                error={emailError}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
+                leftIcon={
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                }
+                testID="input-email"
               />
-            }
-          />
 
-          {/* Password Input */}
-          <Input
-            label="Password"
-            placeholder="••••••••"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setPasswordError('');
-            }}
-            error={passwordError}
-            secureTextEntry
-            leftIcon={
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.mutedForeground}
+              {/* Password Input */}
+              <Input
+                label="Password"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setPasswordError('');
+                }}
+                error={passwordError}
+                secureTextEntry
+                autoComplete="password"
+                textContentType="password"
+                leftIcon={
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                }
+                testID="input-password"
               />
-            }
-          />
 
-          {/* Forgot Password Link */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ForgotPassword')}
-            style={styles.forgotPasswordLink}
-          >
-            <Text style={styles.forgotPasswordText}>Password dimenticata?</Text>
-          </TouchableOpacity>
+              {/* Password dimenticata */}
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword')}
+                style={styles.forgotPasswordLink}
+                data-testid="link-forgot-password"
+              >
+                <Text style={styles.forgotPasswordText}>Password dimenticata?</Text>
+              </TouchableOpacity>
 
-          {/* Login Button */}
-          <Button
-            title={isLoading ? 'Accesso in corso...' : 'Accedi'}
-            onPress={handleLogin}
-            disabled={isLoading}
-            loading={isLoading}
-            style={styles.loginButton}
-          />
+              {/* Login Button */}
+              <Button
+                title={isLoading ? 'Accesso in corso...' : 'Accedi'}
+                onPress={handleLogin}
+                disabled={isLoading}
+                loading={isLoading}
+                style={styles.loginButton}
+                testID="button-login"
+              />
 
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>oppure</Text>
-            <View style={styles.dividerLine} />
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>oppure</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Google Login Button */}
+              <Button
+                title="Accedi con Google"
+                onPress={() => {
+                  setError('Google login non ancora disponibile');
+                }}
+                variant="outline"
+                icon={
+                  <Ionicons
+                    name="logo-google"
+                    size={20}
+                    color={colors.foreground}
+                  />
+                }
+                testID="button-google-login"
+              />
+
+              {/* Sign Up Link */}
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>Non hai un account? </Text>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate('Register')}
+                  data-testid="link-register"
+                >
+                  <Text style={styles.signupLink}>Registrati</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
           </View>
-
-          {/* Google Login Button */}
-          <Button
-            title="Accedi con Google"
-            onPress={() => {
-              // TODO: Implement Google login
-              setError('Google login non ancora disponibile');
-            }}
-            variant="outline"
-            icon={
-              <Ionicons
-                name="logo-google"
-                size={20}
-                color={colors.foreground}
-              />
-            }
-          />
-
-          {/* Sign Up Link */}
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Non hai un account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.signupLink}>Registrati</Text>
-            </TouchableOpacity>
-          </View>
-        </Card>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  container: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing['2xl'],
+  },
+  scrollContentLandscape: {
     paddingVertical: spacing.lg,
+  },
+  innerContainer: {
+    width: '100%',
+    alignSelf: 'center',
+  },
+  innerContainerLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing['3xl'],
+  },
+  headerLandscape: {
+    marginBottom: spacing.xl,
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.lg,
     marginBottom: spacing.lg,
+  },
+  logoIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   logoText: {
     fontSize: fontSize['3xl'],
     fontWeight: fontWeight.bold,
     color: colors.foreground,
+    letterSpacing: -0.5,
+  },
+  logoTextTablet: {
+    fontSize: fontSize['4xl'],
   },
   subtitle: {
     fontSize: fontSize.lg,
     color: colors.mutedForeground,
     fontWeight: fontWeight.medium,
   },
+  subtitleTablet: {
+    fontSize: fontSize.xl,
+  },
   card: {
-    variant: 'elevated' as const,
+    width: '100%',
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   errorText: {
     color: colors.destructive,
@@ -243,7 +327,8 @@ const styles = StyleSheet.create({
   },
   forgotPasswordLink: {
     alignItems: 'flex-end',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.xs,
   },
   forgotPasswordText: {
     color: colors.primary,
@@ -251,13 +336,13 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   loginButton: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    marginBottom: spacing.xl,
+    gap: spacing.lg,
   },
   dividerLine: {
     flex: 1,
@@ -273,7 +358,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
   },
   signupText: {
     color: colors.mutedForeground,

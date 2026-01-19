@@ -1,0 +1,76 @@
+Perfetto. Ecco **un messaggio chiaro, strutturato e con istruzioni precise**, scritto in modo professionale e diretto, che puoi usare così com’è.
+
+---
+
+**ISTRUZIONI PER LO SVILUPPO COMPLETO DELL’APP**
+
+L’app deve essere sviluppata **integralmente**, seguendo **fedelmente la grafica e il tema mobile già definito e utilizzato nella versione Safari**, creato appositamente per l’app.
+Non sono accettate interpretazioni grafiche personali o soluzioni “simili”: **ogni schermata deve essere allineata al tema esistente** (colori, font, spaziature, componenti, stile generale).
+
+### 1. Metodo di lavoro obbligatorio
+
+* Le schermate devono essere realizzate **una alla volta**, in ordine logico.
+* Si parte **dal Login** e si prosegue **fino all’ultima pagina dell’app**, senza saltare schermate.
+* Ogni pagina deve essere considerata **completa** prima di passare alla successiva.
+
+### 2. Requisiti grafici
+
+Ogni schermata deve:
+
+* Utilizzare **esattamente lo stesso tema grafico della mobile app su Safari**
+* Rispettare:
+
+  * colori
+  * font
+  * bottoni
+  * input
+  * card
+  * header
+  * bottom navigation
+  * spacing e allineamenti
+* Essere ottimizzata per **mobile app** (safe area, tastiera, scroll, touch).
+
+### 3. Requisiti funzionali per ogni pagina
+
+Ogni pagina deve includere:
+
+* Stato normale (contenuto caricato)
+* Stato di caricamento (loading)
+* Stato vuoto (se applicabile)
+* Stato di errore (se applicabile)
+* Navigazione corretta verso le altre schermate
+* Comportamenti coerenti con i ruoli utente (es. Organizzatore / Management / Cambusa ecc.)
+
+### 4. Flusso obbligatorio
+
+Lo sviluppo deve seguire questo approccio:
+
+1. Login
+2. Recupero password (se previsto)
+3. Registrazione / onboarding (se previsto)
+4. Home
+5. Navigazione principale
+6. Tutte le sezioni dell’app (Management, Eventi, Liste, QR code, Tavoli, Cambusa, Profilo, Impostazioni, ecc.)
+7. Ultima schermata prevista dal flusso
+
+Nessuna sezione deve rimanere incompleta o solo “abbozzata”.
+
+### 5. Obiettivo finale
+
+L’obiettivo è ottenere:
+
+* Un’app **completa**
+* Graficamente **identica al tema mobile Safari**
+* Coerente in ogni schermata
+* Pronta per essere usata come vera mobile app (iOS / Android)
+
+Il lavoro non è da considerarsi concluso finché **tutte le schermate, dalla prima all’ultima, non sono state sviluppate seguendo queste istruzioni**.
+
+---
+
+Se vuoi, nel prossimo messaggio posso:
+
+* renderlo **più duro/contrattuale**
+* oppure **più tecnico**
+* oppure **più semplice e diretto**
+  Dimmi solo che tono vuoi.

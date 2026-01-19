@@ -1,0 +1,145 @@
+Perfetto. Qui trovi il **messaggio riscritto in modo molto più specifico e tecnico**, con enfasi chiara su:
+
+* **adattamento del tema senza modificarne la grafica**
+* **gestione corretta di orientamento verticale/orizzontale**
+* **supporto a TUTTE le dimensioni di schermo**
+
+Puoi usarlo così com’è.
+
+---
+
+## ISTRUZIONI VINCOLANTI PER LO SVILUPPO DELL’APP
+
+Lo sviluppo dell’app deve essere eseguito **integralmente**, includendo **tutte le schermate**, sia **nuove che già esistenti (vecchi screen)**.
+
+Il **tema grafico attualmente utilizzato nella versione mobile su Safari** rappresenta la **base grafica ufficiale e definitiva del progetto**.
+👉 **La grafica NON deve essere modificata, reinterpretata o ridisegnata.**
+
+Il lavoro richiesto consiste esclusivamente in un **adattamento tecnico e funzionale del tema a una vera mobile app**, mantenendo **invariata l’identità visiva**.
+
+---
+
+## 1. Adattamento del tema (senza alterare la grafica)
+
+Il tema Safari deve essere:
+
+* **Trasposto fedelmente in app**
+* **Adattato a livello tecnico**, NON grafico
+
+È consentito **solo**:
+
+* ottimizzare spaziature per il touch
+* migliorare leggibilità su schermi piccoli/grandi
+* gestire correttamente safe area e notch
+* rendere fluidi scroll, transizioni e interazioni
+
+❌ NON è consentito:
+
+* cambiare colori
+* cambiare font
+* cambiare stile di bottoni, card, input
+* introdurre nuovi stili grafici
+* reinterpretare il design
+
+La grafica deve risultare **identica**, ma **funzionare perfettamente in app**.
+
+---
+
+## 2. Gestione obbligatoria di orientamenti e schermi
+
+L’app deve supportare **TUTTE le configurazioni di schermo**, senza eccezioni.
+
+### Orientamento
+
+* **Verticale (portrait)** → modalità principale
+* **Orizzontale (landscape)** → deve funzionare correttamente, senza rotture di layout
+
+Ogni schermata deve:
+
+* adattarsi dinamicamente al cambio di orientamento
+* mantenere proporzioni, allineamenti e gerarchie visive
+* evitare tagli, sovrapposizioni o elementi fuori schermo
+
+---
+
+### Dimensioni schermo
+
+Il layout deve essere **completamente responsive** e supportare:
+
+* smartphone piccoli
+* smartphone grandi
+* dispositivi pieghevoli
+* tablet (portrait e landscape)
+
+Deve essere garantito:
+
+* ridimensionamento corretto di testi e componenti
+* griglie fluide
+* nessun elemento fisso che rompa il layout
+* rispetto delle safe area su ogni dispositivo
+
+---
+
+## 3. Metodo di lavoro obbligatorio
+
+* Le schermate devono essere sviluppate **una alla volta**, in ordine logico.
+* Si parte **dal Login** e si procede **sequenzialmente fino all’ultima schermata dell’app**.
+* **Tutti i vecchi screen devono essere revisionati e adattati**, uno per uno, secondo queste regole.
+* Una schermata è considerata “completata” solo se:
+
+  * rispetta il tema grafico invariato
+  * funziona in verticale e orizzontale
+  * funziona su tutte le dimensioni di schermo
+  * include stati (loading / empty / error se applicabili)
+
+---
+
+## 4. Requisiti funzionali per ogni schermata
+
+Ogni pagina (vecchia o nuova) deve includere:
+
+* stato normale
+* stato di caricamento
+* stato vuoto (se necessario)
+* stato di errore
+* navigazione corretta
+* rispetto dei ruoli utente (Organizzatore / Management / Cambusa ecc.)
+
+---
+
+## 5. Flusso obbligatorio
+
+Lo sviluppo deve coprire **tutto il flusso dell’app**, senza saltare schermate:
+
+1. Login
+2. Recupero password (se previsto)
+3. Registrazione / onboarding (se previsto)
+4. Home
+5. Navigazione principale
+6. Tutte le sezioni funzionali (Management, Eventi, Liste, QR, Tavoli, Cambusa, Profilo, Impostazioni, ecc.)
+7. Ultima schermata prevista dal sistema
+
+**Tutti i vecchi screen presenti in questo flusso devono essere aggiornati e adattati.**
+
+---
+
+## 6. Obiettivo finale (non negoziabile)
+
+Il risultato finale deve essere:
+
+* un’app **completa**
+* con **grafica invariata**
+* **perfettamente adattata a mobile app**
+* funzionante in **verticale e orizzontale**
+* compatibile con **tutte le dimensioni di schermo**
+* pronta per pubblicazione su **iOS e Android**
+
+Il lavoro **non è da considerarsi concluso** finché **tutte le schermate, dalla prima all’ultima, rispettano integralmente queste istruzioni**.
+
+---
+
+Se vuoi, nel prossimo messaggio posso:
+
+* renderlo **ancora più tecnico (livello sviluppatore senior)**
+* trasformarlo in **checklist di verifica**
+* oppure adattarlo a **documento ufficiale di progetto**
