@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { siaeTicketedEvents, siaeTransmissions, siaeTransmissionSettings, events, companies, siaeEventSectors, siaeTickets, siaeResales } from "@shared/schema";
+import { siaeTicketedEvents, siaeTransmissions, siaeTransmissionSettings, events, companies, siaeEventSectors, siaeTickets, siaeResales, companyFeatures } from "@shared/schema";
 import { eq, and, sql, gte, lt, desc, lte } from "drizzle-orm";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
@@ -493,16 +493,20 @@ async function sendDailyReports() {
     const ticketedEventsWithEvents = await db.select({
       ticketedEvent: siaeTicketedEvents,
       event: events,
+      companyFeature: companyFeatures,
     })
     .from(siaeTicketedEvents)
     .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .leftJoin(companyFeatures, eq(events.companyId, companyFeatures.companyId))
     .where(and(
       eq(siaeTicketedEvents.autoSendReports, true),
       gte(events.endDatetime, yesterday),
-      lt(events.endDatetime, endOfYesterday)
+      lt(events.endDatetime, endOfYesterday),
+      sql`${events.isInternational} IS NOT TRUE`,
+      sql`COALESCE(${companyFeatures.operatingMode}, 'italy_only') != 'international_only'`
     ));
 
-    log(`Trovati ${ticketedEventsWithEvents.length} eventi conclusi ieri con auto-invio abilitato`);
+    log(`Trovati ${ticketedEventsWithEvents.length} eventi conclusi ieri con auto-invio abilitato (esclusi eventi internazionali)`);
 
     for (const { ticketedEvent, event } of ticketedEventsWithEvents) {
       try {
@@ -787,17 +791,23 @@ async function sendMonthlyReports() {
 
     const ticketedEventsWithTickets = await db.select({
       ticketedEvent: siaeTicketedEvents,
+      event: events,
+      companyFeature: companyFeatures,
     })
     .from(siaeTicketedEvents)
     .innerJoin(siaeTickets, eq(siaeTicketedEvents.id, siaeTickets.ticketedEventId))
+    .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .leftJoin(companyFeatures, eq(events.companyId, companyFeatures.companyId))
     .where(and(
       eq(siaeTicketedEvents.autoSendReports, true),
       gte(siaeTickets.createdAt, previousMonth),
-      lt(siaeTickets.createdAt, endOfPreviousMonth)
+      lt(siaeTickets.createdAt, endOfPreviousMonth),
+      sql`${events.isInternational} IS NOT TRUE`,
+      sql`COALESCE(${companyFeatures.operatingMode}, 'italy_only') != 'international_only'`
     ))
-    .groupBy(siaeTicketedEvents.id);
+    .groupBy(siaeTicketedEvents.id, events.id, companyFeatures.id);
 
-    log(`Trovati ${ticketedEventsWithTickets.length} eventi con attività nel mese precedente`);
+    log(`Trovati ${ticketedEventsWithTickets.length} eventi con attività nel mese precedente (esclusi eventi internazionali)`);
 
     for (const { ticketedEvent } of ticketedEventsWithTickets) {
       try {
@@ -1053,18 +1063,25 @@ async function sendRCAReports() {
     const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
     
     // Trova eventi chiusi da almeno 24 ore con ticketed events che hanno auto-invio
+    // Escludi eventi internazionali e aziende in modalità international_only
     const ticketedEventsWithEvents = await db.select({
       ticketedEvent: siaeTicketedEvents,
       event: events,
+      companyFeature: companyFeatures,
     })
     .from(siaeTicketedEvents)
     .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .leftJoin(companyFeatures, eq(events.companyId, companyFeatures.companyId))
     .where(and(
       eq(siaeTicketedEvents.autoSendReports, true),
       eq(events.status, 'closed'),
       // Evento terminato tra 48 e 24 ore fa (finestra per invio RCA)
       gte(events.endDatetime, fortyEightHoursAgo),
-      lt(events.endDatetime, twentyFourHoursAgo)
+      lt(events.endDatetime, twentyFourHoursAgo),
+      // Skip international events - SIAE non richiede report per eventi internazionali
+      sql`${events.isInternational} IS NOT TRUE`,
+      // Skip companies in international_only mode
+      sql`COALESCE(${companyFeatures.operatingMode}, 'italy_only') != 'international_only'`
     ));
     
     if (ticketedEventsWithEvents.length === 0) {

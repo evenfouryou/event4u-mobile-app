@@ -94,6 +94,29 @@ console.log('[SIAE Routes] Router initialized, registering routes...');
 console.log(`[SIAE Routes] Test mode: ${SIAE_TEST_MODE}, Test email: ${SIAE_TEST_EMAIL}`);
 
 /**
+ * Verifica se un evento o azienda è esente da SIAE per modalità internazionale
+ * Controlla isInternational dell'evento e operatingMode dell'azienda
+ */
+async function checkInternationalExemption(
+  eventId: string | null | undefined,
+  companyId: string
+): Promise<{ exempt: boolean; reason?: string }> {
+  if (eventId) {
+    const event = await storage.getEvent(eventId);
+    if (event?.isInternational) {
+      return { exempt: true, reason: "Eventi internazionali sono esenti da report SIAE" };
+    }
+  }
+  
+  const features = await storage.getCompanyFeatures(companyId);
+  if (features?.operatingMode === 'international_only') {
+    return { exempt: true, reason: "Gestore in modalità internazionale - esente da SIAE" };
+  }
+  
+  return { exempt: false };
+}
+
+/**
  * Valida e normalizza il Codice Fiscale italiano (16 caratteri)
  * Implementa l'algoritmo di checksum ufficiale dell'Agenzia delle Entrate
  * @returns { valid: boolean, normalized: string, error?: string }
@@ -5049,6 +5072,12 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       return res.status(400).json({ message: "Evento SIAE non trovato" });
     }
     
+    // Check international exemption
+    const intlCheck = await checkInternationalExemption(ticketedEvent.eventId, original.companyId);
+    if (intlCheck.exempt) {
+      return res.status(400).json({ message: intlCheck.reason, code: 'INTERNATIONAL_EXEMPT' });
+    }
+    
     const company = await storage.getCompany(original.companyId);
     const baseEvent = await storage.getEvent(ticketedEvent.eventId);
     const allTickets = await siaeStorage.getSiaeTicketsByCompany(original.companyId);
@@ -5486,6 +5515,17 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     
     if (!transmission.fileContent) {
       return res.status(400).json({ message: "Trasmissione senza contenuto XML" });
+    }
+    
+    // Check international exemption - get eventId from ticketedEvent if available
+    let sendEmailEventId: string | null = null;
+    if (transmission.ticketedEventId) {
+      const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(transmission.ticketedEventId);
+      sendEmailEventId = ticketedEvent?.eventId || null;
+    }
+    const intlCheck = await checkInternationalExemption(sendEmailEventId, transmission.companyId);
+    if (intlCheck.exempt) {
+      return res.status(400).json({ message: intlCheck.reason, code: 'INTERNATIONAL_EXEMPT' });
     }
     
     // Get company name
@@ -6667,6 +6707,12 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
     const { companyId } = req.params;
     const { date, toEmail, type = 'daily', eventId, signWithSmartCard = true, forceSubstitution = false } = req.body;
     
+    // Check international exemption
+    const intlCheck = await checkInternationalExemption(eventId, companyId);
+    if (intlCheck.exempt) {
+      return res.status(400).json({ message: intlCheck.reason, code: 'INTERNATIONAL_EXEMPT' });
+    }
+    
     console.log(`[SIAE-ROUTES] send-c1 request received - type: ${type}, eventId: ${eventId}, companyId: ${companyId}, forceSubstitution: ${forceSubstitution}`);
     
     const result = await handleSendC1Transmission({
@@ -6708,6 +6754,12 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
   try {
     const { companyId } = req.params;
     const { date, toEmail, signWithSmartCard = true } = req.body;
+    
+    // Check international exemption (daily reports are company-wide)
+    const intlCheck = await checkInternationalExemption(null, companyId);
+    if (intlCheck.exempt) {
+      return res.status(400).json({ message: intlCheck.reason, code: 'INTERNATIONAL_EXEMPT' });
+    }
     
     const result = await handleSendC1Transmission({
       companyId,
@@ -9597,6 +9649,12 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const event = await siaeStorage.getSiaeTicketedEvent(id);
     if (!event) {
       return res.status(404).json({ message: "Evento non trovato" });
+    }
+    
+    // Check international exemption
+    const intlCheck = await checkInternationalExemption(event.eventId, event.companyId);
+    if (intlCheck.exempt) {
+      return res.status(400).json({ message: intlCheck.reason, code: 'INTERNATIONAL_EXEMPT' });
     }
 
     // Get company data for Quadro A - Organizzatore
