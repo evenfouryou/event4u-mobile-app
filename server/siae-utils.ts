@@ -184,25 +184,23 @@ export function validateSystemCodeConsistency(
   }
   
   // Verifica anche attributo NomeFile (solo per RMG/RPM che lo supportano)
-  // FIX 2026-01-18: Formato SIAE Allegato C con underscore tra ogni componente
-  // - RMG: RMG_YYYY_MM_GG_SSSSSSSS_nnn.xsi (es: RMG_2026_01_18_P0004010_001.xsi)
-  // - RPM: RPM_YYYY_MM_SSSSSSSS_nnn.xsi (es: RPM_2026_01_P0004010_001.xsi)
-  // - RCA: RCA_YYYY_MM_GG_SSSSSSSS_nnn.xsi (es: RCA_2026_01_18_P0004010_001.xsi)
-  // Il codice sistema è in posizione variabile in base al tipo
+  // FIX 2026-01-19: Formato SIAE Allegato C sezione 1.4.1 con DATA CONTIGUA
+  // - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RMG_20260118_P0004010_001.xsi) - 4 parti
+  // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (es: RPM_202601_P0004010_001.xsi) - 4 parti
+  // - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RCA_20260118_P0004010_001.xsi) - 4 parti
+  // Il codice sistema è SEMPRE in posizione parts[2] (terzo elemento)
   if (isRMG || isRPM) {
     const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
     if (nomeFileMatch) {
       const nomeFileValue = nomeFileMatch[1];
       const parts = nomeFileValue.split('_');
-      // FIX 2026-01-18: Nuovo formato con underscore tra componenti data
-      // RMG: RMG_YYYY_MM_GG_SSSSSSSS_PPP.xsi (6 parti)
-      // RPM: RPM_YYYY_MM_SSSSSSSS_PPP.xsi (5 parti)
-      // La posizione del codice sistema varia in base al tipo
+      // FIX 2026-01-19: Formato con data contigua (4 parti totali)
+      // RMG: RMG_YYYYMMDD_SSSSSSSS_PPP.xsi (4 parti: tipo, data, codice, prog)
+      // RPM: RPM_YYYYMM_SSSSSSSS_PPP.xsi (4 parti: tipo, mese, codice, prog)
+      // Il codice sistema è sempre in posizione parts[2]
       let nomeFileSystemCode: string | null = null;
-      if (parts[0] === 'RMG' && parts.length >= 5) {
-        nomeFileSystemCode = parts[4]; // RMG_YYYY_MM_DD_SSSSSSSS_PPP
-      } else if (parts[0] === 'RPM' && parts.length >= 4) {
-        nomeFileSystemCode = parts[3]; // RPM_YYYY_MM_SSSSSSSS_PPP
+      if ((parts[0] === 'RMG' || parts[0] === 'RPM') && parts.length >= 4) {
+        nomeFileSystemCode = parts[2]; // XXX_DATACONTIGUA_SSSSSSSS_PPP
       }
       
       if (nomeFileSystemCode && nomeFileSystemCode !== expectedSystemCode) {
@@ -520,26 +518,31 @@ export function generateSiaeAttachmentName(
   // Estensione: .xsi.p7m per CAdES, .xsi per non firmato
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
-  // FIX 2026-01-18: Formato SIAE ufficiale (Allegato C) usa underscore come separatori
-  // Formato: XXX_AAAA_MM_GG_SSSSSSSS_###.xsi (con underscore tra ogni componente data)
-  // NON date contigue! Es: RMG_2026_01_18_P0004010_001.xsi (non RMG_20260118_...)
+  // FIX 2026-01-19: Formato SIAE Allegato C sezione 1.4.1 usa DATA CONTIGUA (YYYYMMDD)
+  // NON usare underscore tra i componenti della data!
+  // Formato: XXX_YYYYMMDD_SSSSSSSS_NNN.xsi
+  // Esempio corretto: RMG_20260118_P0004010_004.xsi
+  // Esempio SBAGLIATO: RMG_2026_01_18_P0004010_004.xsi (causa errore SIAE 0600!)
   
-  // Formato allegato conforme SIAE Allegato C:
-  // - RMG: RMG_YYYY_MM_GG_SSSSSSSS_nnn.xsi (data con underscore)
-  // - RPM: RPM_YYYY_MM_SSSSSSSS_nnn.xsi (anno-mese con underscore)
-  // - RCA: RCA_YYYY_MM_GG_SSSSSSSS_nnn.xsi (data completa con underscore)
+  // NOTA: La data nel nome file DEVE corrispondere al formato della data nel contenuto XML
+  // Nell'XML: Data="20260118" (contigua) - il nome file deve usare lo stesso formato
+  
+  // Formato allegato conforme SIAE Allegato C sezione 1.4.1:
+  // - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua)
+  // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (anno-mese contiguo)
+  // - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua)
   switch (reportType) {
     case 'mensile':
       // RPM = Riepilogo Periodico Mensile
-      return `RPM_${year}_${month}_${sysCode}_${prog}${extension}`;
+      return `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
     case 'log':
     case 'rca':
       // RCA = Riepilogo Controllo Accessi
-      return `RCA_${year}_${month}_${day}_${sysCode}_${prog}${extension}`;
+      return `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
     case 'giornaliero':
     default:
       // RMG = Riepilogo Mensile Giornaliero
-      return `RMG_${year}_${month}_${day}_${sysCode}_${prog}${extension}`;
+      return `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
   }
 }
 
