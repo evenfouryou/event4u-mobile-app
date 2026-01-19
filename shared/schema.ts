@@ -150,7 +150,8 @@ export const companyFeatures = pgTable("company_features", {
   cassaEnabled: boolean("cassa_enabled").notNull().default(false),
   nightFileEnabled: boolean("night_file_enabled").notNull().default(false),
   siaeEnabled: boolean("siae_enabled").notNull().default(false),
-  siaeExempt: boolean("siae_exempt").notNull().default(false), // Esenzione SIAE per vendite internazionali (estero)
+  siaeExempt: boolean("siae_exempt").notNull().default(false), // Esenzione SIAE per vendite internazionali (estero) - DEPRECATO, usare operatingMode
+  operatingMode: varchar("operating_mode", { length: 20 }).notNull().default('italy_only'), // italy_only, international_only, hybrid
   scannerEnabled: boolean("scanner_enabled").notNull().default(true), // Gestione Scanner e Scanner QR
   prEnabled: boolean("pr_enabled").notNull().default(true), // Gestione PR
   prWalletEnabled: boolean("pr_wallet_enabled").default(true), // Wallet PR per commissioni
@@ -365,6 +366,7 @@ export const events = pgTable("events", {
   recurrenceEndDate: timestamp("recurrence_end_date"), // when recurrence ends
   parentEventId: varchar("parent_event_id").references((): any => events.id), // null for parent, points to parent for exceptions
   isPublic: boolean("is_public").notNull().default(false), // Mostra nella vetrina pubblica e abilita link biglietti
+  isInternational: boolean("is_international").notNull().default(false), // Evento internazionale (no SIAE) - override modalità gestore
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

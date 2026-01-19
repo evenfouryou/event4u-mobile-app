@@ -51,7 +51,9 @@ import {
   Megaphone,
   ShieldCheck,
   Euro,
+  Globe,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   MobileAppLayout,
   MobileHeader,
@@ -60,7 +62,7 @@ import {
 } from "@/components/mobile-primitives";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User, Company, UserFeatures } from "@shared/schema";
+import type { User, Company, UserFeatures, CompanyFeatures } from "@shared/schema";
 
 interface FeatureConfig {
   key: keyof Omit<UserFeatures, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'canCreateProducts' | 'skipSiaeApproval'>;
@@ -141,6 +143,7 @@ export default function AdminGestori() {
   const [featuresDialogOpen, setFeaturesDialogOpen] = useState(false);
   const [selectedGestore, setSelectedGestore] = useState<User | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<FeatureCategory>('general');
+  const [operatingMode, setOperatingMode] = useState<'italy_only' | 'international_only' | 'hybrid'>('italy_only');
   const [featureValues, setFeatureValues] = useState<Record<string, boolean>>({
     beverageEnabled: true,
     contabilitaEnabled: false,
@@ -181,21 +184,30 @@ export default function AdminGestori() {
     enabled: !!selectedGestore?.id && featuresDialogOpen,
   });
 
+  const { data: selectedCompanyFeatures } = useQuery<CompanyFeatures>({
+    queryKey: ["/api/company-features", selectedGestore?.companyId],
+    enabled: !!selectedGestore?.companyId && featuresDialogOpen,
+  });
+
   const updateFeaturesMutation = useMutation({
-    mutationFn: async (data: { userId: string; features: Record<string, boolean> }) => {
-      return apiRequest("PATCH", `/api/user-features/${data.userId}`, data.features);
+    mutationFn: async (data: { userId: string; companyId?: string; features: Record<string, boolean>; operatingMode?: string }) => {
+      await apiRequest("PATCH", `/api/user-features/${data.userId}`, data.features);
+      if (data.companyId && data.operatingMode) {
+        await apiRequest("PUT", `/api/company-features/${data.companyId}`, { operatingMode: data.operatingMode });
+      }
     },
     onSuccess: (_data, variables) => {
       toast({ title: "Funzionalità aggiornate", description: "Le impostazioni sono state salvate." });
-      // Invalidate all user-features related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/user-features');
+          return typeof key === 'string' && (key.startsWith('/api/user-features') || key.startsWith('/api/company-features'));
         }
       });
-      // Also specifically invalidate the edited user's features
       queryClient.invalidateQueries({ queryKey: ["/api/user-features", variables.userId] });
+      if (variables.companyId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/company-features", variables.companyId] });
+      }
       setFeaturesDialogOpen(false);
     },
     onError: () => {
@@ -235,6 +247,14 @@ export default function AdminGestori() {
     }
   }, [selectedUserFeatures]);
 
+  useMemo(() => {
+    if (selectedCompanyFeatures) {
+      setOperatingMode((selectedCompanyFeatures.operatingMode as 'italy_only' | 'international_only' | 'hybrid') || 'italy_only');
+    } else {
+      setOperatingMode('italy_only');
+    }
+  }, [selectedCompanyFeatures]);
+
   const gestori = useMemo(() => {
     return users?.filter((user) => user.role === "gestore") || [];
   }, [users]);
@@ -270,7 +290,9 @@ export default function AdminGestori() {
     if (!selectedGestore) return;
     updateFeaturesMutation.mutate({
       userId: selectedGestore.id,
+      companyId: selectedGestore.companyId || undefined,
       features: featureValues,
+      operatingMode: operatingMode,
     });
   };
 
@@ -504,6 +526,43 @@ export default function AdminGestori() {
                 </div>
               ) : (
                 <div className="space-y-2">
+                  {selectedCategory === 'general' && (
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors mb-4 border border-primary/20">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-md bg-primary/10 text-primary">
+                          <Globe className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <Label htmlFor="operatingMode" className="font-medium cursor-pointer">
+                            Modalità Operativa
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Determina se gli eventi richiedono integrazione SIAE
+                          </p>
+                        </div>
+                      </div>
+                      <Select
+                        value={operatingMode}
+                        onValueChange={(value: 'italy_only' | 'international_only' | 'hybrid') => setOperatingMode(value)}
+                        data-testid="select-operating-mode"
+                      >
+                        <SelectTrigger className="w-48" data-testid="select-operating-mode-trigger">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="italy_only" data-testid="select-item-italy-only">
+                            <span className="flex items-center gap-2">🇮🇹 Solo Italia</span>
+                          </SelectItem>
+                          <SelectItem value="international_only" data-testid="select-item-international-only">
+                            <span className="flex items-center gap-2">🌍 Solo Estero</span>
+                          </SelectItem>
+                          <SelectItem value="hybrid" data-testid="select-item-hybrid">
+                            <span className="flex items-center gap-2">🌐 Italia + Estero</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   {currentCategoryFeatures.map((feature) => (
                     <div 
                       key={feature.key} 

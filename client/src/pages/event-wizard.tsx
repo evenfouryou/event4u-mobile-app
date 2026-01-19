@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema, type Location as LocationType, type EventFormat, type InsertEvent, type SiaeEventGenre, type SiaeSectorCode } from "@shared/schema";
+import { insertEventSchema, type Location as LocationType, type EventFormat, type InsertEvent, type SiaeEventGenre, type SiaeSectorCode, type CompanyFeatures } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, CheckCircle, ArrowLeft, ArrowRight, Ticket, Users, Euro, Plus, Trash2, Upload, X, ImageIcon, Loader2, ChevronLeft, Building2, AlertTriangle } from "lucide-react";
+import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, CheckCircle, ArrowLeft, ArrowRight, Ticket, Users, Euro, Plus, Trash2, Upload, X, ImageIcon, Loader2, ChevronLeft, Building2, AlertTriangle, Globe } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
@@ -157,6 +157,7 @@ export default function EventWizard() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   
   const [siaeEnabled, setSiaeEnabled] = useState(false);
+  const [isInternational, setIsInternational] = useState(false);
   const [siaeGenreCode, setSiaeGenreCode] = useState<string>('');
   const [siaeTaxType, setSiaeTaxType] = useState<string>('S');
   const [siaeRequiresNominative, setSiaeRequiresNominative] = useState(true);
@@ -165,7 +166,8 @@ export default function EventWizard() {
   const [siaeSubscriptionTypes, setSiaeSubscriptionTypes] = useState<SubscriptionTypeConfig[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   
-  const STEPS = getSteps(siaeEnabled);
+  const effectiveSiaeEnabled = siaeEnabled && !isInternational;
+  const STEPS = getSteps(effectiveSiaeEnabled);
   
   const draftIdRef = useRef<string | null>(params?.id || null);
   const isSavingRef = useRef(false);
@@ -200,6 +202,14 @@ export default function EventWizard() {
     queryKey: ['/api/siae/events', draftId, 'ticketing'],
     enabled: !!draftId,
   });
+
+  const { data: companyFeatures } = useQuery<CompanyFeatures>({
+    queryKey: ['/api/company-features/current/my'],
+  });
+
+  const operatingMode = companyFeatures?.operatingMode || 'italy_only';
+  const isHybridMode = operatingMode === 'hybrid';
+  const isInternationalOnly = operatingMode === 'international_only';
 
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -616,6 +626,9 @@ export default function EventWizard() {
     
     const payload: any = { ...data };
     
+    // Set isInternational flag based on operating mode and toggle
+    payload.isInternational = isInternationalOnly || isInternational;
+    
     if (payload.startDatetime instanceof Date && !isNaN(payload.startDatetime.getTime())) {
       payload.startDatetime = payload.startDatetime.toISOString();
     }
@@ -729,6 +742,52 @@ export default function EventWizard() {
                   </Select>
                   <FormMessage />
                 </FormItem>
+              )}
+
+              {isHybridMode && (
+                <div className="p-4 rounded-xl bg-muted/30 border border-primary/20 space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Globe className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <Label htmlFor="is-international" className="text-base font-medium cursor-pointer">
+                          Evento Internazionale
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Gli eventi internazionali non richiedono integrazione SIAE
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="is-international"
+                      checked={isInternational}
+                      onCheckedChange={setIsInternational}
+                      data-testid="switch-is-international"
+                    />
+                  </div>
+                  {isInternational && (
+                    <p className="text-xs text-teal-400 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Questo evento verrà creato senza biglietteria SIAE
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {isInternationalOnly && (
+                <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/20">
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-teal-400" />
+                    <div>
+                      <p className="text-sm font-medium text-teal-400">Modalità Solo Estero</p>
+                      <p className="text-xs text-muted-foreground">
+                        Gli eventi vengono creati automaticamente senza biglietteria SIAE
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <FormField
@@ -2243,24 +2302,70 @@ export default function EventWizard() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Ticket className="h-5 w-5" />
+                  {isHybridMode && (
+                    <div className="rounded-lg border border-primary/20 p-4 bg-muted/30 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Globe className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <Label htmlFor="desktop-is-international" className="font-medium cursor-pointer">Evento Internazionale</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Gli eventi internazionali non richiedono integrazione SIAE
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          id="desktop-is-international"
+                          checked={isInternational}
+                          onCheckedChange={setIsInternational}
+                          data-testid="switch-is-international-desktop"
+                        />
                       </div>
-                      <div>
-                        <Label className="font-medium">Abilita Biglietteria SIAE</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Gestisci la biglietteria secondo la normativa SIAE
+                      {isInternational && (
+                        <p className="text-xs text-teal-400 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          Questo evento verrà creato senza biglietteria SIAE
                         </p>
+                      )}
+                    </div>
+                  )}
+
+                  {isInternationalOnly && (
+                    <div className="rounded-lg border border-teal-500/20 p-4 bg-teal-500/10">
+                      <div className="flex items-center gap-3">
+                        <Globe className="h-5 w-5 text-teal-400" />
+                        <div>
+                          <p className="text-sm font-medium text-teal-400">Modalità Solo Estero</p>
+                          <p className="text-xs text-muted-foreground">
+                            Gli eventi vengono creati automaticamente senza biglietteria SIAE
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <Switch
-                      checked={siaeEnabled}
-                      onCheckedChange={setSiaeEnabled}
-                      data-testid="switch-siae-enabled"
-                    />
-                  </div>
+                  )}
+
+                  {!isInternationalOnly && !isInternational && (
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-muted">
+                          <Ticket className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <Label className="font-medium">Abilita Biglietteria SIAE</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Gestisci la biglietteria secondo la normativa SIAE
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={siaeEnabled}
+                        onCheckedChange={setSiaeEnabled}
+                        data-testid="switch-siae-enabled"
+                      />
+                    </div>
+                  )}
 
                   <FormField
                     control={form.control}

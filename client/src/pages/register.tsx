@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -29,7 +30,9 @@ import {
   Building2,
   Ticket,
   MapPin,
-  Calendar
+  Calendar,
+  Globe,
+  Globe2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,6 +52,7 @@ const gestoreRegisterSchema = z.object({
   confirmPassword: z.string(),
   firstName: z.string().min(1, "Nome richiesto"),
   lastName: z.string().min(1, "Cognome richiesto"),
+  operatingMode: z.enum(['italy_only', 'international_only', 'hybrid']).default('italy_only'),
   acceptTerms: z.boolean().refine(val => val === true, {
     message: "Devi accettare i termini e condizioni"
   }),
@@ -115,6 +119,7 @@ export default function Register() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      operatingMode: "italy_only",
       acceptTerms: false,
       acceptPrivacy: false,
     },
@@ -141,8 +146,8 @@ export default function Register() {
 
   const gestoreMutation = useMutation({
     mutationFn: async (data: GestoreFormValues) => {
-      const { confirmPassword, acceptTerms, acceptPrivacy, ...registerData } = data;
-      return await apiRequest('POST', '/api/register', { ...registerData, role: 'gestore' });
+      const { confirmPassword, acceptTerms, acceptPrivacy, operatingMode, ...registerData } = data;
+      return await apiRequest('POST', '/api/register', { ...registerData, role: 'gestore', operatingMode });
     },
     onSuccess: () => {
       triggerHaptic('success');
@@ -855,6 +860,61 @@ export default function Register() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={gestoreForm.control}
+                    name="operatingMode"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-primary" />
+                          Modalità Operativa
+                        </FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="space-y-2"
+                            data-testid="radio-group-operating-mode"
+                          >
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                              <RadioGroupItem value="italy_only" id="italy_only" data-testid="radio-italy-only" />
+                              <div className="flex-1">
+                                <label htmlFor="italy_only" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                                  <span>🇮🇹</span> Solo Italia
+                                </label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Gestione eventi in Italia con integrazione SIAE obbligatoria
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                              <RadioGroupItem value="international_only" id="international_only" data-testid="radio-international-only" />
+                              <div className="flex-1">
+                                <label htmlFor="international_only" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                                  <span>🌍</span> Solo Estero
+                                </label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Gestione eventi internazionali, senza requisiti SIAE
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                              <RadioGroupItem value="hybrid" id="hybrid" data-testid="radio-hybrid" />
+                              <div className="flex-1">
+                                <label htmlFor="hybrid" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                                  <span>🌐</span> Italia + Estero
+                                </label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Gestione mista, scegli per ogni evento se applicare SIAE
+                                </p>
+                              </div>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <div className="space-y-3 pt-2">
                     <FormField
                       control={gestoreForm.control}
@@ -1134,6 +1194,71 @@ export default function Register() {
                               {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                           </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.38 }}
+                >
+                  <FormField
+                    control={gestoreForm.control}
+                    name="operatingMode"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
+                          <Globe className="h-4 w-4 text-primary" />
+                          Modalità Operativa
+                        </FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={(value) => {
+                              triggerHaptic('light');
+                              field.onChange(value);
+                            }}
+                            defaultValue={field.value}
+                            className="space-y-2"
+                            data-testid="radio-group-operating-mode-mobile"
+                          >
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/30 border border-border">
+                              <RadioGroupItem value="italy_only" id="italy_only_mobile" className="mt-0.5" data-testid="radio-italy-only-mobile" />
+                              <div className="flex-1">
+                                <label htmlFor="italy_only_mobile" className="text-sm font-medium cursor-pointer flex items-center gap-2 text-foreground">
+                                  <span>🇮🇹</span> Solo Italia
+                                </label>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Eventi in Italia con integrazione SIAE
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/30 border border-border">
+                              <RadioGroupItem value="international_only" id="international_only_mobile" className="mt-0.5" data-testid="radio-international-only-mobile" />
+                              <div className="flex-1">
+                                <label htmlFor="international_only_mobile" className="text-sm font-medium cursor-pointer flex items-center gap-2 text-foreground">
+                                  <span>🌍</span> Solo Estero
+                                </label>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Eventi internazionali, senza SIAE
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/30 border border-border">
+                              <RadioGroupItem value="hybrid" id="hybrid_mobile" className="mt-0.5" data-testid="radio-hybrid-mobile" />
+                              <div className="flex-1">
+                                <label htmlFor="hybrid_mobile" className="text-sm font-medium cursor-pointer flex items-center gap-2 text-foreground">
+                                  <span>🌐</span> Italia + Estero
+                                </label>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Scegli per ogni evento se applicare SIAE
+                                </p>
+                              </div>
+                            </div>
+                          </RadioGroup>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

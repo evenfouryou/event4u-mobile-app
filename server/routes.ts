@@ -455,6 +455,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'owner',
           isDefault: true,
         }).onConflictDoNothing({ target: [userCompanies.userId, userCompanies.companyId] });
+        
+        // Create companyFeatures with operatingMode if provided
+        const operatingMode = req.body.operatingMode || 'italy_only';
+        await storage.upsertCompanyFeatures(finalCompanyId, {
+          operatingMode: operatingMode,
+        });
       }
 
       // Send welcome email with verification link
