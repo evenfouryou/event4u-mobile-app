@@ -150,6 +150,7 @@ export const companyFeatures = pgTable("company_features", {
   cassaEnabled: boolean("cassa_enabled").notNull().default(false),
   nightFileEnabled: boolean("night_file_enabled").notNull().default(false),
   siaeEnabled: boolean("siae_enabled").notNull().default(false),
+  siaeExempt: boolean("siae_exempt").notNull().default(false), // Esenzione SIAE per vendite internazionali (estero)
   scannerEnabled: boolean("scanner_enabled").notNull().default(true), // Gestione Scanner e Scanner QR
   prEnabled: boolean("pr_enabled").notNull().default(true), // Gestione PR
   prWalletEnabled: boolean("pr_wallet_enabled").default(true), // Wallet PR per commissioni
