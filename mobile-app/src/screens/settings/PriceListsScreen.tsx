@@ -8,11 +8,12 @@ import {
   TextInput,
   Alert,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface PriceListItem {
   id: string;
@@ -33,7 +34,10 @@ interface PriceList {
 
 export function PriceListsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedList, setExpandedList] = useState<string | null>(null);
@@ -161,13 +165,129 @@ export function PriceListsScreen() {
     list.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const renderListCard = (list: PriceList, index: number) => (
+    <View
+      key={list.id}
+      style={[
+        styles.listCard,
+        (isTablet || isLandscape) && !expandedList && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.md : 0,
+        },
+      ]}
+    >
+      <TouchableOpacity
+        style={styles.listHeader}
+        onPress={() => toggleExpand(list.id)}
+        activeOpacity={0.8}
+        testID={`list-card-${list.id}`}
+      >
+        <View style={[styles.listIcon, list.isActive ? styles.listIconActive : styles.listIconInactive]}>
+          <Ionicons
+            name="pricetag"
+            size={24}
+            color={list.isActive ? colors.primary : colors.mutedForeground}
+          />
+        </View>
+        <View style={styles.listInfo}>
+          <View style={styles.listTitleRow}>
+            <Text style={styles.listName}>{list.name}</Text>
+            {list.isActive && (
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>Attivo</Text>
+              </View>
+            )}
+          </View>
+          {list.eventName && (
+            <Text style={styles.listEvent}>{list.eventName}</Text>
+          )}
+          <Text style={styles.listMeta}>{list.itemCount} articoli</Text>
+        </View>
+        <Ionicons
+          name={expandedList === list.id ? 'chevron-up' : 'chevron-down'}
+          size={24}
+          color={colors.mutedForeground}
+        />
+      </TouchableOpacity>
+
+      {expandedList === list.id && (
+        <View style={styles.expandedContent}>
+          <View style={styles.itemsList}>
+            {list.items.map(item => (
+              <View key={item.id} style={styles.itemRow}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
+              </View>
+            ))}
+            {list.items.length < list.itemCount && (
+              <Text style={styles.moreItems}>
+                +{list.itemCount - list.items.length} altri articoli
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.listActions}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleToggleActive(list.id)}
+              testID={`button-toggle-${list.id}`}
+            >
+              <Ionicons
+                name={list.isActive ? 'pause-outline' : 'play-outline'}
+                size={18}
+                color={colors.teal}
+              />
+              <Text style={[styles.actionBtnText, { color: colors.teal }]}>
+                {list.isActive ? 'Disattiva' : 'Attiva'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleDuplicateList(list)}
+              testID={`button-duplicate-${list.id}`}
+            >
+              <Ionicons name="copy-outline" size={18} color={colors.foreground} />
+              <Text style={styles.actionBtnText}>Duplica</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleDeleteList(list.id)}
+              testID={`button-delete-${list.id}`}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderListRows = () => {
+    if (expandedList || (!isTablet && !isLandscape)) {
+      return filteredLists.map((list, index) => renderListCard(list, index));
+    }
+
+    const rows = [];
+    for (let i = 0; i < filteredLists.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.listRow}>
+          {renderListCard(filteredLists[i], 0)}
+          {filteredLists[i + 1] && renderListCard(filteredLists[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -175,14 +295,14 @@ export function PriceListsScreen() {
         <TouchableOpacity
           onPress={handleCreateList}
           style={styles.addButton}
-          data-testid="button-create-list"
+          testID="button-create-list"
         >
           <Ionicons name="add" size={24} color={colors.primaryForeground} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+      <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
+        <View style={[styles.searchBar, isTablet && styles.searchBarTablet]}>
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
@@ -190,14 +310,17 @@ export function PriceListsScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
         </View>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -213,98 +336,10 @@ export function PriceListsScreen() {
             <Text style={styles.emptyText}>Nessun listino trovato</Text>
           </View>
         ) : (
-          filteredLists.map(list => (
-            <View key={list.id} style={styles.listCard}>
-              <TouchableOpacity
-                style={styles.listHeader}
-                onPress={() => toggleExpand(list.id)}
-                activeOpacity={0.8}
-                data-testid={`list-card-${list.id}`}
-              >
-                <View style={[styles.listIcon, list.isActive ? styles.listIconActive : styles.listIconInactive]}>
-                  <Ionicons
-                    name="pricetag"
-                    size={24}
-                    color={list.isActive ? colors.primary : colors.mutedForeground}
-                  />
-                </View>
-                <View style={styles.listInfo}>
-                  <View style={styles.listTitleRow}>
-                    <Text style={styles.listName}>{list.name}</Text>
-                    {list.isActive && (
-                      <View style={styles.activeBadge}>
-                        <Text style={styles.activeBadgeText}>Attivo</Text>
-                      </View>
-                    )}
-                  </View>
-                  {list.eventName && (
-                    <Text style={styles.listEvent}>{list.eventName}</Text>
-                  )}
-                  <Text style={styles.listMeta}>{list.itemCount} articoli</Text>
-                </View>
-                <Ionicons
-                  name={expandedList === list.id ? 'chevron-up' : 'chevron-down'}
-                  size={24}
-                  color={colors.mutedForeground}
-                />
-              </TouchableOpacity>
-
-              {expandedList === list.id && (
-                <View style={styles.expandedContent}>
-                  <View style={styles.itemsList}>
-                    {list.items.map(item => (
-                      <View key={item.id} style={styles.itemRow}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
-                      </View>
-                    ))}
-                    {list.items.length < list.itemCount && (
-                      <Text style={styles.moreItems}>
-                        +{list.itemCount - list.items.length} altri articoli
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.listActions}>
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handleToggleActive(list.id)}
-                      data-testid={`button-toggle-${list.id}`}
-                    >
-                      <Ionicons
-                        name={list.isActive ? 'pause-outline' : 'play-outline'}
-                        size={18}
-                        color={colors.teal}
-                      />
-                      <Text style={[styles.actionBtnText, { color: colors.teal }]}>
-                        {list.isActive ? 'Disattiva' : 'Attiva'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handleDuplicateList(list)}
-                      data-testid={`button-duplicate-${list.id}`}
-                    >
-                      <Ionicons name="copy-outline" size={18} color={colors.foreground} />
-                      <Text style={styles.actionBtnText}>Duplica</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handleDeleteList(list.id)}
-                      data-testid={`button-delete-${list.id}`}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={colors.destructive} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
-          ))
+          renderListRows()
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -319,6 +354,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -345,6 +383,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
+  searchContainerLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -354,6 +395,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
+  },
+  searchBarTablet: {
+    maxWidth: 500,
   },
   searchInput: {
     flex: 1,
@@ -366,6 +410,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   emptyState: {
     alignItems: 'center',
@@ -375,6 +423,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.mutedForeground,
     marginTop: spacing.md,
+  },
+  listRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
   },
   listCard: {
     backgroundColor: colors.card,
@@ -410,6 +462,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   listName: {
     fontSize: fontSize.base,
@@ -469,6 +522,7 @@ const styles = StyleSheet.create({
   },
   listActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   actionBtn: {

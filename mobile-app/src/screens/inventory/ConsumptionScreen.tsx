@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -47,7 +48,9 @@ const STATIONS: Station[] = [
 
 export default function ConsumptionScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -160,245 +163,251 @@ export default function ConsumptionScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Registra Consumo" showBack />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Registra Consumo" showBack />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-consumption"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Evento</Text>
-          <TouchableOpacity
-            style={styles.selector}
-            onPress={() => setShowEventPicker(!showEventPicker)}
-            data-testid="button-select-event"
-          >
-            <View style={styles.selectorContent}>
-              <Ionicons name="calendar-outline" size={20} color={colors.mutedForeground} />
-              <Text style={selectedEvent ? styles.selectorText : styles.selectorPlaceholder}>
-                {selectedEvent ? `${selectedEvent.name} - ${selectedEvent.date}` : 'Seleziona evento...'}
-              </Text>
-            </View>
-            <Ionicons
-              name={showEventPicker ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.mutedForeground}
-            />
-          </TouchableOpacity>
-          {showEventPicker && (
-            <Card variant="glass" style={styles.pickerList}>
-              {events.map(event => (
-                <TouchableOpacity
-                  key={event.id}
-                  style={[
-                    styles.pickerItem,
-                    selectedEvent?.id === event.id && styles.pickerItemSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedEvent(event);
-                    setShowEventPicker(false);
-                  }}
-                  data-testid={`select-event-${event.id}`}
-                >
-                  <View style={styles.pickerItemContent}>
-                    <Text style={styles.pickerItemName}>{event.name}</Text>
-                    <Text style={styles.pickerItemMeta}>{event.date}</Text>
-                  </View>
-                  {event.status === 'live' && (
-                    <View style={styles.liveBadge}>
-                      <View style={styles.liveDot} />
-                      <Text style={styles.liveText}>LIVE</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </Card>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stazione</Text>
-          <View style={styles.stationsGrid}>
-            {STATIONS.map(station => (
-              <TouchableOpacity
-                key={station.id}
-                style={[
-                  styles.stationCard,
-                  selectedStation?.id === station.id && styles.stationCardSelected,
-                ]}
-                onPress={() => setSelectedStation(station)}
-                data-testid={`station-${station.id}`}
-              >
-                <Ionicons
-                  name="location-outline"
-                  size={20}
-                  color={selectedStation?.id === station.id ? colors.primaryForeground : colors.foreground}
-                />
-                <Text
-                  style={[
-                    styles.stationName,
-                    selectedStation?.id === station.id && styles.stationNameSelected,
-                  ]}
-                >
-                  {station.name}
+        <View style={[styles.mainContent, (isTablet || isLandscape) && styles.mainContentWide]}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Evento</Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setShowEventPicker(!showEventPicker)}
+              testID="button-select-event"
+            >
+              <View style={styles.selectorContent}>
+                <Ionicons name="calendar-outline" size={20} color={colors.mutedForeground} />
+                <Text style={selectedEvent ? styles.selectorText : styles.selectorPlaceholder}>
+                  {selectedEvent ? `${selectedEvent.name} - ${selectedEvent.date}` : 'Seleziona evento...'}
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Prodotto</Text>
-          <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Cerca prodotto..."
-              placeholderTextColor={colors.mutedForeground}
-              value={productSearch}
-              onChangeText={setProductSearch}
-              onFocus={() => setShowProductPicker(true)}
-              data-testid="input-product-search"
-            />
-          </View>
-          {(showProductPicker || productSearch.length > 0) && (
-            <Card variant="glass" style={styles.productList}>
-              <ScrollView style={styles.productListScroll} nestedScrollEnabled>
-                {filteredProducts.slice(0, 10).map(product => (
+              </View>
+              <Ionicons
+                name={showEventPicker ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.mutedForeground}
+              />
+            </TouchableOpacity>
+            {showEventPicker && (
+              <Card variant="glass" style={styles.pickerList}>
+                {events.map(event => (
                   <TouchableOpacity
-                    key={product.id}
+                    key={event.id}
                     style={[
-                      styles.productItem,
-                      selectedProduct?.id === product.id && styles.productItemSelected,
+                      styles.pickerItem,
+                      selectedEvent?.id === event.id && styles.pickerItemSelected,
                     ]}
                     onPress={() => {
-                      setSelectedProduct(product);
-                      setShowProductPicker(false);
-                      setProductSearch(product.name);
+                      setSelectedEvent(event);
+                      setShowEventPicker(false);
                     }}
-                    data-testid={`select-product-${product.id}`}
+                    testID={`select-event-${event.id}`}
                   >
-                    <View>
-                      <Text style={styles.productItemName}>{product.name}</Text>
-                      <Text style={styles.productItemCategory}>{product.category}</Text>
+                    <View style={styles.pickerItemContent}>
+                      <Text style={styles.pickerItemName}>{event.name}</Text>
+                      <Text style={styles.pickerItemMeta}>{event.date}</Text>
                     </View>
-                    <Text style={styles.productItemStock}>
-                      {product.currentStock} {product.unit}
-                    </Text>
+                    {event.status === 'live' && (
+                      <View style={styles.liveBadge}>
+                        <View style={styles.liveDot} />
+                        <Text style={styles.liveText}>LIVE</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
-            </Card>
-          )}
-          {selectedProduct && (
-            <View style={styles.selectedProductCard}>
-              <Card variant="glass">
-                <View style={styles.selectedProductRow}>
-                  <View>
-                    <Text style={styles.selectedProductName}>{selectedProduct.name}</Text>
-                    <Text style={styles.selectedProductStock}>
-                      Disponibili: {selectedProduct.currentStock} {selectedProduct.unit}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedProduct(null);
-                      setProductSearch('');
-                    }}
-                    data-testid="button-clear-product"
-                  >
-                    <Ionicons name="close-circle" size={24} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                </View>
               </Card>
-            </View>
-          )}
-        </View>
+            )}
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quantità</Text>
-          <Card variant="glass">
-            <View style={styles.quickQuantityRow}>
-              {QUICK_QUANTITIES.map(qty => (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Stazione</Text>
+            <View style={[styles.stationsGrid, (isTablet || isLandscape) && styles.stationsGridWide]}>
+              {STATIONS.map(station => (
                 <TouchableOpacity
-                  key={qty}
+                  key={station.id}
                   style={[
-                    styles.quickQuantityButton,
-                    quantity === qty && styles.quickQuantityButtonActive,
+                    styles.stationCard,
+                    selectedStation?.id === station.id && styles.stationCardSelected,
                   ]}
-                  onPress={() => handleQuickQuantity(qty)}
-                  data-testid={`quick-quantity-${qty}`}
+                  onPress={() => setSelectedStation(station)}
+                  testID={`station-${station.id}`}
                 >
+                  <Ionicons
+                    name="location-outline"
+                    size={20}
+                    color={selectedStation?.id === station.id ? colors.primaryForeground : colors.foreground}
+                  />
                   <Text
                     style={[
-                      styles.quickQuantityText,
-                      quantity === qty && styles.quickQuantityTextActive,
+                      styles.stationName,
+                      selectedStation?.id === station.id && styles.stationNameSelected,
                     ]}
                   >
-                    {qty}
+                    {station.name}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.quantityContainer}>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(-1)}
-                data-testid="button-quantity-minus"
-              >
-                <Ionicons name="remove" size={24} color={colors.foreground} />
-              </TouchableOpacity>
-              <View style={styles.quantityInputContainer}>
-                <TextInput
-                  style={styles.quantityInput}
-                  value={quantity.toString()}
-                  onChangeText={(text) => setQuantity(parseInt(text) || 1)}
-                  keyboardType="number-pad"
-                  data-testid="input-quantity"
-                />
-                {selectedProduct && (
-                  <Text style={styles.quantityUnit}>{selectedProduct.unit}</Text>
-                )}
-              </View>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(1)}
-                data-testid="button-quantity-plus"
-              >
-                <Ionicons name="add" size={24} color={colors.foreground} />
-              </TouchableOpacity>
-            </View>
-          </Card>
-        </View>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Note (opzionale)</Text>
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Aggiungi note..."
-            placeholderTextColor={colors.mutedForeground}
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={3}
-            data-testid="input-notes"
-          />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prodotto</Text>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Cerca prodotto..."
+                placeholderTextColor={colors.mutedForeground}
+                value={productSearch}
+                onChangeText={setProductSearch}
+                onFocus={() => setShowProductPicker(true)}
+                testID="input-product-search"
+              />
+            </View>
+            {(showProductPicker || productSearch.length > 0) && (
+              <Card variant="glass" style={styles.productList}>
+                <ScrollView style={styles.productListScroll} nestedScrollEnabled testID="scroll-product-picker">
+                  {filteredProducts.slice(0, 10).map(product => (
+                    <TouchableOpacity
+                      key={product.id}
+                      style={[
+                        styles.productItem,
+                        selectedProduct?.id === product.id && styles.productItemSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedProduct(product);
+                        setShowProductPicker(false);
+                        setProductSearch(product.name);
+                      }}
+                      testID={`select-product-${product.id}`}
+                    >
+                      <View>
+                        <Text style={styles.productItemName}>{product.name}</Text>
+                        <Text style={styles.productItemCategory}>{product.category}</Text>
+                      </View>
+                      <Text style={styles.productItemStock}>
+                        {product.currentStock} {product.unit}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </Card>
+            )}
+            {selectedProduct && (
+              <View style={styles.selectedProductCard}>
+                <Card variant="glass" testID="card-selected-product">
+                  <View style={styles.selectedProductRow}>
+                    <View>
+                      <Text style={styles.selectedProductName} testID="text-selected-product-name">{selectedProduct.name}</Text>
+                      <Text style={styles.selectedProductStock} testID="text-selected-product-stock">
+                        Disponibili: {selectedProduct.currentStock} {selectedProduct.unit}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedProduct(null);
+                        setProductSearch('');
+                      }}
+                      testID="button-clear-product"
+                    >
+                      <Ionicons name="close-circle" size={24} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+                </Card>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quantità</Text>
+            <Card variant="glass" testID="card-quantity">
+              <View style={styles.quickQuantityRow}>
+                {QUICK_QUANTITIES.map(qty => (
+                  <TouchableOpacity
+                    key={qty}
+                    style={[
+                      styles.quickQuantityButton,
+                      quantity === qty && styles.quickQuantityButtonActive,
+                    ]}
+                    onPress={() => handleQuickQuantity(qty)}
+                    testID={`quick-quantity-${qty}`}
+                  >
+                    <Text
+                      style={[
+                        styles.quickQuantityText,
+                        quantity === qty && styles.quickQuantityTextActive,
+                      ]}
+                    >
+                      {qty}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.quantityContainer}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleQuantityChange(-1)}
+                  testID="button-quantity-minus"
+                >
+                  <Ionicons name="remove" size={24} color={colors.foreground} />
+                </TouchableOpacity>
+                <View style={styles.quantityInputContainer}>
+                  <TextInput
+                    style={styles.quantityInput}
+                    value={quantity.toString()}
+                    onChangeText={(text) => setQuantity(parseInt(text) || 1)}
+                    keyboardType="number-pad"
+                    testID="input-quantity"
+                  />
+                  {selectedProduct && (
+                    <Text style={styles.quantityUnit}>{selectedProduct.unit}</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleQuantityChange(1)}
+                  testID="button-quantity-plus"
+                >
+                  <Ionicons name="add" size={24} color={colors.foreground} />
+                </TouchableOpacity>
+              </View>
+            </Card>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Note (opzionale)</Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Aggiungi note..."
+              placeholderTextColor={colors.mutedForeground}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={3}
+              testID="input-notes"
+            />
+          </View>
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomActions, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={[styles.bottomActions, isLandscape && styles.bottomActionsLandscape]}>
         <Button
           title="Registra Consumo"
           variant="primary"
@@ -406,9 +415,10 @@ export default function ConsumptionScreen() {
           loading={submitting}
           disabled={!selectedEvent || !selectedStation || !selectedProduct || quantity <= 0}
           style={styles.submitButton}
+          testID="button-submit"
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -419,6 +429,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 80,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentWide: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -518,6 +542,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  stationsGridWide: {
+    maxWidth: 600,
   },
   stationCard: {
     flexDirection: 'row',
@@ -675,9 +702,13 @@ const styles = StyleSheet.create({
   bottomActions: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,
+  },
+  bottomActionsLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   submitButton: {
     width: '100%',

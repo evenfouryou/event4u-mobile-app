@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -53,9 +53,10 @@ const mapEventStatus = (event: any): 'live' | 'upcoming' | 'past' | 'draft' => {
 
 export function ManageEventsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const [activeFilter, setActiveFilter] = useState<EventFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,7 +166,7 @@ export function ManageEventsScreen() {
         activeFilter === item.key && styles.filterPillActive,
       ]}
       onPress={() => setActiveFilter(item.key)}
-      data-testid={`filter-${item.key}`}
+      testID={`filter-${item.key}`}
     >
       <Ionicons
         name={item.icon as any}
@@ -190,8 +191,8 @@ export function ManageEventsScreen() {
       <TouchableOpacity
         onPress={() => handleEventPress(item.id)}
         activeOpacity={0.8}
-        data-testid={`card-event-${item.id}`}
-        style={isLandscape ? styles.eventCardLandscapeWrapper : undefined}
+        testID={`card-event-${item.id}`}
+        style={(isTablet || isLandscape) ? styles.eventCardLandscapeWrapper : undefined}
       >
         <Card style={styles.eventCard} variant="elevated">
           <View style={styles.eventHeader}>
@@ -250,21 +251,21 @@ export function ManageEventsScreen() {
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => handleQuickAction(item.id, 'edit')}
-                data-testid={`button-edit-${item.id}`}
+                testID={`button-edit-${item.id}`}
               >
                 <Ionicons name="create-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => handleQuickAction(item.id, 'tickets')}
-                data-testid={`button-tickets-${item.id}`}
+                testID={`button-tickets-${item.id}`}
               >
                 <Ionicons name="ticket-outline" size={20} color={colors.accent} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => handleQuickAction(item.id, 'duplicate')}
-                data-testid={`button-duplicate-${item.id}`}
+                testID={`button-duplicate-${item.id}`}
               >
                 <Ionicons name="copy-outline" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
@@ -276,21 +277,21 @@ export function ManageEventsScreen() {
   };
 
   const renderLoadingState = () => (
-    <View style={styles.loadingState} data-testid="loading-indicator">
+    <View style={styles.loadingState} testID="loading-indicator">
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Caricamento eventi...</Text>
     </View>
   );
 
   const renderErrorState = () => (
-    <View style={styles.errorState} data-testid="error-state">
+    <View style={styles.errorState} testID="error-state">
       <Ionicons name="alert-circle-outline" size={64} color={colors.destructive} />
       <Text style={styles.errorTitle}>Errore di caricamento</Text>
       <Text style={styles.errorText}>{error}</Text>
       <TouchableOpacity
         style={styles.retryButton}
         onPress={handleRetry}
-        data-testid="button-retry"
+        testID="button-retry"
       >
         <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
         <Text style={styles.retryButtonText}>Riprova</Text>
@@ -299,7 +300,7 @@ export function ManageEventsScreen() {
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
+    <View style={styles.emptyState} testID="empty-state">
       <Ionicons name="calendar-outline" size={64} color={colors.muted} />
       <Text style={styles.emptyTitle}>Nessun evento trovato</Text>
       <Text style={styles.emptyText}>
@@ -309,7 +310,7 @@ export function ManageEventsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Gestione Eventi"
         showBack
@@ -317,7 +318,7 @@ export function ManageEventsScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('CreateEvent')}
-            data-testid="button-create-event"
+            testID="button-create-event"
           >
             <Ionicons name="add" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -333,10 +334,10 @@ export function ManageEventsScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
           {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -363,27 +364,25 @@ export function ManageEventsScreen() {
           data={filteredEvents}
           renderItem={renderEventCard}
           keyExtractor={(item) => item.id}
-          numColumns={isLandscape ? 2 : 1}
-          key={isLandscape ? 'landscape' : 'portrait'}
-          columnWrapperStyle={isLandscape ? styles.columnWrapper : undefined}
-          contentContainerStyle={[
-            styles.eventsList,
-            { paddingBottom: insets.bottom + 80 },
-          ]}
+          numColumns={numColumns}
+          key={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={styles.eventsList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
+          testID="events-list"
         />
       )}
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        style={styles.fab}
         onPress={() => navigation.navigate('CreateEvent')}
         activeOpacity={0.8}
-        data-testid="button-fab-create"
+        testID="button-fab-create"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -442,6 +441,7 @@ const styles = StyleSheet.create({
   },
   eventsList: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   columnWrapper: {
     gap: spacing.md,
@@ -618,6 +618,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: spacing.lg,
+    bottom: spacing.xl,
     width: 56,
     height: 56,
     borderRadius: borderRadius.full,

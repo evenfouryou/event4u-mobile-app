@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -28,11 +29,15 @@ interface TicketedEvent {
 
 export function SIAETicketedEventsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<TicketedEvent[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadEvents = async () => {
     try {
@@ -103,24 +108,30 @@ export function SIAETicketedEventsScreen() {
     }).format(amount);
   };
 
-  const renderEvent = ({ item }: { item: TicketedEvent }) => (
+  const renderEvent = ({ item, index }: { item: TicketedEvent; index: number }) => (
     <TouchableOpacity
-      style={styles.eventCard}
+      style={[
+        styles.eventCard,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAEEventTickets', { eventId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-event-${item.id}`}
+      testID={`card-event-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.eventHeader}>
           <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]} testID={`text-status-${item.id}`}>
               {getStatusLabel(item.status)}
             </Text>
           </View>
         </View>
         
-        <Text style={styles.eventName}>{item.name}</Text>
+        <Text style={styles.eventName} testID={`text-event-name-${item.id}`}>{item.name}</Text>
         
         <View style={styles.eventDetails}>
           <View style={styles.detailRow}>
@@ -137,14 +148,14 @@ export function SIAETicketedEventsScreen() {
           <View style={styles.statItem}>
             <Ionicons name="ticket-outline" size={20} color={colors.primary} />
             <View>
-              <Text style={styles.statValue}>{item.ticketsSold}/{item.ticketsTotal}</Text>
+              <Text style={styles.statValue} testID={`text-tickets-${item.id}`}>{item.ticketsSold}/{item.ticketsTotal}</Text>
               <Text style={styles.statLabel}>Biglietti</Text>
             </View>
           </View>
           <View style={styles.statItem}>
             <Ionicons name="cash-outline" size={20} color={colors.teal} />
             <View>
-              <Text style={[styles.statValue, { color: colors.teal }]}>{formatCurrency(item.revenue)}</Text>
+              <Text style={[styles.statValue, { color: colors.teal }]} testID={`text-revenue-${item.id}`}>{formatCurrency(item.revenue)}</Text>
               <Text style={styles.statLabel}>Incasso</Text>
             </View>
           </View>
@@ -159,7 +170,7 @@ export function SIAETicketedEventsScreen() {
               ]} 
             />
           </View>
-          <Text style={styles.progressText}>
+          <Text style={styles.progressText} testID={`text-progress-${item.id}`}>
             {Math.round((item.ticketsSold / item.ticketsTotal) * 100)}% venduto
           </Text>
         </View>
@@ -169,24 +180,24 @@ export function SIAETicketedEventsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Eventi con Bigliettazione" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Eventi con Bigliettazione"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAEEventAdd')} data-testid="button-add-event">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAEEventAdd')} testID="button-add-event">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -196,7 +207,13 @@ export function SIAETicketedEventsScreen() {
         data={events}
         renderItem={renderEvent}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={[
+          styles.listContent,
+          (isTablet || isLandscape) && styles.listContentLandscape,
+        ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -208,8 +225,9 @@ export function SIAETicketedEventsScreen() {
             <Text style={styles.emptySubtext}>Crea un evento per iniziare la vendita biglietti</Text>
           </View>
         }
+        testID="list-ticketed-events"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -231,6 +249,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   eventCard: {
     marginBottom: spacing.lg,

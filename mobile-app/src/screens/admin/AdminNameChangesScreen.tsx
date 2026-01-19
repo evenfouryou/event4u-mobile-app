@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
@@ -35,7 +36,9 @@ type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
 
 export function AdminNameChangesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,27 +181,31 @@ export function AdminNameChangesScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Richieste Cambio Nome" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento richieste...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento richieste...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Richieste Cambio Nome" showBack />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
@@ -209,10 +216,10 @@ export function AdminNameChangesScreen() {
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              data-testid="input-search"
+              testID="input-search"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
                 <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
@@ -230,7 +237,7 @@ export function AdminNameChangesScreen() {
               key={option.value}
               style={[styles.filterPill, filterStatus === option.value && styles.filterPillActive]}
               onPress={() => setFilterStatus(option.value)}
-              data-testid={`filter-${option.value}`}
+              testID={`filter-${option.value}`}
             >
               <Text
                 style={[
@@ -244,21 +251,21 @@ export function AdminNameChangesScreen() {
           ))}
         </ScrollView>
 
-        <View style={styles.statsRow}>
-          <Card variant="glass" style={styles.statCard}>
-            <Text style={styles.statValue}>
+        <View style={[styles.statsRow, (isTablet || isLandscape) && styles.statsRowWide]}>
+          <Card variant="glass" style={styles.statCard} testID="card-pending-count">
+            <Text style={styles.statValue} testID="text-pending-count">
               {requests.filter((r) => r.status === 'pending').length}
             </Text>
             <Text style={styles.statLabel}>In Attesa</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.success }]}>
+          <Card variant="glass" style={styles.statCard} testID="card-approved-count">
+            <Text style={[styles.statValue, { color: colors.success }]} testID="text-approved-count">
               {requests.filter((r) => r.status === 'approved').length}
             </Text>
             <Text style={styles.statLabel}>Approvati</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.destructive }]}>
+          <Card variant="glass" style={styles.statCard} testID="card-rejected-count">
+            <Text style={[styles.statValue, { color: colors.destructive }]} testID="text-rejected-count">
               {requests.filter((r) => r.status === 'rejected').length}
             </Text>
             <Text style={styles.statLabel}>Rifiutati</Text>
@@ -266,34 +273,39 @@ export function AdminNameChangesScreen() {
         </View>
 
         {filteredRequests.length === 0 ? (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="document-text-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyTitle}>Nessuna richiesta trovata</Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={styles.emptyTitle} testID="text-empty-title">Nessuna richiesta trovata</Text>
+            <Text style={styles.emptySubtitle} testID="text-empty-subtitle">
               {searchQuery
                 ? 'Prova a modificare i criteri di ricerca'
                 : 'Non ci sono richieste di cambio nome'}
             </Text>
           </Card>
         ) : (
-          <View style={styles.requestsList}>
+          <View style={(isTablet || isLandscape) ? styles.requestsGrid : styles.requestsList}>
             {filteredRequests.map((request) => (
-              <Card key={request.id} variant="glass" style={styles.requestCard}>
+              <Card 
+                key={request.id} 
+                variant="glass" 
+                style={[styles.requestCard, (isTablet || isLandscape) && styles.requestCardWide]} 
+                testID={`card-request-${request.id}`}
+              >
                 <View style={styles.requestHeader}>
                   <View style={styles.userInfo}>
                     <View style={styles.avatar}>
                       <Ionicons name="person" size={24} color={colors.primary} />
                     </View>
                     <View style={styles.userDetails}>
-                      <Text style={styles.userName}>{request.userName}</Text>
-                      <Text style={styles.userEmail}>{request.userEmail}</Text>
+                      <Text style={styles.userName} testID={`text-user-name-${request.id}`}>{request.userName}</Text>
+                      <Text style={styles.userEmail} testID={`text-user-email-${request.id}`}>{request.userEmail}</Text>
                     </View>
                   </View>
                   <View
                     style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}
                   >
                     <View style={[styles.statusDot, { backgroundColor: getStatusColor(request.status) }]} />
-                    <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(request.status) }]} testID={`text-status-${request.id}`}>
                       {getStatusLabel(request.status)}
                     </Text>
                   </View>
@@ -302,28 +314,28 @@ export function AdminNameChangesScreen() {
                 <View style={styles.nameChangeSection}>
                   <View style={styles.nameRow}>
                     <Text style={styles.nameLabel}>Da:</Text>
-                    <Text style={styles.nameValue}>{request.currentName}</Text>
+                    <Text style={styles.nameValue} testID={`text-current-name-${request.id}`}>{request.currentName}</Text>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={colors.primary} style={styles.arrowIcon} />
                   <View style={styles.nameRow}>
                     <Text style={styles.nameLabel}>A:</Text>
-                    <Text style={[styles.nameValue, { color: colors.primary }]}>{request.requestedName}</Text>
+                    <Text style={[styles.nameValue, { color: colors.primary }]} testID={`text-requested-name-${request.id}`}>{request.requestedName}</Text>
                   </View>
                 </View>
 
                 <View style={styles.reasonSection}>
                   <Text style={styles.reasonLabel}>Motivazione:</Text>
-                  <Text style={styles.reasonText}>{request.reason}</Text>
+                  <Text style={styles.reasonText} testID={`text-reason-${request.id}`}>{request.reason}</Text>
                 </View>
 
-                <Text style={styles.dateText}>{formatDate(request.createdAt)}</Text>
+                <Text style={styles.dateText} testID={`text-date-${request.id}`}>{formatDate(request.createdAt)}</Text>
 
                 {request.status === 'pending' && (
                   <View style={styles.actionsRow}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.rejectButton]}
                       onPress={() => handleReject(request)}
-                      data-testid={`button-reject-${request.id}`}
+                      testID={`button-reject-${request.id}`}
                     >
                       <Ionicons name="close" size={20} color={colors.destructive} />
                       <Text style={[styles.actionButtonText, { color: colors.destructive }]}>Rifiuta</Text>
@@ -331,7 +343,7 @@ export function AdminNameChangesScreen() {
                     <TouchableOpacity
                       style={[styles.actionButton, styles.approveButton]}
                       onPress={() => handleApprove(request)}
-                      data-testid={`button-approve-${request.id}`}
+                      testID={`button-approve-${request.id}`}
                     >
                       <Ionicons name="checkmark" size={20} color={colors.primaryForeground} />
                       <Text style={[styles.actionButtonText, { color: colors.primaryForeground }]}>
@@ -345,7 +357,7 @@ export function AdminNameChangesScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -356,7 +368,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -419,6 +439,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  statsRowWide: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
   statCard: {
     flex: 1,
     padding: spacing.lg,
@@ -437,8 +462,19 @@ const styles = StyleSheet.create({
   requestsList: {
     gap: spacing.md,
   },
+  requestsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   requestCard: {
     padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  requestCardWide: {
+    flex: 1,
+    minWidth: '45%',
+    marginBottom: 0,
   },
   requestHeader: {
     flexDirection: 'row',
@@ -572,3 +608,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+export default AdminNameChangesScreen;

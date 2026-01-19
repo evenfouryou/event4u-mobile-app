@@ -10,12 +10,13 @@ import {
   Modal,
   Alert,
   Switch,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header, Input } from '../../components';
 
 interface Operator {
@@ -52,13 +53,18 @@ const GATES = ['Ingresso A', 'Ingresso B', 'Ingresso VIP', 'Backstage', 'Uscita'
 
 export default function ScannerManagementScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
+  const contentMaxWidth = isTablet ? 1200 : undefined;
 
   const [newOperator, setNewOperator] = useState({
     name: '',
@@ -192,166 +198,188 @@ export default function ScannerManagementScreen() {
     setShowPermissionsModal(false);
   };
 
-  const renderOperatorCard = ({ item }: { item: Operator }) => {
+  const renderOperatorCard = ({ item, index }: { item: Operator; index: number }) => {
     const statusConfig = getStatusConfig(item.status);
+    const isLeftColumn = index % 2 === 0;
 
     return (
-      <Card variant="glass" style={styles.operatorCard}>
-        <View style={styles.operatorHeader}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+      <View
+        style={[
+          styles.operatorCardWrapper,
+          numColumns === 2 && {
+            flex: 0.5,
+            paddingLeft: isLeftColumn ? 0 : spacing.sm,
+            paddingRight: isLeftColumn ? spacing.sm : 0,
+          },
+        ]}
+      >
+        <Card variant="glass" style={styles.operatorCard}>
+          <View style={styles.operatorHeader}>
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+              </View>
+              <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
             </View>
-            <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
+            <View style={styles.operatorInfo}>
+              <Text style={styles.operatorName}>{item.name}</Text>
+              <Text style={styles.operatorEmail}>{item.email}</Text>
+              <View style={styles.gatesContainer}>
+                {item.assignedGates.slice(0, 2).map((gate) => (
+                  <View key={gate} style={styles.gateBadge}>
+                    <Text style={styles.gateBadgeText}>{gate}</Text>
+                  </View>
+                ))}
+                {item.assignedGates.length > 2 && (
+                  <View style={styles.gateBadge}>
+                    <Text style={styles.gateBadgeText}>+{item.assignedGates.length - 2}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => navigation.navigate('OperatorDetail', { operatorId: item.id })}
+              testID={`button-menu-${item.id}`}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
           </View>
-          <View style={styles.operatorInfo}>
-            <Text style={styles.operatorName}>{item.name}</Text>
-            <Text style={styles.operatorEmail}>{item.email}</Text>
-            <View style={styles.gatesContainer}>
-              {item.assignedGates.slice(0, 2).map((gate) => (
-                <View key={gate} style={styles.gateBadge}>
-                  <Text style={styles.gateBadgeText}>{gate}</Text>
-                </View>
-              ))}
-              {item.assignedGates.length > 2 && (
-                <View style={styles.gateBadge}>
-                  <Text style={styles.gateBadgeText}>+{item.assignedGates.length - 2}</Text>
-                </View>
-              )}
+
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Ionicons name="scan-outline" size={16} color={colors.emerald} />
+              <Text style={styles.statValue} testID={`text-scans-${item.id}`}>{item.totalScans.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>scansioni</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
+              <Text style={styles.statValue} testID={`text-last-active-${item.id}`}>{item.lastActive}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => navigation.navigate('OperatorDetail', { operatorId: item.id })}
-            data-testid={`button-menu-${item.id}`}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Ionicons name="scan-outline" size={16} color={colors.emerald} />
-            <Text style={styles.statValue}>{item.totalScans.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>scansioni</Text>
+          <View style={styles.permissionsSummary}>
+            {Object.entries(item.permissions).slice(0, 3).map(([key, value]) => (
+              <View key={key} style={styles.permissionItem}>
+                <Ionicons
+                  name={value ? 'checkmark-circle' : 'close-circle'}
+                  size={14}
+                  color={value ? colors.teal : colors.mutedForeground}
+                />
+                <Text style={[styles.permissionText, !value && styles.permissionDisabled]}>
+                  {PERMISSION_LABELS[key as keyof OperatorPermissions]}
+                </Text>
+              </View>
+            ))}
           </View>
-          <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
-            <Text style={styles.statValue}>{item.lastActive}</Text>
+
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleEditPermissions(item)}
+              testID={`button-permissions-${item.id}`}
+            >
+              <Ionicons name="key-outline" size={18} color={colors.emerald} />
+              <Text style={styles.actionButtonText}>Permessi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('AssignGates', { operatorId: item.id })}
+              testID={`button-gates-${item.id}`}
+            >
+              <Ionicons name="enter-outline" size={18} color={colors.teal} />
+              <Text style={styles.actionButtonText}>Ingressi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('OperatorStats', { operatorId: item.id })}
+              testID={`button-stats-${item.id}`}
+            >
+              <Ionicons name="stats-chart-outline" size={18} color={colors.foreground} />
+              <Text style={styles.actionButtonText}>Stats</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.permissionsSummary}>
-          {Object.entries(item.permissions).slice(0, 3).map(([key, value]) => (
-            <View key={key} style={styles.permissionItem}>
-              <Ionicons
-                name={value ? 'checkmark-circle' : 'close-circle'}
-                size={14}
-                color={value ? colors.teal : colors.mutedForeground}
-              />
-              <Text style={[styles.permissionText, !value && styles.permissionDisabled]}>
-                {PERMISSION_LABELS[key as keyof OperatorPermissions]}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleEditPermissions(item)}
-            data-testid={`button-permissions-${item.id}`}
-          >
-            <Ionicons name="key-outline" size={18} color={colors.emerald} />
-            <Text style={styles.actionButtonText}>Permessi</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('AssignGates', { operatorId: item.id })}
-            data-testid={`button-gates-${item.id}`}
-          >
-            <Ionicons name="enter-outline" size={18} color={colors.teal} />
-            <Text style={styles.actionButtonText}>Ingressi</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('OperatorStats', { operatorId: item.id })}
-            data-testid={`button-stats-${item.id}`}
-          >
-            <Ionicons name="stats-chart-outline" size={18} color={colors.foreground} />
-            <Text style={styles.actionButtonText}>Stats</Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
+        </Card>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Gestione Scanner"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => setShowAddModal(true)} data-testid="button-add-operator">
+          <TouchableOpacity onPress={() => setShowAddModal(true)} testID="button-add-operator">
             <Ionicons name="person-add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
 
-      <View style={styles.summaryContainer}>
-        <Card variant="glass" style={styles.summaryCard}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{mockOperators.length}</Text>
-            <Text style={styles.summaryLabel}>Totale</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: colors.teal }]}>
-              {mockOperators.filter(o => o.status === 'active').length}
-            </Text>
-            <Text style={styles.summaryLabel}>Attivi</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: colors.emerald }]}>
-              {mockOperators.reduce((sum, o) => sum + o.totalScans, 0).toLocaleString()}
-            </Text>
-            <Text style={styles.summaryLabel}>Scansioni</Text>
-          </View>
-        </Card>
-      </View>
+      <View style={[styles.contentContainer, contentMaxWidth ? { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' } : undefined]}>
+        <View style={styles.summaryContainer}>
+          <Card variant="glass" style={styles.summaryCard}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue} testID="text-total-operators">{mockOperators.length}</Text>
+              <Text style={styles.summaryLabel}>Totale</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: colors.teal }]} testID="text-active-operators">
+                {mockOperators.filter(o => o.status === 'active').length}
+              </Text>
+              <Text style={styles.summaryLabel}>Attivi</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: colors.emerald }]} testID="text-total-scans">
+                {mockOperators.reduce((sum, o) => sum + o.totalScans, 0).toLocaleString()}
+              </Text>
+              <Text style={styles.summaryLabel}>Scansioni</Text>
+            </View>
+          </Card>
+        </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cerca operatore..."
-          placeholderTextColor={colors.mutedForeground}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          data-testid="input-search"
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cerca operatore..."
+            placeholderTextColor={colors.mutedForeground}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            testID="input-search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <FlatList
+          data={filteredOperators}
+          renderItem={renderOperatorCard}
+          keyExtractor={(item) => item.id}
+          key={numColumns}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          ListEmptyComponent={
+            <Card style={styles.emptyCard} variant="glass">
+              <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle} testID="text-empty-title">Nessun operatore</Text>
+              <Text style={styles.emptyText} testID="text-empty-subtitle">Aggiungi operatori per gestire gli scanner</Text>
+            </Card>
+          }
+          testID="list-operators"
         />
       </View>
-
-      <FlatList
-        data={filteredOperators}
-        renderItem={renderOperatorCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
-        }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
-            <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyTitle}>Nessun operatore</Text>
-            <Text style={styles.emptyText}>Aggiungi operatori per gestire gli scanner</Text>
-          </Card>
-        }
-      />
 
       <Modal
         visible={showAddModal}
@@ -360,10 +388,10 @@ export default function ScannerManagementScreen() {
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nuovo Operatore</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)} data-testid="button-close-add-modal">
+              <TouchableOpacity onPress={() => setShowAddModal(false)} testID="button-close-add-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -376,7 +404,7 @@ export default function ScannerManagementScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 value={newOperator.name}
                 onChangeText={(text) => setNewOperator({ ...newOperator, name: text })}
-                data-testid="input-name"
+                testID="input-name"
               />
             </View>
 
@@ -390,7 +418,7 @@ export default function ScannerManagementScreen() {
                 autoCapitalize="none"
                 value={newOperator.email}
                 onChangeText={(text) => setNewOperator({ ...newOperator, email: text })}
-                data-testid="input-email"
+                testID="input-email"
               />
             </View>
 
@@ -403,14 +431,14 @@ export default function ScannerManagementScreen() {
                 keyboardType="phone-pad"
                 value={newOperator.phone}
                 onChangeText={(text) => setNewOperator({ ...newOperator, phone: text })}
-                data-testid="input-phone"
+                testID="input-phone"
               />
             </View>
 
             <Button
               onPress={() => addOperatorMutation.mutate(newOperator)}
               disabled={addOperatorMutation.isPending || !newOperator.name || !newOperator.email}
-              data-testid="button-submit-operator"
+              testID="button-submit-operator"
             >
               <Text style={styles.buttonText}>
                 {addOperatorMutation.isPending ? 'Aggiunta...' : 'Aggiungi Operatore'}
@@ -427,10 +455,10 @@ export default function ScannerManagementScreen() {
         onRequestClose={() => setShowPermissionsModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Permessi - {selectedOperator?.name}</Text>
-              <TouchableOpacity onPress={() => setShowPermissionsModal(false)} data-testid="button-close-permissions-modal">
+              <TouchableOpacity onPress={() => setShowPermissionsModal(false)} testID="button-close-permissions-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -447,13 +475,14 @@ export default function ScannerManagementScreen() {
                       onValueChange={() => togglePermission(key)}
                       trackColor={{ false: colors.surface, true: `${colors.emerald}50` }}
                       thumbColor={selectedOperator.permissions[key] ? colors.emerald : colors.mutedForeground}
+                      testID={`switch-permission-${key}`}
                     />
                   </View>
                 ))}
               </View>
             )}
 
-            <Button onPress={savePermissions} data-testid="button-save-permissions">
+            <Button onPress={savePermissions} testID="button-save-permissions">
               <Text style={styles.buttonText}>Salva Permessi</Text>
             </Button>
           </View>
@@ -461,14 +490,14 @@ export default function ScannerManagementScreen() {
       </Modal>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, isTablet && styles.fabTablet]}
         onPress={() => setShowAddModal(true)}
         activeOpacity={0.8}
-        data-testid="button-fab-add"
+        testID="button-fab-add"
       >
         <Ionicons name="person-add" size={24} color={colors.emeraldForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -476,6 +505,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentContainer: {
+    flex: 1,
   },
   summaryContainer: {
     paddingHorizontal: spacing.lg,
@@ -525,6 +557,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
+  },
+  operatorCardWrapper: {
+    flex: 1,
   },
   operatorCard: {
     paddingVertical: spacing.lg,
@@ -578,6 +613,7 @@ const styles = StyleSheet.create({
   gatesContainer: {
     flexDirection: 'row',
     gap: spacing.xs,
+    flexWrap: 'wrap',
   },
   gateBadge: {
     paddingHorizontal: spacing.sm,
@@ -677,15 +713,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  modalContentTablet: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
+    borderRadius: borderRadius['2xl'],
+    marginBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
   },
   modalTitle: {
     color: colors.foreground,
@@ -703,9 +744,9 @@ const styles = StyleSheet.create({
   },
   formInput: {
     backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     color: colors.foreground,
@@ -716,8 +757,8 @@ const styles = StyleSheet.create({
   },
   permissionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
@@ -736,7 +777,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 100,
+    bottom: spacing['2xl'],
     right: spacing.lg,
     width: 56,
     height: 56,
@@ -744,10 +785,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.emerald,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.emerald,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabTablet: {
+    bottom: spacing['3xl'],
+    right: spacing.xl,
   },
 });

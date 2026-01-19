@@ -9,11 +9,11 @@ import {
   Modal,
   TextInput,
   Alert,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -21,12 +21,9 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Svg, { Rect, Circle, G, Text as SvgText } from 'react-native-svg';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
-import { Card, Header, Button } from '../../components';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
+import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const FLOOR_PLAN_SIZE = SCREEN_WIDTH - spacing.lg * 2;
 
 interface Zone {
   id: string;
@@ -76,8 +73,12 @@ const ZONE_STATUSES: { value: Zone['status']; label: string; color: string }[] =
 export function FloorPlanEditorScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { venueId, zoneId, mode } = route.params || {};
+
+  const FLOOR_PLAN_SIZE = isLandscape ? Math.min(height - 250, width * 0.5) : width - spacing.lg * 2;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -304,243 +305,246 @@ export function FloorPlanEditorScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Editor Planimetria" showBack onBack={handleDiscardChanges} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <Header
-        title="Editor Planimetria"
-        showBack
-        onBack={handleDiscardChanges}
-        rightAction={
-          hasChanges ? (
-            <TouchableOpacity onPress={handleSaveAll} data-testid="button-save-all">
-              <Text style={styles.saveButtonText}>Salva</Text>
-            </TouchableOpacity>
-          ) : undefined
-        }
-      />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <Header
+          title="Editor Planimetria"
+          showBack
+          onBack={handleDiscardChanges}
+          rightAction={
+            hasChanges ? (
+              <TouchableOpacity onPress={handleSaveAll} testID="button-save-all">
+                <Text style={styles.saveButtonText}>Salva</Text>
+              </TouchableOpacity>
+            ) : undefined
+          }
+        />
 
-      <View style={styles.content}>
-        <View style={styles.instructionBanner}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.teal} />
-          <Text style={styles.instructionText}>
-            Tocca una zona per modificare le proprietà
-          </Text>
-        </View>
-
-        <View style={styles.floorPlanContainer}>
-          <GestureDetector gesture={composedGesture}>
-            <Animated.View style={[styles.svgContainer, animatedStyle]}>
-              <Svg
-                width={FLOOR_PLAN_SIZE}
-                height={FLOOR_PLAN_SIZE * 1.27}
-                viewBox={`0 0 ${FLOOR_PLAN_SIZE} ${FLOOR_PLAN_SIZE * 1.27}`}
-              >
-                <Rect
-                  x={0}
-                  y={0}
-                  width={FLOOR_PLAN_SIZE}
-                  height={FLOOR_PLAN_SIZE * 1.27}
-                  fill={colors.surface}
-                  stroke={colors.border}
-                  strokeWidth={2}
-                  rx={12}
-                />
-                {zones.map(renderZone)}
-              </Svg>
-            </Animated.View>
-          </GestureDetector>
-        </View>
-
-        <View style={styles.legendContainer}>
-          <Card variant="glass">
-            <View style={styles.legendContent}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.teal }]} />
-                <Text style={styles.legendText}>Disponibile</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-                <Text style={styles.legendText}>Prenotata</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
-                <Text style={styles.legendText}>Venduta</Text>
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.editorNote}>
-          <Card variant="outline">
-            <View style={styles.editorNoteContent}>
-              <Ionicons name="desktop-outline" size={24} color={colors.mutedForeground} />
-              <Text style={styles.editorNoteText}>
-                Per disegnare nuove zone, usa l'editor web. La versione mobile consente solo modifiche rapide alle proprietà.
+        <View style={[styles.content, isLandscape && styles.contentLandscape]}>
+          <View style={[styles.editorSection, isLandscape && styles.editorSectionLandscape]}>
+            <View style={styles.instructionBanner} testID="instruction-banner">
+              <Ionicons name="information-circle-outline" size={20} color={colors.teal} />
+              <Text style={styles.instructionText}>
+                Tocca una zona per modificare le proprietà
               </Text>
             </View>
-          </Card>
-        </View>
-      </View>
 
-      <Modal
-        visible={showEditModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowEditModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowEditModal(false)}
-        >
-          <View style={[styles.editPanel, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <TouchableOpacity activeOpacity={1}>
-              <View style={styles.editPanelHandle} />
-
-              <Text style={styles.editPanelTitle}>Modifica Zona</Text>
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Nome Zona</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editForm.name}
-                    onChangeText={(text) => setEditForm({ ...editForm, name: text })}
-                    placeholder="Nome della zona"
-                    placeholderTextColor={colors.mutedForeground}
-                    data-testid="input-zone-name"
-                  />
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Tipo</Text>
-                  <View style={styles.typeGrid}>
-                    {ZONE_TYPES.map((type) => (
-                      <TouchableOpacity
-                        key={type.value}
-                        style={[
-                          styles.typeButton,
-                          editForm.type === type.value && styles.typeButtonActive,
-                        ]}
-                        onPress={() => setEditForm({ ...editForm, type: type.value })}
-                        data-testid={`button-type-${type.value}`}
-                      >
-                        <Text
-                          style={[
-                            styles.typeButtonText,
-                            editForm.type === type.value && styles.typeButtonTextActive,
-                          ]}
-                        >
-                          {type.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Capacità</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editForm.capacity}
-                    onChangeText={(text) => setEditForm({ ...editForm, capacity: text })}
-                    placeholder="Numero di posti"
-                    placeholderTextColor={colors.mutedForeground}
-                    keyboardType="number-pad"
-                    data-testid="input-zone-capacity"
-                  />
-                </View>
-
-                <View style={styles.formRow}>
-                  <View style={[styles.formGroup, { flex: 1 }]}>
-                    <Text style={styles.formLabel}>Tariffa</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={editForm.priceTier}
-                      onChangeText={(text) => setEditForm({ ...editForm, priceTier: text })}
-                      placeholder="es. VIP, Standard"
-                      placeholderTextColor={colors.mutedForeground}
-                      data-testid="input-zone-price-tier"
-                    />
-                  </View>
-                  <View style={[styles.formGroup, { flex: 1 }]}>
-                    <Text style={styles.formLabel}>Prezzo €</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={editForm.priceAmount}
-                      onChangeText={(text) => setEditForm({ ...editForm, priceAmount: text })}
-                      placeholder="0.00"
-                      placeholderTextColor={colors.mutedForeground}
-                      keyboardType="decimal-pad"
-                      data-testid="input-zone-price-amount"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Stato</Text>
-                  <View style={styles.statusGrid}>
-                    {ZONE_STATUSES.map((status) => (
-                      <TouchableOpacity
-                        key={status.value}
-                        style={[
-                          styles.statusButton,
-                          { borderColor: status.color },
-                          editForm.status === status.value && { backgroundColor: `${status.color}20` },
-                        ]}
-                        onPress={() => setEditForm({ ...editForm, status: status.value })}
-                        data-testid={`button-status-${status.value}`}
-                      >
-                        <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-                        <Text
-                          style={[
-                            styles.statusButtonText,
-                            editForm.status === status.value && { color: status.color },
-                          ]}
-                        >
-                          {status.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.editActions}>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => setShowEditModal(false)}
-                    data-testid="button-cancel-edit"
+            <View style={styles.floorPlanContainer}>
+              <GestureDetector gesture={composedGesture}>
+                <Animated.View style={[styles.svgContainer, animatedStyle]} testID="floor-plan-svg">
+                  <Svg
+                    width={FLOOR_PLAN_SIZE}
+                    height={FLOOR_PLAN_SIZE * 1.27}
+                    viewBox={`0 0 ${FLOOR_PLAN_SIZE} ${FLOOR_PLAN_SIZE * 1.27}`}
                   >
-                    <Text style={styles.cancelButtonText}>Annulla</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={handleSaveZone}
-                    disabled={saving}
-                    data-testid="button-save-zone"
-                  >
-                    {saving ? (
-                      <ActivityIndicator size="small" color={colors.primaryForeground} />
-                    ) : (
-                      <Text style={styles.saveButtonTextPrimary}>Salva Modifiche</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </TouchableOpacity>
+                    <Rect
+                      x={0}
+                      y={0}
+                      width={FLOOR_PLAN_SIZE}
+                      height={FLOOR_PLAN_SIZE * 1.27}
+                      fill={colors.surface}
+                      stroke={colors.border}
+                      strokeWidth={2}
+                      rx={12}
+                    />
+                    {zones.map(renderZone)}
+                  </Svg>
+                </Animated.View>
+              </GestureDetector>
+            </View>
           </View>
-        </TouchableOpacity>
-      </Modal>
+
+          <View style={[styles.infoSection, isLandscape && styles.infoSectionLandscape]}>
+            <Card variant="glass" testID="card-legend">
+              <View style={[styles.legendContent, isLandscape && styles.legendContentLandscape]}>
+                <View style={styles.legendItem} testID="legend-available">
+                  <View style={[styles.legendDot, { backgroundColor: colors.teal }]} />
+                  <Text style={styles.legendText}>Disponibile</Text>
+                </View>
+                <View style={styles.legendItem} testID="legend-reserved">
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={styles.legendText}>Prenotata</Text>
+                </View>
+                <View style={styles.legendItem} testID="legend-sold">
+                  <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
+                  <Text style={styles.legendText}>Venduta</Text>
+                </View>
+              </View>
+            </Card>
+
+            <Card variant="outline" testID="card-editor-note">
+              <View style={styles.editorNoteContent}>
+                <Ionicons name="desktop-outline" size={24} color={colors.mutedForeground} />
+                <Text style={styles.editorNoteText}>
+                  Per disegnare nuove zone, usa l'editor web. La versione mobile consente solo modifiche rapide alle proprietà.
+                </Text>
+              </View>
+            </Card>
+          </View>
+        </View>
+
+        <Modal
+          visible={showEditModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowEditModal(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowEditModal(false)}
+            testID="modal-overlay"
+          >
+            <View style={styles.editPanel}>
+              <TouchableOpacity activeOpacity={1}>
+                <View style={styles.editPanelHandle} />
+
+                <Text style={styles.editPanelTitle} testID="text-edit-title">Modifica Zona</Text>
+
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Nome Zona</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={editForm.name}
+                      onChangeText={(text) => setEditForm({ ...editForm, name: text })}
+                      placeholder="Nome della zona"
+                      placeholderTextColor={colors.mutedForeground}
+                      testID="input-zone-name"
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Tipo</Text>
+                    <View style={styles.typeGrid}>
+                      {ZONE_TYPES.map((type) => (
+                        <TouchableOpacity
+                          key={type.value}
+                          style={[
+                            styles.typeButton,
+                            editForm.type === type.value && styles.typeButtonActive,
+                          ]}
+                          onPress={() => setEditForm({ ...editForm, type: type.value })}
+                          testID={`button-type-${type.value}`}
+                        >
+                          <Text
+                            style={[
+                              styles.typeButtonText,
+                              editForm.type === type.value && styles.typeButtonTextActive,
+                            ]}
+                          >
+                            {type.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Capacità</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={editForm.capacity}
+                      onChangeText={(text) => setEditForm({ ...editForm, capacity: text })}
+                      placeholder="Numero di posti"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="number-pad"
+                      testID="input-zone-capacity"
+                    />
+                  </View>
+
+                  <View style={styles.formRow}>
+                    <View style={[styles.formGroup, { flex: 1 }]}>
+                      <Text style={styles.formLabel}>Tariffa</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={editForm.priceTier}
+                        onChangeText={(text) => setEditForm({ ...editForm, priceTier: text })}
+                        placeholder="es. VIP, Standard"
+                        placeholderTextColor={colors.mutedForeground}
+                        testID="input-zone-price-tier"
+                      />
+                    </View>
+                    <View style={[styles.formGroup, { flex: 1 }]}>
+                      <Text style={styles.formLabel}>Prezzo €</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={editForm.priceAmount}
+                        onChangeText={(text) => setEditForm({ ...editForm, priceAmount: text })}
+                        placeholder="0.00"
+                        placeholderTextColor={colors.mutedForeground}
+                        keyboardType="decimal-pad"
+                        testID="input-zone-price-amount"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Stato</Text>
+                    <View style={styles.statusGrid}>
+                      {ZONE_STATUSES.map((status) => (
+                        <TouchableOpacity
+                          key={status.value}
+                          style={[
+                            styles.statusButton,
+                            { borderColor: status.color },
+                            editForm.status === status.value && { backgroundColor: `${status.color}20` },
+                          ]}
+                          onPress={() => setEditForm({ ...editForm, status: status.value })}
+                          testID={`button-status-${status.value}`}
+                        >
+                          <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                          <Text
+                            style={[
+                              styles.statusButtonText,
+                              editForm.status === status.value && { color: status.color },
+                            ]}
+                          >
+                            {status.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => setShowEditModal(false)}
+                      testID="button-cancel-edit"
+                    >
+                      <Text style={styles.cancelButtonText}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      onPress={handleSaveZone}
+                      disabled={saving}
+                      testID="button-save-zone"
+                    >
+                      {saving ? (
+                        <ActivityIndicator size="small" color={colors.primaryForeground} />
+                      ) : (
+                        <Text style={styles.saveButtonTextPrimary}>Salva Modifiche</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </SafeAreaView>
     </GestureHandlerRootView>
   );
 }
@@ -552,6 +556,24 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentLandscape: {
+    flexDirection: 'row',
+  },
+  editorSection: {
+    flex: 1,
+  },
+  editorSectionLandscape: {
+    flex: 2,
+  },
+  infoSection: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  infoSectionLandscape: {
+    flex: 1,
+    justifyContent: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -597,14 +619,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
   },
-  legendContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
   legendContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: spacing.sm,
+  },
+  legendContentLandscape: {
+    flexDirection: 'column',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
   },
   legendItem: {
     flexDirection: 'row',
@@ -619,10 +642,6 @@ const styles = StyleSheet.create({
   legendText: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
-  },
-  editorNote: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
   },
   editorNoteContent: {
     flexDirection: 'row',
@@ -646,6 +665,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius['2xl'],
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
     maxHeight: '80%',
   },
   editPanelHandle: {
@@ -659,24 +679,20 @@ const styles = StyleSheet.create({
   editPanelTitle: {
     color: colors.foreground,
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.semibold,
     marginBottom: spacing.lg,
   },
   formGroup: {
-    marginBottom: spacing.md,
-  },
-  formRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   formLabel: {
-    color: colors.mutedForeground,
+    color: colors.foreground,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     marginBottom: spacing.sm,
   },
   textInput: {
-    backgroundColor: colors.muted,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
@@ -684,6 +700,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     color: colors.foreground,
     fontSize: fontSize.base,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
   },
   typeGrid: {
     flexDirection: 'row',
@@ -694,7 +714,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.muted,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -703,9 +723,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   typeButtonText: {
-    color: colors.mutedForeground,
+    color: colors.foreground,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
   },
   typeButtonTextActive: {
     color: colors.primaryForeground,
@@ -722,33 +741,30 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.muted,
     borderWidth: 1,
   },
   statusDot: {
     width: 8,
     height: 8,
-    borderRadius: borderRadius.full,
+    borderRadius: 4,
   },
   statusButtonText: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    color: colors.foreground,
+    fontSize: fontSize.sm,
   },
   editActions: {
     flexDirection: 'row',
     gap: spacing.md,
     marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   cancelButton: {
     flex: 1,
-    alignItems: 'center',
     paddingVertical: spacing.md,
+    alignItems: 'center',
+    backgroundColor: colors.background,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.muted,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cancelButtonText: {
     color: colors.foreground,
@@ -756,11 +772,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   saveButton: {
-    flex: 2,
-    alignItems: 'center',
+    flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    alignItems: 'center',
     backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
   },
   saveButtonTextPrimary: {
     color: colors.primaryForeground,

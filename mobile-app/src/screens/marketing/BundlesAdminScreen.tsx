@@ -11,12 +11,13 @@ import {
   FlatList,
   Modal,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 
 interface Bundle {
@@ -61,11 +62,16 @@ const ITEM_TYPES = [
 
 export default function BundlesAdminScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedBundle, setSelectedBundle] = useState<Bundle | null>(null);
+
+  const numColumns = isTablet || isLandscape ? 4 : 2;
+  const statCardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const [newBundle, setNewBundle] = useState({
     name: '',
@@ -194,101 +200,104 @@ export default function BundlesAdminScreen() {
     return ITEM_TYPES.find(t => t.id === type) || ITEM_TYPES[0];
   };
 
-  const renderBundleCard = ({ item }: { item: Bundle }) => {
+  const renderBundleCard = ({ item, index }: { item: Bundle; index: number }) => {
     const statusConfig = getStatusConfig(item.status);
 
     return (
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedBundle(item);
-          navigation.navigate('BundleDetail', { bundleId: item.id });
-        }}
-        activeOpacity={0.8}
-        data-testid={`card-bundle-${item.id}`}
-      >
-        <Card variant="glass" style={styles.bundleCard}>
-          <View style={styles.bundleHeader}>
-            <View style={styles.bundleInfo}>
-              <View style={styles.bundleNameRow}>
-                <Text style={styles.bundleName}>{item.name}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]}>
-                  <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                    {statusConfig.label}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.bundleDescription}>{item.description}</Text>
-            </View>
-            <Switch
-              value={item.status === 'active'}
-              onValueChange={(value) => toggleBundleMutation.mutate({ bundleId: item.id, active: value })}
-              trackColor={{ false: colors.surface, true: `${colors.teal}50` }}
-              thumbColor={item.status === 'active' ? colors.teal : colors.mutedForeground}
-              disabled={item.status === 'soldout' || item.status === 'expired'}
-            />
-          </View>
-
-          <View style={styles.itemsList}>
-            {item.items.map((bundleItem) => {
-              const typeConfig = getItemTypeConfig(bundleItem.type);
-              return (
-                <View key={bundleItem.id} style={styles.itemRow}>
-                  <View style={[styles.itemIcon, { backgroundColor: `${typeConfig.color}20` }]}>
-                    <Ionicons name={typeConfig.icon as any} size={14} color={typeConfig.color} />
+      <View style={[isTablet && styles.bundleCardWrapper]}>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedBundle(item);
+            navigation.navigate('BundleDetail', { bundleId: item.id });
+          }}
+          activeOpacity={0.8}
+          testID={`card-bundle-${item.id}`}
+        >
+          <Card variant="glass" style={styles.bundleCard}>
+            <View style={styles.bundleHeader}>
+              <View style={styles.bundleInfo}>
+                <View style={styles.bundleNameRow}>
+                  <Text style={styles.bundleName} testID={`text-bundle-name-${item.id}`}>{item.name}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]} testID={`badge-status-${item.id}`}>
+                    <Text style={[styles.statusText, { color: statusConfig.color }]}>
+                      {statusConfig.label}
+                    </Text>
                   </View>
-                  <Text style={styles.itemName}>
-                    {bundleItem.quantity}x {bundleItem.name}
-                  </Text>
-                  <Text style={styles.itemValue}>€{bundleItem.value}</Text>
                 </View>
-              );
-            })}
-          </View>
+                <Text style={styles.bundleDescription} testID={`text-description-${item.id}`}>{item.description}</Text>
+              </View>
+              <Switch
+                value={item.status === 'active'}
+                onValueChange={(value) => toggleBundleMutation.mutate({ bundleId: item.id, active: value })}
+                trackColor={{ false: colors.surface, true: `${colors.teal}50` }}
+                thumbColor={item.status === 'active' ? colors.teal : colors.mutedForeground}
+                disabled={item.status === 'soldout' || item.status === 'expired'}
+                testID={`switch-bundle-${item.id}`}
+              />
+            </View>
 
-          <View style={styles.pricingRow}>
-            <View style={styles.priceInfo}>
-              <Text style={styles.originalPrice}>€{item.originalPrice}</Text>
-              <Text style={styles.bundlePrice}>€{item.bundlePrice}</Text>
+            <View style={styles.itemsList} testID={`list-items-${item.id}`}>
+              {item.items.map((bundleItem) => {
+                const typeConfig = getItemTypeConfig(bundleItem.type);
+                return (
+                  <View key={bundleItem.id} style={styles.itemRow} testID={`item-${bundleItem.id}`}>
+                    <View style={[styles.itemIcon, { backgroundColor: `${typeConfig.color}20` }]}>
+                      <Ionicons name={typeConfig.icon as any} size={14} color={typeConfig.color} />
+                    </View>
+                    <Text style={styles.itemName}>
+                      {bundleItem.quantity}x {bundleItem.name}
+                    </Text>
+                    <Text style={styles.itemValue}>€{bundleItem.value}</Text>
+                  </View>
+                );
+              })}
             </View>
-            <View style={styles.savingsBadge}>
-              <Ionicons name="pricetag" size={14} color={colors.primary} />
-              <Text style={styles.savingsText}>-{item.savingsPercent}%</Text>
-            </View>
-          </View>
 
-          <View style={styles.bundleMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>{item.validFrom} - {item.validTo}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="cart-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>
-                {item.salesCount} venduti
-                {item.maxSales && ` / ${item.maxSales}`}
-              </Text>
-            </View>
-          </View>
-
-          {item.maxSales && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${(item.salesCount / item.maxSales) * 100}%` },
-                  ]}
-                />
+            <View style={styles.pricingRow}>
+              <View style={styles.priceInfo}>
+                <Text style={styles.originalPrice} testID={`text-original-${item.id}`}>€{item.originalPrice}</Text>
+                <Text style={styles.bundlePrice} testID={`text-price-${item.id}`}>€{item.bundlePrice}</Text>
+              </View>
+              <View style={styles.savingsBadge} testID={`badge-savings-${item.id}`}>
+                <Ionicons name="pricetag" size={14} color={colors.primary} />
+                <Text style={styles.savingsText}>-{item.savingsPercent}%</Text>
               </View>
             </View>
-          )}
-        </Card>
-      </TouchableOpacity>
+
+            <View style={styles.bundleMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText} testID={`text-dates-${item.id}`}>{item.validFrom} - {item.validTo}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="cart-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText} testID={`text-sales-${item.id}`}>
+                  {item.salesCount} venduti
+                  {item.maxSales && ` / ${item.maxSales}`}
+                </Text>
+              </View>
+            </View>
+
+            {item.maxSales && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${(item.salesCount / item.maxSales) * 100}%` },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
+          </Card>
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Bundle & Offerte"
         showBack
@@ -296,7 +305,7 @@ export default function BundlesAdminScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => setShowCreateModal(true)}
-            data-testid="button-create-bundle"
+            testID="button-create-bundle"
           >
             <Ionicons name="add" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -305,60 +314,65 @@ export default function BundlesAdminScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         <View style={styles.section}>
           <View style={styles.statsGrid}>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-active">
               <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
                 <Ionicons name="pricetags" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.statValue}>{mockStats.activeBundles}</Text>
+              <Text style={styles.statValue} testID="text-active-bundles">{mockStats.activeBundles}</Text>
               <Text style={styles.statLabel}>Bundle Attivi</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-sales">
               <View style={[styles.statIcon, { backgroundColor: `${colors.teal}20` }]}>
                 <Ionicons name="cart" size={20} color={colors.teal} />
               </View>
-              <Text style={styles.statValue}>{mockStats.totalSales}</Text>
+              <Text style={styles.statValue} testID="text-total-sales">{mockStats.totalSales}</Text>
               <Text style={styles.statLabel}>Vendite Totali</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-revenue">
               <View style={[styles.statIcon, { backgroundColor: `${colors.success}20` }]}>
                 <Ionicons name="cash" size={20} color={colors.success} />
               </View>
-              <Text style={styles.statValue}>€{mockStats.totalRevenue.toLocaleString()}</Text>
+              <Text style={styles.statValue} testID="text-revenue">€{mockStats.totalRevenue.toLocaleString()}</Text>
               <Text style={styles.statLabel}>Revenue</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-savings">
               <View style={[styles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
                 <Ionicons name="trending-down" size={20} color={colors.warning} />
               </View>
-              <Text style={styles.statValue}>{mockStats.averageSavings}%</Text>
+              <Text style={styles.statValue} testID="text-avg-savings">{mockStats.averageSavings}%</Text>
               <Text style={styles.statLabel}>Sconto Medio</Text>
             </Card>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>I Tuoi Bundle</Text>
+          <Text style={styles.sectionTitle} testID="text-bundles-title">I Tuoi Bundle</Text>
           <FlatList
+            key={`bundles-${isTablet ? 2 : 1}`}
             data={mockBundles}
             renderItem={renderBundleCard}
             keyExtractor={(item) => item.id}
+            numColumns={isTablet ? 2 : 1}
             scrollEnabled={false}
+            columnWrapperStyle={isTablet ? styles.bundleGridRow : undefined}
             ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
             ListEmptyComponent={
-              <Card style={styles.emptyCard} variant="glass">
+              <Card style={styles.emptyCard} variant="glass" testID="empty-bundles">
                 <Ionicons name="pricetags-outline" size={48} color={colors.mutedForeground} />
                 <Text style={styles.emptyTitle}>Nessun bundle</Text>
                 <Text style={styles.emptyText}>Crea il tuo primo bundle per iniziare</Text>
               </Card>
             }
+            testID="list-bundles"
           />
         </View>
       </ScrollView>
@@ -370,10 +384,10 @@ export default function BundlesAdminScreen() {
         onRequestClose={() => setShowCreateModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nuovo Bundle</Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)} data-testid="button-close-modal">
+              <Text style={styles.modalTitle} testID="text-modal-title">Nuovo Bundle</Text>
+              <TouchableOpacity onPress={() => setShowCreateModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -387,7 +401,7 @@ export default function BundlesAdminScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={newBundle.name}
                   onChangeText={(text) => setNewBundle({ ...newBundle, name: text })}
-                  data-testid="input-bundle-name"
+                  testID="input-bundle-name"
                 />
               </View>
 
@@ -401,13 +415,13 @@ export default function BundlesAdminScreen() {
                   numberOfLines={3}
                   value={newBundle.description}
                   onChangeText={(text) => setNewBundle({ ...newBundle, description: text })}
-                  data-testid="input-bundle-description"
+                  testID="input-bundle-description"
                 />
               </View>
 
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Aggiungi Articoli</Text>
-                <View style={styles.itemTypesGrid}>
+                <View style={[styles.itemTypesGrid, isLandscape && styles.itemTypesGridLandscape]}>
                   {ITEM_TYPES.map((type) => (
                     <TouchableOpacity
                       key={type.id}
@@ -415,7 +429,7 @@ export default function BundlesAdminScreen() {
                       onPress={() => {
                         Alert.alert('Aggiungi', `Seleziona un ${type.label.toLowerCase()} da aggiungere`);
                       }}
-                      data-testid={`button-add-${type.id}`}
+                      testID={`button-add-${type.id}`}
                     >
                       <View style={[styles.itemTypeIcon, { backgroundColor: `${type.color}20` }]}>
                         <Ionicons name={type.icon as any} size={20} color={type.color} />
@@ -435,7 +449,7 @@ export default function BundlesAdminScreen() {
                   keyboardType="decimal-pad"
                   value={newBundle.bundlePrice}
                   onChangeText={(text) => setNewBundle({ ...newBundle, bundlePrice: text })}
-                  data-testid="input-bundle-price"
+                  testID="input-bundle-price"
                 />
               </View>
             </ScrollView>
@@ -447,7 +461,7 @@ export default function BundlesAdminScreen() {
                 setNewBundle({ name: '', description: '', bundlePrice: '', items: [] });
               }}
               disabled={!newBundle.name}
-              data-testid="button-create"
+              testID="button-create"
             >
               <Text style={styles.buttonText}>Crea Bundle</Text>
             </Button>
@@ -459,11 +473,11 @@ export default function BundlesAdminScreen() {
         style={styles.fab}
         onPress={() => setShowCreateModal(true)}
         activeOpacity={0.8}
-        data-testid="button-fab-create"
+        testID="button-fab-create"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -474,6 +488,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   section: {
     marginBottom: spacing.lg,
@@ -491,7 +508,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   statCard: {
-    width: '48%',
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
@@ -514,6 +530,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     textAlign: 'center',
   },
+  bundleGridRow: {
+    gap: spacing.md,
+  },
+  bundleCardWrapper: {
+    flex: 1,
+  },
   bundleCard: {
     paddingVertical: spacing.lg,
   },
@@ -532,6 +554,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
+    flexWrap: 'wrap',
   },
   bundleName: {
     color: colors.foreground,
@@ -617,6 +640,8 @@ const styles = StyleSheet.create({
   bundleMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   metaItem: {
     flexDirection: 'row',
@@ -665,6 +690,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
     maxHeight: '90%',
   },
   modalHeader: {
@@ -692,13 +718,12 @@ const styles = StyleSheet.create({
   },
   formInput: {
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    padding: spacing.md,
     color: colors.foreground,
     fontSize: fontSize.base,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   formInputMultiline: {
     minHeight: 80,
@@ -709,27 +734,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  itemTypesGridLandscape: {
+    justifyContent: 'center',
+  },
   itemTypeButton: {
-    width: '47%',
     alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderStyle: 'dashed',
+    gap: spacing.xs,
+    width: '22%',
   },
   itemTypeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
   itemTypeLabel: {
     color: colors.mutedForeground,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
   },
   buttonText: {
     color: colors.primaryForeground,

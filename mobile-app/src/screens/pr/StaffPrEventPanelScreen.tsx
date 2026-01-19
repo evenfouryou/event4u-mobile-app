@@ -8,12 +8,13 @@ import {
   RefreshControl,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
@@ -44,13 +45,17 @@ type TabType = 'overview' | 'guests' | 'checkins';
 export function StaffPrEventPanelScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const eventId = route.params?.eventId;
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: event, refetch: refetchEvent } = useQuery<EventDetails>({
     queryKey: ['/api/staff/events', eventId],
@@ -177,8 +182,10 @@ export function StaffPrEventPanelScreen() {
     { key: 'checkins', label: 'In Attesa', count: pendingGuests.length },
   ];
 
+  const displayGuests = activeTab === 'checkins' ? pendingGuests : filteredGuests;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title={event?.name || 'Evento'} showBack />
 
       <View style={styles.tabsContainer}>
@@ -187,7 +194,7 @@ export function StaffPrEventPanelScreen() {
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
-            data-testid={`tab-${tab.key}`}
+            testID={`tab-${tab.key}`}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
               {tab.label}
@@ -205,15 +212,16 @@ export function StaffPrEventPanelScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
+        testID="scroll-event-panel"
       >
         {activeTab === 'overview' && event && (
           <>
-            <Card variant="elevated" style={styles.statusCard}>
+            <Card variant="elevated" style={styles.statusCard} testID="card-status">
               <View style={styles.statusHeader}>
                 <View style={styles.statusInfo}>
                   <View style={[styles.statusIndicator, { backgroundColor: colors.success }]} />
@@ -227,20 +235,20 @@ export function StaffPrEventPanelScreen() {
               </View>
             </Card>
 
-            <View style={styles.statsGrid}>
-              <Card variant="glass" style={styles.statCard}>
+            <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
+              <Card variant="glass" style={styles.statCard} testID="card-stat-attendance">
                 <Ionicons name="people" size={28} color={colors.purple} />
                 <Text style={styles.statValue}>{event.currentAttendance}</Text>
                 <Text style={styles.statLabel}>Presenti</Text>
                 <Text style={styles.statSubtext}>di {event.totalCapacity}</Text>
               </Card>
-              <Card variant="glass" style={styles.statCard}>
+              <Card variant="glass" style={styles.statCard} testID="card-stat-checkins">
                 <Ionicons name="checkmark-circle" size={28} color={colors.success} />
                 <Text style={styles.statValue}>{event.checkinsToday}</Text>
                 <Text style={styles.statLabel}>Check-in</Text>
                 <Text style={styles.statSubtext}>oggi</Text>
               </Card>
-              <Card variant="glass" style={styles.statCard}>
+              <Card variant="glass" style={styles.statCard} testID="card-stat-pending">
                 <Ionicons name="time" size={28} color={colors.warning} />
                 <Text style={styles.statValue}>{event.pendingGuests}</Text>
                 <Text style={styles.statLabel}>In Attesa</Text>
@@ -250,7 +258,7 @@ export function StaffPrEventPanelScreen() {
 
             <View style={styles.capacitySection}>
               <Text style={styles.sectionTitle}>Capienza</Text>
-              <Card variant="glass" style={styles.capacityCard}>
+              <Card variant="glass" style={styles.capacityCard} testID="card-capacity">
                 <View style={styles.capacityHeader}>
                   <Text style={styles.capacityPercent}>
                     {Math.round((event.currentAttendance / event.totalCapacity) * 100)}%
@@ -278,18 +286,20 @@ export function StaffPrEventPanelScreen() {
               </Card>
             </View>
 
-            <View style={styles.quickActions}>
+            <View style={[styles.quickActions, isLandscape && styles.quickActionsLandscape]}>
               <Button
                 title="Scansiona QR"
                 variant="primary"
                 icon={<Ionicons name="qr-code" size={20} color={colors.primaryForeground} />}
                 onPress={() => navigation.navigate('PRScanner', { eventId })}
+                testID="button-scan-qr"
               />
               <Button
                 title="Cerca Ospite"
                 variant="outline"
                 icon={<Ionicons name="search" size={20} color={colors.foreground} />}
                 onPress={() => setActiveTab('guests')}
+                testID="button-search-guest"
               />
             </View>
           </>
@@ -306,58 +316,69 @@ export function StaffPrEventPanelScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  data-testid="input-search-guest"
+                  testID="input-search-guest"
                 />
                 {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
                     <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
 
-            {(activeTab === 'checkins' ? pendingGuests : filteredGuests).map((guest) => (
-              <Card key={guest.id} variant="glass" style={styles.guestCard}>
-                <View style={styles.guestHeader}>
-                  <View style={styles.guestInfo}>
-                    <View style={styles.guestAvatar}>
-                      <Ionicons name="person" size={20} color={colors.foreground} />
-                    </View>
-                    <View>
-                      <Text style={styles.guestName}>{guest.name}</Text>
-                      <View style={styles.guestMeta}>
-                        <View style={[styles.ticketBadge, { backgroundColor: colors.purpleLight + '20' }]}>
-                          <Text style={[styles.ticketText, { color: colors.purpleLight }]}>{guest.ticketType}</Text>
+            <View style={[styles.guestsList, numColumns === 2 && styles.guestsListGrid]}>
+              {displayGuests.map((guest, index) => (
+                <View 
+                  key={guest.id}
+                  style={[
+                    numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+                    numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+                    numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+                  ]}
+                >
+                  <Card variant="glass" style={styles.guestCard} testID={`card-guest-${guest.id}`}>
+                    <View style={styles.guestHeader}>
+                      <View style={styles.guestInfo}>
+                        <View style={styles.guestAvatar}>
+                          <Ionicons name="person" size={20} color={colors.foreground} />
                         </View>
-                        <Text style={styles.addedBy}>da {guest.addedBy}</Text>
+                        <View>
+                          <Text style={styles.guestName}>{guest.name}</Text>
+                          <View style={styles.guestMeta}>
+                            <View style={[styles.ticketBadge, { backgroundColor: colors.purpleLight + '20' }]}>
+                              <Text style={[styles.ticketText, { color: colors.purpleLight }]}>{guest.ticketType}</Text>
+                            </View>
+                            <Text style={styles.addedBy}>da {guest.addedBy}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.guestStatus}>
+                        {guest.status === 'pending' ? (
+                          <TouchableOpacity
+                            style={styles.checkInButton}
+                            onPress={() => handleCheckIn(guest)}
+                            testID={`button-checkin-${guest.id}`}
+                          >
+                            <Ionicons name="checkmark" size={20} color={colors.primaryForeground} />
+                            <Text style={styles.checkInButtonText}>Check-in</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.checkedInBadge}>
+                            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                            <Text style={styles.checkedInTime}>
+                              {guest.checkInTime ? formatTime(guest.checkInTime) : ''}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
-                  </View>
-                  <View style={styles.guestStatus}>
-                    {guest.status === 'pending' ? (
-                      <TouchableOpacity
-                        style={styles.checkInButton}
-                        onPress={() => handleCheckIn(guest)}
-                        data-testid={`button-checkin-${guest.id}`}
-                      >
-                        <Ionicons name="checkmark" size={20} color={colors.primaryForeground} />
-                        <Text style={styles.checkInButtonText}>Check-in</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.checkedInBadge}>
-                        <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                        <Text style={styles.checkedInTime}>
-                          {guest.checkInTime ? formatTime(guest.checkInTime) : ''}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                  </Card>
                 </View>
-              </Card>
-            ))}
+              ))}
+            </View>
 
-            {(activeTab === 'checkins' ? pendingGuests : filteredGuests).length === 0 && (
-              <Card variant="glass" style={styles.emptyCard}>
+            {displayGuests.length === 0 && (
+              <Card variant="glass" style={styles.emptyCard} testID="card-empty">
                 <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
                 <Text style={styles.emptyTitle}>
                   {activeTab === 'checkins' ? 'Nessun ospite in attesa' : 'Nessun ospite trovato'}
@@ -370,7 +391,7 @@ export function StaffPrEventPanelScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -426,6 +447,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
+  contentContainer: {
+    paddingBottom: spacing.xl,
+  },
   statusCard: {
     padding: spacing.lg,
     marginBottom: spacing.lg,
@@ -468,6 +492,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     marginBottom: spacing.xl,
+  },
+  statsGridTablet: {
+    justifyContent: 'center',
   },
   statCard: {
     flex: 1,
@@ -530,6 +557,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
+  quickActionsLandscape: {
+    justifyContent: 'center',
+  },
   searchContainer: {
     marginBottom: spacing.lg,
   },
@@ -548,6 +578,13 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.foreground,
     fontSize: fontSize.base,
+  },
+  guestsList: {
+    gap: spacing.md,
+  },
+  guestsListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   guestCard: {
     padding: spacing.lg,

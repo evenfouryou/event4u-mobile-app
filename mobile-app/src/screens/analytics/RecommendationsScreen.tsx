@@ -8,10 +8,11 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -36,7 +37,9 @@ const TABS = [
 
 export default function RecommendationsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -217,8 +220,14 @@ export default function RecommendationsScreen() {
     }
   };
 
-  const renderRecommendationCard = ({ item }: { item: Recommendation }) => (
-    <View style={styles.recommendationCard} data-testid={`card-recommendation-${item.id}`}>
+  const renderRecommendationCard = ({ item, index }: { item: Recommendation; index: number }) => (
+    <View 
+      style={[
+        styles.recommendationCard,
+        (isLandscape || isTablet) && styles.recommendationCardWide,
+      ]} 
+      testID={`card-recommendation-${item.id}`}
+    >
       <Card variant="glass">
         <View style={styles.cardHeader}>
           <View style={[styles.typeIcon, { backgroundColor: `${getPriorityColor(item.priority)}20` }]}>
@@ -258,7 +267,7 @@ export default function RecommendationsScreen() {
             style={styles.dismissButton}
             onPress={() => dismissRecommendation(item.id)}
             activeOpacity={0.8}
-            data-testid={`button-dismiss-${item.id}`}
+            testID={`button-dismiss-${item.id}`}
           >
             <Text style={styles.dismissButtonText}>Ignora</Text>
           </TouchableOpacity>
@@ -267,7 +276,7 @@ export default function RecommendationsScreen() {
             onPress={() => applyRecommendation(item.id)}
             activeOpacity={0.8}
             disabled={applying === item.id}
-            data-testid={`button-apply-${item.id}`}
+            testID={`button-apply-${item.id}`}
           >
             {applying === item.id ? (
               <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -285,18 +294,18 @@ export default function RecommendationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Raccomandazioni" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento raccomandazioni...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento raccomandazioni...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Raccomandazioni" showBack onBack={() => navigation.goBack()} />
       
       <View style={styles.tabsContainer}>
@@ -304,13 +313,14 @@ export default function RecommendationsScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsContent}
+          testID="scroll-tabs"
         >
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab.id}
               style={[styles.tab, activeTab === tab.id && styles.tabActive]}
               onPress={() => setActiveTab(tab.id)}
-              data-testid={`tab-${tab.id}`}
+              testID={`tab-${tab.id}`}
             >
               <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
                 {tab.label}
@@ -321,22 +331,22 @@ export default function RecommendationsScreen() {
         </ScrollView>
       </View>
 
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryItem}>
+      <View style={[styles.summaryRow, (isLandscape || isTablet) && styles.summaryRowWide]}>
+        <View style={styles.summaryItem} testID="summary-urgent">
           <Ionicons name="alert-circle" size={20} color={colors.destructive} />
           <Text style={styles.summaryCount}>
             {recommendations.filter(r => r.priority === 'high' && r.status === 'pending').length}
           </Text>
           <Text style={styles.summaryLabel}>Urgenti</Text>
         </View>
-        <View style={styles.summaryItem}>
+        <View style={styles.summaryItem} testID="summary-important">
           <Ionicons name="time" size={20} color={colors.warning} />
           <Text style={styles.summaryCount}>
             {recommendations.filter(r => r.priority === 'medium' && r.status === 'pending').length}
           </Text>
           <Text style={styles.summaryLabel}>Importanti</Text>
         </View>
-        <View style={styles.summaryItem}>
+        <View style={styles.summaryItem} testID="summary-applied">
           <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
           <Text style={styles.summaryCount}>
             {recommendations.filter(r => r.status === 'applied').length}
@@ -349,17 +359,24 @@ export default function RecommendationsScreen() {
         data={filteredRecommendations}
         renderItem={renderRecommendationCard}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={(isLandscape || isTablet) ? 2 : 1}
+        key={(isLandscape || isTablet) ? 'two-columns' : 'one-column'}
+        contentContainerStyle={[
+          styles.listContent,
+          (isLandscape || isTablet) && styles.listContentWide,
+        ]}
+        columnWrapperStyle={(isLandscape || isTablet) ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
+        testID="list-recommendations"
         ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
+          <Card style={styles.emptyCard} variant="glass" testID="empty-state">
             <Ionicons name="checkmark-done-circle-outline" size={48} color={colors.teal} />
             <Text style={styles.emptyTitle}>Tutto a posto!</Text>
             <Text style={styles.emptyText}>Nessuna raccomandazione in sospeso</Text>
           </Card>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -414,6 +431,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.md,
   },
+  summaryRowWide: {
+    paddingHorizontal: spacing.xl,
+  },
   summaryItem: {
     flex: 1,
     flexDirection: 'row',
@@ -438,9 +458,20 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: 120,
+  },
+  listContentWide: {
+    paddingHorizontal: spacing.md,
+  },
+  columnWrapper: {
+    gap: spacing.md,
   },
   recommendationCard: {
     marginBottom: spacing.md,
+  },
+  recommendationCardWide: {
+    flex: 1,
+    maxWidth: '50%',
   },
   cardHeader: {
     flexDirection: 'row',

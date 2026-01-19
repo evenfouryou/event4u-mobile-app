@@ -7,11 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useWindowDimensions,
-  Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -47,8 +46,9 @@ interface Recommendation {
 
 export default function AnalyticsHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -193,24 +193,24 @@ export default function AnalyticsHomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="AI Analytics" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento analisi...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento analisi...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="AI Analytics"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('Insights')}
-            data-testid="button-insights"
+            testID="button-insights"
           >
             <Ionicons name="bulb-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -218,38 +218,42 @@ export default function AnalyticsHomeScreen() {
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-analytics-home"
       >
-        <View style={styles.section}>
-          <Card variant="glass" style={styles.summaryCard}>
+        <View style={[styles.section, (isLandscape || isTablet) && styles.sectionWide]}>
+          <Card variant="glass" style={styles.summaryCard} testID="card-summary">
             <View style={styles.summaryHeader}>
               <View style={styles.summaryIcon}>
                 <Ionicons name="analytics" size={24} color={colors.primary} />
               </View>
               <View style={styles.summaryTitleContainer}>
-                <Text style={styles.summaryTitle}>Riepilogo AI</Text>
-                <Text style={styles.summarySubtitle}>Ultimo aggiornamento: ora</Text>
+                <Text style={styles.summaryTitle} testID="text-summary-title">Riepilogo AI</Text>
+                <Text style={styles.summarySubtitle} testID="text-summary-subtitle">Ultimo aggiornamento: ora</Text>
               </View>
             </View>
             <View style={styles.insightsContainer}>
               {summary?.insights.map((insight, index) => (
-                <View key={index} style={styles.insightItem}>
+                <View key={index} style={styles.insightItem} testID={`item-insight-${index}`}>
                   <View style={[styles.insightDot, { backgroundColor: index === 1 ? colors.warning : colors.teal }]} />
                   <Text style={styles.insightText}>{insight}</Text>
                 </View>
               ))}
             </View>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
+            <View style={[styles.statsGrid, (isLandscape || isTablet) && styles.statsGridWide]}>
+              <View style={styles.statItem} testID="stat-revenue">
                 <Text style={styles.statValue}>€{summary?.totalRevenue.toLocaleString('it-IT')}</Text>
                 <Text style={styles.statLabel}>Fatturato</Text>
               </View>
-              <View style={styles.statItem}>
+              <View style={styles.statItem} testID="stat-events">
                 <Text style={styles.statValue}>{summary?.totalEvents}</Text>
                 <Text style={styles.statLabel}>Eventi</Text>
               </View>
-              <View style={styles.statItem}>
+              <View style={styles.statItem} testID="stat-efficiency">
                 <Text style={[styles.statValue, { color: colors.teal }]}>{summary?.staffEfficiency}%</Text>
                 <Text style={styles.statLabel}>Efficienza</Text>
               </View>
@@ -257,94 +261,105 @@ export default function AnalyticsHomeScreen() {
           </Card>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trend Consumi</Text>
-          <Card variant="glass">
-            <View style={styles.chartContainer}>
-              <View style={styles.chartBars}>
-                {trendData.map((point, index) => (
-                  <View key={index} style={styles.chartBarContainer}>
-                    <View
-                      style={[
-                        styles.chartBar,
-                        {
-                          height: (point.value / maxTrendValue) * 100,
-                          backgroundColor: index === trendData.length - 2 ? colors.primary : colors.teal,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.chartLabel}>{point.label}</Text>
-                  </View>
-                ))}
+        <View style={[
+          (isLandscape || isTablet) && styles.twoColumnContainer,
+        ]}>
+          <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+            <Text style={styles.sectionTitle} testID="text-trends-title">Trend Consumi</Text>
+            <Card variant="glass" testID="card-trends">
+              <View style={styles.chartContainer}>
+                <View style={styles.chartBars}>
+                  {trendData.map((point, index) => (
+                    <View key={index} style={styles.chartBarContainer} testID={`bar-trend-${index}`}>
+                      <View
+                        style={[
+                          styles.chartBar,
+                          {
+                            height: (point.value / maxTrendValue) * 100,
+                            backgroundColor: index === trendData.length - 2 ? colors.primary : colors.teal,
+                          },
+                        ]}
+                      />
+                      <Text style={styles.chartLabel}>{point.label}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          </Card>
-        </View>
+            </Card>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top Prodotti</Text>
-          <Card variant="glass">
-            {topProducts.map((product, index) => (
-              <View key={index} style={styles.productItem}>
-                <View style={styles.productRank}>
-                  <Text style={styles.productRankText}>{index + 1}</Text>
-                </View>
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName}>{product.name}</Text>
-                  <View style={styles.productBarContainer}>
-                    <View
-                      style={[
-                        styles.productBar,
-                        { width: `${(product.quantity / maxProductValue) * 100}%` },
-                      ]}
-                    />
+          <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+            <Text style={styles.sectionTitle} testID="text-products-title">Top Prodotti</Text>
+            <Card variant="glass" testID="card-products">
+              {topProducts.map((product, index) => (
+                <View key={index} style={styles.productItem} testID={`item-product-${index}`}>
+                  <View style={styles.productRank}>
+                    <Text style={styles.productRankText}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{product.name}</Text>
+                    <View style={styles.productBarContainer}>
+                      <View
+                        style={[
+                          styles.productBar,
+                          { width: `${(product.quantity / maxProductValue) * 100}%` },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.productStats}>
+                    <Text style={styles.productQuantity}>{product.quantity}</Text>
+                    <Text style={styles.productRevenue}>€{product.revenue}</Text>
                   </View>
                 </View>
-                <View style={styles.productStats}>
-                  <Text style={styles.productQuantity}>{product.quantity}</Text>
-                  <Text style={styles.productRevenue}>€{product.revenue}</Text>
-                </View>
-              </View>
-            ))}
-          </Card>
+              ))}
+            </Card>
+          </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Raccomandazioni</Text>
+            <Text style={styles.sectionTitle} testID="text-recommendations-title">Raccomandazioni</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Recommendations')}
-              data-testid="button-view-all-recommendations"
+              testID="button-view-all-recommendations"
             >
               <Text style={styles.viewAllText}>Vedi tutte</Text>
             </TouchableOpacity>
           </View>
-          {recommendations.map((rec) => (
-            <TouchableOpacity
-              key={rec.id}
-              style={styles.recommendationCard}
-              onPress={() => navigation.navigate('Recommendations')}
-              activeOpacity={0.8}
-              data-testid={`card-recommendation-${rec.id}`}
-            >
-              <Card variant="glass">
-                <View style={styles.recommendationHeader}>
-                  <View style={[styles.recommendationIcon, { backgroundColor: `${getPriorityColor(rec.priority)}20` }]}>
-                    <Ionicons name={getTypeIcon(rec.type)} size={20} color={getPriorityColor(rec.priority)} />
+          <View style={[
+            (isLandscape || isTablet) && styles.recommendationsGrid,
+          ]}>
+            {recommendations.map((rec) => (
+              <TouchableOpacity
+                key={rec.id}
+                style={[
+                  styles.recommendationCard,
+                  (isLandscape || isTablet) && styles.recommendationCardWide,
+                ]}
+                onPress={() => navigation.navigate('Recommendations')}
+                activeOpacity={0.8}
+                testID={`card-recommendation-${rec.id}`}
+              >
+                <Card variant="glass">
+                  <View style={styles.recommendationHeader}>
+                    <View style={[styles.recommendationIcon, { backgroundColor: `${getPriorityColor(rec.priority)}20` }]}>
+                      <Ionicons name={getTypeIcon(rec.type)} size={20} color={getPriorityColor(rec.priority)} />
+                    </View>
+                    <View style={styles.recommendationContent}>
+                      <Text style={styles.recommendationTitle}>{rec.title}</Text>
+                      <Text style={styles.recommendationDescription}>{rec.description}</Text>
+                    </View>
+                    <View style={[styles.priorityBadge, { backgroundColor: `${getPriorityColor(rec.priority)}20` }]}>
+                      <Text style={[styles.priorityText, { color: getPriorityColor(rec.priority) }]}>
+                        {rec.priority === 'high' ? 'Alta' : rec.priority === 'medium' ? 'Media' : 'Bassa'}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.recommendationContent}>
-                    <Text style={styles.recommendationTitle}>{rec.title}</Text>
-                    <Text style={styles.recommendationDescription}>{rec.description}</Text>
-                  </View>
-                  <View style={[styles.priorityBadge, { backgroundColor: `${getPriorityColor(rec.priority)}20` }]}>
-                    <Text style={[styles.priorityText, { color: getPriorityColor(rec.priority) }]}>
-                      {rec.priority === 'high' ? 'Alta' : rec.priority === 'medium' ? 'Media' : 'Bassa'}
-                    </Text>
-                  </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))}
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </ScrollView>
 
@@ -353,7 +368,7 @@ export default function AnalyticsHomeScreen() {
         onPress={generateNewAnalysis}
         activeOpacity={0.8}
         disabled={generating}
-        data-testid="button-generate-analysis"
+        testID="button-generate-analysis"
       >
         {generating ? (
           <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -361,7 +376,7 @@ export default function AnalyticsHomeScreen() {
           <Ionicons name="sparkles" size={28} color={colors.primaryForeground} />
         )}
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -372,6 +387,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -386,6 +407,17 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  sectionWide: {
+    paddingHorizontal: spacing.md,
+  },
+  halfSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -459,6 +491,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
+  },
+  statsGridWide: {
+    justifyContent: 'space-evenly',
   },
   statItem: {
     alignItems: 'center',
@@ -552,8 +587,17 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
   },
+  recommendationsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
   recommendationCard: {
     marginBottom: spacing.sm,
+  },
+  recommendationCardWide: {
+    width: '50%',
+    paddingHorizontal: spacing.xs,
   },
   recommendationHeader: {
     flexDirection: 'row',

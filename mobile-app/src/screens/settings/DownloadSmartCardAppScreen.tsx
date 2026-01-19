@@ -1,12 +1,22 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Linking,
+  useWindowDimensions,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 export function DownloadSmartCardAppScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const handleDownloadWindows = () => {
     Linking.openURL('https://event4u.app/downloads/smartcard-windows');
@@ -51,12 +61,12 @@ export function DownloadSmartCardAppScreen() {
   ];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -66,10 +76,13 @@ export function DownloadSmartCardAppScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroSection}>
+        <View style={[styles.heroSection, isLandscape && styles.heroSectionLandscape]}>
           <View style={styles.heroIcon}>
             <Ionicons name="desktop-outline" size={48} color={colors.primary} />
           </View>
@@ -80,70 +93,84 @@ export function DownloadSmartCardAppScreen() {
           <Text style={styles.versionText}>Versione 2.1.0</Text>
         </View>
 
-        <View style={styles.downloadSection}>
-          <Text style={styles.sectionTitle}>Download</Text>
-          
-          <TouchableOpacity
-            style={styles.downloadCard}
-            onPress={handleDownloadWindows}
-            activeOpacity={0.8}
-            data-testid="button-download-windows"
-          >
-            <View style={styles.downloadIcon}>
-              <Ionicons name="logo-windows" size={32} color="#0078D4" />
-            </View>
-            <View style={styles.downloadInfo}>
-              <Text style={styles.downloadTitle}>Windows</Text>
-              <Text style={styles.downloadMeta}>Windows 10/11 • 45 MB</Text>
-            </View>
-            <Ionicons name="download-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
+        <View style={(isTablet || isLandscape) ? styles.contentGrid : undefined}>
+          <View style={[styles.leftColumn, (isTablet || isLandscape) && styles.leftColumnWide]}>
+            <View style={styles.downloadSection}>
+              <Text style={styles.sectionTitle}>Download</Text>
+              
+              <TouchableOpacity
+                style={styles.downloadCard}
+                onPress={handleDownloadWindows}
+                activeOpacity={0.8}
+                testID="button-download-windows"
+              >
+                <View style={styles.downloadIcon}>
+                  <Ionicons name="logo-windows" size={32} color="#0078D4" />
+                </View>
+                <View style={styles.downloadInfo}>
+                  <Text style={styles.downloadTitle}>Windows</Text>
+                  <Text style={styles.downloadMeta}>Windows 10/11 • 45 MB</Text>
+                </View>
+                <Ionicons name="download-outline" size={24} color={colors.primary} />
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.downloadCard}
-            onPress={handleDownloadMac}
-            activeOpacity={0.8}
-            data-testid="button-download-mac"
-          >
-            <View style={styles.downloadIcon}>
-              <Ionicons name="logo-apple" size={32} color={colors.foreground} />
+              <TouchableOpacity
+                style={styles.downloadCard}
+                onPress={handleDownloadMac}
+                activeOpacity={0.8}
+                testID="button-download-mac"
+              >
+                <View style={styles.downloadIcon}>
+                  <Ionicons name="logo-apple" size={32} color={colors.foreground} />
+                </View>
+                <View style={styles.downloadInfo}>
+                  <Text style={styles.downloadTitle}>macOS</Text>
+                  <Text style={styles.downloadMeta}>macOS 10.14+ • 52 MB</Text>
+                </View>
+                <Ionicons name="download-outline" size={24} color={colors.primary} />
+              </TouchableOpacity>
             </View>
-            <View style={styles.downloadInfo}>
-              <Text style={styles.downloadTitle}>macOS</Text>
-              <Text style={styles.downloadMeta}>macOS 10.14+ • 52 MB</Text>
-            </View>
-            <Ionicons name="download-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
 
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Funzionalità</Text>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name={feature.icon} size={24} color={colors.teal} />
-              </View>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
+            <View style={styles.requirementsSection}>
+              <Text style={styles.sectionTitle}>Requisiti di Sistema</Text>
+              <View style={styles.requirementsCard}>
+                {requirements.map((req, index) => (
+                  <View key={index} style={styles.requirementItem}>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                    <Text style={styles.requirementText}>{req}</Text>
+                  </View>
+                ))}
               </View>
             </View>
-          ))}
-        </View>
+          </View>
 
-        <View style={styles.requirementsSection}>
-          <Text style={styles.sectionTitle}>Requisiti di Sistema</Text>
-          <View style={styles.requirementsCard}>
-            {requirements.map((req, index) => (
-              <View key={index} style={styles.requirementItem}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                <Text style={styles.requirementText}>{req}</Text>
+          <View style={[styles.rightColumn, (isTablet || isLandscape) && styles.rightColumnWide]}>
+            <View style={styles.featuresSection}>
+              <Text style={styles.sectionTitle}>Funzionalità</Text>
+              <View style={(isTablet || isLandscape) ? styles.featuresGrid : undefined}>
+                {features.map((feature, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.featureCard,
+                      (isTablet || isLandscape) && styles.featureCardGrid,
+                    ]}
+                  >
+                    <View style={styles.featureIcon}>
+                      <Ionicons name={feature.icon} size={24} color={colors.teal} />
+                    </View>
+                    <View style={styles.featureContent}>
+                      <Text style={styles.featureTitle}>{feature.title}</Text>
+                      <Text style={styles.featureDescription}>{feature.description}</Text>
+                    </View>
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
           </View>
         </View>
 
-        <View style={styles.helpSection}>
+        <View style={[styles.helpSection, isTablet && styles.helpSectionTablet]}>
           <View style={styles.helpCard}>
             <Ionicons name="book-outline" size={24} color={colors.primary} />
             <View style={styles.helpContent}>
@@ -158,7 +185,7 @@ export function DownloadSmartCardAppScreen() {
             style={styles.docsButton}
             onPress={handleDocumentation}
             activeOpacity={0.8}
-            data-testid="button-documentation"
+            testID="button-documentation"
           >
             <Ionicons name="document-text-outline" size={20} color={colors.primary} />
             <Text style={styles.docsButtonText}>Apri Documentazione</Text>
@@ -172,7 +199,7 @@ export function DownloadSmartCardAppScreen() {
           </Text>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -187,6 +214,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -209,11 +239,18 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   heroSection: {
     alignItems: 'center',
     paddingVertical: spacing['2xl'],
     marginBottom: spacing.lg,
+  },
+  heroSectionLandscape: {
+    paddingVertical: spacing.xl,
   },
   heroIcon: {
     width: 96,
@@ -243,6 +280,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.teal,
     fontWeight: fontWeight.medium,
+  },
+  contentGrid: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnWide: {
+    flex: 1,
+    maxWidth: 400,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnWide: {
+    flex: 1,
   },
   downloadSection: {
     marginBottom: spacing.xl,
@@ -291,6 +345,11 @@ const styles = StyleSheet.create({
   featuresSection: {
     marginBottom: spacing.xl,
   },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -300,6 +359,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
+  },
+  featureCardGrid: {
+    flex: 1,
+    minWidth: 250,
+    marginBottom: 0,
   },
   featureIcon: {
     width: 48,
@@ -345,6 +409,11 @@ const styles = StyleSheet.create({
   },
   helpSection: {
     marginBottom: spacing.xl,
+  },
+  helpSectionTablet: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   helpCard: {
     flexDirection: 'row',

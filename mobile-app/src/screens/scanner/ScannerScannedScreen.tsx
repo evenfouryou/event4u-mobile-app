@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   FlatList,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface ScannedTicket {
@@ -45,10 +46,15 @@ const SCAN_RESULT_CONFIG = {
 export default function ScannerScannedScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const sessionId = route.params?.sessionId;
   const [refreshing, setRefreshing] = useState(false);
   const [filterResult, setFilterResult] = useState<string | null>(null);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
+  const contentMaxWidth = isTablet ? 1200 : undefined;
 
   const { data: scannedTickets, refetch: refetchTickets } = useQuery<ScannedTicket[]>({
     queryKey: ['/api/scanner/session', sessionId, 'scanned'],
@@ -88,12 +94,13 @@ export default function ScannerScannedScreen() {
 
   const renderFilterPill = (resultType: string | null, label: string, count: number) => (
     <TouchableOpacity
+      key={resultType || 'all'}
       style={[
         styles.filterPill,
         filterResult === resultType && styles.filterPillActive,
       ]}
       onPress={() => setFilterResult(filterResult === resultType ? null : resultType)}
-      data-testid={`filter-${resultType || 'all'}`}
+      testID={`filter-${resultType || 'all'}`}
     >
       <Text
         style={[
@@ -106,14 +113,23 @@ export default function ScannerScannedScreen() {
     </TouchableOpacity>
   );
 
-  const renderTicketCard = ({ item }: { item: ScannedTicket }) => {
+  const renderTicketCard = ({ item, index }: { item: ScannedTicket; index: number }) => {
     const resultConfig = SCAN_RESULT_CONFIG[item.scanResult];
+    const isLeftColumn = index % 2 === 0;
 
     return (
       <TouchableOpacity
         onPress={() => navigation.navigate('TicketDetail', { ticketCode: item.ticketCode })}
         activeOpacity={0.8}
-        data-testid={`card-scanned-${item.id}`}
+        testID={`card-scanned-${item.id}`}
+        style={[
+          styles.ticketCardWrapper,
+          numColumns === 2 && {
+            flex: 0.5,
+            paddingLeft: isLeftColumn ? 0 : spacing.sm,
+            paddingRight: isLeftColumn ? spacing.sm : 0,
+          },
+        ]}
       >
         <Card variant="glass" style={styles.ticketCard}>
           <View style={styles.ticketHeader}>
@@ -154,7 +170,7 @@ export default function ScannerScannedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Biglietti Scansionati"
         showBack
@@ -162,70 +178,97 @@ export default function ScannerScannedScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('ExportScans', { sessionId })}
-            data-testid="button-export"
+            testID="button-export"
           >
             <Ionicons name="download-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statsRow}>
-          <Card variant="glass" style={styles.mainStatCard}>
-            <Text style={styles.mainStatValue}>{mockStats.totalScanned}</Text>
-            <Text style={styles.mainStatLabel}>Totale Scansioni</Text>
-            <View style={styles.durationBadge}>
-              <Ionicons name="time-outline" size={12} color={colors.emerald} />
-              <Text style={styles.durationText}>{mockStats.duration}</Text>
+      <View style={[styles.contentContainer, contentMaxWidth ? { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' } : undefined]}>
+        <View style={styles.statsContainer}>
+          <View style={[styles.statsRow, isLandscape && styles.statsRowLandscape]}>
+            <Card variant="glass" style={[styles.mainStatCard, isLandscape && { flex: 1 }]}>
+              <Text style={styles.mainStatValue} testID="text-total-scanned">{mockStats.totalScanned}</Text>
+              <Text style={styles.mainStatLabel}>Totale Scansioni</Text>
+              <View style={styles.durationBadge}>
+                <Ionicons name="time-outline" size={12} color={colors.emerald} />
+                <Text style={styles.durationText} testID="text-duration">{mockStats.duration}</Text>
+              </View>
+            </Card>
+            
+            {isLandscape && (
+              <View style={styles.landscapeStatsGroup}>
+                <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
+                  <View style={[styles.statDot, { backgroundColor: colors.teal }]} />
+                  <Text style={styles.statValue} testID="text-valid-scans">{mockStats.validScans}</Text>
+                  <Text style={styles.statLabel}>Validi</Text>
+                </Card>
+                <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
+                  <View style={[styles.statDot, { backgroundColor: colors.destructive }]} />
+                  <Text style={styles.statValue} testID="text-invalid-scans">{mockStats.invalidScans}</Text>
+                  <Text style={styles.statLabel}>Non Validi</Text>
+                </Card>
+                <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
+                  <View style={[styles.statDot, { backgroundColor: colors.warning }]} />
+                  <Text style={styles.statValue} testID="text-duplicate-scans">{mockStats.duplicateScans}</Text>
+                  <Text style={styles.statLabel}>Duplicati</Text>
+                </Card>
+              </View>
+            )}
+          </View>
+
+          {!isLandscape && (
+            <View style={styles.statsRow}>
+              <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
+                <View style={[styles.statDot, { backgroundColor: colors.teal }]} />
+                <Text style={styles.statValue} testID="text-valid-scans">{mockStats.validScans}</Text>
+                <Text style={styles.statLabel}>Validi</Text>
+              </Card>
+              <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
+                <View style={[styles.statDot, { backgroundColor: colors.destructive }]} />
+                <Text style={styles.statValue} testID="text-invalid-scans">{mockStats.invalidScans}</Text>
+                <Text style={styles.statLabel}>Non Validi</Text>
+              </Card>
+              <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
+                <View style={[styles.statDot, { backgroundColor: colors.warning }]} />
+                <Text style={styles.statValue} testID="text-duplicate-scans">{mockStats.duplicateScans}</Text>
+                <Text style={styles.statLabel}>Duplicati</Text>
+              </Card>
             </View>
-          </Card>
+          )}
         </View>
 
-        <View style={styles.statsRow}>
-          <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
-            <View style={[styles.statDot, { backgroundColor: colors.teal }]} />
-            <Text style={styles.statValue}>{mockStats.validScans}</Text>
-            <Text style={styles.statLabel}>Validi</Text>
-          </Card>
-          <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
-            <View style={[styles.statDot, { backgroundColor: colors.destructive }]} />
-            <Text style={styles.statValue}>{mockStats.invalidScans}</Text>
-            <Text style={styles.statLabel}>Non Validi</Text>
-          </Card>
-          <Card variant="glass" style={[styles.statCard, styles.statCardSmall]}>
-            <View style={[styles.statDot, { backgroundColor: colors.warning }]} />
-            <Text style={styles.statValue}>{mockStats.duplicateScans}</Text>
-            <Text style={styles.statLabel}>Duplicati</Text>
-          </Card>
+        <View style={styles.filtersContainer}>
+          {renderFilterPill(null, 'Tutti', mockStats.totalScanned)}
+          {renderFilterPill('valid', 'Validi', mockStats.validScans)}
+          {renderFilterPill('invalid', 'Non Validi', mockStats.invalidScans)}
+          {renderFilterPill('duplicate', 'Duplicati', mockStats.duplicateScans)}
         </View>
-      </View>
 
-      <View style={styles.filtersContainer}>
-        {renderFilterPill(null, 'Tutti', mockStats.totalScanned)}
-        {renderFilterPill('valid', 'Validi', mockStats.validScans)}
-        {renderFilterPill('invalid', 'Non Validi', mockStats.invalidScans)}
-        {renderFilterPill('duplicate', 'Duplicati', mockStats.duplicateScans)}
+        <FlatList
+          data={filteredTickets}
+          renderItem={renderTicketCard}
+          keyExtractor={(item) => item.id}
+          key={numColumns}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          ListEmptyComponent={
+            <Card style={styles.emptyCard} variant="glass">
+              <Ionicons name="scan-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle} testID="text-empty-title">Nessuna scansione</Text>
+              <Text style={styles.emptyText} testID="text-empty-subtitle">I biglietti scansionati appariranno qui</Text>
+            </Card>
+          }
+          testID="list-scanned-tickets"
+        />
       </View>
-
-      <FlatList
-        data={filteredTickets}
-        renderItem={renderTicketCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
-        }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
-            <Ionicons name="scan-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyTitle}>Nessuna scansione</Text>
-            <Text style={styles.emptyText}>I biglietti scansionati appariranno qui</Text>
-          </Card>
-        }
-      />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -234,11 +277,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  contentContainer: {
+    flex: 1,
+  },
   statsContainer: {
     padding: spacing.lg,
     gap: spacing.md,
   },
   statsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  statsRowLandscape: {
+    alignItems: 'stretch',
+  },
+  landscapeStatsGroup: {
+    flex: 2,
     flexDirection: 'row',
     gap: spacing.md,
   },
@@ -301,6 +355,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
     marginBottom: spacing.md,
+    flexWrap: 'wrap',
   },
   filterPill: {
     paddingHorizontal: spacing.md,
@@ -324,6 +379,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  ticketCardWrapper: {
+    flex: 1,
   },
   ticketCard: {
     paddingVertical: spacing.lg,

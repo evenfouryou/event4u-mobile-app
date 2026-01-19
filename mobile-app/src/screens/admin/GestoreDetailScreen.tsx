@@ -10,10 +10,11 @@ import {
   Switch,
   Alert,
   Image,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -45,7 +46,9 @@ interface Company {
 export function GestoreDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const gestoreId = route.params?.gestoreId;
   const isCreateMode = route.params?.mode === 'create' || !gestoreId;
@@ -183,261 +186,280 @@ export function GestoreDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={isCreateMode ? 'Nuovo Gestore' : 'Modifica Gestore'} showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title={isCreateMode ? 'Nuovo Gestore' : 'Modifica Gestore'} showBack />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-form"
       >
-        <View style={styles.avatarSection}>
-          {renderAvatar()}
-          <TouchableOpacity style={styles.changeAvatarButton} data-testid="button-change-avatar">
-            <Ionicons name="camera-outline" size={16} color={colors.primary} />
-            <Text style={styles.changeAvatarText}>Cambia foto</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Card variant="glass" style={styles.formCard}>
-          <Text style={styles.formTitle}>Informazioni Personali</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Nome *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nome"
-              placeholderTextColor={colors.mutedForeground}
-              value={form.firstName}
-              onChangeText={(text) => setForm({ ...form, firstName: text })}
-              data-testid="input-first-name"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Cognome *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Cognome"
-              placeholderTextColor={colors.mutedForeground}
-              value={form.lastName}
-              onChangeText={(text) => setForm({ ...form, lastName: text })}
-              data-testid="input-last-name"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="email@esempio.it"
-              placeholderTextColor={colors.mutedForeground}
-              value={form.email}
-              onChangeText={(text) => setForm({ ...form, email: text })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              data-testid="input-email"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Telefono</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="+39 000 000 0000"
-              placeholderTextColor={colors.mutedForeground}
-              value={form.phone}
-              onChangeText={(text) => setForm({ ...form, phone: text })}
-              keyboardType="phone-pad"
-              data-testid="input-phone"
-            />
-          </View>
-        </Card>
-
-        <Card variant="glass" style={styles.formCard}>
-          <Text style={styles.formTitle}>Azienda e Ruolo</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Azienda</Text>
-            <View style={styles.selectContainer}>
-              <TouchableOpacity
-                style={styles.selectButton}
-                data-testid="button-select-company"
-              >
-                <Text style={[
-                  styles.selectButtonText,
-                  !form.companyId && styles.selectPlaceholder
-                ]}>
-                  {companies.find(c => c.id === form.companyId)?.name || 'Seleziona azienda'}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
+        <View style={[
+          styles.formLayout,
+          (isTablet || isLandscape) && styles.formLayoutLandscape
+        ]}>
+          <View style={[
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.columnLandscape
+          ]}>
+            <View style={styles.avatarSection}>
+              {renderAvatar()}
+              <TouchableOpacity style={styles.changeAvatarButton} testID="button-change-avatar">
+                <Ionicons name="camera-outline" size={16} color={colors.primary} />
+                <Text style={styles.changeAvatarText}>Cambia foto</Text>
               </TouchableOpacity>
             </View>
+
+            <Card variant="glass" style={styles.formCard} testID="card-personal-info">
+              <Text style={styles.formTitle} testID="text-form-title-personal">Informazioni Personali</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nome *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nome"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={form.firstName}
+                  onChangeText={(text) => setForm({ ...form, firstName: text })}
+                  testID="input-first-name"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Cognome *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Cognome"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={form.lastName}
+                  onChangeText={(text) => setForm({ ...form, lastName: text })}
+                  testID="input-last-name"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="email@esempio.it"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={form.email}
+                  onChangeText={(text) => setForm({ ...form, email: text })}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  testID="input-email"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Telefono</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="+39 000 000 0000"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={form.phone}
+                  onChangeText={(text) => setForm({ ...form, phone: text })}
+                  keyboardType="phone-pad"
+                  testID="input-phone"
+                />
+              </View>
+            </Card>
+
+            <Card variant="glass" style={styles.formCard} testID="card-company-role">
+              <Text style={styles.formTitle} testID="text-form-title-company">Azienda e Ruolo</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Azienda</Text>
+                <View style={styles.selectContainer}>
+                  <TouchableOpacity
+                    style={styles.selectButton}
+                    testID="button-select-company"
+                  >
+                    <Text style={[
+                      styles.selectButtonText,
+                      !form.companyId && styles.selectPlaceholder
+                    ]}>
+                      {companies.find(c => c.id === form.companyId)?.name || 'Seleziona azienda'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Ruolo</Text>
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleOption,
+                      form.role === 'gestore' && styles.roleOptionActive
+                    ]}
+                    onPress={() => setForm({ ...form, role: 'gestore' })}
+                    testID="button-role-gestore"
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color={form.role === 'gestore' ? colors.primaryForeground : colors.foreground}
+                    />
+                    <Text style={[
+                      styles.roleOptionText,
+                      form.role === 'gestore' && styles.roleOptionTextActive
+                    ]}>
+                      Gestore
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleOption,
+                      form.role === 'admin' && styles.roleOptionActive
+                    ]}
+                    onPress={() => setForm({ ...form, role: 'admin' })}
+                    testID="button-role-admin"
+                  >
+                    <Ionicons
+                      name="shield-outline"
+                      size={20}
+                      color={form.role === 'admin' ? colors.primaryForeground : colors.foreground}
+                    />
+                    <Text style={[
+                      styles.roleOptionText,
+                      form.role === 'admin' && styles.roleOptionTextActive
+                    ]}>
+                      Admin
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Stato</Text>
+                <View style={styles.roleSelector}>
+                  {['active', 'inactive', 'pending'].map((status) => (
+                    <TouchableOpacity
+                      key={status}
+                      style={[
+                        styles.statusOption,
+                        form.status === status && styles.statusOptionActive
+                      ]}
+                      onPress={() => setForm({ ...form, status: status as any })}
+                      testID={`button-status-${status}`}
+                    >
+                      <Text style={[
+                        styles.statusOptionText,
+                        form.status === status && styles.statusOptionTextActive
+                      ]}>
+                        {status === 'active' ? 'Attivo' : status === 'inactive' ? 'Inattivo' : 'In Attesa'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </Card>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Ruolo</Text>
-            <View style={styles.roleSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.roleOption,
-                  form.role === 'gestore' && styles.roleOptionActive
-                ]}
-                onPress={() => setForm({ ...form, role: 'gestore' })}
-                data-testid="button-role-gestore"
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color={form.role === 'gestore' ? colors.primaryForeground : colors.foreground}
-                />
-                <Text style={[
-                  styles.roleOptionText,
-                  form.role === 'gestore' && styles.roleOptionTextActive
-                ]}>
-                  Gestore
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleOption,
-                  form.role === 'admin' && styles.roleOptionActive
-                ]}
-                onPress={() => setForm({ ...form, role: 'admin' })}
-                data-testid="button-role-admin"
-              >
-                <Ionicons
-                  name="shield-outline"
-                  size={20}
-                  color={form.role === 'admin' ? colors.primaryForeground : colors.foreground}
-                />
-                <Text style={[
-                  styles.roleOptionText,
-                  form.role === 'admin' && styles.roleOptionTextActive
-                ]}>
-                  Admin
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Stato</Text>
-            <View style={styles.roleSelector}>
-              {['active', 'inactive', 'pending'].map((status) => (
-                <TouchableOpacity
-                  key={status}
-                  style={[
-                    styles.statusOption,
-                    form.status === status && styles.statusOptionActive
-                  ]}
-                  onPress={() => setForm({ ...form, status: status as any })}
-                  data-testid={`button-status-${status}`}
-                >
-                  <Text style={[
-                    styles.statusOptionText,
-                    form.status === status && styles.statusOptionTextActive
-                  ]}>
-                    {status === 'active' ? 'Attivo' : status === 'inactive' ? 'Inattivo' : 'In Attesa'}
+          <View style={[
+            styles.rightColumn,
+            (isTablet || isLandscape) && styles.columnLandscape
+          ]}>
+            <Card variant="glass" style={styles.formCard} testID="card-siae">
+              <View style={styles.siaeHeader}>
+                <View>
+                  <Text style={styles.formTitle} testID="text-form-title-siae">Modulo SIAE</Text>
+                  <Text style={styles.siaeDesc}>
+                    Abilita la gestione biglietteria SIAE
                   </Text>
+                </View>
+                <Switch
+                  value={form.siaeEnabled}
+                  onValueChange={(value) => setForm({ ...form, siaeEnabled: value })}
+                  trackColor={{ false: colors.muted, true: `${colors.accent}50` }}
+                  thumbColor={form.siaeEnabled ? colors.accent : colors.mutedForeground}
+                  testID="switch-siae-enabled"
+                />
+              </View>
+            </Card>
+
+            <Card variant="glass" style={styles.formCard} testID="card-permissions">
+              <Text style={styles.formTitle} testID="text-form-title-permissions">Permessi</Text>
+              
+              {[
+                { key: 'manageEvents', label: 'Gestione Eventi', icon: 'calendar-outline' },
+                { key: 'manageTickets', label: 'Gestione Biglietti', icon: 'ticket-outline' },
+                { key: 'managePR', label: 'Gestione PR', icon: 'people-outline' },
+                { key: 'manageInventory', label: 'Gestione Inventario', icon: 'cube-outline' },
+                { key: 'viewReports', label: 'Visualizza Report', icon: 'bar-chart-outline' },
+                { key: 'manageStaff', label: 'Gestione Staff', icon: 'person-add-outline' },
+              ].map((permission) => (
+                <TouchableOpacity
+                  key={permission.key}
+                  style={styles.permissionRow}
+                  onPress={() => updatePermission(
+                    permission.key as keyof typeof form.permissions,
+                    !form.permissions[permission.key as keyof typeof form.permissions]
+                  )}
+                  activeOpacity={0.7}
+                  testID={`permission-${permission.key}`}
+                >
+                  <View style={styles.permissionInfo}>
+                    <Ionicons
+                      name={permission.icon as any}
+                      size={20}
+                      color={colors.mutedForeground}
+                    />
+                    <Text style={styles.permissionLabel}>{permission.label}</Text>
+                  </View>
+                  <View style={[
+                    styles.checkbox,
+                    form.permissions[permission.key as keyof typeof form.permissions] && styles.checkboxChecked
+                  ]}>
+                    {form.permissions[permission.key as keyof typeof form.permissions] && (
+                      <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                    )}
+                  </View>
                 </TouchableOpacity>
               ))}
-            </View>
-          </View>
-        </Card>
+            </Card>
 
-        <Card variant="glass" style={styles.formCard}>
-          <View style={styles.siaeHeader}>
-            <View>
-              <Text style={styles.formTitle}>Modulo SIAE</Text>
-              <Text style={styles.siaeDesc}>
-                Abilita la gestione biglietteria SIAE
-              </Text>
-            </View>
-            <Switch
-              value={form.siaeEnabled}
-              onValueChange={(value) => setForm({ ...form, siaeEnabled: value })}
-              trackColor={{ false: colors.muted, true: `${colors.accent}50` }}
-              thumbColor={form.siaeEnabled ? colors.accent : colors.mutedForeground}
-              data-testid="switch-siae-enabled"
-            />
-          </View>
-        </Card>
-
-        <Card variant="glass" style={styles.formCard}>
-          <Text style={styles.formTitle}>Permessi</Text>
-          
-          {[
-            { key: 'manageEvents', label: 'Gestione Eventi', icon: 'calendar-outline' },
-            { key: 'manageTickets', label: 'Gestione Biglietti', icon: 'ticket-outline' },
-            { key: 'managePR', label: 'Gestione PR', icon: 'people-outline' },
-            { key: 'manageInventory', label: 'Gestione Inventario', icon: 'cube-outline' },
-            { key: 'viewReports', label: 'Visualizza Report', icon: 'bar-chart-outline' },
-            { key: 'manageStaff', label: 'Gestione Staff', icon: 'person-add-outline' },
-          ].map((permission) => (
-            <TouchableOpacity
-              key={permission.key}
-              style={styles.permissionRow}
-              onPress={() => updatePermission(
-                permission.key as keyof typeof form.permissions,
-                !form.permissions[permission.key as keyof typeof form.permissions]
+            <View style={styles.buttonContainer}>
+              <Button
+                title={saving ? 'Salvataggio...' : 'Salva'}
+                onPress={handleSave}
+                variant="primary"
+                disabled={saving}
+                testID="button-save"
+              />
+              
+              {!isCreateMode && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                  testID="button-delete"
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+                  <Text style={styles.deleteButtonText}>Elimina Gestore</Text>
+                </TouchableOpacity>
               )}
-              activeOpacity={0.7}
-              data-testid={`permission-${permission.key}`}
-            >
-              <View style={styles.permissionInfo}>
-                <Ionicons
-                  name={permission.icon as any}
-                  size={20}
-                  color={colors.mutedForeground}
-                />
-                <Text style={styles.permissionLabel}>{permission.label}</Text>
-              </View>
-              <View style={[
-                styles.checkbox,
-                form.permissions[permission.key as keyof typeof form.permissions] && styles.checkboxChecked
-              ]}>
-                {form.permissions[permission.key as keyof typeof form.permissions] && (
-                  <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </Card>
-
-        <View style={styles.buttonContainer}>
-          <Button
-            title={saving ? 'Salvataggio...' : 'Salva'}
-            onPress={handleSave}
-            variant="primary"
-            disabled={saving}
-            data-testid="button-save"
-          />
-          
-          {!isCreateMode && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDelete}
-              data-testid="button-delete"
-            >
-              <Ionicons name="trash-outline" size={20} color={colors.destructive} />
-              <Text style={styles.deleteButtonText}>Elimina Gestore</Text>
-            </TouchableOpacity>
-          )}
+            </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -449,6 +471,28 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
+  },
+  formLayout: {
+    flex: 1,
+  },
+  formLayoutLandscape: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  columnLandscape: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

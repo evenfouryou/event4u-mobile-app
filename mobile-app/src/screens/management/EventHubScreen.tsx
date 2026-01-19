@@ -8,11 +8,10 @@ import {
   FlatList,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -103,9 +102,9 @@ const tabs: Tab[] = [
 export function EventHubScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [activeTab, setActiveTab] = useState<TabKey>(route.params?.tab || 'overview');
   const [nameChanges, setNameChanges] = useState<SiaeNameChange[]>([]);
   const [resales, setResales] = useState<SiaeResale[]>([]);
@@ -143,7 +142,10 @@ export function EventHubScreen() {
 
   const eventId = route.params?.eventId || '1';
 
-  // Reset data when eventId changes
+  const statCardWidth = (isTablet || isLandscape)
+    ? (width - spacing.lg * 2 - spacing.md * 3) / 4
+    : (width - spacing.lg * 2 - spacing.md) / 2;
+
   useEffect(() => {
     setNameChanges([]);
     setResales([]);
@@ -167,7 +169,6 @@ export function EventHubScreen() {
     setReloadRevenue(0);
   }, [eventId]);
 
-  // Load event data on mount
   useEffect(() => {
     const loadEventData = async () => {
       setLoadingEvent(true);
@@ -190,7 +191,6 @@ export function EventHubScreen() {
     loadEventData();
   }, [eventId, reloadOverview]);
 
-  // Load ticket types when tickets tab is active
   useEffect(() => {
     if (activeTab !== 'tickets') return;
     
@@ -208,7 +208,6 @@ export function EventHubScreen() {
     loadTicketTypes();
   }, [activeTab, eventId, reloadTickets]);
 
-  // Load guest lists when lists tab is active
   useEffect(() => {
     if (activeTab !== 'lists') return;
     
@@ -233,7 +232,6 @@ export function EventHubScreen() {
     loadGuestLists();
   }, [activeTab, eventId, reloadLists]);
 
-  // Load staff when staff tab is active
   useEffect(() => {
     if (activeTab !== 'staff') return;
     
@@ -258,7 +256,6 @@ export function EventHubScreen() {
     loadStaff();
   }, [activeTab, eventId, reloadStaff]);
 
-  // Load revenue data when revenue tab is active
   useEffect(() => {
     if (activeTab !== 'revenue') return;
     
@@ -276,7 +273,6 @@ export function EventHubScreen() {
     loadRevenue();
   }, [activeTab, eventId, reloadRevenue]);
 
-  // Fetch name changes
   useEffect(() => {
     if (activeTab !== 'name-changes') return;
     
@@ -294,7 +290,6 @@ export function EventHubScreen() {
     loadNameChanges();
   }, [activeTab, eventId]);
 
-  // Fetch resales
   useEffect(() => {
     if (activeTab !== 'resales') return;
     
@@ -312,7 +307,6 @@ export function EventHubScreen() {
     loadResales();
   }, [activeTab, eventId]);
 
-  // Helper functions for computed values
   const getEventName = () => eventData?.name || 'Caricamento...';
   const getEventDate = () => {
     if (!eventData?.startDate) return '--';
@@ -338,7 +332,6 @@ export function EventHubScreen() {
   const getGuestsCheckedIn = () => operationalStats?.guestsCheckedIn ?? 0;
   const getStaffOnDuty = () => operationalStats?.staffOnDuty ?? staffMembers.filter(s => s.status === 'active').length;
 
-  // Revenue breakdown from API data
   const getRevenueBreakdown = () => {
     if (!revenueData?.breakdown) {
       return [];
@@ -389,7 +382,7 @@ export function EventHubScreen() {
     <TouchableOpacity
       style={[styles.tab, activeTab === item.key && styles.tabActive]}
       onPress={() => setActiveTab(item.key)}
-      data-testid={`tab-${item.key}`}
+      testID={`tab-${item.key}`}
     >
       <Ionicons
         name={item.icon as any}
@@ -405,7 +398,7 @@ export function EventHubScreen() {
   const renderOverviewTab = () => {
     if (loadingEvent) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="loading-overview">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       );
@@ -413,7 +406,7 @@ export function EventHubScreen() {
 
     if (errorEvent) {
       return (
-        <Card style={styles.emptyCard}>
+        <Card style={styles.emptyCard} testID="error-overview">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorEvent}</Text>
           <Button
@@ -421,6 +414,7 @@ export function EventHubScreen() {
             variant="primary"
             onPress={() => setReloadOverview(prev => prev + 1)}
             style={styles.retryButton}
+            testID="button-retry-overview"
           />
         </Card>
       );
@@ -431,182 +425,119 @@ export function EventHubScreen() {
                         getEventStatus() === 'completed' ? 'Concluso' : 'Bozza';
 
     return (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.eventInfoCard} variant="elevated">
-        <View style={styles.eventHeader}>
-          <View>
-            <Text style={styles.eventName}>{getEventName()}</Text>
-            <View style={styles.eventMeta}>
-              <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.eventMetaText}>{getEventDate()} • {getEventTime()}</Text>
-            </View>
-            <View style={styles.eventMeta}>
-              <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.eventMetaText}>{getEventVenue()}</Text>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(getEventStatus())}20` }]}>
-            <View style={[styles.liveDot, { backgroundColor: getStatusColor(getEventStatus()) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(getEventStatus()) }]}>
-              {statusLabel}
-            </Text>
-          </View>
-        </View>
-      </Card>
-
-      <Card style={styles.statusTimelineCard}>
-        <Text style={styles.statusTimelineTitle}>Stato Evento</Text>
-        <View style={styles.statusTimeline}>
-          {[
-            { key: 'draft', label: 'Bozza', icon: 'document-outline' },
-            { key: 'live', label: 'In Corso', icon: 'play-outline' },
-            { key: 'completed', label: 'Concluso', icon: 'checkmark-circle-outline' },
-            { key: 'archived', label: 'Archiviato', icon: 'archive-outline' },
-          ].map((step, index, arr) => {
-            const currentStatus = getEventStatus();
-            const statusOrder = ['draft', 'pending', 'upcoming', 'live', 'completed', 'archived'];
-            const currentIndex = statusOrder.indexOf(currentStatus);
-            const stepIndex = statusOrder.indexOf(step.key);
-            const isActive = step.key === currentStatus || 
-                            (step.key === 'draft' && ['draft', 'pending', 'upcoming'].includes(currentStatus));
-            const isCompleted = stepIndex < currentIndex || 
-                              (step.key === 'draft' && currentIndex > 2);
-            
-            return (
-              <View key={step.key} style={styles.statusTimelineStep}>
-                <View style={[
-                  styles.statusTimelineIcon,
-                  isActive && styles.statusTimelineIconActive,
-                  isCompleted && styles.statusTimelineIconCompleted,
-                ]}>
-                  <Ionicons 
-                    name={step.icon as any} 
-                    size={20} 
-                    color={isActive ? colors.primaryForeground : isCompleted ? colors.successForeground : colors.mutedForeground} 
-                  />
-                </View>
-                <Text style={[
-                  styles.statusTimelineLabel,
-                  isActive && styles.statusTimelineLabelActive,
-                  isCompleted && styles.statusTimelineLabelCompleted,
-                ]}>
-                  {step.label}
-                </Text>
-                {index < arr.length - 1 && (
-                  <View style={[
-                    styles.statusTimelineLine,
-                    (isCompleted || isActive) && styles.statusTimelineLineActive,
-                  ]} />
-                )}
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-overview">
+        <Card style={styles.eventInfoCard} variant="elevated" testID="event-info-card">
+          <View style={styles.eventHeader}>
+            <View>
+              <Text style={styles.eventName}>{getEventName()}</Text>
+              <View style={styles.eventMeta}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.eventMetaText}>{getEventDate()} • {getEventTime()}</Text>
               </View>
-            );
-          })}
-        </View>
-      </Card>
-
-      <View style={[styles.statsGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
-        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-            <View style={styles.statIconGradientPurple}>
-              <Ionicons name="wallet-outline" size={24} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{getTotalRevenue()}</Text>
-          <Text style={styles.statLabel}>Incasso Totale</Text>
-        </Card>
-        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-            <View style={styles.statIconGradientGreen}>
-              <Ionicons name="ticket-outline" size={24} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{getTicketsSold()}/{getTotalTickets()}</Text>
-          <Text style={styles.statLabel}>Biglietti</Text>
-        </Card>
-        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-            <View style={styles.statIconGradientBlue}>
-              <Ionicons name="people-outline" size={24} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{getGuestsCheckedIn()}</Text>
-          <Text style={styles.statLabel}>Check-in</Text>
-        </Card>
-        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-            <View style={styles.statIconGradientAmber}>
-              <Ionicons name="person-outline" size={24} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={styles.statValue}>{getStaffOnDuty()}</Text>
-          <Text style={styles.statLabel}>Staff Attivo</Text>
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-        <View style={styles.quickActionsGrid}>
-          <Button
-            title="Scanner"
-            variant="outline"
-            onPress={() => navigation.navigate('Scanner', { eventId })}
-            icon={<Ionicons name="scan-outline" size={20} color={colors.foreground} />}
-            style={styles.quickActionBtn}
-          />
-          <Button
-            title="Check-in Lista"
-            variant="outline"
-            onPress={() => setActiveTab('lists')}
-            icon={<Ionicons name="list-outline" size={20} color={colors.foreground} />}
-            style={styles.quickActionBtn}
-          />
-          <Button
-            title="Vendi Biglietto"
-            variant="outline"
-            onPress={() => navigation.navigate('CashierTicket', { eventId })}
-            icon={<Ionicons name="ticket-outline" size={20} color={colors.foreground} />}
-            style={styles.quickActionBtn}
-          />
-          <Button
-            title="Report Live"
-            variant="outline"
-            onPress={() => setActiveTab('revenue')}
-            icon={<Ionicons name="bar-chart-outline" size={20} color={colors.foreground} />}
-            style={styles.quickActionBtn}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Attività Recente</Text>
-        {[
-          { time: '23:45', action: 'Check-in', detail: 'Marco Rossi + 4 ospiti', icon: 'checkmark-circle' },
-          { time: '23:42', action: 'Vendita Biglietto', detail: 'VIP - €50', icon: 'ticket' },
-          { time: '23:38', action: 'Check-in', detail: 'Sara Neri + 3 ospiti', icon: 'checkmark-circle' },
-          { time: '23:35', action: 'Prenotazione', detail: 'Tavolo 5 - €200', icon: 'restaurant' },
-        ].map((activity, index) => (
-          <Card key={index} style={styles.activityCard}>
-            <View style={styles.activityItem}>
-              <View style={styles.activityIcon}>
-                <Ionicons name={activity.icon as any} size={20} color={colors.primary} />
+              <View style={styles.eventMeta}>
+                <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.eventMetaText}>{getEventVenue()}</Text>
               </View>
-              <View style={styles.activityDetails}>
-                <Text style={styles.activityAction}>{activity.action}</Text>
-                <Text style={styles.activityDetail}>{activity.detail}</Text>
-              </View>
-              <Text style={styles.activityTime}>{activity.time}</Text>
             </View>
+            <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(getEventStatus())}20` }]}>
+              <View style={[styles.liveDot, { backgroundColor: getStatusColor(getEventStatus()) }]} />
+              <Text style={[styles.statusText, { color: getStatusColor(getEventStatus()) }]}>
+                {statusLabel}
+              </Text>
+            </View>
+          </View>
+        </Card>
+
+        <View style={styles.statsGrid}>
+          <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-revenue">
+            <Ionicons name="wallet-outline" size={24} color={colors.primary} />
+            <Text style={styles.statValue}>{getTotalRevenue()}</Text>
+            <Text style={styles.statLabel}>Incasso Totale</Text>
           </Card>
-        ))}
-      </View>
-    </ScrollView>
-  );
+          <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-tickets">
+            <Ionicons name="ticket-outline" size={24} color={colors.success} />
+            <Text style={styles.statValue}>{getTicketsSold()}/{getTotalTickets()}</Text>
+            <Text style={styles.statLabel}>Biglietti</Text>
+          </Card>
+          <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-checkin">
+            <Ionicons name="checkmark-circle-outline" size={24} color={colors.accent} />
+            <Text style={styles.statValue}>{getGuestsCheckedIn()}</Text>
+            <Text style={styles.statLabel}>Check-in</Text>
+          </Card>
+          <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-staff">
+            <Ionicons name="people-outline" size={24} color={colors.warning} />
+            <Text style={styles.statValue}>{getStaffOnDuty()}</Text>
+            <Text style={styles.statLabel}>Staff Attivo</Text>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+          <View style={[styles.quickActionsGrid, (isTablet || isLandscape) && styles.quickActionsGridResponsive]}>
+            <Button
+              title="Gestisci Biglietti"
+              variant="secondary"
+              icon={<Ionicons name="ticket-outline" size={18} color={colors.foreground} />}
+              onPress={() => setActiveTab('tickets')}
+              style={styles.quickActionBtn}
+              testID="button-manage-tickets"
+            />
+            <Button
+              title="Liste Ospiti"
+              variant="secondary"
+              icon={<Ionicons name="list-outline" size={18} color={colors.foreground} />}
+              onPress={() => setActiveTab('lists')}
+              style={styles.quickActionBtn}
+              testID="button-guest-lists"
+            />
+            <Button
+              title="Check-in Scanner"
+              variant="secondary"
+              icon={<Ionicons name="qr-code-outline" size={18} color={colors.foreground} />}
+              onPress={() => navigation.navigate('CheckInScanner', { eventId })}
+              style={styles.quickActionBtn}
+              testID="button-checkin-scanner"
+            />
+            <Button
+              title="Report Vendite"
+              variant="secondary"
+              icon={<Ionicons name="bar-chart-outline" size={18} color={colors.foreground} />}
+              onPress={() => setActiveTab('revenue')}
+              style={styles.quickActionBtn}
+              testID="button-sales-report"
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Attività Recente</Text>
+          {[
+            { action: 'Nuovo check-in', detail: 'Marco R. • Biglietto VIP', time: '2 min fa', icon: 'checkmark-circle' },
+            { action: 'Vendita biglietto', detail: 'Standard • € 15,00', time: '5 min fa', icon: 'ticket' },
+            { action: 'Staff check-in', detail: 'Giulia M. • Bartender', time: '12 min fa', icon: 'person' },
+          ].map((activity, index) => (
+            <Card key={index} style={styles.activityCard} testID={`activity-${index}`}>
+              <View style={styles.activityItem}>
+                <View style={styles.activityIcon}>
+                  <Ionicons name={activity.icon as any} size={20} color={colors.primary} />
+                </View>
+                <View style={styles.activityDetails}>
+                  <Text style={styles.activityAction}>{activity.action}</Text>
+                  <Text style={styles.activityDetail}>{activity.detail}</Text>
+                </View>
+                <Text style={styles.activityTime}>{activity.time}</Text>
+              </View>
+            </Card>
+          ))}
+        </View>
+      </ScrollView>
+    );
   };
 
   const renderTicketsTab = () => {
     if (loadingTickets) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="loading-tickets">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       );
@@ -614,7 +545,7 @@ export function EventHubScreen() {
 
     if (errorTickets) {
       return (
-        <Card style={styles.emptyCard}>
+        <Card style={styles.emptyCard} testID="error-tickets">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorTickets}</Text>
           <Button
@@ -622,284 +553,244 @@ export function EventHubScreen() {
             variant="primary"
             onPress={() => setReloadTickets(prev => prev + 1)}
             style={styles.retryButton}
+            testID="button-retry-tickets"
           />
         </Card>
       );
     }
 
-    const totalSold = ticketTypes.reduce((sum, t) => sum + (t.sold || 0), 0);
-    const totalAvailable = ticketTypes.reduce((sum, t) => sum + ((t.total || 0) - (t.sold || 0)), 0);
-
     return (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Riepilogo Biglietti</Text>
-        <View style={styles.summaryStats}>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{getTicketsSold()}</Text>
-            <Text style={styles.summaryLabel}>Venduti</Text>
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-tickets">
+        <Card style={styles.summaryCard} testID="tickets-summary">
+          <Text style={styles.summaryTitle}>Riepilogo Vendite</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{getTicketsSold()}</Text>
+              <Text style={styles.summaryLabel}>Venduti</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{getTotalTickets() - getTicketsSold()}</Text>
+              <Text style={styles.summaryLabel}>Disponibili</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{getTotalRevenue()}</Text>
+              <Text style={styles.summaryLabel}>Incasso</Text>
+            </View>
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{getTotalTickets() - getTicketsSold()}</Text>
-            <Text style={styles.summaryLabel}>Disponibili</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.primary }]}>{getTotalRevenue()}</Text>
-            <Text style={styles.summaryLabel}>Incasso</Text>
-          </View>
-        </View>
-      </Card>
-
-      {ticketTypes.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Ionicons name="ticket-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Nessun tipo di biglietto</Text>
         </Card>
-      ) : (
-        ticketTypes.map((ticket) => {
-          const sold = ticket.sold || ticket.soldCount || 0;
-          const total = ticket.total || ticket.totalCount || ticket.capacity || 1;
-          const price = typeof ticket.price === 'number' ? `€ ${ticket.price.toLocaleString('it-IT')}` : (ticket.price || '€ 0');
-          const revenue = typeof ticket.revenue === 'number' ? `€ ${ticket.revenue.toLocaleString('it-IT')}` : (ticket.revenue || '€ 0');
-          
-          return (
-          <Card key={ticket.id} style={styles.ticketCard}>
-            <View style={styles.ticketHeader}>
-              <View>
-                <Text style={styles.ticketName}>{ticket.name || ticket.typeName}</Text>
-                <Text style={styles.ticketPrice}>{price}</Text>
-              </View>
-              <Text style={styles.ticketRevenue}>{revenue}</Text>
-            </View>
-            <View style={styles.ticketProgress}>
-              <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>Venduti: {sold}/{total}</Text>
-                <Text style={styles.progressPercentage}>
-                  {total > 0 ? Math.round((sold / total) * 100) : 0}%
-                </Text>
-              </View>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${total > 0 ? (sold / total) * 100 : 0}%`,
-                      backgroundColor: sold >= total ? colors.success : colors.primary,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          </Card>
-          );
-        })
-      )}
-    </ScrollView>
-  );
+
+        <View style={(isTablet || isLandscape) ? styles.ticketsGrid : undefined}>
+          {ticketTypes.length === 0 ? (
+            <Card style={styles.emptyCard} testID="empty-tickets">
+              <Ionicons name="ticket-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyText}>Nessun tipo biglietto configurato</Text>
+            </Card>
+          ) : (
+            ticketTypes.map((ticket: any) => {
+              const sold = ticket.sold || 0;
+              const total = ticket.total || ticket.quantity || 0;
+              const progress = total > 0 ? (sold / total) * 100 : 0;
+              return (
+                <Card key={ticket.id} style={[styles.ticketCard, (isTablet || isLandscape) && styles.ticketCardResponsive]} testID={`ticket-type-${ticket.id}`}>
+                  <View style={styles.ticketHeader}>
+                    <View>
+                      <Text style={styles.ticketName}>{ticket.name}</Text>
+                      <Text style={styles.ticketPrice}>€ {ticket.price}</Text>
+                    </View>
+                    <Text style={styles.ticketRevenue}>
+                      € {((sold * parseFloat(ticket.price)) || 0).toLocaleString('it-IT')}
+                    </Text>
+                  </View>
+                  <View style={styles.ticketProgress}>
+                    <View style={styles.progressHeader}>
+                      <Text style={styles.progressLabel}>{sold}/{total} venduti</Text>
+                      <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: progress >= 80 ? colors.success : colors.primary }]} />
+                    </View>
+                  </View>
+                </Card>
+              );
+            })
+          )}
+        </View>
+      </ScrollView>
+    );
   };
 
-  const renderNameChangesTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Cambi Nominativo</Text>
-        <View style={styles.summaryStats}>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{nameChanges.length}</Text>
-            <Text style={styles.summaryLabel}>Totali</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.success }]}>
-              {nameChanges.filter(nc => nc.status === 'completed').length}
-            </Text>
-            <Text style={styles.summaryLabel}>Completati</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.warning }]}>
-              {nameChanges.filter(nc => nc.status === 'pending').length}
-            </Text>
-            <Text style={styles.summaryLabel}>In Attesa</Text>
-          </View>
-        </View>
-      </Card>
-
-      {loadingNameChanges ? (
-        <View style={styles.loadingContainer}>
+  const renderNameChangesTab = () => {
+    if (loadingNameChanges) {
+      return (
+        <View style={styles.loadingContainer} testID="loading-name-changes">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      ) : errorNameChanges ? (
-        <Card style={styles.emptyCard}>
+      );
+    }
+
+    if (errorNameChanges) {
+      return (
+        <Card style={styles.emptyCard} testID="error-name-changes">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorNameChanges}</Text>
-          <Button
-            title="Riprova"
-            variant="primary"
-            onPress={() => {
-              setErrorNameChanges(null);
-              setActiveTab('overview');
-              setTimeout(() => setActiveTab('name-changes'), 100);
-            }}
-            style={styles.retryButton}
-          />
         </Card>
-      ) : nameChanges.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Ionicons name="swap-horizontal-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Nessun cambio nominativo</Text>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-name-changes">
+        <Card style={styles.summaryCard} testID="name-changes-summary">
+          <Text style={styles.summaryTitle}>Cambi Nominativo SIAE</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{nameChanges.filter(nc => nc.status === 'pending').length}</Text>
+              <Text style={styles.summaryLabel}>In Attesa</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{nameChanges.filter(nc => nc.status === 'completed').length}</Text>
+              <Text style={styles.summaryLabel}>Completati</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{nameChanges.length}</Text>
+              <Text style={styles.summaryLabel}>Totale</Text>
+            </View>
+          </View>
         </Card>
-      ) : (
-        nameChanges.map((nc) => (
-          <Card key={nc.id} style={styles.trackingCard}>
-            <View style={styles.trackingHeader}>
-              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(nc.status)}20` }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(nc.status) }]}>
-                  {nc.status === 'completed' ? 'Completato' : nc.status === 'pending' ? 'In Attesa' : nc.status === 'approved' ? 'Approvato' : nc.status === 'rejected' ? 'Rifiutato' : nc.status}
-                </Text>
-              </View>
-              <Text style={styles.trackingDate}>
-                {nc.requestedAt ? new Date(nc.requestedAt).toLocaleDateString('it-IT') : '-'}
-              </Text>
-            </View>
-            
-            <View style={styles.transferRow}>
-              <View style={styles.transferPerson}>
-                <Text style={styles.transferLabel}>VECCHIO</Text>
-                <Text style={styles.transferName}>{nc.oldFirstName} {nc.oldLastName}</Text>
-                {nc.oldFiscalSeal && (
-                  <Text style={styles.fiscalSeal}>Sigillo: {nc.oldFiscalSeal}</Text>
-                )}
-                {nc.oldProgressiveNumber && (
-                  <Text style={styles.progressiveNum}>N° {nc.oldProgressiveNumber}</Text>
-                )}
-              </View>
-              <Ionicons name="arrow-forward" size={20} color={colors.primary} />
-              <View style={styles.transferPerson}>
-                <Text style={styles.transferLabel}>NUOVO</Text>
-                <Text style={styles.transferName}>{nc.newFirstName} {nc.newLastName}</Text>
-                {nc.newFiscalSeal && (
-                  <Text style={styles.fiscalSeal}>Sigillo: {nc.newFiscalSeal}</Text>
-                )}
-                {nc.newProgressiveNumber && (
-                  <Text style={styles.progressiveNum}>N° {nc.newProgressiveNumber}</Text>
-                )}
-              </View>
-            </View>
+
+        {nameChanges.length === 0 ? (
+          <Card style={styles.emptyCard} testID="empty-name-changes">
+            <Ionicons name="swap-horizontal-outline" size={48} color={colors.mutedForeground} />
+            <Text style={styles.emptyText}>Nessuna richiesta di cambio nominativo</Text>
           </Card>
-        ))
-      )}
-    </ScrollView>
-  );
+        ) : (
+          <View style={(isTablet || isLandscape) ? styles.listGrid : undefined}>
+            {nameChanges.map((nc) => (
+              <Card key={nc.id} style={[styles.trackingCard, (isTablet || isLandscape) && styles.trackingCardResponsive]} testID={`name-change-${nc.id}`}>
+                <View style={styles.trackingHeader}>
+                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(nc.status)}20` }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(nc.status) }]}>
+                      {nc.status === 'pending' ? 'In Attesa' : nc.status === 'completed' ? 'Completato' : nc.status}
+                    </Text>
+                  </View>
+                  <Text style={styles.trackingDate}>{new Date(nc.requestedAt).toLocaleDateString('it-IT')}</Text>
+                </View>
+                <View style={styles.transferRow}>
+                  <View style={styles.transferPerson}>
+                    <Text style={styles.transferLabel}>DA</Text>
+                    <Text style={styles.transferName}>{nc.oldFirstName} {nc.oldLastName}</Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={20} color={colors.mutedForeground} />
+                  <View style={styles.transferPerson}>
+                    <Text style={styles.transferLabel}>A</Text>
+                    <Text style={styles.transferName}>{nc.newFirstName} {nc.newLastName}</Text>
+                  </View>
+                </View>
+                {nc.newFiscalSeal && (
+                  <View style={styles.siaeInfo}>
+                    <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+                    <Text style={styles.siaeText}>Sigillo: {nc.newFiscalSeal} • N. {nc.newProgressiveNumber}</Text>
+                  </View>
+                )}
+              </Card>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
-  const renderResalesTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Rivendite Biglietti</Text>
-        <View style={styles.summaryStats}>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{resales.length}</Text>
-            <Text style={styles.summaryLabel}>Totali</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.success }]}>
-              {resales.filter(r => r.status === 'completed').length}
-            </Text>
-            <Text style={styles.summaryLabel}>Completate</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.warning }]}>
-              {resales.filter(r => r.status === 'listed').length}
-            </Text>
-            <Text style={styles.summaryLabel}>In Vendita</Text>
-          </View>
-        </View>
-      </Card>
-
-      {loadingResales ? (
-        <View style={styles.loadingContainer}>
+  const renderResalesTab = () => {
+    if (loadingResales) {
+      return (
+        <View style={styles.loadingContainer} testID="loading-resales">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      ) : errorResales ? (
-        <Card style={styles.emptyCard}>
+      );
+    }
+
+    if (errorResales) {
+      return (
+        <Card style={styles.emptyCard} testID="error-resales">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorResales}</Text>
-          <Button
-            title="Riprova"
-            variant="primary"
-            onPress={() => {
-              setErrorResales(null);
-              setActiveTab('overview');
-              setTimeout(() => setActiveTab('resales'), 100);
-            }}
-            style={styles.retryButton}
-          />
         </Card>
-      ) : resales.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Ionicons name="repeat-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Nessuna rivendita</Text>
-        </Card>
-      ) : (
-        resales.map((resale) => (
-          <Card key={resale.id} style={styles.trackingCard}>
-            <View style={styles.trackingHeader}>
-              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(resale.status)}20` }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(resale.status) }]}>
-                  {resale.status === 'completed' ? 'Completata' : resale.status === 'listed' ? 'In Vendita' : resale.status === 'reserved' ? 'Riservata' : resale.status === 'cancelled' ? 'Annullata' : resale.status}
-                </Text>
-              </View>
-              <Text style={styles.resalePrice}>€ {resale.resalePrice}</Text>
-            </View>
-            
-            <View style={styles.transferRow}>
-              <View style={styles.transferPerson}>
-                <Text style={styles.transferLabel}>VENDITORE</Text>
-                <Text style={styles.transferName}>{resale.sellerFirstName} {resale.sellerLastName}</Text>
-                {resale.oldFiscalSeal && (
-                  <Text style={styles.fiscalSeal}>Sigillo: {resale.oldFiscalSeal}</Text>
-                )}
-                {resale.oldProgressiveNumber && (
-                  <Text style={styles.progressiveNum}>N° {resale.oldProgressiveNumber}</Text>
-                )}
-              </View>
-              <Ionicons name="arrow-forward" size={20} color={colors.primary} />
-              <View style={styles.transferPerson}>
-                <Text style={styles.transferLabel}>ACQUIRENTE</Text>
-                {resale.buyerFirstName && resale.buyerLastName ? (
-                  <>
-                    <Text style={styles.transferName}>{resale.buyerFirstName} {resale.buyerLastName}</Text>
-                    {resale.newFiscalSeal && (
-                      <Text style={styles.fiscalSeal}>Sigillo: {resale.newFiscalSeal}</Text>
-                    )}
-                    {resale.newProgressiveNumber && (
-                      <Text style={styles.progressiveNum}>N° {resale.newProgressiveNumber}</Text>
-                    )}
-                  </>
-                ) : (
-                  <Text style={styles.transferNamePending}>In attesa...</Text>
-                )}
-              </View>
-            </View>
+      );
+    }
 
-            <View style={styles.resaleFooter}>
-              <Text style={styles.trackingDate}>
-                {resale.createdAt ? new Date(resale.createdAt).toLocaleDateString('it-IT') : '-'}
-              </Text>
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-resales">
+        <Card style={styles.summaryCard} testID="resales-summary">
+          <Text style={styles.summaryTitle}>Rivendite SIAE</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{resales.filter(r => r.status === 'listed').length}</Text>
+              <Text style={styles.summaryLabel}>In Vendita</Text>
             </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{resales.filter(r => r.status === 'completed').length}</Text>
+              <Text style={styles.summaryLabel}>Completate</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{resales.length}</Text>
+              <Text style={styles.summaryLabel}>Totale</Text>
+            </View>
+          </View>
+        </Card>
+
+        {resales.length === 0 ? (
+          <Card style={styles.emptyCard} testID="empty-resales">
+            <Ionicons name="repeat-outline" size={48} color={colors.mutedForeground} />
+            <Text style={styles.emptyText}>Nessuna rivendita attiva</Text>
           </Card>
-        ))
-      )}
-    </ScrollView>
-  );
+        ) : (
+          <View style={(isTablet || isLandscape) ? styles.listGrid : undefined}>
+            {resales.map((resale) => (
+              <Card key={resale.id} style={[styles.trackingCard, (isTablet || isLandscape) && styles.trackingCardResponsive]} testID={`resale-${resale.id}`}>
+                <View style={styles.trackingHeader}>
+                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(resale.status)}20` }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(resale.status) }]}>
+                      {resale.status === 'listed' ? 'In Vendita' : resale.status === 'completed' ? 'Venduto' : resale.status}
+                    </Text>
+                  </View>
+                  <Text style={styles.trackingDate}>€ {resale.resalePrice}</Text>
+                </View>
+                <View style={styles.transferRow}>
+                  <View style={styles.transferPerson}>
+                    <Text style={styles.transferLabel}>VENDITORE</Text>
+                    <Text style={styles.transferName}>{resale.sellerFirstName} {resale.sellerLastName}</Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={20} color={colors.mutedForeground} />
+                  <View style={styles.transferPerson}>
+                    <Text style={styles.transferLabel}>ACQUIRENTE</Text>
+                    <Text style={resale.buyerFirstName ? styles.transferName : styles.transferNamePending}>
+                      {resale.buyerFirstName ? `${resale.buyerFirstName} ${resale.buyerLastName}` : 'In attesa...'}
+                    </Text>
+                  </View>
+                </View>
+                {resale.newFiscalSeal && (
+                  <View style={styles.siaeInfo}>
+                    <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+                    <Text style={styles.siaeText}>Sigillo: {resale.newFiscalSeal} • N. {resale.newProgressiveNumber}</Text>
+                  </View>
+                )}
+              </Card>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
   const renderListsTab = () => {
     if (loadingLists) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="loading-lists">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       );
@@ -907,7 +798,7 @@ export function EventHubScreen() {
 
     if (errorLists) {
       return (
-        <Card style={styles.emptyCard}>
+        <Card style={styles.emptyCard} testID="error-lists">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorLists}</Text>
           <Button
@@ -915,80 +806,81 @@ export function EventHubScreen() {
             variant="primary"
             onPress={() => setReloadLists(prev => prev + 1)}
             style={styles.retryButton}
+            testID="button-retry-lists"
           />
         </Card>
       );
     }
 
     return (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Riepilogo Liste</Text>
-        <View style={styles.summaryStats}>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{guestLists.length}</Text>
-            <Text style={styles.summaryLabel}>Prenotazioni</Text>
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-lists">
+        <Card style={styles.summaryCard} testID="lists-summary">
+          <Text style={styles.summaryTitle}>Liste Ospiti</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{guestLists.reduce((sum, gl) => sum + gl.guests, 0)}</Text>
+              <Text style={styles.summaryLabel}>Totale Ospiti</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{guestLists.filter(gl => gl.status === 'checked-in').length}</Text>
+              <Text style={styles.summaryLabel}>Check-in</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{guestLists.length}</Text>
+              <Text style={styles.summaryLabel}>Liste</Text>
+            </View>
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>
-              {guestLists.reduce((sum, g) => sum + g.guests, 0)}
-            </Text>
-            <Text style={styles.summaryLabel}>Ospiti Totali</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.success }]}>
-              {guestLists.filter((g) => g.status === 'checked-in').length}
-            </Text>
-            <Text style={styles.summaryLabel}>Check-in</Text>
-          </View>
-        </View>
-      </Card>
-
-      {guestLists.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Ionicons name="list-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Nessuna lista ospiti</Text>
         </Card>
-      ) : (
-        guestLists.map((entry) => (
-          <Card key={entry.id} style={styles.listEntryCard}>
-            <View style={styles.listEntryHeader}>
-              <View>
-                <Text style={styles.listEntryName}>{entry.name}</Text>
-                <Text style={styles.listEntryPr}>PR: {entry.prName}</Text>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(entry.status)}20` }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(entry.status) }]}>
-                  {entry.status === 'checked-in' ? 'Entrato' : entry.status === 'confirmed' ? 'Confermato' : 'In attesa'}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.listEntryFooter}>
-              <View style={styles.guestCount}>
-                <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
-                <Text style={styles.guestCountText}>{entry.guests} ospiti</Text>
-              </View>
-              {entry.status !== 'checked-in' && (
-                <Button
-                  title="Check-in"
-                  size="sm"
-                  onPress={() => {}}
-                />
-              )}
-            </View>
+
+        {guestLists.length === 0 ? (
+          <Card style={styles.emptyCard} testID="empty-lists">
+            <Ionicons name="list-outline" size={48} color={colors.mutedForeground} />
+            <Text style={styles.emptyText}>Nessuna lista ospiti</Text>
           </Card>
-        ))
-      )}
-    </ScrollView>
-  );
+        ) : (
+          <View style={(isTablet || isLandscape) ? styles.listGrid : undefined}>
+            {guestLists.map((entry) => (
+              <Card key={entry.id} style={[styles.listEntryCard, (isTablet || isLandscape) && styles.listEntryCardResponsive]} testID={`guest-list-${entry.id}`}>
+                <View style={styles.listEntryHeader}>
+                  <View>
+                    <Text style={styles.listEntryName}>{entry.name}</Text>
+                    <Text style={styles.listEntryPr}>PR: {entry.prName}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(entry.status)}20` }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(entry.status) }]}>
+                      {entry.status === 'checked-in' ? 'Entrato' : entry.status === 'confirmed' ? 'Confermato' : 'In Attesa'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.listEntryFooter}>
+                  <View style={styles.guestCount}>
+                    <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
+                    <Text style={styles.guestCountText}>{entry.guests} ospiti</Text>
+                  </View>
+                  {entry.status !== 'checked-in' && (
+                    <Button
+                      title="Check-in"
+                      variant="outline"
+                      size="sm"
+                      onPress={() => {}}
+                      testID={`button-checkin-${entry.id}`}
+                    />
+                  )}
+                </View>
+              </Card>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    );
   };
 
   const renderStaffTab = () => {
     if (loadingStaff) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="loading-staff">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       );
@@ -996,7 +888,7 @@ export function EventHubScreen() {
 
     if (errorStaff) {
       return (
-        <Card style={styles.emptyCard}>
+        <Card style={styles.emptyCard} testID="error-staff">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorStaff}</Text>
           <Button
@@ -1004,74 +896,77 @@ export function EventHubScreen() {
             variant="primary"
             onPress={() => setReloadStaff(prev => prev + 1)}
             style={styles.retryButton}
+            testID="button-retry-staff"
           />
         </Card>
       );
     }
 
     return (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Staff in Servizio</Text>
-        <View style={styles.summaryStats}>
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>
-              {staffMembers.filter((s) => s.status === 'active').length}
-            </Text>
-            <Text style={styles.summaryLabel}>Attivi</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.warning }]}>
-              {staffMembers.filter((s) => s.status === 'break').length}
-            </Text>
-            <Text style={styles.summaryLabel}>In Pausa</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{staffMembers.length}</Text>
-            <Text style={styles.summaryLabel}>Totale</Text>
-          </View>
-        </View>
-      </Card>
-
-      {staffMembers.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Nessuno staff assegnato</Text>
-        </Card>
-      ) : (
-        staffMembers.map((member) => (
-          <Card key={member.id} style={styles.staffCard}>
-            <View style={styles.staffHeader}>
-              <View style={styles.staffAvatar}>
-                <Text style={styles.staffInitials}>
-                  {member.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
-                </Text>
-              </View>
-              <View style={styles.staffInfo}>
-                <Text style={styles.staffName}>{member.name}</Text>
-                <Text style={styles.staffRole}>{member.role}</Text>
-              </View>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-staff">
+        <Card style={styles.summaryCard} testID="staff-summary">
+          <Text style={styles.summaryTitle}>Staff in Servizio</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>
+                {staffMembers.filter((s) => s.status === 'active').length}
+              </Text>
+              <Text style={styles.summaryLabel}>Attivi</Text>
             </View>
-            {member.checkInTime && (
-              <View style={styles.staffCheckIn}>
-                <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.staffCheckInText}>Check-in: {member.checkInTime}</Text>
-              </View>
-            )}
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={[styles.summaryValue, { color: colors.warning }]}>
+                {staffMembers.filter((s) => s.status === 'break').length}
+              </Text>
+              <Text style={styles.summaryLabel}>In Pausa</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryValue}>{staffMembers.length}</Text>
+              <Text style={styles.summaryLabel}>Totale</Text>
+            </View>
+          </View>
+        </Card>
+
+        {staffMembers.length === 0 ? (
+          <Card style={styles.emptyCard} testID="empty-staff">
+            <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+            <Text style={styles.emptyText}>Nessuno staff assegnato</Text>
           </Card>
-        ))
-      )}
-    </ScrollView>
-  );
+        ) : (
+          <View style={(isTablet || isLandscape) ? styles.listGrid : undefined}>
+            {staffMembers.map((member) => (
+              <Card key={member.id} style={[styles.staffCard, (isTablet || isLandscape) && styles.staffCardResponsive]} testID={`staff-${member.id}`}>
+                <View style={styles.staffHeader}>
+                  <View style={styles.staffAvatar}>
+                    <Text style={styles.staffInitials}>
+                      {member.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
+                    </Text>
+                  </View>
+                  <View style={styles.staffInfo}>
+                    <Text style={styles.staffName}>{member.name}</Text>
+                    <Text style={styles.staffRole}>{member.role}</Text>
+                  </View>
+                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
+                </View>
+                {member.checkInTime && (
+                  <View style={styles.staffCheckIn}>
+                    <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.staffCheckInText}>Check-in: {member.checkInTime}</Text>
+                  </View>
+                )}
+              </Card>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    );
   };
 
   const renderRevenueTab = () => {
     if (loadingRevenue) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="loading-revenue">
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       );
@@ -1079,7 +974,7 @@ export function EventHubScreen() {
 
     if (errorRevenue) {
       return (
-        <Card style={styles.emptyCard}>
+        <Card style={styles.emptyCard} testID="error-revenue">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{errorRevenue}</Text>
           <Button
@@ -1087,6 +982,7 @@ export function EventHubScreen() {
             variant="primary"
             onPress={() => setReloadRevenue(prev => prev + 1)}
             style={styles.retryButton}
+            testID="button-retry-revenue"
           />
         </Card>
       );
@@ -1102,83 +998,85 @@ export function EventHubScreen() {
     const cashPayments = revenueData?.paymentMethods?.cash ?? revenueData?.cashPayments ?? 0;
 
     return (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.revenueCard} variant="elevated">
-        <Text style={styles.revenueTotalLabel}>Incasso Totale</Text>
-        <Text style={styles.revenueTotalValue}>{formattedTotal}</Text>
-        {trendPercentage !== null && (
-          <View style={styles.revenueTrend}>
-            <Ionicons 
-              name={trendPercentage >= 0 ? "trending-up" : "trending-down"} 
-              size={16} 
-              color={trendPercentage >= 0 ? colors.success : colors.destructive} 
-            />
-            <Text style={[styles.revenueTrendText, { color: trendPercentage >= 0 ? colors.success : colors.destructive }]}>
-              {trendPercentage >= 0 ? '+' : ''}{trendPercentage}% rispetto a evento precedente
-            </Text>
-          </View>
-        )}
-      </Card>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Suddivisione Incassi</Text>
-        {revenueBreakdown.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="pie-chart-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessun dato disponibile</Text>
-          </Card>
-        ) : (
-          revenueBreakdown.map((item: any, index: number) => (
-            <Card key={index} style={styles.breakdownCard}>
-              <View style={styles.breakdownHeader}>
-                <View style={styles.breakdownLabel}>
-                  <View style={[styles.breakdownDot, { backgroundColor: item.color }]} />
-                  <Text style={styles.breakdownName}>{item.label}</Text>
-                </View>
-                <Text style={styles.breakdownValue}>{item.value}</Text>
-              </View>
-              <View style={styles.breakdownBar}>
-                <View
-                  style={[styles.breakdownFill, { width: `${item.percentage}%`, backgroundColor: item.color }]}
-                />
-              </View>
-              <Text style={styles.breakdownPercentage}>{item.percentage}%</Text>
-            </Card>
-          ))
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Metodi di Pagamento</Text>
-        <Card style={styles.paymentCard}>
-          <View style={styles.paymentRow}>
-            <View style={styles.paymentMethod}>
-              <Ionicons name="card-outline" size={20} color={colors.primary} />
-              <Text style={styles.paymentLabel}>Carte</Text>
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-revenue">
+        <Card style={styles.revenueCard} variant="elevated" testID="revenue-total">
+          <Text style={styles.revenueTotalLabel}>Incasso Totale</Text>
+          <Text style={styles.revenueTotalValue}>{formattedTotal}</Text>
+          {trendPercentage !== null && (
+            <View style={styles.revenueTrend}>
+              <Ionicons 
+                name={trendPercentage >= 0 ? "trending-up" : "trending-down"} 
+                size={16} 
+                color={trendPercentage >= 0 ? colors.success : colors.destructive} 
+              />
+              <Text style={[styles.revenueTrendText, { color: trendPercentage >= 0 ? colors.success : colors.destructive }]}>
+                {trendPercentage >= 0 ? '+' : ''}{trendPercentage}% rispetto a evento precedente
+              </Text>
             </View>
-            <Text style={styles.paymentValue}>
-              {typeof cardPayments === 'number' ? `€ ${cardPayments.toLocaleString('it-IT')}` : cardPayments}
-            </Text>
-          </View>
-          <View style={styles.paymentDivider} />
-          <View style={styles.paymentRow}>
-            <View style={styles.paymentMethod}>
-              <Ionicons name="cash-outline" size={20} color={colors.success} />
-              <Text style={styles.paymentLabel}>Contanti</Text>
-            </View>
-            <Text style={styles.paymentValue}>
-              {typeof cashPayments === 'number' ? `€ ${cashPayments.toLocaleString('it-IT')}` : cashPayments}
-            </Text>
-          </View>
+          )}
         </Card>
-      </View>
-    </ScrollView>
-  );
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Suddivisione Incassi</Text>
+          {revenueBreakdown.length === 0 ? (
+            <Card style={styles.emptyCard} testID="empty-breakdown">
+              <Ionicons name="pie-chart-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyText}>Nessun dato disponibile</Text>
+            </Card>
+          ) : (
+            <View style={(isTablet || isLandscape) ? styles.listGrid : undefined}>
+              {revenueBreakdown.map((item: any, index: number) => (
+                <Card key={index} style={[styles.breakdownCard, (isTablet || isLandscape) && styles.breakdownCardResponsive]} testID={`breakdown-${index}`}>
+                  <View style={styles.breakdownHeader}>
+                    <View style={styles.breakdownLabel}>
+                      <View style={[styles.breakdownDot, { backgroundColor: item.color }]} />
+                      <Text style={styles.breakdownName}>{item.label}</Text>
+                    </View>
+                    <Text style={styles.breakdownValue}>{item.value}</Text>
+                  </View>
+                  <View style={styles.breakdownBar}>
+                    <View
+                      style={[styles.breakdownFill, { width: `${item.percentage}%`, backgroundColor: item.color }]}
+                    />
+                  </View>
+                  <Text style={styles.breakdownPercentage}>{item.percentage}%</Text>
+                </Card>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Metodi di Pagamento</Text>
+          <Card style={styles.paymentCard} testID="payment-methods">
+            <View style={styles.paymentRow}>
+              <View style={styles.paymentMethod}>
+                <Ionicons name="card-outline" size={20} color={colors.primary} />
+                <Text style={styles.paymentLabel}>Carte</Text>
+              </View>
+              <Text style={styles.paymentValue}>
+                {typeof cardPayments === 'number' ? `€ ${cardPayments.toLocaleString('it-IT')}` : cardPayments}
+              </Text>
+            </View>
+            <View style={styles.paymentDivider} />
+            <View style={styles.paymentRow}>
+              <View style={styles.paymentMethod}>
+                <Ionicons name="cash-outline" size={20} color={colors.success} />
+                <Text style={styles.paymentLabel}>Contanti</Text>
+              </View>
+              <Text style={styles.paymentValue}>
+                {typeof cashPayments === 'number' ? `€ ${cashPayments.toLocaleString('it-IT')}` : cashPayments}
+              </Text>
+            </View>
+          </Card>
+        </View>
+      </ScrollView>
+    );
   };
 
   const renderPlaceholderTab = (title: string, icon: string, description: string) => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.placeholderCard}>
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID={`scroll-placeholder-${title.toLowerCase().replace(/\s/g, '-')}`}>
+      <Card style={styles.placeholderCard} testID={`placeholder-${title.toLowerCase().replace(/\s/g, '-')}`}>
         <Ionicons name={icon as any} size={64} color={colors.primary} />
         <Text style={styles.placeholderTitle}>{title}</Text>
         <Text style={styles.placeholderDescription}>{description}</Text>
@@ -1220,8 +1118,8 @@ export function EventHubScreen() {
   );
 
   const renderPageEditorTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.placeholderCard}>
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} testID="scroll-page-editor">
+      <Card style={styles.placeholderCard} testID="placeholder-page-editor">
         <Ionicons name="globe-outline" size={64} color={colors.primary} />
         <Text style={styles.placeholderTitle}>Pagina Pubblica</Text>
         <Text style={styles.placeholderDescription}>
@@ -1233,6 +1131,7 @@ export function EventHubScreen() {
           onPress={() => {}}
           icon={<Ionicons name="open-outline" size={20} color={colors.primaryForeground} />}
           style={styles.placeholderButton}
+          testID="button-open-editor"
         />
       </Card>
     </ScrollView>
@@ -1270,13 +1169,13 @@ export function EventHubScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Centro Controllo"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity data-testid="button-settings">
+          <TouchableOpacity testID="button-settings">
             <Ionicons name="settings-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -1293,10 +1192,10 @@ export function EventHubScreen() {
         />
       </View>
 
-      <View style={[styles.contentContainer, { paddingBottom: insets.bottom + 80 }]}>
+      <View style={styles.contentContainer}>
         {renderTabContent()}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -1339,6 +1238,35 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  loadingText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+  },
+  errorText: {
+    color: colors.destructive,
+    fontSize: fontSize.base,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  retryButton: {
+    marginTop: spacing.md,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+    gap: spacing.sm,
+  },
+  emptyText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
   },
   eventInfoCard: {
     marginBottom: spacing.md,
@@ -1416,6 +1344,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  quickActionsGridResponsive: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
   quickActionBtn: {
     flex: 1,
     minWidth: 140,
@@ -1485,8 +1417,17 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: colors.border,
   },
+  ticketsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   ticketCard: {
     marginBottom: spacing.md,
+  },
+  ticketCardResponsive: {
+    flex: 1,
+    minWidth: 280,
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -1534,8 +1475,17 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: borderRadius.full,
   },
+  listGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   listEntryCard: {
     marginBottom: spacing.md,
+  },
+  listEntryCardResponsive: {
+    flex: 1,
+    minWidth: 280,
   },
   listEntryHeader: {
     flexDirection: 'row',
@@ -1567,8 +1517,66 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
+  trackingCard: {
+    marginBottom: spacing.md,
+  },
+  trackingCardResponsive: {
+    flex: 1,
+    minWidth: 280,
+  },
+  trackingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  trackingDate: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+  },
+  transferRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  transferPerson: {
+    flex: 1,
+  },
+  transferLabel: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  transferName: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+  },
+  transferNamePending: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+  },
+  siaeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  siaeText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+  },
   staffCard: {
     marginBottom: spacing.md,
+  },
+  staffCardResponsive: {
+    flex: 1,
+    minWidth: 280,
   },
   staffHeader: {
     flexDirection: 'row',
@@ -1647,6 +1655,10 @@ const styles = StyleSheet.create({
   breakdownCard: {
     marginBottom: spacing.md,
   },
+  breakdownCardResponsive: {
+    flex: 1,
+    minWidth: 280,
+  },
   breakdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1715,148 +1727,40 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
   },
-  trackingCard: {
-    marginBottom: spacing.md,
-  },
-  trackingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  placeholderCard: {
     alignItems: 'center',
-    marginBottom: spacing.md,
+    paddingVertical: spacing.xxl,
   },
-  trackingDate: {
+  placeholderTitle: {
+    color: colors.foreground,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    marginTop: spacing.lg,
+  },
+  placeholderDescription: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
-  },
-  transferRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  transferPerson: {
-    flex: 1,
-  },
-  transferLabel: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    marginBottom: spacing.xs,
-  },
-  transferName: {
-    color: colors.foreground,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-  },
-  transferNamePending: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.base,
-    fontStyle: 'italic',
-  },
-  fiscalSeal: {
-    color: colors.primary,
-    fontSize: fontSize.xs,
-    marginTop: spacing.xs,
-  },
-  progressiveNum: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
-  },
-  loadingContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: colors.mutedForeground,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyText: {
-    color: colors.mutedForeground,
-    marginTop: spacing.md,
-  },
-  errorText: {
-    color: colors.destructive,
-    marginTop: spacing.md,
     textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
-  retryButton: {
+  placeholderBadge: {
+    backgroundColor: colors.muted,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  placeholderBadgeText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  placeholderButton: {
     marginTop: spacing.md,
-  },
-  resalePrice: {
-    color: colors.success,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-  },
-  resaleFooter: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  statIconGradientPurple: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: '#8B5CF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  statIconGradientGreen: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#34D399',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  statIconGradientBlue: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#60A5FA',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  statIconGradientAmber: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: '#F59E0B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FBBF24',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
   },
   statusTimelineCard: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   statusTimelineTitle: {
     color: colors.foreground,
@@ -1866,13 +1770,12 @@ const styles = StyleSheet.create({
   },
   statusTimeline: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   statusTimelineStep: {
-    flex: 1,
     alignItems: 'center',
-    position: 'relative',
+    flex: 1,
   },
   statusTimelineIcon: {
     width: 40,
@@ -1881,8 +1784,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
-    zIndex: 1,
   },
   statusTimelineIconActive: {
     backgroundColor: colors.primary,
@@ -1893,7 +1794,7 @@ const styles = StyleSheet.create({
   statusTimelineLabel: {
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
   statusTimelineLabelActive: {
@@ -1906,48 +1807,12 @@ const styles = StyleSheet.create({
   statusTimelineLine: {
     position: 'absolute',
     top: 20,
-    left: '60%',
-    right: '-40%',
+    left: '55%',
+    width: '90%',
     height: 2,
     backgroundColor: colors.muted,
-    zIndex: 0,
   },
   statusTimelineLineActive: {
-    backgroundColor: colors.success,
-  },
-  placeholderCard: {
-    alignItems: 'center',
-    padding: spacing.xl,
-    marginTop: spacing.xl,
-  },
-  placeholderTitle: {
-    color: colors.foreground,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  placeholderDescription: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  placeholderBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-  },
-  placeholderBadgeText: {
-    color: colors.primary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-  },
-  placeholderButton: {
-    marginTop: spacing.md,
+    backgroundColor: colors.primary,
   },
 });

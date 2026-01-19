@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -40,7 +41,9 @@ const REPORT_TYPES = [
 export function FinancialReportsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const shouldExport = route.params?.export;
 
   const [loading, setLoading] = useState(true);
@@ -157,18 +160,18 @@ export function FinancialReportsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Report Finanziari" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Generazione report...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Generazione report...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Report Finanziari" showBack onBack={() => navigation.goBack()} />
 
       <ScrollView
@@ -176,6 +179,7 @@ export function FinancialReportsScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.typesContainer}
         style={styles.typesScroll}
+        testID="scroll-report-types"
       >
         {REPORT_TYPES.map((type) => (
           <TouchableOpacity
@@ -185,7 +189,7 @@ export function FinancialReportsScreen() {
               selectedType === type.id && styles.typePillActive,
             ]}
             onPress={() => setSelectedType(type.id)}
-            data-testid={`pill-report-${type.id}`}
+            testID={`pill-report-${type.id}`}
           >
             <Ionicons
               name={type.icon as any}
@@ -206,37 +210,41 @@ export function FinancialReportsScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-reports"
       >
-        <View style={styles.dateRangeCard}>
+        <View style={styles.dateRangeCard} testID="card-date-range">
           <Ionicons name="calendar-outline" size={20} color={colors.mutedForeground} />
           <Text style={styles.dateRangeText}>{getDateRangeLabel()}</Text>
           {selectedType === 'custom' && (
-            <TouchableOpacity data-testid="button-change-dates">
+            <TouchableOpacity testID="button-change-dates">
               <Ionicons name="pencil-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Riepilogo</Text>
-          <View style={styles.summaryGrid}>
-            <Card variant="glass" style={styles.summaryCard}>
+          <Text style={styles.sectionTitle} testID="text-summary-title">Riepilogo</Text>
+          <View style={[styles.summaryGrid, (isLandscape || isTablet) && styles.summaryGridWide]}>
+            <Card variant="glass" style={styles.summaryCard} testID="card-summary-revenue">
               <View style={[styles.summaryIcon, { backgroundColor: `${colors.primary}20` }]}>
                 <Ionicons name="trending-up-outline" size={24} color={colors.primary} />
               </View>
               <Text style={styles.summaryValue}>{formatCurrency(reportData.totalRevenue)}</Text>
               <Text style={styles.summaryLabel}>Ricavi</Text>
             </Card>
-            <Card variant="glass" style={styles.summaryCard}>
+            <Card variant="glass" style={styles.summaryCard} testID="card-summary-expenses">
               <View style={[styles.summaryIcon, { backgroundColor: `${colors.destructive}20` }]}>
                 <Ionicons name="trending-down-outline" size={24} color={colors.destructive} />
               </View>
               <Text style={styles.summaryValue}>{formatCurrency(reportData.totalExpenses)}</Text>
               <Text style={styles.summaryLabel}>Spese</Text>
             </Card>
-            <Card variant="glass" style={styles.summaryCard}>
+            <Card variant="glass" style={styles.summaryCard} testID="card-summary-profit">
               <View style={[styles.summaryIcon, { backgroundColor: `${colors.teal}20` }]}>
                 <Ionicons name="wallet-outline" size={24} color={colors.teal} />
               </View>
@@ -248,7 +256,7 @@ export function FinancialReportsScreen() {
               </Text>
               <Text style={styles.summaryLabel}>Utile Netto</Text>
             </Card>
-            <Card variant="glass" style={styles.summaryCard}>
+            <Card variant="glass" style={styles.summaryCard} testID="card-summary-transactions">
               <View style={[styles.summaryIcon, { backgroundColor: `${colors.accent}20` }]}>
                 <Ionicons name="receipt-outline" size={24} color={colors.accent} />
               </View>
@@ -258,90 +266,94 @@ export function FinancialReportsScreen() {
           </View>
         </View>
 
-        {incomeCategories.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ricavi per Categoria</Text>
-            <Card variant="glass">
-              {incomeCategories.map((category, index) => (
-                <View
-                  key={category.name}
-                  style={[
-                    styles.categoryItem,
-                    index < incomeCategories.length - 1 && styles.categoryItemBorder,
-                  ]}
-                >
-                  <View style={styles.categoryInfo}>
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                    <View style={styles.categoryBarContainer}>
-                      <View
-                        style={[
-                          styles.categoryBar,
-                          {
-                            width: `${category.percentage}%`,
-                            backgroundColor: colors.primary,
-                          },
-                        ]}
-                      />
+        <View style={(isLandscape || isTablet) ? styles.twoColumnContainer : undefined}>
+          {incomeCategories.length > 0 && (
+            <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+              <Text style={styles.sectionTitle} testID="text-income-title">Ricavi per Categoria</Text>
+              <Card variant="glass" testID="card-income-breakdown">
+                {incomeCategories.map((category, index) => (
+                  <View
+                    key={category.name}
+                    style={[
+                      styles.categoryItem,
+                      index < incomeCategories.length - 1 && styles.categoryItemBorder,
+                    ]}
+                    testID={`item-income-${index}`}
+                  >
+                    <View style={styles.categoryInfo}>
+                      <Text style={styles.categoryName}>{category.name}</Text>
+                      <View style={styles.categoryBarContainer}>
+                        <View
+                          style={[
+                            styles.categoryBar,
+                            {
+                              width: `${category.percentage}%`,
+                              backgroundColor: colors.primary,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.categoryValues}>
+                      <Text style={[styles.categoryAmount, { color: colors.primary }]}>
+                        {formatCurrency(category.amount)}
+                      </Text>
+                      <Text style={styles.categoryPercentage}>{category.percentage.toFixed(1)}%</Text>
                     </View>
                   </View>
-                  <View style={styles.categoryValues}>
-                    <Text style={[styles.categoryAmount, { color: colors.primary }]}>
-                      {formatCurrency(category.amount)}
-                    </Text>
-                    <Text style={styles.categoryPercentage}>{category.percentage.toFixed(1)}%</Text>
-                  </View>
-                </View>
-              ))}
-            </Card>
-          </View>
-        )}
+                ))}
+              </Card>
+            </View>
+          )}
 
-        {expenseCategories.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Spese per Categoria</Text>
-            <Card variant="glass">
-              {expenseCategories.map((category, index) => (
-                <View
-                  key={category.name}
-                  style={[
-                    styles.categoryItem,
-                    index < expenseCategories.length - 1 && styles.categoryItemBorder,
-                  ]}
-                >
-                  <View style={styles.categoryInfo}>
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                    <View style={styles.categoryBarContainer}>
-                      <View
-                        style={[
-                          styles.categoryBar,
-                          {
-                            width: `${category.percentage}%`,
-                            backgroundColor: colors.destructive,
-                          },
-                        ]}
-                      />
+          {expenseCategories.length > 0 && (
+            <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+              <Text style={styles.sectionTitle} testID="text-expense-title">Spese per Categoria</Text>
+              <Card variant="glass" testID="card-expense-breakdown">
+                {expenseCategories.map((category, index) => (
+                  <View
+                    key={category.name}
+                    style={[
+                      styles.categoryItem,
+                      index < expenseCategories.length - 1 && styles.categoryItemBorder,
+                    ]}
+                    testID={`item-expense-${index}`}
+                  >
+                    <View style={styles.categoryInfo}>
+                      <Text style={styles.categoryName}>{category.name}</Text>
+                      <View style={styles.categoryBarContainer}>
+                        <View
+                          style={[
+                            styles.categoryBar,
+                            {
+                              width: `${category.percentage}%`,
+                              backgroundColor: colors.destructive,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.categoryValues}>
+                      <Text style={[styles.categoryAmount, { color: colors.destructive }]}>
+                        {formatCurrency(category.amount)}
+                      </Text>
+                      <Text style={styles.categoryPercentage}>{category.percentage.toFixed(1)}%</Text>
                     </View>
                   </View>
-                  <View style={styles.categoryValues}>
-                    <Text style={[styles.categoryAmount, { color: colors.destructive }]}>
-                      {formatCurrency(category.amount)}
-                    </Text>
-                    <Text style={styles.categoryPercentage}>{category.percentage.toFixed(1)}%</Text>
-                  </View>
-                </View>
-              ))}
-            </Card>
-          </View>
-        )}
+                ))}
+              </Card>
+            </View>
+          )}
+        </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Esporta Report</Text>
-          <View style={styles.exportGrid}>
+          <Text style={styles.sectionTitle} testID="text-export-title">Esporta Report</Text>
+          <View style={[styles.exportGrid, (isLandscape || isTablet) && styles.exportGridWide]}>
             <TouchableOpacity
               style={styles.exportButton}
               onPress={() => handleExport('pdf')}
               activeOpacity={0.8}
-              data-testid="button-export-pdf"
+              testID="button-export-pdf"
             >
               <View style={[styles.exportIcon, { backgroundColor: `${colors.destructive}20` }]}>
                 <Ionicons name="document-outline" size={24} color={colors.destructive} />
@@ -352,7 +364,7 @@ export function FinancialReportsScreen() {
               style={styles.exportButton}
               onPress={() => handleExport('excel')}
               activeOpacity={0.8}
-              data-testid="button-export-excel"
+              testID="button-export-excel"
             >
               <View style={[styles.exportIcon, { backgroundColor: `${colors.teal}20` }]}>
                 <Ionicons name="grid-outline" size={24} color={colors.teal} />
@@ -362,7 +374,7 @@ export function FinancialReportsScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -374,6 +386,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -436,6 +454,14 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
   },
+  halfSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    marginHorizontal: -spacing.sm,
+  },
   sectionTitle: {
     color: colors.foreground,
     fontSize: fontSize.lg,
@@ -446,6 +472,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  summaryGridWide: {
+    flexWrap: 'nowrap',
   },
   summaryCard: {
     flex: 1,
@@ -516,8 +545,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
+  exportGridWide: {
+    justifyContent: 'center',
+  },
   exportButton: {
     flex: 1,
+    maxWidth: 200,
     alignItems: 'center',
     backgroundColor: colors.glass.background,
     borderRadius: borderRadius['2xl'],

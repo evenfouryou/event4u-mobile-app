@@ -6,20 +6,22 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Dimensions,
+  useWindowDimensions,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
 const CASHIER_ACCENT = colors.cashier;
 const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+const TABLET_BREAKPOINT = 768;
+const CONTENT_MAX_WIDTH = 800;
 
 interface CashierStats {
   totalRevenue: number;
@@ -61,8 +63,6 @@ interface QuickAction {
   action: () => void;
 }
 
-const { width } = Dimensions.get('window');
-
 function formatCurrency(amount: number): string {
   return `€ ${amount.toFixed(2).replace('.', ',')}`;
 }
@@ -74,7 +74,9 @@ function formatTime(dateString: string): string {
 
 export function CashierHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= TABLET_BREAKPOINT;
 
   const { data: dashboard, isLoading, refetch, isRefetching } = useQuery<CashierDashboard>({
     queryKey: ['/api/cashier/dashboard'],
@@ -151,9 +153,7 @@ export function CashierHomeScreen() {
       title: 'Chiusura Cassa',
       icon: 'lock-closed',
       color: colors.destructive,
-      action: () => {
-        // Navigate to closing
-      },
+      action: () => {},
     },
   ];
 
@@ -179,22 +179,27 @@ export function CashierHomeScreen() {
     }
   };
 
+  const numColumns = isLandscape || isTablet ? 4 : 2;
+  const cardWidth = isTablet
+    ? (Math.min(width, CONTENT_MAX_WIDTH) - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns
+    : (width - spacing.lg * 2 - spacing.md) / 2;
+
   const renderStatCard = ({ item }: { item: typeof statCards[0] }) => (
-    <Card style={[styles.statCard, { width: (width - spacing.lg * 2 - spacing.md) / 2 }]}>
+    <Card style={[styles.statCard, { width: cardWidth }]} testID={`card-stat-${item.id}`}>
       <View style={styles.statHeader}>
         <Ionicons name={item.icon as any} size={24} color={item.color || CASHIER_ACCENT} />
       </View>
       <Text style={styles.statLabel}>{item.label}</Text>
-      <Text style={styles.statValue}>{item.value}</Text>
+      <Text style={styles.statValue} testID={`text-stat-value-${item.id}`}>{item.value}</Text>
     </Card>
   );
 
   const renderQuickAction = ({ item }: { item: QuickAction }) => (
     <TouchableOpacity
-      style={styles.quickActionButton}
+      style={[styles.quickActionButton, { width: cardWidth }]}
       onPress={item.action}
       activeOpacity={0.8}
-      data-testid={`button-quick-action-${item.id}`}
+      testID={`button-quick-action-${item.id}`}
     >
       <View style={[styles.quickActionIcon, { backgroundColor: item.color }]}>
         <Ionicons name={item.icon as any} size={32} color={colors.primaryForeground} />
@@ -218,164 +223,177 @@ export function CashierHomeScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Cassa" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento dati...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Cassa" />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.scrollContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
             tintColor={colors.primary}
+            testID="refresh-control"
           />
         }
+        testID="scroll-view"
       >
-        {currentEvent ? (
-          <Card style={styles.eventCard} variant="elevated">
-            <View style={styles.eventHeader}>
-              <View style={styles.eventInfo}>
-                <Text style={styles.eventLabel}>Evento Attuale</Text>
-                <Text style={styles.eventName}>{currentEvent.name}</Text>
-                <Text style={styles.eventTime}>
-                  {currentEvent.date} • {currentEvent.startTime} - {currentEvent.endTime}
-                </Text>
-              </View>
-              <View style={[
-                styles.eventStatus,
-                currentEvent.status === 'in_progress' && styles.eventStatusActive,
-                currentEvent.status === 'ended' && styles.eventStatusEnded,
-              ]}>
-                <View style={[
-                  styles.statusIndicator,
-                  currentEvent.status === 'in_progress' && styles.statusIndicatorActive,
-                  currentEvent.status === 'ended' && styles.statusIndicatorEnded,
-                ]} />
-                <Text style={[
-                  styles.statusText,
-                  currentEvent.status === 'in_progress' && styles.statusTextActive,
-                  currentEvent.status === 'ended' && styles.statusTextEnded,
-                ]}>
-                  {getEventStatusText(currentEvent.status)}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        ) : (
-          <Card style={styles.eventCard} variant="elevated">
-            <View style={styles.noEventContainer}>
-              <Ionicons name="calendar-outline" size={40} color={colors.mutedForeground} />
-              <Text style={styles.noEventText}>Nessun evento assegnato</Text>
-              <Text style={styles.noEventSubtext}>
-                Attendi l'assegnazione ad un evento da parte del gestore
-              </Text>
-            </View>
-          </Card>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistiche Oggi</Text>
-          <FlatList
-            data={statCards}
-            renderItem={renderStatCard}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.statsGrid}
-            scrollEnabled={false}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-          <FlatList
-            data={quickActions}
-            renderItem={renderQuickAction}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.actionsGrid}
-            scrollEnabled={false}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Transazioni Recenti</Text>
-            <TouchableOpacity data-testid="button-view-all">
-              <Text style={styles.viewAllText}>Vedi tutto</Text>
-            </TouchableOpacity>
-          </View>
-
-          {recentTransactions.length > 0 ? (
-            recentTransactions.map((transaction) => (
-              <Card key={transaction.id} style={styles.transactionCard}>
-                <View style={styles.transactionItem}>
-                  <View style={styles.transactionIcon}>
-                    <Ionicons 
-                      name={getTransactionIcon(transaction.type) as any} 
-                      size={20} 
-                      color={getTransactionColor(transaction.type)} 
-                    />
-                  </View>
-                  <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionTitle}>{transaction.title}</Text>
-                    <Text style={styles.transactionTime}>{transaction.time}</Text>
-                  </View>
-                  <Text style={styles.transactionAmount}>
-                    {formatCurrency(transaction.amount)}
+        <View style={[styles.contentWrapper, isTablet && { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', width: '100%' }]}>
+          {currentEvent ? (
+            <Card style={styles.eventCard} variant="elevated" testID="card-current-event">
+              <View style={styles.eventHeader}>
+                <View style={styles.eventInfo}>
+                  <Text style={styles.eventLabel}>Evento Attuale</Text>
+                  <Text style={styles.eventName} testID="text-event-name">{currentEvent.name}</Text>
+                  <Text style={styles.eventTime} testID="text-event-time">
+                    {currentEvent.date} • {currentEvent.startTime} - {currentEvent.endTime}
                   </Text>
                 </View>
-              </Card>
-            ))
+                <View style={[
+                  styles.eventStatus,
+                  currentEvent.status === 'in_progress' && styles.eventStatusActive,
+                  currentEvent.status === 'ended' && styles.eventStatusEnded,
+                ]}>
+                  <View style={[
+                    styles.statusIndicator,
+                    currentEvent.status === 'in_progress' && styles.statusIndicatorActive,
+                    currentEvent.status === 'ended' && styles.statusIndicatorEnded,
+                  ]} />
+                  <Text style={[
+                    styles.statusText,
+                    currentEvent.status === 'in_progress' && styles.statusTextActive,
+                    currentEvent.status === 'ended' && styles.statusTextEnded,
+                  ]} testID="text-event-status">
+                    {getEventStatusText(currentEvent.status)}
+                  </Text>
+                </View>
+              </View>
+            </Card>
           ) : (
-            <Card style={styles.emptyTransactionsCard}>
-              <View style={styles.emptyTransactions}>
-                <Ionicons name="receipt-outline" size={32} color={colors.mutedForeground} />
-                <Text style={styles.emptyTransactionsText}>
-                  Nessuna transazione recente
+            <Card style={styles.eventCard} variant="elevated" testID="card-no-event">
+              <View style={styles.noEventContainer}>
+                <Ionicons name="calendar-outline" size={40} color={colors.mutedForeground} />
+                <Text style={styles.noEventText}>Nessun evento assegnato</Text>
+                <Text style={styles.noEventSubtext}>
+                  Attendi l'assegnazione ad un evento da parte del gestore
                 </Text>
               </View>
             </Card>
           )}
-        </View>
 
-        <View style={styles.section}>
-          <Card style={styles.summaryCard}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Contanti</Text>
-              <Text style={styles.summaryValue}>
-                {stats ? formatCurrency(stats.cashRevenue) : '€ 0,00'}
-              </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Statistiche Oggi</Text>
+            <FlatList
+              data={statCards}
+              renderItem={renderStatCard}
+              keyExtractor={(item) => item.id}
+              numColumns={numColumns}
+              key={numColumns}
+              columnWrapperStyle={styles.statsGrid}
+              scrollEnabled={false}
+              testID="list-stats"
+            />
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+            <FlatList
+              data={quickActions}
+              renderItem={renderQuickAction}
+              keyExtractor={(item) => item.id}
+              numColumns={numColumns}
+              key={`actions-${numColumns}`}
+              columnWrapperStyle={styles.actionsGrid}
+              scrollEnabled={false}
+              testID="list-quick-actions"
+            />
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Transazioni Recenti</Text>
+              <TouchableOpacity testID="button-view-all-transactions">
+                <Text style={styles.viewAllText}>Vedi tutto</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Carte</Text>
-              <Text style={styles.summaryValue}>
-                {stats ? formatCurrency(stats.cardRevenue) : '€ 0,00'}
-              </Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Totale</Text>
-              <Text style={styles.summaryTotal}>
-                {stats ? formatCurrency(stats.totalRevenue) : '€ 0,00'}
-              </Text>
-            </View>
-          </Card>
+
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((transaction) => (
+                <Card key={transaction.id} style={styles.transactionCard} testID={`card-transaction-${transaction.id}`}>
+                  <View style={styles.transactionItem}>
+                    <View style={styles.transactionIcon}>
+                      <Ionicons 
+                        name={getTransactionIcon(transaction.type) as any} 
+                        size={20} 
+                        color={getTransactionColor(transaction.type)} 
+                      />
+                    </View>
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionTitle} testID={`text-transaction-title-${transaction.id}`}>
+                        {transaction.title}
+                      </Text>
+                      <Text style={styles.transactionTime}>{transaction.time}</Text>
+                    </View>
+                    <Text style={styles.transactionAmount} testID={`text-transaction-amount-${transaction.id}`}>
+                      {formatCurrency(transaction.amount)}
+                    </Text>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <Card style={styles.emptyTransactionsCard} testID="card-empty-transactions">
+                <View style={styles.emptyTransactions}>
+                  <Ionicons name="receipt-outline" size={32} color={colors.mutedForeground} />
+                  <Text style={styles.emptyTransactionsText}>
+                    Nessuna transazione recente
+                  </Text>
+                </View>
+              </Card>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Card style={styles.summaryCard} testID="card-summary">
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Contanti</Text>
+                <Text style={styles.summaryValue} testID="text-summary-cash">
+                  {stats ? formatCurrency(stats.cashRevenue) : '€ 0,00'}
+                </Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Carte</Text>
+                <Text style={styles.summaryValue} testID="text-summary-card">
+                  {stats ? formatCurrency(stats.cardRevenue) : '€ 0,00'}
+                </Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Totale</Text>
+                <Text style={styles.summaryTotal} testID="text-summary-total">
+                  {stats ? formatCurrency(stats.totalRevenue) : '€ 0,00'}
+                </Text>
+              </View>
+            </Card>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -385,6 +403,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 80,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentWrapper: {
     flex: 1,
   },
   loadingContainer: {

@@ -8,10 +8,11 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -29,7 +30,9 @@ interface BillingOrganizer {
 
 export function AdminBillingOrganizersScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -144,18 +147,18 @@ export function AdminBillingOrganizersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Organizzatori" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Fatturazione Organizzatori" showBack />
       
       <View style={styles.searchContainer}>
@@ -167,10 +170,10 @@ export function AdminBillingOrganizersScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-organizers"
+            testID="input-search-organizers"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -179,71 +182,84 @@ export function AdminBillingOrganizersScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view-organizers"
       >
         {filteredOrganizers.length > 0 ? (
-          filteredOrganizers.map((org) => (
-            <TouchableOpacity
-              key={org.id}
-              onPress={() => navigation.navigate('AdminBillingOrganizerDetail', { organizerId: org.id })}
-              activeOpacity={0.8}
-              data-testid={`card-organizer-${org.id}`}
-            >
-              <Card variant="glass" style={styles.orgCard}>
-                <View style={styles.orgHeader}>
-                  <View style={styles.orgInfo}>
-                    <Text style={styles.orgName}>{org.name}</Text>
-                    <Text style={styles.orgEmail}>{org.email}</Text>
+          <View style={[
+            styles.listContainer,
+            (isTablet || isLandscape) && styles.listContainerLandscape
+          ]}>
+            {filteredOrganizers.map((org) => (
+              <TouchableOpacity
+                key={org.id}
+                style={[
+                  styles.orgCardWrapper,
+                  (isTablet || isLandscape) && styles.orgCardWrapperLandscape
+                ]}
+                onPress={() => navigation.navigate('AdminBillingOrganizerDetail', { organizerId: org.id })}
+                activeOpacity={0.8}
+                testID={`card-organizer-${org.id}`}
+              >
+                <Card variant="glass" style={styles.orgCard}>
+                  <View style={styles.orgHeader}>
+                    <View style={styles.orgInfo}>
+                      <Text style={styles.orgName} testID={`text-org-name-${org.id}`}>{org.name}</Text>
+                      <Text style={styles.orgEmail} testID={`text-org-email-${org.id}`}>{org.email}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(org.status)}20` }]}>
+                      <View style={[styles.statusDot, { backgroundColor: getStatusColor(org.status) }]} />
+                      <Text style={[styles.statusText, { color: getStatusColor(org.status) }]} testID={`text-org-status-${org.id}`}>
+                        {getStatusLabel(org.status)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(org.status)}20` }]}>
-                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(org.status) }]} />
-                    <Text style={[styles.statusText, { color: getStatusColor(org.status) }]}>
-                      {getStatusLabel(org.status)}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.orgDetails}>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Piano</Text>
-                    <Text style={styles.detailValue}>{org.planName}</Text>
+                  <View style={styles.orgDetails}>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Piano</Text>
+                      <Text style={styles.detailValue} testID={`text-org-plan-${org.id}`}>{org.planName}</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Saldo</Text>
+                      <Text style={[styles.detailValue, org.balance > 0 && { color: colors.destructive }]} testID={`text-org-balance-${org.id}`}>
+                        {formatCurrency(org.balance)}
+                      </Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Ricavi</Text>
+                      <Text style={[styles.detailValue, { color: colors.teal }]} testID={`text-org-revenue-${org.id}`}>
+                        {formatCurrency(org.totalRevenue)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Saldo</Text>
-                    <Text style={[styles.detailValue, org.balance > 0 && { color: colors.destructive }]}>
-                      {formatCurrency(org.balance)}
-                    </Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Ricavi</Text>
-                    <Text style={[styles.detailValue, { color: colors.teal }]}>
-                      {formatCurrency(org.totalRevenue)}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.orgFooter}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.nextBillingText}>
-                    Prossima fattura: {formatDate(org.nextBillingDate)}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))
+                  <View style={styles.orgFooter}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.nextBillingText} testID={`text-org-next-billing-${org.id}`}>
+                      Prossima fattura: {formatDate(org.nextBillingDate)}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty-state">
             <Ionicons name="business-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessun organizzatore trovato</Text>
+            <Text style={styles.emptyText} testID="text-empty-message">Nessun organizzatore trovato</Text>
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -255,6 +271,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -286,8 +308,22 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.base,
   },
-  orgCard: {
+  listContainer: {
+    flex: 1,
+  },
+  listContainerLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  orgCardWrapper: {
     marginBottom: spacing.md,
+  },
+  orgCardWrapperLandscape: {
+    width: '48.5%',
+    marginBottom: 0,
+  },
+  orgCard: {
     padding: spacing.lg,
   },
   orgHeader: {

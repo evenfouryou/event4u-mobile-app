@@ -11,10 +11,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -61,7 +62,9 @@ const colorPresets = [
 export function EventPageEditorScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const eventId = route.params?.eventId;
 
   const [config, setConfig] = useState<EventPageConfig | null>(null);
@@ -213,290 +216,312 @@ export function EventPageEditorScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Editor Pagina" showBack onBack={() => navigation.goBack()} />
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !config) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Editor Pagina" showBack onBack={() => navigation.goBack()} />
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error || 'Configurazione non trovata'}</Text>
-          <Button title="Riprova" onPress={loadPageConfig} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadPageConfig} style={styles.retryButton} testID="button-retry" />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Header
-        title="Editor Pagina"
-        subtitle={config.eventName}
-        showBack
-        onBack={() => {
-          if (hasChanges) {
-            Alert.alert(
-              'Modifiche non salvate',
-              'Vuoi uscire senza salvare?',
-              [
-                { text: 'Annulla', style: 'cancel' },
-                { text: 'Esci', style: 'destructive', onPress: () => navigation.goBack() },
-              ]
-            );
-          } else {
-            navigation.goBack();
-          }
-        }}
-        rightAction={
-          <TouchableOpacity
-            style={styles.previewButton}
-            onPress={() => navigation.navigate('EventPagePreview', { eventId })}
-            data-testid="button-preview"
-          >
-            <Ionicons name="eye-outline" size={22} color={colors.primary} />
-          </TouchableOpacity>
-        }
-      />
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.section} variant="elevated">
-          <View style={styles.publishRow}>
-            <View style={styles.publishInfo}>
-              <Text style={styles.sectionTitle}>Stato Pubblicazione</Text>
-              <Text style={styles.publishStatus}>
-                {config.isPublished ? 'Pagina pubblicata' : 'Pagina nascosta'}
-              </Text>
-            </View>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Header
+          title="Editor Pagina"
+          subtitle={config.eventName}
+          showBack
+          onBack={() => {
+            if (hasChanges) {
+              Alert.alert(
+                'Modifiche non salvate',
+                'Vuoi uscire senza salvare?',
+                [
+                  { text: 'Annulla', style: 'cancel' },
+                  { text: 'Esci', style: 'destructive', onPress: () => navigation.goBack() },
+                ]
+              );
+            } else {
+              navigation.goBack();
+            }
+          }}
+          rightAction={
             <TouchableOpacity
-              style={[styles.publishButton, { backgroundColor: config.isPublished ? colors.success : colors.surface }]}
-              onPress={handlePublish}
-              data-testid="button-publish"
+              style={styles.previewButton}
+              onPress={() => navigation.navigate('EventPagePreview', { eventId })}
+              testID="button-preview"
             >
-              <Ionicons
-                name={config.isPublished ? 'eye' : 'eye-off'}
-                size={20}
-                color={config.isPublished ? colors.foreground : colors.mutedForeground}
-              />
+              <Ionicons name="eye-outline" size={22} color={colors.primary} />
             </TouchableOpacity>
-          </View>
+          }
+        />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>URL Slug</Text>
-            <View style={styles.slugContainer}>
-              <Text style={styles.slugPrefix}>/eventi/</Text>
-              <TextInput
-                style={styles.slugInput}
-                value={config.slug}
-                onChangeText={(v) => updateConfig('slug', v.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="nome-evento"
-                placeholderTextColor={colors.mutedForeground}
-                autoCapitalize="none"
-                data-testid="input-slug"
-              />
-            </View>
-          </View>
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <Text style={styles.sectionTitle}>Descrizione</Text>
-          <TextInput
-            style={[styles.textInput, styles.textArea]}
-            value={config.description}
-            onChangeText={(v) => updateConfig('description', v)}
-            placeholder="Descrizione della pagina evento..."
-            placeholderTextColor={colors.mutedForeground}
-            multiline
-            numberOfLines={4}
-            data-testid="input-description"
-          />
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <Text style={styles.sectionTitle}>Sezioni</Text>
-          
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Mostra Lineup</Text>
-            <Switch
-              value={config.showLineup}
-              onValueChange={(v) => updateConfig('showLineup', v)}
-              trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
-              thumbColor={config.showLineup ? colors.primary : colors.mutedForeground}
-            />
-          </View>
-          
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Mostra Galleria</Text>
-            <Switch
-              value={config.showGallery}
-              onValueChange={(v) => updateConfig('showGallery', v)}
-              trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
-              thumbColor={config.showGallery ? colors.primary : colors.mutedForeground}
-            />
-          </View>
-          
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Mostra Location</Text>
-            <Switch
-              value={config.showLocation}
-              onValueChange={(v) => updateConfig('showLocation', v)}
-              trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
-              thumbColor={config.showLocation ? colors.primary : colors.mutedForeground}
-            />
-          </View>
-          
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Mostra Countdown</Text>
-            <Switch
-              value={config.showCountdown}
-              onValueChange={(v) => updateConfig('showCountdown', v)}
-              trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
-              thumbColor={config.showCountdown ? colors.primary : colors.mutedForeground}
-            />
-          </View>
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <Text style={styles.sectionTitle}>Colori</Text>
-          
-          <Text style={styles.colorLabel}>Colore Primario</Text>
-          <View style={styles.colorGrid}>
-            {colorPresets.map((preset) => (
-              <TouchableOpacity
-                key={preset.value}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: preset.value },
-                  config.primaryColor === preset.value && styles.colorSwatchSelected,
-                ]}
-                onPress={() => updateConfig('primaryColor', preset.value)}
-                data-testid={`color-primary-${preset.label}`}
-              />
-            ))}
-          </View>
-
-          <Text style={[styles.colorLabel, { marginTop: spacing.md }]}>Colore Accento</Text>
-          <View style={styles.colorGrid}>
-            {colorPresets.map((preset) => (
-              <TouchableOpacity
-                key={preset.value}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: preset.value },
-                  config.accentColor === preset.value && styles.colorSwatchSelected,
-                ]}
-                onPress={() => updateConfig('accentColor', preset.value)}
-                data-testid={`color-accent-${preset.label}`}
-              />
-            ))}
-          </View>
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <Text style={styles.sectionTitle}>Social Links</Text>
-          
-          <View style={styles.socialRow}>
-            <Ionicons name="logo-instagram" size={20} color={colors.mutedForeground} />
-            <TextInput
-              style={styles.socialInput}
-              value={config.socialLinks.instagram}
-              onChangeText={(v) => updateSocialLink('instagram', v)}
-              placeholder="@username"
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
-            />
-          </View>
-          
-          <View style={styles.socialRow}>
-            <Ionicons name="logo-facebook" size={20} color={colors.mutedForeground} />
-            <TextInput
-              style={styles.socialInput}
-              value={config.socialLinks.facebook}
-              onChangeText={(v) => updateSocialLink('facebook', v)}
-              placeholder="facebook.com/page"
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
-            />
-          </View>
-          
-          <View style={styles.socialRow}>
-            <Ionicons name="globe-outline" size={20} color={colors.mutedForeground} />
-            <TextInput
-              style={styles.socialInput}
-              value={config.socialLinks.website}
-              onChangeText={(v) => updateSocialLink('website', v)}
-              placeholder="https://..."
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Sezioni Personalizzate</Text>
-            <TouchableOpacity style={styles.addSectionButton} onPress={addCustomSection} data-testid="button-add-section">
-              <Ionicons name="add" size={20} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {config.customSections.length === 0 ? (
-            <Text style={styles.emptyText}>Nessuna sezione personalizzata</Text>
-          ) : (
-            config.customSections.map((section, index) => (
-              <View key={section.id} style={styles.customSection}>
-                <View style={styles.customSectionHeader}>
-                  <TextInput
-                    style={styles.sectionTitleInput}
-                    value={section.title}
-                    onChangeText={(v) => updateCustomSection(index, 'title', v)}
-                    placeholder="Titolo sezione"
-                    placeholderTextColor={colors.mutedForeground}
-                  />
-                  <TouchableOpacity onPress={() => removeCustomSection(index)}>
-                    <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={(isTablet || isLandscape) && styles.contentWide}
+        >
+          <View style={(isTablet || isLandscape) ? styles.columnsContainer : undefined}>
+            <View style={(isTablet || isLandscape) ? styles.column : undefined}>
+              <Card style={styles.section} variant="elevated" testID="card-publish">
+                <View style={styles.publishRow}>
+                  <View style={styles.publishInfo}>
+                    <Text style={styles.sectionTitle}>Stato Pubblicazione</Text>
+                    <Text style={styles.publishStatus}>
+                      {config.isPublished ? 'Pagina pubblicata' : 'Pagina nascosta'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.publishButton, { backgroundColor: config.isPublished ? colors.success : colors.surface }]}
+                    onPress={handlePublish}
+                    testID="button-publish"
+                  >
+                    <Ionicons
+                      name={config.isPublished ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={config.isPublished ? colors.foreground : colors.mutedForeground}
+                    />
                   </TouchableOpacity>
                 </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>URL Slug</Text>
+                  <View style={styles.slugContainer}>
+                    <Text style={styles.slugPrefix}>/eventi/</Text>
+                    <TextInput
+                      style={styles.slugInput}
+                      value={config.slug}
+                      onChangeText={(v) => updateConfig('slug', v.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                      placeholder="nome-evento"
+                      placeholderTextColor={colors.mutedForeground}
+                      autoCapitalize="none"
+                      testID="input-slug"
+                    />
+                  </View>
+                </View>
+              </Card>
+
+              <Card style={styles.section} variant="elevated" testID="card-description">
+                <Text style={styles.sectionTitle}>Descrizione</Text>
                 <TextInput
-                  style={[styles.textInput, styles.sectionContent]}
-                  value={section.content}
-                  onChangeText={(v) => updateCustomSection(index, 'content', v)}
-                  placeholder="Contenuto..."
+                  style={[styles.textInput, styles.textArea]}
+                  value={config.description}
+                  onChangeText={(v) => updateConfig('description', v)}
+                  placeholder="Descrizione della pagina evento..."
                   placeholderTextColor={colors.mutedForeground}
                   multiline
-                  numberOfLines={3}
+                  numberOfLines={4}
+                  testID="input-description"
                 />
-              </View>
-            ))
-          )}
-        </Card>
+              </Card>
 
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+              <Card style={styles.section} variant="elevated" testID="card-sections">
+                <Text style={styles.sectionTitle}>Sezioni</Text>
+                
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>Mostra Lineup</Text>
+                  <Switch
+                    value={config.showLineup}
+                    onValueChange={(v) => updateConfig('showLineup', v)}
+                    trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
+                    thumbColor={config.showLineup ? colors.primary : colors.mutedForeground}
+                    testID="switch-lineup"
+                  />
+                </View>
+                
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>Mostra Galleria</Text>
+                  <Switch
+                    value={config.showGallery}
+                    onValueChange={(v) => updateConfig('showGallery', v)}
+                    trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
+                    thumbColor={config.showGallery ? colors.primary : colors.mutedForeground}
+                    testID="switch-gallery"
+                  />
+                </View>
+                
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>Mostra Location</Text>
+                  <Switch
+                    value={config.showLocation}
+                    onValueChange={(v) => updateConfig('showLocation', v)}
+                    trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
+                    thumbColor={config.showLocation ? colors.primary : colors.mutedForeground}
+                    testID="switch-location"
+                  />
+                </View>
+                
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>Mostra Countdown</Text>
+                  <Switch
+                    value={config.showCountdown}
+                    onValueChange={(v) => updateConfig('showCountdown', v)}
+                    trackColor={{ false: colors.surface, true: `${colors.primary}50` }}
+                    thumbColor={config.showCountdown ? colors.primary : colors.mutedForeground}
+                    testID="switch-countdown"
+                  />
+                </View>
+              </Card>
+            </View>
 
-      {hasChanges && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-          <Button
-            title={saving ? 'Salvataggio...' : 'Salva Modifiche'}
-            onPress={handleSave}
-            disabled={saving}
-            style={styles.saveButton}
-          />
-        </View>
-      )}
-    </KeyboardAvoidingView>
+            <View style={(isTablet || isLandscape) ? styles.column : undefined}>
+              <Card style={styles.section} variant="elevated" testID="card-colors">
+                <Text style={styles.sectionTitle}>Colori</Text>
+                
+                <Text style={styles.colorLabel}>Colore Primario</Text>
+                <View style={styles.colorGrid}>
+                  {colorPresets.map((preset) => (
+                    <TouchableOpacity
+                      key={preset.value}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: preset.value },
+                        config.primaryColor === preset.value && styles.colorSwatchSelected,
+                      ]}
+                      onPress={() => updateConfig('primaryColor', preset.value)}
+                      testID={`color-primary-${preset.label.toLowerCase()}`}
+                    />
+                  ))}
+                </View>
+
+                <Text style={[styles.colorLabel, { marginTop: spacing.md }]}>Colore Accento</Text>
+                <View style={styles.colorGrid}>
+                  {colorPresets.map((preset) => (
+                    <TouchableOpacity
+                      key={preset.value}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: preset.value },
+                        config.accentColor === preset.value && styles.colorSwatchSelected,
+                      ]}
+                      onPress={() => updateConfig('accentColor', preset.value)}
+                      testID={`color-accent-${preset.label.toLowerCase()}`}
+                    />
+                  ))}
+                </View>
+              </Card>
+
+              <Card style={styles.section} variant="elevated" testID="card-social">
+                <Text style={styles.sectionTitle}>Social Links</Text>
+                
+                <View style={styles.socialRow}>
+                  <Ionicons name="logo-instagram" size={20} color={colors.mutedForeground} />
+                  <TextInput
+                    style={styles.socialInput}
+                    value={config.socialLinks.instagram}
+                    onChangeText={(v) => updateSocialLink('instagram', v)}
+                    placeholder="@username"
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCapitalize="none"
+                    testID="input-instagram"
+                  />
+                </View>
+                
+                <View style={styles.socialRow}>
+                  <Ionicons name="logo-facebook" size={20} color={colors.mutedForeground} />
+                  <TextInput
+                    style={styles.socialInput}
+                    value={config.socialLinks.facebook}
+                    onChangeText={(v) => updateSocialLink('facebook', v)}
+                    placeholder="facebook.com/page"
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCapitalize="none"
+                    testID="input-facebook"
+                  />
+                </View>
+                
+                <View style={styles.socialRow}>
+                  <Ionicons name="globe-outline" size={20} color={colors.mutedForeground} />
+                  <TextInput
+                    style={styles.socialInput}
+                    value={config.socialLinks.website}
+                    onChangeText={(v) => updateSocialLink('website', v)}
+                    placeholder="https://..."
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCapitalize="none"
+                    keyboardType="url"
+                    testID="input-website"
+                  />
+                </View>
+              </Card>
+
+              <Card style={styles.section} variant="elevated" testID="card-custom-sections">
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Sezioni Personalizzate</Text>
+                  <TouchableOpacity style={styles.addSectionButton} onPress={addCustomSection} testID="button-add-section">
+                    <Ionicons name="add" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+
+                {config.customSections.length === 0 ? (
+                  <Text style={styles.emptyText}>Nessuna sezione personalizzata</Text>
+                ) : (
+                  config.customSections.map((section, index) => (
+                    <View key={section.id} style={styles.customSection}>
+                      <View style={styles.customSectionHeader}>
+                        <TextInput
+                          style={styles.sectionTitleInput}
+                          value={section.title}
+                          onChangeText={(v) => updateCustomSection(index, 'title', v)}
+                          placeholder="Titolo sezione"
+                          placeholderTextColor={colors.mutedForeground}
+                          testID={`input-section-title-${index}`}
+                        />
+                        <TouchableOpacity onPress={() => removeCustomSection(index)} testID={`button-remove-section-${index}`}>
+                          <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+                        </TouchableOpacity>
+                      </View>
+                      <TextInput
+                        style={[styles.textInput, styles.sectionContent]}
+                        value={section.content}
+                        onChangeText={(v) => updateCustomSection(index, 'content', v)}
+                        placeholder="Contenuto..."
+                        placeholderTextColor={colors.mutedForeground}
+                        multiline
+                        numberOfLines={3}
+                        testID={`input-section-content-${index}`}
+                      />
+                    </View>
+                  ))
+                )}
+              </Card>
+            </View>
+          </View>
+
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+
+        {hasChanges && (
+          <View style={styles.footer}>
+            <Button
+              title={saving ? 'Salvataggio...' : 'Salva Modifiche'}
+              onPress={handleSave}
+              disabled={saving}
+              style={styles.saveButton}
+              testID="button-save"
+            />
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -505,9 +530,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  keyboardView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  contentWide: {
+    paddingBottom: spacing['4xl'],
+  },
+  columnsContainer: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  column: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -700,11 +738,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: fontSize.sm,
     color: colors.mutedForeground,
-    fontStyle: 'italic',
   },
   footer: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,
@@ -713,6 +750,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   bottomPadding: {
-    height: spacing['4xl'],
+    height: spacing['3xl'],
   },
 });

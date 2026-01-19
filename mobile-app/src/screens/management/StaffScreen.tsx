@@ -10,9 +10,9 @@ import {
   useWindowDimensions,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -59,9 +59,9 @@ const statusLabels: Record<string, string> = {
 export function StaffScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const eventId = route.params?.eventId;
   const [viewMode, setViewMode] = useState<ViewMode>(eventId ? 'assignments' : 'schedule');
@@ -69,6 +69,8 @@ export function StaffScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   useEffect(() => {
     loadAssignments();
@@ -146,52 +148,54 @@ export function StaffScreen() {
   };
 
   const renderAssignment = ({ item }: { item: StaffAssignment }) => (
-    <TouchableOpacity
-      onPress={() => handleUpdateStatus(item)}
-      activeOpacity={0.8}
-      data-testid={`assignment-${item.id}`}
-    >
-      <Card style={styles.assignmentCard} variant="elevated">
-        <View style={styles.assignmentHeader}>
-          <View style={[styles.avatar, { borderColor: statusColors[item.status] }]}>
-            <Text style={styles.avatarText}>{item.personnelName.charAt(0).toUpperCase()}</Text>
+    <View style={numColumns > 1 && viewMode === 'assignments' ? styles.columnItem : undefined}>
+      <TouchableOpacity
+        onPress={() => handleUpdateStatus(item)}
+        activeOpacity={0.8}
+        testID={`card-assignment-${item.id}`}
+      >
+        <Card style={styles.assignmentCard} variant="elevated">
+          <View style={styles.assignmentHeader}>
+            <View style={[styles.avatar, { borderColor: statusColors[item.status] }]}>
+              <Text style={styles.avatarText}>{item.personnelName.charAt(0).toUpperCase()}</Text>
+            </View>
+            <View style={styles.assignmentInfo}>
+              <Text style={styles.personnelName}>{item.personnelName}</Text>
+              <Text style={styles.roleText}>{item.role}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: `${statusColors[item.status]}20` }]}>
+              <View style={[styles.statusDot, { backgroundColor: statusColors[item.status] }]} />
+              <Text style={[styles.statusText, { color: statusColors[item.status] }]}>
+                {statusLabels[item.status]}
+              </Text>
+            </View>
           </View>
-          <View style={styles.assignmentInfo}>
-            <Text style={styles.personnelName}>{item.personnelName}</Text>
-            <Text style={styles.roleText}>{item.role}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: `${statusColors[item.status]}20` }]}>
-            <View style={[styles.statusDot, { backgroundColor: statusColors[item.status] }]} />
-            <Text style={[styles.statusText, { color: statusColors[item.status] }]}>
-              {statusLabels[item.status]}
-            </Text>
-          </View>
-        </View>
 
-        {!eventId && (
-          <View style={styles.eventInfo}>
-            <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.eventText}>{item.eventName}</Text>
-            <Text style={styles.dateText}>{item.eventDate}</Text>
-          </View>
-        )}
-
-        <View style={styles.shiftInfo}>
-          <View style={styles.shiftItem}>
-            <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.shiftText}>
-              {item.shiftStart || '-'} - {item.shiftEnd || '-'}
-            </Text>
-          </View>
-          {item.stationName && (
-            <View style={styles.shiftItem}>
-              <Ionicons name="beer-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.shiftText}>{item.stationName}</Text>
+          {!eventId && (
+            <View style={styles.eventInfo}>
+              <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.eventText}>{item.eventName}</Text>
+              <Text style={styles.dateText}>{item.eventDate}</Text>
             </View>
           )}
-        </View>
-      </Card>
-    </TouchableOpacity>
+
+          <View style={styles.shiftInfo}>
+            <View style={styles.shiftItem}>
+              <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.shiftText}>
+                {item.shiftStart || '-'} - {item.shiftEnd || '-'}
+              </Text>
+            </View>
+            {item.stationName && (
+              <View style={styles.shiftItem}>
+                <Ionicons name="beer-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.shiftText}>{item.stationName}</Text>
+              </View>
+            )}
+          </View>
+        </Card>
+      </TouchableOpacity>
+    </View>
   );
 
   const renderScheduleDay = ({ item }: { item: ScheduleDay }) => (
@@ -200,12 +204,14 @@ export function StaffScreen() {
         <Text style={styles.dayDate}>{item.dateLabel}</Text>
         <Text style={styles.dayCount}>{item.assignments.length} assegnazioni</Text>
       </View>
-      {item.assignments.map((a) => renderAssignment({ item: a }))}
+      {item.assignments.map((a) => (
+        <View key={a.id}>{renderAssignment({ item: a })}</View>
+      ))}
     </View>
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title={eventId ? 'Staff Evento' : 'Staff & Turni'}
         showBack
@@ -214,7 +220,7 @@ export function StaffScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('AssignStaff', { eventId })}
-            data-testid="button-add-staff"
+            testID="button-add-staff"
           >
             <Ionicons name="person-add" size={20} color={colors.primaryForeground} />
           </TouchableOpacity>
@@ -230,8 +236,13 @@ export function StaffScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -240,7 +251,7 @@ export function StaffScreen() {
           <TouchableOpacity
             style={[styles.toggleButton, viewMode === 'schedule' && styles.toggleButtonActive]}
             onPress={() => setViewMode('schedule')}
-            data-testid="toggle-schedule"
+            testID="toggle-schedule"
           >
             <Ionicons
               name="calendar"
@@ -254,7 +265,7 @@ export function StaffScreen() {
           <TouchableOpacity
             style={[styles.toggleButton, viewMode === 'assignments' && styles.toggleButtonActive]}
             onPress={() => setViewMode('assignments')}
-            data-testid="toggle-assignments"
+            testID="toggle-assignments"
           >
             <Ionicons
               name="list"
@@ -270,14 +281,14 @@ export function StaffScreen() {
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
-          <Button title="Riprova" onPress={loadAssignments} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadAssignments} style={styles.retryButton} testID="button-retry" />
         </View>
       ) : filteredAssignments.length === 0 ? (
         <View style={styles.centerContainer}>
@@ -287,6 +298,7 @@ export function StaffScreen() {
             title="Assegna Staff"
             onPress={() => navigation.navigate('AssignStaff', { eventId })}
             style={styles.assignButton}
+            testID="button-assign-staff"
           />
         </View>
       ) : viewMode === 'schedule' && !eventId ? (
@@ -296,17 +308,22 @@ export function StaffScreen() {
           keyExtractor={(item) => item.date}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          testID="list-schedule"
         />
       ) : (
         <FlatList
           data={filteredAssignments}
           renderItem={renderAssignment}
           keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          key={numColumns}
           contentContainerStyle={styles.listContent}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
+          testID="list-assignments"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -366,6 +383,12 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  columnItem: {
+    flex: 0.48,
   },
   daySection: {
     marginBottom: spacing.lg,

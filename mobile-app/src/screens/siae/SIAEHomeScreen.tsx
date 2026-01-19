@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -39,7 +40,9 @@ interface DashboardStats {
 
 export function SIAEHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -164,24 +167,24 @@ export function SIAEHomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="SIAE Ticketing" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="SIAE Ticketing"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('SIAETransmissions')}
-            data-testid="button-view-transmissions"
+            testID="button-view-transmissions"
           >
             <Ionicons name="list-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -190,7 +193,10 @@ export function SIAEHomeScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -199,191 +205,219 @@ export function SIAEHomeScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-view-home"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stato Sistema</Text>
-          <Card variant="glass" style={styles.statusCard}>
-            <View style={styles.statusRow}>
-              <View style={styles.statusItem}>
-                <View style={[
-                  styles.statusDot,
-                  { backgroundColor: systemStatus.smartCardConnected ? colors.success : colors.destructive }
-                ]} />
-                <Text style={styles.statusLabel}>Smart Card</Text>
-                <Text style={[
-                  styles.statusValue,
-                  { color: systemStatus.smartCardConnected ? colors.success : colors.destructive }
-                ]}>
-                  {systemStatus.smartCardConnected ? 'Connessa' : 'Non connessa'}
-                </Text>
-              </View>
-              <View style={styles.statusDivider} />
-              <View style={styles.statusItem}>
-                <View style={[
-                  styles.statusDot,
-                  { backgroundColor: systemStatus.bridgeConnected ? colors.success : colors.destructive }
-                ]} />
-                <Text style={styles.statusLabel}>Bridge</Text>
-                <Text style={[
-                  styles.statusValue,
-                  { color: systemStatus.bridgeConnected ? colors.success : colors.destructive }
-                ]}>
-                  {systemStatus.bridgeConnected ? 'Attivo' : 'Offline'}
-                </Text>
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentLandscape,
+        ]}>
+          <View style={[
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.leftColumnLandscape,
+          ]}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Stato Sistema</Text>
+              <Card variant="glass" style={styles.statusCard}>
+                <View style={styles.statusRow}>
+                  <View style={styles.statusItem}>
+                    <View style={[
+                      styles.statusDot,
+                      { backgroundColor: systemStatus.smartCardConnected ? colors.success : colors.destructive }
+                    ]} />
+                    <Text style={styles.statusLabel}>Smart Card</Text>
+                    <Text style={[
+                      styles.statusValue,
+                      { color: systemStatus.smartCardConnected ? colors.success : colors.destructive }
+                    ]} testID="text-smartcard-status">
+                      {systemStatus.smartCardConnected ? 'Connessa' : 'Non connessa'}
+                    </Text>
+                  </View>
+                  <View style={styles.statusDivider} />
+                  <View style={styles.statusItem}>
+                    <View style={[
+                      styles.statusDot,
+                      { backgroundColor: systemStatus.bridgeConnected ? colors.success : colors.destructive }
+                    ]} />
+                    <Text style={styles.statusLabel}>Bridge</Text>
+                    <Text style={[
+                      styles.statusValue,
+                      { color: systemStatus.bridgeConnected ? colors.success : colors.destructive }
+                    ]} testID="text-bridge-status">
+                      {systemStatus.bridgeConnected ? 'Attivo' : 'Offline'}
+                    </Text>
+                  </View>
+                </View>
+                {systemStatus.lastSync && (
+                  <Text style={styles.lastSync} testID="text-last-sync">
+                    Ultimo sync: {formatDate(systemStatus.lastSync)}
+                  </Text>
+                )}
+              </Card>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Riepilogo</Text>
+              <View style={[
+                styles.statsGrid,
+                (isTablet || isLandscape) && styles.statsGridLandscape,
+              ]}>
+                <Card variant="glass" style={styles.statCard}>
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
+                    <Ionicons name="time-outline" size={24} color={colors.warning} />
+                  </View>
+                  <Text style={styles.statValue} testID="text-pending-count">{stats.pendingCount}</Text>
+                  <Text style={styles.statLabel}>In Attesa</Text>
+                </Card>
+                <Card variant="glass" style={styles.statCard}>
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.success}20` }]}>
+                    <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
+                  </View>
+                  <Text style={styles.statValue} testID="text-success-count">{stats.successCount}</Text>
+                  <Text style={styles.statLabel}>Completati</Text>
+                </Card>
+                <Card variant="glass" style={styles.statCard}>
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.destructive}20` }]}>
+                    <Ionicons name="close-circle-outline" size={24} color={colors.destructive} />
+                  </View>
+                  <Text style={styles.statValue} testID="text-error-count">{stats.errorCount}</Text>
+                  <Text style={styles.statLabel}>Errori</Text>
+                </Card>
+                <Card variant="glass" style={styles.statCard}>
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
+                    <Ionicons name="today-outline" size={24} color={colors.primary} />
+                  </View>
+                  <Text style={styles.statValue} testID="text-today-count">{stats.todayCount}</Text>
+                  <Text style={styles.statLabel}>Oggi</Text>
+                </Card>
               </View>
             </View>
-            {systemStatus.lastSync && (
-              <Text style={styles.lastSync}>
-                Ultimo sync: {formatDate(systemStatus.lastSync)}
-              </Text>
-            )}
-          </Card>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Riepilogo</Text>
-          <View style={styles.statsGrid}>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
-                <Ionicons name="time-outline" size={24} color={colors.warning} />
-              </View>
-              <Text style={styles.statValue}>{stats.pendingCount}</Text>
-              <Text style={styles.statLabel}>In Attesa</Text>
-            </Card>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.success}20` }]}>
-                <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
-              </View>
-              <Text style={styles.statValue}>{stats.successCount}</Text>
-              <Text style={styles.statLabel}>Completati</Text>
-            </Card>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.destructive}20` }]}>
-                <Ionicons name="close-circle-outline" size={24} color={colors.destructive} />
-              </View>
-              <Text style={styles.statValue}>{stats.errorCount}</Text>
-              <Text style={styles.statLabel}>Errori</Text>
-            </Card>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
-                <Ionicons name="today-outline" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.statValue}>{stats.todayCount}</Text>
-              <Text style={styles.statLabel}>Oggi</Text>
-            </Card>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('SIAEReports', { defaultType: 'RCA' })}
-              activeOpacity={0.8}
-              data-testid="button-rca-report"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
-                <Ionicons name="document-text-outline" size={28} color={colors.primaryForeground} />
-              </View>
-              <Text style={styles.actionLabel}>RCA</Text>
-              <Text style={styles.actionDesc}>Riepilogo Controllo Accessi</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('SIAEReports', { defaultType: 'RMG' })}
-              activeOpacity={0.8}
-              data-testid="button-rmg-report"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.success }]}>
-                <Ionicons name="calendar-outline" size={28} color={colors.successForeground} />
-              </View>
-              <Text style={styles.actionLabel}>RMG</Text>
-              <Text style={styles.actionDesc}>Report Mensile Giornaliero</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('SIAEReports', { defaultType: 'RPM' })}
-              activeOpacity={0.8}
-              data-testid="button-rpm-report"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
-                <Ionicons name="stats-chart-outline" size={28} color={colors.accentForeground} />
-              </View>
-              <Text style={styles.actionLabel}>RPM</Text>
-              <Text style={styles.actionDesc}>Report Periodo Mensile</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trasmissioni Recenti</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('SIAETransmissions')}
-              data-testid="button-view-all-transmissions"
-            >
-              <Text style={styles.viewAllText}>Vedi tutte</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {recentTransmissions.length > 0 ? (
-            recentTransmissions.map((transmission) => (
-              <TouchableOpacity
-                key={transmission.id}
-                style={styles.transmissionCard}
-                onPress={() => navigation.navigate('SIAETransmissionDetail', { transmissionId: transmission.id })}
-                activeOpacity={0.8}
-                data-testid={`card-transmission-${transmission.id}`}
-              >
-                <Card variant="glass">
-                  <View style={styles.transmissionRow}>
-                    <View style={styles.transmissionInfo}>
-                      <View style={styles.transmissionHeader}>
-                        <View style={[styles.typeBadge, { backgroundColor: `${colors.primary}20` }]}>
-                          <Text style={[styles.typeText, { color: colors.primary }]}>
-                            {transmission.type}
-                          </Text>
-                        </View>
-                        <View style={[
-                          styles.statusBadge,
-                          { backgroundColor: `${getStatusColor(transmission.status)}20` }
-                        ]}>
-                          <Ionicons
-                            name={getStatusIcon(transmission.status) as any}
-                            size={14}
-                            color={getStatusColor(transmission.status)}
-                          />
-                          <Text style={[styles.statusText, { color: getStatusColor(transmission.status) }]}>
-                            {getStatusLabel(transmission.status)}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.transmissionEvent}>{transmission.eventName}</Text>
-                      <Text style={styles.transmissionDate}>{formatDate(transmission.createdAt)}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+              <View style={styles.actionsGrid}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('SIAEReports', { defaultType: 'RCA' })}
+                  activeOpacity={0.8}
+                  testID="button-rca-report"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="document-text-outline" size={28} color={colors.primaryForeground} />
                   </View>
+                  <Text style={styles.actionLabel}>RCA</Text>
+                  <Text style={styles.actionDesc}>Riepilogo Controllo Accessi</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('SIAEReports', { defaultType: 'RMG' })}
+                  activeOpacity={0.8}
+                  testID="button-rmg-report"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.success }]}>
+                    <Ionicons name="calendar-outline" size={28} color={colors.successForeground} />
+                  </View>
+                  <Text style={styles.actionLabel}>RMG</Text>
+                  <Text style={styles.actionDesc}>Report Mensile Giornaliero</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('SIAEReports', { defaultType: 'RPM' })}
+                  activeOpacity={0.8}
+                  testID="button-rpm-report"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
+                    <Ionicons name="stats-chart-outline" size={28} color={colors.accentForeground} />
+                  </View>
+                  <Text style={styles.actionLabel}>RPM</Text>
+                  <Text style={styles.actionDesc}>Report Periodo Mensile</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={[
+            styles.rightColumn,
+            (isTablet || isLandscape) && styles.rightColumnLandscape,
+          ]}>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Trasmissioni Recenti</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('SIAETransmissions')}
+                  testID="button-view-all-transmissions"
+                >
+                  <Text style={styles.viewAllText}>Vedi tutte</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {recentTransmissions.length > 0 ? (
+                <View style={[
+                  styles.transmissionsGrid,
+                  (isTablet || isLandscape) && styles.transmissionsGridLandscape,
+                ]}>
+                  {recentTransmissions.map((transmission) => (
+                    <TouchableOpacity
+                      key={transmission.id}
+                      style={[
+                        styles.transmissionCard,
+                        (isTablet || isLandscape) && styles.transmissionCardLandscape,
+                      ]}
+                      onPress={() => navigation.navigate('SIAETransmissionDetail', { transmissionId: transmission.id })}
+                      activeOpacity={0.8}
+                      testID={`card-transmission-${transmission.id}`}
+                    >
+                      <Card variant="glass">
+                        <View style={styles.transmissionRow}>
+                          <View style={styles.transmissionInfo}>
+                            <View style={styles.transmissionHeader}>
+                              <View style={[styles.typeBadge, { backgroundColor: `${colors.primary}20` }]}>
+                                <Text style={[styles.typeText, { color: colors.primary }]}>
+                                  {transmission.type}
+                                </Text>
+                              </View>
+                              <View style={[
+                                styles.statusBadge,
+                                { backgroundColor: `${getStatusColor(transmission.status)}20` }
+                              ]}>
+                                <Ionicons
+                                  name={getStatusIcon(transmission.status) as any}
+                                  size={14}
+                                  color={getStatusColor(transmission.status)}
+                                />
+                                <Text style={[styles.statusText, { color: getStatusColor(transmission.status) }]}>
+                                  {getStatusLabel(transmission.status)}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={styles.transmissionEvent}>{transmission.eventName}</Text>
+                            <Text style={styles.transmissionDate}>{formatDate(transmission.createdAt)}</Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                        </View>
+                      </Card>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Card variant="glass" style={styles.emptyCard}>
+                  <Ionicons name="document-outline" size={40} color={colors.mutedForeground} />
+                  <Text style={styles.emptyText}>Nessuna trasmissione</Text>
+                  <Button
+                    title="Genera Report"
+                    onPress={() => navigation.navigate('SIAEReports')}
+                    variant="primary"
+                    size="sm"
+                    testID="button-generate-report"
+                  />
                 </Card>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Card variant="glass" style={styles.emptyCard}>
-              <Ionicons name="document-outline" size={40} color={colors.mutedForeground} />
-              <Text style={styles.emptyText}>Nessuna trasmissione</Text>
-              <Button
-                title="Genera Report"
-                onPress={() => navigation.navigate('SIAEReports')}
-                variant="primary"
-                size="sm"
-              />
-            </Card>
-          )}
+              )}
+            </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -394,6 +428,32 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentLandscape: {
+    flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnLandscape: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnLandscape: {
+    flex: 1,
+    paddingLeft: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -473,6 +533,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  statsGridLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   statCard: {
     flex: 1,
     minWidth: '45%',
@@ -529,8 +593,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     textAlign: 'center',
   },
+  transmissionsGrid: {
+    gap: spacing.md,
+  },
+  transmissionsGridLandscape: {
+    flexDirection: 'column',
+  },
   transmissionCard: {
     marginBottom: spacing.md,
+  },
+  transmissionCardLandscape: {
+    marginBottom: spacing.sm,
   },
   transmissionRow: {
     flexDirection: 'row',

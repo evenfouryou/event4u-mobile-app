@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -31,11 +32,15 @@ interface Resale {
 
 export function SIAEResalesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [resales, setResales] = useState<Resale[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadResales = async () => {
     try {
@@ -69,12 +74,19 @@ export function SIAEResalesScreen() {
     });
   };
 
-  const renderResale = ({ item }: { item: Resale }) => (
+  const renderResale = ({ item, index }: { item: Resale; index: number }) => (
     <TouchableOpacity
-      style={styles.resaleCard}
+      style={[
+        styles.resaleCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        }
+      ]}
       onPress={() => navigation.navigate('SIAEResaleDetail', { resaleId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-resale-${item.id}`}
+      testID={`card-resale-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.resaleHeader}>
@@ -133,37 +145,44 @@ export function SIAEResalesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Rivendite Autorizzate" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Rivendite Autorizzate"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAEResaleAdd')} data-testid="button-add-resale">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAEResaleAdd')} testID="button-add-resale">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       
       <FlatList
+        key={numColumns}
         data={resales}
         renderItem={renderResale}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+            testID="refresh-control"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -172,8 +191,9 @@ export function SIAEResalesScreen() {
             <Text style={styles.emptySubtext}>Aggiungi punti vendita autorizzati</Text>
           </View>
         }
+        testID="resales-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -195,6 +215,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   resaleCard: {
     marginBottom: spacing.lg,

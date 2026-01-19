@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -35,7 +36,9 @@ const CATEGORIES = [
 
 export default function InsightsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -194,7 +197,7 @@ export default function InsightsScreen() {
         selectedCategory === id && styles.categoryPillActive,
       ]}
       onPress={() => setSelectedCategory(id)}
-      data-testid={`pill-category-${id}`}
+      testID={`pill-category-${id}`}
     >
       <Ionicons
         name={icon as any}
@@ -212,8 +215,14 @@ export default function InsightsScreen() {
     </TouchableOpacity>
   );
 
-  const renderInsightCard = ({ item }: { item: Insight }) => (
-    <View style={styles.insightCard} data-testid={`card-insight-${item.id}`}>
+  const renderInsightCard = ({ item, index }: { item: Insight; index: number }) => (
+    <View 
+      style={[
+        styles.insightCard,
+        (isLandscape || isTablet) && styles.insightCardWide,
+      ]} 
+      testID={`card-insight-${item.id}`}
+    >
       <Card variant="glass">
         <View style={styles.insightHeader}>
           <View style={[styles.categoryIcon, { backgroundColor: `${getImpactColor(item.impact)}20` }]}>
@@ -235,7 +244,7 @@ export default function InsightsScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             activeOpacity={0.8}
-            data-testid={`button-action-${item.id}`}
+            testID={`button-action-${item.id}`}
           >
             <Ionicons name="arrow-forward" size={16} color={colors.primary} />
             <Text style={styles.actionButtonText}>Azione Suggerita</Text>
@@ -247,18 +256,18 @@ export default function InsightsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="AI Insights" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento insights...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento insights...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="AI Insights" showBack onBack={() => navigation.goBack()} />
       
       <View style={styles.categoriesSection}>
@@ -266,25 +275,26 @@ export default function InsightsScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesContainer}
+          testID="scroll-categories"
         >
           {CATEGORIES.map(renderCategoryPill)}
         </ScrollView>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
+      <View style={[styles.statsRow, (isLandscape || isTablet) && styles.statsRowWide]}>
+        <View style={styles.statCard} testID="stat-high">
           <Text style={[styles.statNumber, { color: colors.destructive }]}>
             {insights.filter(i => i.impact === 'high').length}
           </Text>
           <Text style={styles.statText}>Critici</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={styles.statCard} testID="stat-medium">
           <Text style={[styles.statNumber, { color: colors.warning }]}>
             {insights.filter(i => i.impact === 'medium').length}
           </Text>
           <Text style={styles.statText}>Moderati</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={styles.statCard} testID="stat-low">
           <Text style={[styles.statNumber, { color: colors.teal }]}>
             {insights.filter(i => i.impact === 'low').length}
           </Text>
@@ -296,16 +306,23 @@ export default function InsightsScreen() {
         data={filteredInsights}
         renderItem={renderInsightCard}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={(isLandscape || isTablet) ? 2 : 1}
+        key={(isLandscape || isTablet) ? 'two-columns' : 'one-column'}
+        contentContainerStyle={[
+          styles.listContent,
+          (isLandscape || isTablet) && styles.listContentWide,
+        ]}
+        columnWrapperStyle={(isLandscape || isTablet) ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
+        testID="list-insights"
         ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
+          <Card style={styles.emptyCard} variant="glass" testID="empty-state">
             <Ionicons name="bulb-outline" size={32} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>Nessun insight trovato</Text>
           </Card>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -362,6 +379,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.md,
   },
+  statsRowWide: {
+    paddingHorizontal: spacing.xl,
+  },
   statCard: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -383,9 +403,20 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: 120,
+  },
+  listContentWide: {
+    paddingHorizontal: spacing.md,
+  },
+  columnWrapper: {
+    gap: spacing.md,
   },
   insightCard: {
     marginBottom: spacing.md,
+  },
+  insightCardWide: {
+    flex: 1,
+    maxWidth: '50%',
   },
   insightHeader: {
     flexDirection: 'row',

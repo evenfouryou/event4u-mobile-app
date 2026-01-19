@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -54,7 +55,9 @@ interface InvoiceDetail {
 export function InvoiceDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { invoiceId } = route.params || {};
 
   const [loading, setLoading] = useState(true);
@@ -238,136 +241,147 @@ export function InvoiceDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Fattura" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!invoice) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Nuova Fattura" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="new-invoice-placeholder">
           <Ionicons name="construct-outline" size={48} color={colors.mutedForeground} />
           <Text style={styles.loadingText}>Creazione fattura in arrivo...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Dettaglio Fattura" showBack onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-invoice-detail"
       >
-        <Card variant="glass" style={styles.headerCard}>
-          <View style={styles.invoiceHeader}>
-            <View>
-              <Text style={styles.invoiceNumber}>{invoice.number}</Text>
-              <View style={[
-                styles.statusBadge,
-                { backgroundColor: `${getStatusColor(invoice.status)}20` }
-              ]}>
-                <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
-                  {getStatusLabel(invoice.status)}
-                </Text>
+        <View style={(isLandscape || isTablet) ? styles.twoColumnContainer : undefined}>
+          <View style={(isLandscape || isTablet) ? styles.halfSection : undefined}>
+            <Card variant="glass" style={styles.headerCard} testID="card-invoice-header">
+              <View style={styles.invoiceHeader}>
+                <View>
+                  <Text style={styles.invoiceNumber} testID="text-invoice-number">{invoice.number}</Text>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: `${getStatusColor(invoice.status)}20` }
+                  ]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
+                      {getStatusLabel(invoice.status)}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.invoiceTotal} testID="text-invoice-total">{formatCurrency(invoice.total)}</Text>
               </View>
-            </View>
-            <Text style={styles.invoiceTotal}>{formatCurrency(invoice.total)}</Text>
-          </View>
-          <View style={styles.datesRow}>
-            <View style={styles.dateItem}>
-              <Text style={styles.dateLabel}>Data Emissione</Text>
-              <Text style={styles.dateValue}>{formatDate(invoice.date)}</Text>
-            </View>
-            <View style={styles.dateItem}>
-              <Text style={styles.dateLabel}>Scadenza</Text>
-              <Text style={[
-                styles.dateValue,
-                invoice.status === 'overdue' && { color: colors.destructive }
-              ]}>
-                {formatDate(invoice.dueDate)}
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cliente</Text>
-          <Card variant="glass">
-            <Text style={styles.customerName}>{invoice.customer.name}</Text>
-            {invoice.customer.address && (
-              <Text style={styles.customerDetail}>{invoice.customer.address}</Text>
-            )}
-            {invoice.customer.email && (
-              <View style={styles.customerRow}>
-                <Ionicons name="mail-outline" size={16} color={colors.mutedForeground} />
-                <Text style={styles.customerDetail}>{invoice.customer.email}</Text>
-              </View>
-            )}
-            {invoice.customer.vatNumber && (
-              <View style={styles.customerRow}>
-                <Ionicons name="document-text-outline" size={16} color={colors.mutedForeground} />
-                <Text style={styles.customerDetail}>P.IVA: {invoice.customer.vatNumber}</Text>
-              </View>
-            )}
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dettaglio Voci</Text>
-          <Card variant="glass">
-            {invoice.lineItems.map((item, index) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.lineItem,
-                  index < invoice.lineItems.length - 1 && styles.lineItemBorder,
-                ]}
-              >
-                <View style={styles.lineItemInfo}>
-                  <Text style={styles.lineItemDesc}>{item.description}</Text>
-                  <Text style={styles.lineItemQty}>
-                    {item.quantity} x {formatCurrency(item.unitPrice)}
+              <View style={styles.datesRow}>
+                <View style={styles.dateItem}>
+                  <Text style={styles.dateLabel}>Data Emissione</Text>
+                  <Text style={styles.dateValue} testID="text-date-issued">{formatDate(invoice.date)}</Text>
+                </View>
+                <View style={styles.dateItem}>
+                  <Text style={styles.dateLabel}>Scadenza</Text>
+                  <Text style={[
+                    styles.dateValue,
+                    invoice.status === 'overdue' && { color: colors.destructive }
+                  ]} testID="text-date-due">
+                    {formatDate(invoice.dueDate)}
                   </Text>
                 </View>
-                <Text style={styles.lineItemTotal}>{formatCurrency(item.total)}</Text>
               </View>
-            ))}
-          </Card>
-        </View>
+            </Card>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Totali</Text>
-          <Card variant="glass">
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Imponibile</Text>
-              <Text style={styles.totalValue}>{formatCurrency(invoice.subtotal)}</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} testID="text-customer-title">Cliente</Text>
+              <Card variant="glass" testID="card-customer">
+                <Text style={styles.customerName}>{invoice.customer.name}</Text>
+                {invoice.customer.address && (
+                  <Text style={styles.customerDetail}>{invoice.customer.address}</Text>
+                )}
+                {invoice.customer.email && (
+                  <View style={styles.customerRow}>
+                    <Ionicons name="mail-outline" size={16} color={colors.mutedForeground} />
+                    <Text style={styles.customerDetail}>{invoice.customer.email}</Text>
+                  </View>
+                )}
+                {invoice.customer.vatNumber && (
+                  <View style={styles.customerRow}>
+                    <Ionicons name="document-text-outline" size={16} color={colors.mutedForeground} />
+                    <Text style={styles.customerDetail}>P.IVA: {invoice.customer.vatNumber}</Text>
+                  </View>
+                )}
+              </Card>
             </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>IVA ({invoice.taxRate}%)</Text>
-              <Text style={styles.totalValue}>{formatCurrency(invoice.taxAmount)}</Text>
+          </View>
+
+          <View style={(isLandscape || isTablet) ? styles.halfSection : undefined}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} testID="text-items-title">Dettaglio Voci</Text>
+              <Card variant="glass" testID="card-line-items">
+                {invoice.lineItems.map((item, index) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.lineItem,
+                      index < invoice.lineItems.length - 1 && styles.lineItemBorder,
+                    ]}
+                    testID={`item-line-${item.id}`}
+                  >
+                    <View style={styles.lineItemInfo}>
+                      <Text style={styles.lineItemDesc}>{item.description}</Text>
+                      <Text style={styles.lineItemQty}>
+                        {item.quantity} x {formatCurrency(item.unitPrice)}
+                      </Text>
+                    </View>
+                    <Text style={styles.lineItemTotal}>{formatCurrency(item.total)}</Text>
+                  </View>
+                ))}
+              </Card>
             </View>
-            <View style={[styles.totalRow, styles.grandTotalRow]}>
-              <Text style={styles.grandTotalLabel}>Totale</Text>
-              <Text style={styles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} testID="text-totals-title">Totali</Text>
+              <Card variant="glass" testID="card-totals">
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Imponibile</Text>
+                  <Text style={styles.totalValue}>{formatCurrency(invoice.subtotal)}</Text>
+                </View>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>IVA ({invoice.taxRate}%)</Text>
+                  <Text style={styles.totalValue}>{formatCurrency(invoice.taxAmount)}</Text>
+                </View>
+                <View style={[styles.totalRow, styles.grandTotalRow]}>
+                  <Text style={styles.grandTotalLabel}>Totale</Text>
+                  <Text style={styles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
+                </View>
+              </Card>
             </View>
-          </Card>
+          </View>
         </View>
 
         {invoice.paymentHistory.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Storico Pagamenti</Text>
-            <Card variant="glass">
+            <Text style={styles.sectionTitle} testID="text-payments-title">Storico Pagamenti</Text>
+            <Card variant="glass" testID="card-payments">
               {invoice.paymentHistory.map((payment, index) => (
                 <View
                   key={payment.id}
@@ -375,6 +389,7 @@ export function InvoiceDetailScreen() {
                     styles.paymentItem,
                     index < invoice.paymentHistory.length - 1 && styles.paymentItemBorder,
                   ]}
+                  testID={`item-payment-${payment.id}`}
                 >
                   <View style={styles.paymentInfo}>
                     <Text style={styles.paymentDate}>{formatDate(payment.date)}</Text>
@@ -389,15 +404,15 @@ export function InvoiceDetailScreen() {
 
         {invoice.notes && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Note</Text>
-            <Card variant="glass">
+            <Text style={styles.sectionTitle} testID="text-notes-title">Note</Text>
+            <Card variant="glass" testID="card-notes">
               <Text style={styles.notesText}>{invoice.notes}</Text>
             </Card>
           </View>
         )}
       </ScrollView>
 
-      <View style={[styles.actionsContainer, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.actionsContainer, (isLandscape || isTablet) && styles.actionsContainerWide]}>
         {invoice.status !== 'paid' && (
           <Button
             title="Segna come Pagata"
@@ -405,14 +420,14 @@ export function InvoiceDetailScreen() {
             variant="primary"
             loading={actionLoading}
             style={styles.actionButton}
-            data-testid="button-mark-paid"
+            testID="button-mark-paid"
           />
         )}
         {invoice.status === 'overdue' && (
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={handleSendReminder}
-            data-testid="button-send-reminder"
+            testID="button-send-reminder"
           >
             <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
             <Text style={styles.secondaryButtonText}>Promemoria</Text>
@@ -421,13 +436,13 @@ export function InvoiceDetailScreen() {
         <TouchableOpacity
           style={styles.secondaryButton}
           onPress={handleDownloadPDF}
-          data-testid="button-download-pdf"
+          testID="button-download-pdf"
         >
           <Ionicons name="download-outline" size={20} color={colors.foreground} />
           <Text style={styles.secondaryButtonText}>PDF</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -438,7 +453,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: 140,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -449,6 +470,14 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.mutedForeground,
     fontSize: fontSize.base,
+  },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    marginHorizontal: -spacing.sm,
+  },
+  halfSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
   },
   headerCard: {
     marginBottom: spacing.lg,
@@ -621,12 +650,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  actionsContainerWide: {
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
   actionButton: {
     flex: 1,
+    maxWidth: 300,
   },
   secondaryButton: {
     flexDirection: 'row',

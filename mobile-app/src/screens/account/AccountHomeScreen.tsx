@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { useAuthStore } from '../../store/auth';
 import { Card } from '../../components/Card';
 import { Header } from '../../components/Header';
@@ -25,11 +25,17 @@ interface MenuItemProps {
   onPress: () => void;
   destructive?: boolean;
   badge?: string | number;
+  testID?: string;
 }
 
-function MenuItem({ icon, title, subtitle, onPress, destructive, badge }: MenuItemProps) {
+function MenuItem({ icon, title, subtitle, onPress, destructive, badge, testID }: MenuItemProps) {
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={styles.menuItem} 
+      onPress={onPress} 
+      activeOpacity={0.7}
+      testID={testID}
+    >
       <View style={[styles.menuIcon, destructive && styles.menuIconDestructive]}>
         <Ionicons 
           name={icon} 
@@ -55,7 +61,9 @@ function MenuItem({ icon, title, subtitle, onPress, destructive, badge }: MenuIt
 
 export function AccountHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { logout } = useAuthStore();
 
   const { data: customer, isLoading, refetch, isRefetching } = useQuery({
@@ -71,100 +79,119 @@ export function AccountHomeScreen() {
     ? `${customer.firstName?.[0] || ''}${customer.lastName?.[0] || ''}`.toUpperCase() || customer.email[0].toUpperCase()
     : '?';
 
+  const contentMaxWidth = isTablet || isLandscape ? 600 : undefined;
+
   return (
-    <View style={styles.container}>
-      <Header title="Account" />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <Header title="Account" testID="header-account" />
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          styles.content, 
+          (isTablet || isLandscape) && styles.contentCentered
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
             tintColor={colors.primary}
+            testID="refresh-control-account"
           />
         }
+        testID="scrollview-account"
       >
-        <Card style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+        <View style={[styles.innerContent, contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%' } : undefined]}>
+          <Card style={styles.profileCard} testID="card-profile">
+            <View style={styles.profileHeader}>
+              <View style={styles.avatar} testID="avatar-user">
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName} testID="text-profile-name">
+                  {customer?.firstName && customer?.lastName 
+                    ? `${customer.firstName} ${customer.lastName}`
+                    : 'Utente'}
+                </Text>
+                <Text style={styles.profileEmail} testID="text-profile-email">{customer?.email}</Text>
+              </View>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {customer?.firstName && customer?.lastName 
-                  ? `${customer.firstName} ${customer.lastName}`
-                  : 'Utente'}
-              </Text>
-              <Text style={styles.profileEmail}>{customer?.email}</Text>
-            </View>
+          </Card>
+
+          <View style={(isTablet || isLandscape) ? styles.menuGrid : undefined}>
+            <Card style={styles.menuCard} testID="card-account-menu">
+              <Text style={styles.sectionTitle}>Il mio account</Text>
+              <MenuItem
+                icon="person-outline"
+                title="Profilo"
+                subtitle="Modifica i tuoi dati personali"
+                onPress={() => navigation.navigate('Profile')}
+                testID="button-menu-profile"
+              />
+              <View style={styles.menuDivider} />
+              <MenuItem
+                icon="ticket-outline"
+                title="I miei biglietti"
+                subtitle="Visualizza i tuoi acquisti"
+                onPress={() => navigation.navigate('MyTickets')}
+                testID="button-menu-tickets"
+              />
+              <View style={styles.menuDivider} />
+              <MenuItem
+                icon="wallet-outline"
+                title="Wallet"
+                subtitle="Saldo e movimenti"
+                onPress={() => navigation.navigate('Wallet')}
+                testID="button-menu-wallet"
+              />
+              <View style={styles.menuDivider} />
+              <MenuItem
+                icon="repeat-outline"
+                title="Le mie rivendite"
+                subtitle="Biglietti in vendita"
+                onPress={() => navigation.navigate('MyResales')}
+                testID="button-menu-resales"
+              />
+            </Card>
+
+            <Card style={styles.menuCard} testID="card-support-menu">
+              <Text style={styles.sectionTitle}>Supporto</Text>
+              <MenuItem
+                icon="help-circle-outline"
+                title="Centro assistenza"
+                onPress={() => {}}
+                testID="button-menu-help"
+              />
+              <View style={styles.menuDivider} />
+              <MenuItem
+                icon="document-text-outline"
+                title="Termini e condizioni"
+                onPress={() => {}}
+                testID="button-menu-terms"
+              />
+              <View style={styles.menuDivider} />
+              <MenuItem
+                icon="shield-checkmark-outline"
+                title="Privacy"
+                onPress={() => {}}
+                testID="button-menu-privacy"
+              />
+            </Card>
           </View>
-        </Card>
 
-        <Card style={styles.menuCard}>
-          <Text style={styles.sectionTitle}>Il mio account</Text>
-          <MenuItem
-            icon="person-outline"
-            title="Profilo"
-            subtitle="Modifica i tuoi dati personali"
-            onPress={() => navigation.navigate('Profile')}
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon="ticket-outline"
-            title="I miei biglietti"
-            subtitle="Visualizza i tuoi acquisti"
-            onPress={() => navigation.navigate('MyTickets')}
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon="wallet-outline"
-            title="Wallet"
-            subtitle="Saldo e movimenti"
-            onPress={() => navigation.navigate('Wallet')}
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon="repeat-outline"
-            title="Le mie rivendite"
-            subtitle="Biglietti in vendita"
-            onPress={() => navigation.navigate('MyResales')}
-          />
-        </Card>
+          <Card style={styles.menuCard} testID="card-logout-menu">
+            <MenuItem
+              icon="log-out-outline"
+              title="Esci"
+              onPress={handleLogout}
+              destructive
+              testID="button-logout"
+            />
+          </Card>
 
-        <Card style={styles.menuCard}>
-          <Text style={styles.sectionTitle}>Supporto</Text>
-          <MenuItem
-            icon="help-circle-outline"
-            title="Centro assistenza"
-            onPress={() => {}}
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon="document-text-outline"
-            title="Termini e condizioni"
-            onPress={() => {}}
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon="shield-checkmark-outline"
-            title="Privacy"
-            onPress={() => {}}
-          />
-        </Card>
-
-        <Card style={styles.menuCard}>
-          <MenuItem
-            icon="log-out-outline"
-            title="Esci"
-            onPress={handleLogout}
-            destructive
-          />
-        </Card>
-
-        <Text style={styles.version}>Versione 1.0.0</Text>
+          <Text style={styles.version} testID="text-version">Versione 1.0.0</Text>
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -178,6 +205,18 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.md,
+  },
+  contentCentered: {
+    alignItems: 'center',
+  },
+  innerContent: {
+    gap: spacing.md,
+    width: '100%',
+  },
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   profileCard: {
@@ -217,6 +256,8 @@ const styles = StyleSheet.create({
   menuCard: {
     padding: 0,
     overflow: 'hidden',
+    flex: 1,
+    minWidth: 280,
   },
   sectionTitle: {
     color: colors.mutedForeground,

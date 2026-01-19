@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -35,11 +36,15 @@ interface NameChange {
 
 export function SIAENameChangesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [nameChanges, setNameChanges] = useState<NameChange[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadNameChanges = async () => {
     try {
@@ -100,32 +105,38 @@ export function SIAENameChangesScreen() {
     });
   };
 
-  const renderNameChange = ({ item }: { item: NameChange }) => (
+  const renderNameChange = ({ item, index }: { item: NameChange; index: number }) => (
     <TouchableOpacity
-      style={styles.changeCard}
+      style={[
+        styles.changeCard,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAENameChangeDetail', { changeId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-change-${item.id}`}
+      testID={`card-change-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.changeHeader}>
           <View style={styles.ticketBadge}>
             <Ionicons name="ticket-outline" size={16} color={colors.primary} />
-            <Text style={styles.ticketNumber}>{item.ticketNumber}</Text>
+            <Text style={styles.ticketNumber} testID={`text-ticket-number-${item.id}`}>{item.ticketNumber}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]} testID={`text-status-${item.id}`}>
               {getStatusLabel(item.status)}
             </Text>
           </View>
         </View>
         
-        <Text style={styles.eventName}>{item.eventName}</Text>
+        <Text style={styles.eventName} testID={`text-event-name-${item.id}`}>{item.eventName}</Text>
         
         <View style={styles.changeDetails}>
           <View style={styles.holderCard}>
             <Text style={styles.holderLabel}>Da</Text>
-            <Text style={styles.holderName}>{item.previousHolder.name}</Text>
+            <Text style={styles.holderName} testID={`text-prev-holder-${item.id}`}>{item.previousHolder.name}</Text>
             <Text style={styles.holderFiscalCode}>{item.previousHolder.fiscalCode}</Text>
           </View>
           
@@ -135,7 +146,7 @@ export function SIAENameChangesScreen() {
           
           <View style={styles.holderCard}>
             <Text style={styles.holderLabel}>A</Text>
-            <Text style={styles.holderName}>{item.newHolder.name}</Text>
+            <Text style={styles.holderName} testID={`text-new-holder-${item.id}`}>{item.newHolder.name}</Text>
             <Text style={styles.holderFiscalCode}>{item.newHolder.fiscalCode}</Text>
           </View>
         </View>
@@ -154,24 +165,24 @@ export function SIAENameChangesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Cambio Nominativo" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Cambio Nominativo"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAENameChangeAdd')} data-testid="button-add-change">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAENameChangeAdd')} testID="button-add-change">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -181,7 +192,13 @@ export function SIAENameChangesScreen() {
         data={nameChanges}
         renderItem={renderNameChange}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={[
+          styles.listContent,
+          (isTablet || isLandscape) && styles.listContentLandscape,
+        ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -193,8 +210,9 @@ export function SIAENameChangesScreen() {
             <Text style={styles.emptySubtext}>Le richieste di cambio appariranno qui</Text>
           </View>
         }
+        testID="list-name-changes"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -216,6 +234,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   changeCard: {
     marginBottom: spacing.lg,
@@ -225,6 +250,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   ticketBadge: {
     flexDirection: 'row',
@@ -287,6 +314,8 @@ const styles = StyleSheet.create({
   changeFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   requestDate: {
     color: colors.mutedForeground,

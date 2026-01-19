@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -47,10 +47,10 @@ interface ActiveEvent {
 
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
-  const numColumns = isLandscape ? 4 : 2;
+  const isTablet = width >= 768;
+  const numColumns = isTablet ? 4 : isLandscape ? 4 : 2;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,12 +186,14 @@ export function DashboardScreen() {
     }
   };
 
-  const cardWidth = isLandscape 
-    ? (width - spacing.lg * 2 - spacing.md * 3) / 4 
-    : (width - spacing.lg * 2 - spacing.md) / 2;
+  const cardWidth = isTablet
+    ? (width - spacing.lg * 2 - spacing.md * 3) / 4
+    : isLandscape 
+      ? (width - spacing.lg * 2 - spacing.md * 3) / 4 
+      : (width - spacing.lg * 2 - spacing.md) / 2;
 
   const renderStatCard = ({ item }: { item: StatCard }) => (
-    <Card style={[styles.statCard, { width: cardWidth }]}>
+    <Card style={[styles.statCard, { width: cardWidth }]} testID={`stat-card-${item.id}`}>
       <View style={styles.statHeader}>
         <View style={[styles.statIcon, { backgroundColor: `${item.color}20` }]}>
           <Ionicons name={item.icon as any} size={20} color={item.color} />
@@ -219,7 +221,7 @@ export function DashboardScreen() {
       style={styles.quickActionButton}
       onPress={() => navigation.navigate(item.route)}
       activeOpacity={0.8}
-      data-testid={`button-quick-action-${item.id}`}
+      testID={`button-quick-action-${item.id}`}
     >
       <View style={[styles.quickActionIcon, { backgroundColor: item.color }]}>
         <Ionicons name={item.icon as any} size={28} color={colors.primaryForeground} />
@@ -231,10 +233,10 @@ export function DashboardScreen() {
   const renderEventCard = (event: ActiveEvent) => (
     <TouchableOpacity
       key={event.id}
-      style={styles.eventCard}
+      style={[styles.eventCard, (isTablet || isLandscape) && styles.eventCardResponsive]}
       onPress={() => navigation.navigate('EventHub', { eventId: event.id })}
       activeOpacity={0.8}
-      data-testid={`card-event-${event.id}`}
+      testID={`card-event-${event.id}`}
     >
       <Card variant="elevated">
         <View style={styles.eventHeader}>
@@ -273,64 +275,65 @@ export function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header
           title="Dashboard Gestore"
           rightAction={
-            <TouchableOpacity data-testid="button-notifications">
+            <TouchableOpacity testID="button-notifications">
               <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
             </TouchableOpacity>
           }
         />
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="loading-indicator">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header
           title="Dashboard Gestore"
           rightAction={
-            <TouchableOpacity data-testid="button-notifications">
+            <TouchableOpacity testID="button-notifications">
               <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
             </TouchableOpacity>
           }
         />
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID="error-state">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton} 
             onPress={loadDashboard}
-            data-testid="button-retry"
+            testID="button-retry"
           >
             <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
             <Text style={styles.retryButtonText}>Riprova</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Dashboard Gestore"
         rightAction={
-          <TouchableOpacity data-testid="button-notifications">
+          <TouchableOpacity testID="button-notifications">
             <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-dashboard"
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Panoramica</Text>
@@ -362,15 +365,17 @@ export function DashboardScreen() {
             <Text style={styles.sectionTitle}>Eventi Attivi</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('ManageEvents')}
-              data-testid="button-view-all-events"
+              testID="button-view-all-events"
             >
               <Text style={styles.viewAllText}>Vedi tutti</Text>
             </TouchableOpacity>
           </View>
           {activeEvents.length > 0 ? (
-            activeEvents.map(renderEventCard)
+            <View style={(isTablet || isLandscape) ? styles.eventsGrid : undefined}>
+              {activeEvents.map(renderEventCard)}
+            </View>
           ) : (
-            <Card style={styles.emptyCard}>
+            <Card style={styles.emptyCard} testID="empty-events-card">
               <Ionicons name="calendar-outline" size={32} color={colors.mutedForeground} />
               <Text style={styles.emptyText}>Nessun evento attivo</Text>
             </Card>
@@ -378,7 +383,7 @@ export function DashboardScreen() {
         </View>
 
         <View style={styles.section}>
-          <Card style={styles.chartCard}>
+          <Card style={styles.chartCard} testID="chart-card">
             <Text style={styles.chartTitle}>Andamento Vendite</Text>
             <View style={styles.chartPlaceholder}>
               <View style={styles.chartBars}>
@@ -401,7 +406,7 @@ export function DashboardScreen() {
           </Card>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -412,6 +417,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: spacing.xl,
   },
   loadingContainer: {
     flex: 1,
@@ -544,8 +552,18 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     textAlign: 'center',
   },
+  eventsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   eventCard: {
     marginBottom: spacing.md,
+  },
+  eventCardResponsive: {
+    flex: 1,
+    minWidth: 280,
+    maxWidth: '48%',
   },
   eventHeader: {
     flexDirection: 'row',

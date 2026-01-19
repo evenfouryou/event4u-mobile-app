@@ -9,12 +9,13 @@ import {
   FlatList,
   RefreshControl,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 
 interface PurchaseOrder {
@@ -59,7 +60,9 @@ const FILTER_OPTIONS = [
 export default function PurchaseOrdersScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const supplierId = route.params?.supplierId;
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +70,8 @@ export default function PurchaseOrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: orders, refetch } = useQuery<PurchaseOrder[]>({
     queryKey: ['/api/purchase-orders', supplierId],
@@ -161,60 +166,62 @@ export default function PurchaseOrdersScreen() {
     const statusConfig = STATUS_CONFIG[item.status];
 
     return (
-      <TouchableOpacity
-        onPress={() => handleViewOrder(item)}
-        activeOpacity={0.8}
-        data-testid={`card-order-${item.id}`}
-      >
-        <Card variant="glass" style={styles.orderCard}>
-          <View style={styles.orderHeader}>
-            <View style={styles.orderInfo}>
-              <Text style={styles.orderNumber}>{item.orderNumber}</Text>
-              <Text style={styles.supplierName}>{item.supplierName}</Text>
+      <View style={[styles.orderCardWrapper, numColumns === 2 && styles.orderCardGrid]}>
+        <TouchableOpacity
+          onPress={() => handleViewOrder(item)}
+          activeOpacity={0.8}
+          testID={`card-order-${item.id}`}
+        >
+          <Card variant="glass" style={styles.orderCard}>
+            <View style={styles.orderHeader}>
+              <View style={styles.orderInfo}>
+                <Text style={styles.orderNumber} testID={`text-order-number-${item.id}`}>{item.orderNumber}</Text>
+                <Text style={styles.supplierName}>{item.supplierName}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]}>
+                <Text style={[styles.statusText, { color: statusConfig.color }]} testID={`text-status-${item.id}`}>
+                  {statusConfig.label}
+                </Text>
+              </View>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]}>
-              <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                {statusConfig.label}
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.orderMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>{item.date}</Text>
+            <View style={styles.orderMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>{item.date}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>Consegna: {item.expectedDelivery}</Text>
+              </View>
             </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>Consegna: {item.expectedDelivery}</Text>
-            </View>
-          </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${getStatusProgress(item.status)}%`,
-                    backgroundColor: statusConfig.color,
-                  },
-                ]}
-              />
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${getStatusProgress(item.status)}%`,
+                      backgroundColor: statusConfig.color,
+                    },
+                  ]}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.orderFooter}>
-            <Text style={styles.itemsCount}>{item.items.length} articoli</Text>
-            <Text style={styles.orderTotal}>€{item.total.toLocaleString()}</Text>
-          </View>
-        </Card>
-      </TouchableOpacity>
+            <View style={styles.orderFooter}>
+              <Text style={styles.itemsCount}>{item.items.length} articoli</Text>
+              <Text style={styles.orderTotal} testID={`text-total-${item.id}`}>€{item.total.toLocaleString()}</Text>
+            </View>
+          </Card>
+        </TouchableOpacity>
+      </View>
     );
   };
 
   const renderOrderItemRow = ({ item }: { item: OrderItem }) => (
-    <View style={styles.orderItemRow}>
+    <View style={styles.orderItemRow} testID={`order-item-row-${item.id}`}>
       <View style={styles.orderItemInfo}>
         <Text style={styles.orderItemName}>{item.productName}</Text>
         <Text style={styles.orderItemMeta}>
@@ -226,7 +233,7 @@ export default function PurchaseOrdersScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Ordini Acquisto"
         showBack
@@ -234,14 +241,14 @@ export default function PurchaseOrdersScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('CreatePurchaseOrder')}
-            data-testid="button-create-order"
+            testID="button-create-order"
           >
             <Ionicons name="add" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
 
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
         <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
         <TextInput
           style={styles.searchInput}
@@ -249,7 +256,7 @@ export default function PurchaseOrdersScreen() {
           placeholderTextColor={colors.mutedForeground}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          data-testid="input-search"
+          testID="input-search"
         />
       </View>
 
@@ -257,7 +264,8 @@ export default function PurchaseOrdersScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
+        contentContainerStyle={[styles.filtersContent, isLandscape && styles.filtersContentLandscape]}
+        testID="scroll-filters"
       >
         {FILTER_OPTIONS.map((filter) => (
           <TouchableOpacity
@@ -267,7 +275,7 @@ export default function PurchaseOrdersScreen() {
               activeFilter === filter.id && styles.filterPillActive,
             ]}
             onPress={() => setActiveFilter(filter.id)}
-            data-testid={`filter-${filter.id}`}
+            testID={`filter-${filter.id}`}
           >
             <Text
               style={[
@@ -281,18 +289,18 @@ export default function PurchaseOrdersScreen() {
         ))}
       </ScrollView>
 
-      <View style={styles.summaryRow}>
-        <Card variant="glass" style={styles.summaryCard}>
+      <View style={[styles.summaryRow, isLandscape && styles.summaryRowLandscape]}>
+        <Card variant="glass" style={styles.summaryCard} testID="summary-orders-count">
           <Text style={styles.summaryValue}>{filteredOrders.length}</Text>
           <Text style={styles.summaryLabel}>Ordini</Text>
         </Card>
-        <Card variant="glass" style={styles.summaryCard}>
+        <Card variant="glass" style={styles.summaryCard} testID="summary-pending-count">
           <Text style={[styles.summaryValue, { color: colors.warning }]}>
             {filteredOrders.filter(o => o.status === 'pending').length}
           </Text>
           <Text style={styles.summaryLabel}>In Attesa</Text>
         </Card>
-        <Card variant="glass" style={styles.summaryCard}>
+        <Card variant="glass" style={styles.summaryCard} testID="summary-total">
           <Text style={[styles.summaryValue, { color: colors.primary }]}>
             €{filteredOrders.reduce((sum, o) => sum + o.total, 0).toLocaleString()}
           </Text>
@@ -304,14 +312,17 @@ export default function PurchaseOrdersScreen() {
         data={filteredOrders}
         renderItem={renderOrderCard}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        key={numColumns}
+        contentContainerStyle={[styles.listContent, isLandscape && styles.listContentLandscape]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        testID="list-orders"
         ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
+          <Card style={styles.emptyCard} variant="glass" testID="card-empty">
             <Ionicons name="document-text-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyTitle}>Nessun ordine trovato</Text>
             <Text style={styles.emptyText}>Crea un nuovo ordine per iniziare</Text>
@@ -326,19 +337,19 @@ export default function PurchaseOrdersScreen() {
         onRequestClose={() => setShowOrderDetail(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <SafeAreaView style={styles.modalContent} edges={['bottom']}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedOrder?.orderNumber}</Text>
+              <Text style={styles.modalTitle} testID="modal-order-number">{selectedOrder?.orderNumber}</Text>
               <TouchableOpacity
                 onPress={() => setShowOrderDetail(false)}
-                data-testid="button-close-modal"
+                testID="button-close-modal"
               >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
 
             {selectedOrder && (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} testID="modal-scroll">
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Fornitore</Text>
                   <Text style={styles.modalText}>{selectedOrder.supplierName}</Text>
@@ -380,42 +391,42 @@ export default function PurchaseOrdersScreen() {
 
                 <View style={styles.totalSection}>
                   <Text style={styles.totalLabel}>Totale Ordine</Text>
-                  <Text style={styles.totalValue}>€{selectedOrder.total.toLocaleString()}</Text>
+                  <Text style={styles.totalValue} testID="modal-total">€{selectedOrder.total.toLocaleString()}</Text>
                 </View>
 
                 <View style={styles.modalActions}>
                   {selectedOrder.status === 'pending' && (
-                    <TouchableOpacity style={styles.modalActionButton} data-testid="button-confirm-order">
+                    <TouchableOpacity style={styles.modalActionButton} testID="button-confirm-order">
                       <Ionicons name="checkmark-circle-outline" size={20} color={colors.teal} />
                       <Text style={[styles.modalActionText, { color: colors.teal }]}>Conferma</Text>
                     </TouchableOpacity>
                   )}
                   {selectedOrder.status === 'shipped' && (
-                    <TouchableOpacity style={styles.modalActionButton} data-testid="button-mark-delivered">
+                    <TouchableOpacity style={styles.modalActionButton} testID="button-mark-delivered">
                       <Ionicons name="cube-outline" size={20} color={colors.primary} />
                       <Text style={[styles.modalActionText, { color: colors.primary }]}>Segna Consegnato</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity style={styles.modalActionButton} data-testid="button-print-order">
+                  <TouchableOpacity style={styles.modalActionButton} testID="button-print-order">
                     <Ionicons name="print-outline" size={20} color={colors.foreground} />
                     <Text style={styles.modalActionText}>Stampa</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
             )}
-          </View>
+          </SafeAreaView>
         </View>
       </Modal>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, isLandscape && styles.fabLandscape]}
         onPress={() => navigation.navigate('CreatePurchaseOrder')}
         activeOpacity={0.8}
-        data-testid="button-fab-create"
+        testID="button-fab-create"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -437,6 +448,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
+  searchContainerLandscape: {
+    marginHorizontal: spacing.xl,
+  },
   searchInput: {
     flex: 1,
     color: colors.foreground,
@@ -449,6 +463,9 @@ const styles = StyleSheet.create({
   filtersContent: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
+  },
+  filtersContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   filterPill: {
     paddingHorizontal: spacing.lg,
@@ -477,6 +494,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
+  summaryRowLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   summaryCard: {
     flex: 1,
     alignItems: 'center',
@@ -494,6 +514,21 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 80,
+  },
+  columnWrapper: {
+    gap: spacing.md,
+  },
+  orderCardWrapper: {
+    marginBottom: spacing.md,
+  },
+  orderCardGrid: {
+    flex: 1,
+    marginBottom: 0,
   },
   orderCard: {
     paddingVertical: spacing.lg,
@@ -530,6 +565,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.lg,
     marginBottom: spacing.md,
+    flexWrap: 'wrap',
   },
   metaItem: {
     flexDirection: 'row',
@@ -707,5 +743,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabLandscape: {
+    bottom: 80,
   },
 });

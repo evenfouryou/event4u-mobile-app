@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
-
-const { width, height } = Dimensions.get('window');
-const SCANNER_SIZE = width * 0.7;
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 export function SchoolBadgeScannerScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [isScanning, setIsScanning] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [flashEnabled, setFlashEnabled] = useState(false);
+
+  const SCANNER_SIZE = isLandscape ? Math.min(height * 0.6, 300) : width * 0.7;
 
   useEffect(() => {
     setTimeout(() => {
@@ -45,20 +53,20 @@ export function SchoolBadgeScannerScreen() {
 
   if (hasPermission === null) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <SafeAreaView style={[styles.container, styles.centerContent]} edges={['top', 'bottom', 'left', 'right']}>
         <Text style={styles.permissionText}>Richiesta permessi fotocamera...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (hasPermission === false) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, styles.centerContent]} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
-            data-testid="button-back"
+            testID="button-back"
           >
             <Ionicons name="arrow-back" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -72,25 +80,28 @@ export function SchoolBadgeScannerScreen() {
           </Text>
           <TouchableOpacity
             style={styles.settingsButton}
-            data-testid="button-settings"
+            testID="button-settings"
           >
             <Text style={styles.settingsButtonText}>Apri Impostazioni</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={[styles.cameraPlaceholder]}>
+      <View style={styles.cameraPlaceholder}>
         <View style={styles.scannerOverlay}>
-          <View style={[styles.overlayTop, { height: (height - SCANNER_SIZE) / 2 - 50 }]} />
+          <View style={[
+            styles.overlayTop,
+            { height: isLandscape ? (height - SCANNER_SIZE) / 2 - 30 : (height - SCANNER_SIZE) / 2 - 50 }
+          ]} />
           
-          <View style={styles.overlayMiddle}>
+          <View style={[styles.overlayMiddle, { height: SCANNER_SIZE }]}>
             <View style={styles.overlaySide} />
             
-            <View style={styles.scannerFrame}>
+            <View style={[styles.scannerFrame, { width: SCANNER_SIZE, height: SCANNER_SIZE }]}>
               <View style={[styles.corner, styles.cornerTopLeft]} />
               <View style={[styles.corner, styles.cornerTopRight]} />
               <View style={[styles.corner, styles.cornerBottomLeft]} />
@@ -110,51 +121,55 @@ export function SchoolBadgeScannerScreen() {
         </View>
       </View>
 
-      <View style={[styles.topControls, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.controlButton}
-          data-testid="button-back"
-        >
-          <Ionicons name="close" size={28} color={colors.foreground} />
-        </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Scansiona Badge</Text>
-        
-        <TouchableOpacity
-          onPress={toggleFlash}
-          style={styles.controlButton}
-          data-testid="button-flash"
-        >
-          <Ionicons
-            name={flashEnabled ? 'flash' : 'flash-outline'}
-            size={24}
-            color={flashEnabled ? colors.primary : colors.foreground}
-          />
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.controlsWrapper} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[styles.topControls, isLandscape && styles.topControlsLandscape]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.controlButton}
+            testID="button-close"
+          >
+            <Ionicons name="close" size={28} color={colors.foreground} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Scansiona Badge</Text>
+          
+          <TouchableOpacity
+            onPress={toggleFlash}
+            style={styles.controlButton}
+            testID="button-flash"
+          >
+            <Ionicons
+              name={flashEnabled ? 'flash' : 'flash-outline'}
+              size={24}
+              color={flashEnabled ? colors.primary : colors.foreground}
+            />
+          </TouchableOpacity>
+        </View>
 
-      <View style={[styles.bottomControls, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <TouchableOpacity
-          style={styles.simulateButton}
-          onPress={simulateScan}
-          activeOpacity={0.8}
-          data-testid="button-simulate-scan"
-        >
-          <Ionicons name="qr-code" size={24} color={colors.primaryForeground} />
-          <Text style={styles.simulateButtonText}>Simula Scansione</Text>
-        </TouchableOpacity>
+        <View style={[styles.bottomControls, isLandscape && styles.bottomControlsLandscape]}>
+          <View style={[styles.bottomControlsInner, isTablet && styles.bottomControlsInnerTablet]}>
+            <TouchableOpacity
+              style={styles.simulateButton}
+              onPress={simulateScan}
+              activeOpacity={0.8}
+              testID="button-simulate-scan"
+            >
+              <Ionicons name="qr-code" size={24} color={colors.primaryForeground} />
+              <Text style={styles.simulateButtonText}>Simula Scansione</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.manualButton}
-          onPress={handleManualEntry}
-          activeOpacity={0.8}
-          data-testid="button-manual-entry"
-        >
-          <Ionicons name="keypad" size={20} color={colors.foreground} />
-          <Text style={styles.manualButtonText}>Inserisci manualmente</Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={styles.manualButton}
+              onPress={handleManualEntry}
+              activeOpacity={0.8}
+              testID="button-manual-entry"
+            >
+              <Ionicons name="keypad" size={20} color={colors.foreground} />
+              <Text style={styles.manualButtonText}>Inserisci manualmente</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -171,6 +186,10 @@ const styles = StyleSheet.create({
   cameraPlaceholder: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#1a1a2e',
+  },
+  controlsWrapper: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   header: {
     position: 'absolute',
@@ -196,15 +215,12 @@ const styles = StyleSheet.create({
   },
   overlayMiddle: {
     flexDirection: 'row',
-    height: SCANNER_SIZE,
   },
   overlaySide: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   scannerFrame: {
-    width: SCANNER_SIZE,
-    height: SCANNER_SIZE,
     position: 'relative',
   },
   corner: {
@@ -266,14 +282,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   topControls: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  topControlsLandscape: {
+    paddingTop: spacing.sm,
   },
   controlButton: {
     width: 44,
@@ -289,12 +305,20 @@ const styles = StyleSheet.create({
     color: colors.foreground,
   },
   bottomControls: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  bottomControlsLandscape: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  bottomControlsInner: {
     gap: spacing.md,
+  },
+  bottomControlsInnerTablet: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   simulateButton: {
     flexDirection: 'row',

@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize } from '../../theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -47,8 +47,9 @@ interface StaffAssignment {
 export function StationDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const stationId = route.params?.stationId;
 
   const [station, setStation] = useState<StationDetail | null>(null);
@@ -119,33 +120,33 @@ export function StationDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Stazione" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="loading-indicator">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !station) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Stazione" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="error-state">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error || 'Stazione non trovata'}</Text>
-          <Button title="Riprova" onPress={loadStationDetail} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadStationDetail} style={styles.retryButton} testID="button-retry" />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   const renderProduct = ({ item }: { item: Product }) => {
     const stockStatus = getStockStatus(item.currentStock, item.minStock);
     return (
-      <View style={styles.productRow} data-testid={`product-${item.id}`}>
+      <View style={styles.productRow} testID={`product-${item.id}`}>
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{item.name}</Text>
           <Text style={styles.productCategory}>{item.category}</Text>
@@ -162,7 +163,7 @@ export function StationDetailScreen() {
   };
 
   const renderStaff = ({ item }: { item: StaffAssignment }) => (
-    <View style={styles.staffRow} data-testid={`staff-${item.id}`}>
+    <View style={styles.staffRow} testID={`staff-${item.id}`}>
       <View style={[styles.staffAvatar, { borderColor: getStatusColor(item.status) }]}>
         <Text style={styles.staffInitial}>{item.name.charAt(0).toUpperCase()}</Text>
       </View>
@@ -180,7 +181,7 @@ export function StationDetailScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title={station.name}
         showBack
@@ -189,108 +190,118 @@ export function StationDetailScreen() {
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditStation', { stationId })}
-            data-testid="button-edit-station"
+            testID="button-edit-station"
           >
             <Ionicons name="pencil" size={20} color={colors.primary} />
           </TouchableOpacity>
         }
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.heroCard} variant="elevated">
-          <View style={styles.heroHeader}>
-            <View style={styles.heroIcon}>
-              <Ionicons name="beer" size={32} color={colors.primary} />
-            </View>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>{station.name}</Text>
-              <View style={styles.heroMeta}>
-                <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.heroLocation}>{station.locationName}</Text>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={(isTablet || isLandscape) ? styles.contentResponsive : undefined}
+        testID="scroll-view-station-detail"
+      >
+        <View style={(isTablet || isLandscape) ? styles.columnLeft : undefined}>
+          <Card style={styles.heroCard} variant="elevated" testID="hero-card">
+            <View style={styles.heroHeader}>
+              <View style={styles.heroIcon}>
+                <Ionicons name="beer" size={32} color={colors.primary} />
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: station.isActive ? `${colors.success}20` : `${colors.mutedForeground}20` }]}>
-                <View style={[styles.statusDotSmall, { backgroundColor: station.isActive ? colors.success : colors.mutedForeground }]} />
-                <Text style={[styles.statusText, { color: station.isActive ? colors.success : colors.mutedForeground }]}>
-                  {station.isActive ? 'Attiva' : 'Inattiva'}
-                </Text>
+              <View style={styles.heroInfo}>
+                <Text style={styles.heroName}>{station.name}</Text>
+                <View style={styles.heroMeta}>
+                  <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.heroLocation}>{station.locationName}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: station.isActive ? `${colors.success}20` : `${colors.mutedForeground}20` }]}>
+                  <View style={[styles.statusDotSmall, { backgroundColor: station.isActive ? colors.success : colors.mutedForeground }]} />
+                  <Text style={[styles.statusText, { color: station.isActive ? colors.success : colors.mutedForeground }]}>
+                    {station.isActive ? 'Attiva' : 'Inattiva'}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{products.length}</Text>
-              <Text style={styles.statLabel}>Prodotti</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{products.length}</Text>
+                <Text style={styles.statLabel}>Prodotti</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{staff.filter(s => s.status === 'active').length}</Text>
+                <Text style={styles.statLabel}>Staff Attivo</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{products.filter(p => p.currentStock <= p.minStock).length}</Text>
+                <Text style={styles.statLabel}>Stock Basso</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{staff.filter(s => s.status === 'active').length}</Text>
-              <Text style={styles.statLabel}>Staff Attivo</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{products.filter(p => p.currentStock <= p.minStock).length}</Text>
-              <Text style={styles.statLabel}>Stock Basso</Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'products' && styles.tabActive]}
-            onPress={() => setActiveTab('products')}
-            data-testid="tab-products"
-          >
-            <Ionicons name="wine-outline" size={18} color={activeTab === 'products' ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.tabText, activeTab === 'products' && styles.tabTextActive]}>
-              Prodotti ({products.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'staff' && styles.tabActive]}
-            onPress={() => setActiveTab('staff')}
-            data-testid="tab-staff"
-          >
-            <Ionicons name="people-outline" size={18} color={activeTab === 'staff' ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.tabText, activeTab === 'staff' && styles.tabTextActive]}>
-              Staff ({staff.length})
-            </Text>
-          </TouchableOpacity>
+          </Card>
         </View>
 
-        <Card style={styles.listCard} variant="elevated">
-          {activeTab === 'products' ? (
-            products.length === 0 ? (
-              <Text style={styles.emptyText}>Nessun prodotto assegnato</Text>
-            ) : (
-              products.map((p) => renderProduct({ item: p }))
-            )
-          ) : (
-            staff.length === 0 ? (
-              <Text style={styles.emptyText}>Nessuno staff assegnato</Text>
-            ) : (
-              staff.map((s) => renderStaff({ item: s }))
-            )
-          )}
-        </Card>
+        <View style={(isTablet || isLandscape) ? styles.columnRight : undefined}>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'products' && styles.tabActive]}
+              onPress={() => setActiveTab('products')}
+              testID="tab-products"
+            >
+              <Ionicons name="wine-outline" size={18} color={activeTab === 'products' ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'products' && styles.tabTextActive]}>
+                Prodotti ({products.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'staff' && styles.tabActive]}
+              onPress={() => setActiveTab('staff')}
+              testID="tab-staff"
+            >
+              <Ionicons name="people-outline" size={18} color={activeTab === 'staff' ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'staff' && styles.tabTextActive]}>
+                Staff ({staff.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        {station.notes && (
-          <Card style={styles.notesCard} variant="elevated">
-            <Text style={styles.sectionTitle}>Note</Text>
-            <Text style={styles.notesText}>{station.notes}</Text>
+          <Card style={styles.listCard} variant="elevated" testID="list-card">
+            {activeTab === 'products' ? (
+              products.length === 0 ? (
+                <Text style={styles.emptyText}>Nessun prodotto assegnato</Text>
+              ) : (
+                products.map((p) => renderProduct({ item: p }))
+              )
+            ) : (
+              staff.length === 0 ? (
+                <Text style={styles.emptyText}>Nessuno staff assegnato</Text>
+              ) : (
+                staff.map((s) => renderStaff({ item: s }))
+              )
+            )}
           </Card>
-        )}
 
-        <View style={styles.actionsContainer}>
-          <Button
-            title="Gestisci Stock"
-            onPress={() => navigation.navigate('BartenderDirectStock', { stationId })}
-            style={styles.actionButton}
-          />
+          {station.notes && (
+            <Card style={styles.notesCard} variant="elevated" testID="notes-card">
+              <Text style={styles.sectionTitle}>Note</Text>
+              <Text style={styles.notesText}>{station.notes}</Text>
+            </Card>
+          )}
+
+          <View style={styles.actionsContainer}>
+            <Button
+              title="Gestisci Stock"
+              onPress={() => navigation.navigate('BartenderDirectStock', { stationId })}
+              style={styles.actionButton}
+              testID="button-manage-stock"
+            />
+          </View>
         </View>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -302,6 +313,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  contentResponsive: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  columnLeft: {
+    flex: 1,
+    minWidth: 300,
+  },
+  columnRight: {
+    flex: 1,
+    minWidth: 300,
   },
   centerContainer: {
     flex: 1,
@@ -326,7 +350,7 @@ const styles = StyleSheet.create({
   editButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.glass.background,
     justifyContent: 'center',
     alignItems: 'center',
@@ -343,7 +367,7 @@ const styles = StyleSheet.create({
   heroIcon: {
     width: 64,
     height: 64,
-    borderRadius: 16,
+    borderRadius: borderRadius.xl,
     backgroundColor: `${colors.primary}20`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -354,7 +378,7 @@ const styles = StyleSheet.create({
   },
   heroName: {
     fontSize: fontSize['2xl'],
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.foreground,
   },
   heroMeta: {
@@ -373,18 +397,18 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     marginTop: spacing.sm,
     gap: spacing.xs,
   },
   statusDotSmall: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: borderRadius.full,
   },
   statusText: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   statsRow: {
     flexDirection: 'row',
@@ -399,7 +423,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   statLabel: {
@@ -415,7 +439,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     padding: spacing.xs,
   },
   tab: {
@@ -424,7 +448,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
     gap: spacing.xs,
   },
   tabActive: {
@@ -436,7 +460,7 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   listCard: {
     marginTop: spacing.md,
@@ -453,7 +477,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: fontSize.base,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.foreground,
   },
   productCategory: {
@@ -466,21 +490,21 @@ const styles = StyleSheet.create({
   },
   stockValue: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   stockBadge: {
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: borderRadius.sm,
     marginTop: 2,
   },
   stockLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   productPrice: {
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
     width: 60,
     textAlign: 'right',
@@ -495,7 +519,7 @@ const styles = StyleSheet.create({
   staffAvatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -503,7 +527,7 @@ const styles = StyleSheet.create({
   },
   staffInitial: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
   },
   staffInfo: {
@@ -512,7 +536,7 @@ const styles = StyleSheet.create({
   },
   staffName: {
     fontSize: fontSize.base,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.foreground,
   },
   staffRole: {
@@ -531,7 +555,7 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: borderRadius.full,
   },
   emptyText: {
     fontSize: fontSize.sm,
@@ -545,7 +569,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
     marginBottom: spacing.sm,
   },

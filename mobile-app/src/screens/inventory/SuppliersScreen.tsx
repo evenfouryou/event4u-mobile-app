@@ -10,12 +10,13 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface Supplier {
@@ -50,11 +51,15 @@ const FILTER_OPTIONS = [
 
 export default function SuppliersScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: suppliers, refetch } = useQuery<Supplier[]>({
     queryKey: ['/api/suppliers'],
@@ -181,7 +186,7 @@ export default function SuppliersScreen() {
     };
 
     return (
-      <View style={styles.orderItem}>
+      <View style={styles.orderItem} testID={`order-item-${item.id}`}>
         <View style={styles.orderInfo}>
           <Text style={styles.orderDate}>{item.date}</Text>
           <Text style={styles.orderItems}>{item.items} articoli</Text>
@@ -203,110 +208,112 @@ export default function SuppliersScreen() {
     const supplierOrders = getSupplierOrders(item.id);
 
     return (
-      <Card variant="glass" style={styles.supplierCard}>
-        <TouchableOpacity
-          style={styles.supplierHeader}
-          onPress={() => setExpandedSupplier(isExpanded ? null : item.id)}
-          activeOpacity={0.8}
-          data-testid={`card-supplier-${item.id}`}
-        >
-          <View style={styles.supplierAvatar}>
-            <Text style={styles.supplierInitial}>{item.name.charAt(0)}</Text>
-          </View>
-          <View style={styles.supplierInfo}>
-            <View style={styles.supplierNameRow}>
-              <Text style={styles.supplierName}>{item.name}</Text>
-              {item.status === 'inactive' && (
-                <View style={styles.inactiveBadge}>
-                  <Text style={styles.inactiveBadgeText}>Inattivo</Text>
+      <View style={[styles.supplierCardWrapper, numColumns === 2 && styles.supplierCardGrid]}>
+        <Card variant="glass" style={styles.supplierCard}>
+          <TouchableOpacity
+            style={styles.supplierHeader}
+            onPress={() => setExpandedSupplier(isExpanded ? null : item.id)}
+            activeOpacity={0.8}
+            testID={`card-supplier-${item.id}`}
+          >
+            <View style={styles.supplierAvatar}>
+              <Text style={styles.supplierInitial}>{item.name.charAt(0)}</Text>
+            </View>
+            <View style={styles.supplierInfo}>
+              <View style={styles.supplierNameRow}>
+                <Text style={styles.supplierName} testID={`text-supplier-name-${item.id}`}>{item.name}</Text>
+                {item.status === 'inactive' && (
+                  <View style={styles.inactiveBadge}>
+                    <Text style={styles.inactiveBadgeText}>Inattivo</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{item.category}</Text>
+              </View>
+              {renderRatingStars(item.rating)}
+            </View>
+            <Ionicons
+              name={isExpanded ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={colors.mutedForeground}
+            />
+          </TouchableOpacity>
+
+          {isExpanded && (
+            <View style={styles.supplierDetails}>
+              <View style={styles.contactRow}>
+                <TouchableOpacity
+                  style={styles.contactButton}
+                  onPress={() => handleCall(item.phone)}
+                  testID={`button-call-${item.id}`}
+                >
+                  <Ionicons name="call-outline" size={20} color={colors.teal} />
+                  <Text style={styles.contactButtonText}>{item.phone}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.contactButton}
+                  onPress={() => handleEmail(item.email)}
+                  testID={`button-email-${item.id}`}
+                >
+                  <Ionicons name="mail-outline" size={20} color={colors.primary} />
+                  <Text style={styles.contactButtonText}>Email</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.addressRow}>
+                <Ionicons name="location-outline" size={16} color={colors.mutedForeground} />
+                <Text style={styles.addressText}>{item.address}</Text>
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{item.totalOrders}</Text>
+                  <Text style={styles.statLabel}>Ordini</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{item.lastOrderDate}</Text>
+                  <Text style={styles.statLabel}>Ultimo Ordine</Text>
+                </View>
+              </View>
+
+              {supplierOrders.length > 0 && (
+                <View style={styles.ordersSection}>
+                  <Text style={styles.ordersSectionTitle}>Ordini Recenti</Text>
+                  {supplierOrders.slice(0, 3).map((order) => (
+                    <View key={order.id}>{renderOrderItem({ item: order })}</View>
+                  ))}
                 </View>
               )}
-            </View>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{item.category}</Text>
-            </View>
-            {renderRatingStars(item.rating)}
-          </View>
-          <Ionicons
-            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color={colors.mutedForeground}
-          />
-        </TouchableOpacity>
 
-        {isExpanded && (
-          <View style={styles.supplierDetails}>
-            <View style={styles.contactRow}>
-              <TouchableOpacity
-                style={styles.contactButton}
-                onPress={() => handleCall(item.phone)}
-                data-testid={`button-call-${item.id}`}
-              >
-                <Ionicons name="call-outline" size={20} color={colors.teal} />
-                <Text style={styles.contactButtonText}>{item.phone}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.contactButton}
-                onPress={() => handleEmail(item.email)}
-                data-testid={`button-email-${item.id}`}
-              >
-                <Ionicons name="mail-outline" size={20} color={colors.primary} />
-                <Text style={styles.contactButtonText}>Email</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.addressText}>{item.address}</Text>
-            </View>
-
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{item.totalOrders}</Text>
-                <Text style={styles.statLabel}>Ordini</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{item.lastOrderDate}</Text>
-                <Text style={styles.statLabel}>Ultimo Ordine</Text>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('PurchaseOrders', { supplierId: item.id })}
+                  testID={`button-new-order-${item.id}`}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                  <Text style={styles.actionButtonText}>Nuovo Ordine</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('SupplierDetail', { supplierId: item.id })}
+                  testID={`button-details-${item.id}`}
+                >
+                  <Ionicons name="open-outline" size={20} color={colors.foreground} />
+                  <Text style={styles.actionButtonText}>Dettagli</Text>
+                </TouchableOpacity>
               </View>
             </View>
-
-            {supplierOrders.length > 0 && (
-              <View style={styles.ordersSection}>
-                <Text style={styles.ordersSectionTitle}>Ordini Recenti</Text>
-                {supplierOrders.slice(0, 3).map((order) => (
-                  <View key={order.id}>{renderOrderItem({ item: order })}</View>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('PurchaseOrders', { supplierId: item.id })}
-                data-testid={`button-new-order-${item.id}`}
-              >
-                <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                <Text style={styles.actionButtonText}>Nuovo Ordine</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('SupplierDetail', { supplierId: item.id })}
-                data-testid={`button-details-${item.id}`}
-              >
-                <Ionicons name="open-outline" size={20} color={colors.foreground} />
-                <Text style={styles.actionButtonText}>Dettagli</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </Card>
+          )}
+        </Card>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Fornitori"
         showBack
@@ -314,14 +321,14 @@ export default function SuppliersScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('AddSupplier')}
-            data-testid="button-add-supplier"
+            testID="button-add-supplier"
           >
             <Ionicons name="add" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
 
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
         <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
         <TextInput
           style={styles.searchInput}
@@ -329,7 +336,7 @@ export default function SuppliersScreen() {
           placeholderTextColor={colors.mutedForeground}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          data-testid="input-search"
+          testID="input-search"
         />
       </View>
 
@@ -337,7 +344,8 @@ export default function SuppliersScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
+        contentContainerStyle={[styles.filtersContent, isLandscape && styles.filtersContentLandscape]}
+        testID="scroll-filters"
       >
         {FILTER_OPTIONS.map((filter) => (
           <TouchableOpacity
@@ -347,7 +355,7 @@ export default function SuppliersScreen() {
               activeFilter === filter.id && styles.filterPillActive,
             ]}
             onPress={() => setActiveFilter(filter.id)}
-            data-testid={`filter-${filter.id}`}
+            testID={`filter-${filter.id}`}
           >
             <Text
               style={[
@@ -365,21 +373,24 @@ export default function SuppliersScreen() {
         data={filteredSuppliers}
         renderItem={renderSupplierCard}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        key={numColumns}
+        contentContainerStyle={[styles.listContent, isLandscape && styles.listContentLandscape]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        testID="list-suppliers"
         ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
+          <Card style={styles.emptyCard} variant="glass" testID="card-empty">
             <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyTitle}>Nessun fornitore trovato</Text>
             <Text style={styles.emptyText}>Prova a modificare i filtri di ricerca</Text>
           </Card>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -401,6 +412,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
+  searchContainerLandscape: {
+    marginHorizontal: spacing.xl,
+  },
   searchInput: {
     flex: 1,
     color: colors.foreground,
@@ -413,6 +427,9 @@ const styles = StyleSheet.create({
   filtersContent: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
+  },
+  filtersContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   filterPill: {
     paddingHorizontal: spacing.lg,
@@ -436,6 +453,21 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 80,
+  },
+  columnWrapper: {
+    gap: spacing.md,
+  },
+  supplierCardWrapper: {
+    marginBottom: spacing.md,
+  },
+  supplierCardGrid: {
+    flex: 1,
+    marginBottom: 0,
   },
   supplierCard: {
     overflow: 'hidden',

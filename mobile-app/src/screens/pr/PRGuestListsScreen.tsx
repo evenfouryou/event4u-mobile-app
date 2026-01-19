@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button, Input } from '../../components';
 
 interface Guest {
@@ -28,7 +28,9 @@ const mockGuests: Guest[] = [
 export function PRGuestListsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [guests, setGuests] = useState(mockGuests);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -36,6 +38,7 @@ export function PRGuestListsScreen() {
   const [newGuest, setNewGuest] = useState({ name: '', phone: '', plusOne: '0', notes: '' });
 
   const eventName = route.params?.eventName || 'Evento';
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -96,55 +99,61 @@ export function PRGuestListsScreen() {
     setShowAddModal(false);
   };
 
-  const renderGuest = ({ item }: { item: Guest }) => (
-    <Card style={styles.guestCard}>
-      <View style={styles.guestHeader}>
-        <View style={styles.guestAvatar}>
-          <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
-        </View>
-        <View style={styles.guestInfo}>
-          <View style={styles.guestNameRow}>
-            <Text style={styles.guestName}>{item.name}</Text>
-            {item.notes && (
-              <View style={styles.noteBadge}>
-                <Text style={styles.noteText}>{item.notes}</Text>
-              </View>
+  const renderGuest = ({ item, index }: { item: Guest; index: number }) => (
+    <View style={[
+      numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+      numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+      numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+    ]}>
+      <Card style={styles.guestCard} testID={`card-guest-${item.id}`}>
+        <View style={styles.guestHeader}>
+          <View style={styles.guestAvatar}>
+            <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+          </View>
+          <View style={styles.guestInfo}>
+            <View style={styles.guestNameRow}>
+              <Text style={styles.guestName}>{item.name}</Text>
+              {item.notes && (
+                <View style={styles.noteBadge}>
+                  <Text style={styles.noteText}>{item.notes}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.guestPhone}>{item.phone}</Text>
+            {item.plusOne > 0 && (
+              <Text style={styles.plusOneText}>+{item.plusOne} accompagnator{item.plusOne > 1 ? 'i' : 'e'}</Text>
             )}
           </View>
-          <Text style={styles.guestPhone}>{item.phone}</Text>
-          {item.plusOne > 0 && (
-            <Text style={styles.plusOneText}>+{item.plusOne} accompagnator{item.plusOne > 1 ? 'i' : 'e'}</Text>
-          )}
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+            <Ionicons name={getStatusIcon(item.status)} size={14} color={getStatusColor(item.status)} />
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              {getStatusLabel(item.status)}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Ionicons name={getStatusIcon(item.status)} size={14} color={getStatusColor(item.status)} />
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {getStatusLabel(item.status)}
-          </Text>
+        <View style={styles.guestActions}>
+          <TouchableOpacity style={styles.guestAction} testID={`button-call-${item.id}`}>
+            <Ionicons name="call-outline" size={18} color={colors.purple} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.guestAction} testID={`button-message-${item.id}`}>
+            <Ionicons name="chatbubble-outline" size={18} color={colors.purple} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.guestAction} testID={`button-edit-${item.id}`}>
+            <Ionicons name="create-outline" size={18} color={colors.purple} />
+          </TouchableOpacity>
         </View>
-      </View>
-      <View style={styles.guestActions}>
-        <TouchableOpacity style={styles.guestAction}>
-          <Ionicons name="call-outline" size={18} color={colors.purple} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.guestAction}>
-          <Ionicons name="chatbubble-outline" size={18} color={colors.purple} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.guestAction}>
-          <Ionicons name="create-outline" size={18} color={colors.purple} />
-        </TouchableOpacity>
-      </View>
-    </Card>
+      </Card>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Lista Ospiti" 
         showBack 
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => setShowAddModal(true)}>
+          <TouchableOpacity onPress={() => setShowAddModal(true)} testID="button-add-guest">
             <Ionicons name="add-circle" size={28} color={colors.purple} />
           </TouchableOpacity>
         }
@@ -167,14 +176,18 @@ export function PRGuestListsScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Ionicons name="search" size={20} color={colors.mutedForeground} />}
           containerStyle={styles.searchInput}
+          testID="input-search-guest"
         />
       </View>
 
       <FlatList
+        key={numColumns}
         data={filteredGuests}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderGuest}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing.lg }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -189,6 +202,7 @@ export function PRGuestListsScreen() {
             <Text style={styles.emptySubtitle}>Aggiungi il tuo primo ospite</Text>
           </View>
         }
+        testID="guests-list"
       />
 
       <Modal
@@ -198,10 +212,10 @@ export function PRGuestListsScreen() {
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nuovo Ospite</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity onPress={() => setShowAddModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -211,6 +225,7 @@ export function PRGuestListsScreen() {
               placeholder="Mario Rossi"
               value={newGuest.name}
               onChangeText={(text) => setNewGuest({ ...newGuest, name: text })}
+              testID="input-guest-name"
             />
             <Input
               label="Telefono"
@@ -218,6 +233,7 @@ export function PRGuestListsScreen() {
               value={newGuest.phone}
               onChangeText={(text) => setNewGuest({ ...newGuest, phone: text })}
               keyboardType="phone-pad"
+              testID="input-guest-phone"
             />
             <Input
               label="Accompagnatori"
@@ -225,12 +241,14 @@ export function PRGuestListsScreen() {
               value={newGuest.plusOne}
               onChangeText={(text) => setNewGuest({ ...newGuest, plusOne: text })}
               keyboardType="number-pad"
+              testID="input-guest-plusone"
             />
             <Input
               label="Note (opzionale)"
               placeholder="VIP, Compleanno, etc."
               value={newGuest.notes}
               onChangeText={(text) => setNewGuest({ ...newGuest, notes: text })}
+              testID="input-guest-notes"
             />
 
             <View style={styles.modalActions}>
@@ -239,18 +257,20 @@ export function PRGuestListsScreen() {
                 variant="outline"
                 onPress={() => setShowAddModal(false)}
                 style={{ flex: 1 }}
+                testID="button-cancel-add"
               />
               <Button
                 title="Aggiungi"
                 variant="primary"
                 onPress={handleAddGuest}
                 style={{ flex: 1 }}
+                testID="button-confirm-add"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -299,6 +319,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingTop: 0,
     gap: spacing.sm,
+  },
+  columnWrapper: {
+    gap: spacing.md,
   },
   guestCard: {
     padding: spacing.md,
@@ -412,6 +435,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',

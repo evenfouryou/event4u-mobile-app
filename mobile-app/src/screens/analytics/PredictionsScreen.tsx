@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -54,8 +54,9 @@ interface WeatherForecast {
 
 export default function PredictionsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -255,14 +256,15 @@ export default function PredictionsScreen() {
 
   const renderWeatherForecast = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Previsioni Meteo</Text>
+      <Text style={styles.sectionTitle} testID="text-weather-title">Previsioni Meteo</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.weatherContainer}
+        testID="scroll-weather"
       >
         {weatherForecast.map((day, index) => (
-          <Card key={index} variant="glass" style={styles.weatherCard}>
+          <Card key={index} variant="glass" style={styles.weatherCard} testID={`card-weather-${index}`}>
             <Text style={styles.weatherDate}>{day.date}</Text>
             <Ionicons
               name={getWeatherIcon(day.icon)}
@@ -288,10 +290,10 @@ export default function PredictionsScreen() {
   );
 
   const renderEventPredictions = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Previsioni Eventi</Text>
+    <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+      <Text style={styles.sectionTitle} testID="text-events-title">Previsioni Eventi</Text>
       {eventPredictions.map((event) => (
-        <Card key={event.id} variant="glass" style={styles.predictionCard}>
+        <Card key={event.id} variant="glass" style={styles.predictionCard} testID={`card-event-${event.id}`}>
           <View style={styles.predictionHeader}>
             <View style={styles.predictionInfo}>
               <Text style={styles.predictionTitle}>{event.eventName}</Text>
@@ -342,10 +344,10 @@ export default function PredictionsScreen() {
   );
 
   const renderInventoryRecommendations = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Scorte Consigliate</Text>
+    <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+      <Text style={styles.sectionTitle} testID="text-inventory-title">Scorte Consigliate</Text>
       {inventoryRecommendations.map((item) => (
-        <Card key={item.id} variant="glass" style={styles.inventoryCard}>
+        <Card key={item.id} variant="glass" style={styles.inventoryCard} testID={`card-inventory-${item.id}`}>
           <View style={styles.inventoryHeader}>
             <View style={[styles.priorityIcon, { backgroundColor: `${getPriorityColor(item.priority)}20` }]}>
               <Ionicons
@@ -385,60 +387,75 @@ export default function PredictionsScreen() {
 
   const renderPriceOptimizations = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Ottimizzazione Prezzi</Text>
-      {priceOptimizations.map((item) => (
-        <Card key={item.id} variant="glass" style={styles.priceCard}>
-          <View style={styles.priceHeader}>
-            <Text style={styles.priceName}>{item.productName}</Text>
-            <View style={styles.confidenceBadge}>
-              <Ionicons name="analytics" size={12} color={colors.primary} />
-              <Text style={styles.confidenceText}>{item.confidence}%</Text>
+      <Text style={styles.sectionTitle} testID="text-pricing-title">Ottimizzazione Prezzi</Text>
+      <View style={(isLandscape || isTablet) ? styles.priceGrid : undefined}>
+        {priceOptimizations.map((item) => (
+          <Card 
+            key={item.id} 
+            variant="glass" 
+            style={[styles.priceCard, (isLandscape || isTablet) && styles.priceCardWide]} 
+            testID={`card-price-${item.id}`}
+          >
+            <View style={styles.priceHeader}>
+              <Text style={styles.priceName}>{item.productName}</Text>
+              <View style={styles.confidenceBadge}>
+                <Ionicons name="analytics" size={12} color={colors.primary} />
+                <Text style={styles.confidenceText}>{item.confidence}%</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.priceComparison}>
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Attuale</Text>
-              <Text style={styles.priceValue}>€{item.currentPrice.toFixed(2)}</Text>
+            <View style={styles.priceComparison}>
+              <View style={styles.priceItem}>
+                <Text style={styles.priceLabel}>Attuale</Text>
+                <Text style={styles.priceValue}>€{item.currentPrice.toFixed(2)}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+              <View style={styles.priceItem}>
+                <Text style={styles.priceLabel}>Suggerito</Text>
+                <Text style={[styles.priceValue, { color: colors.primary }]}>€{item.suggestedPrice.toFixed(2)}</Text>
+              </View>
             </View>
-            <Ionicons name="arrow-forward" size={20} color={colors.primary} />
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Suggerito</Text>
-              <Text style={[styles.priceValue, { color: colors.primary }]}>€{item.suggestedPrice.toFixed(2)}</Text>
+            <View style={styles.impactRow}>
+              <Ionicons name="trending-up" size={14} color={colors.teal} />
+              <Text style={styles.impactText}>{item.expectedImpact}</Text>
             </View>
-          </View>
-          <View style={styles.impactRow}>
-            <Ionicons name="trending-up" size={14} color={colors.teal} />
-            <Text style={styles.impactText}>{item.expectedImpact}</Text>
-          </View>
-        </Card>
-      ))}
+          </Card>
+        ))}
+      </View>
     </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="AI Previsioni" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Generazione previsioni...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Generazione previsioni...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="AI Previsioni" showBack onBack={() => navigation.goBack()} />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-predictions"
       >
         {renderWeatherForecast()}
-        {renderEventPredictions()}
-        {renderInventoryRecommendations()}
+        
+        <View style={(isLandscape || isTablet) ? styles.twoColumnContainer : undefined}>
+          {renderEventPredictions()}
+          {renderInventoryRecommendations()}
+        </View>
+        
         {renderPriceOptimizations()}
       </ScrollView>
 
@@ -447,7 +464,7 @@ export default function PredictionsScreen() {
         onPress={regeneratePredictions}
         activeOpacity={0.8}
         disabled={generating}
-        data-testid="button-regenerate-predictions"
+        testID="button-regenerate-predictions"
       >
         {generating ? (
           <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -455,7 +472,7 @@ export default function PredictionsScreen() {
           <Ionicons name="refresh" size={28} color={colors.primaryForeground} />
         )}
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -466,6 +483,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -480,6 +503,14 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  halfSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -667,8 +698,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
   },
+  priceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
   priceCard: {
     marginBottom: spacing.md,
+  },
+  priceCardWide: {
+    width: '50%',
+    paddingHorizontal: spacing.xs,
   },
   priceHeader: {
     flexDirection: 'row',

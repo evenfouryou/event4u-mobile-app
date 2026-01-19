@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -32,7 +33,9 @@ interface GestoreEvent {
 export function AdminGestoreEventsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const gestoreId = route.params?.gestoreId;
   const gestoreName = route.params?.gestoreName || 'Gestore';
   
@@ -116,18 +119,18 @@ export function AdminGestoreEventsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={`Eventi - ${gestoreName}`} showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title={`Eventi - ${gestoreName}`} showBack />
       
       <View style={styles.searchContainer}>
@@ -139,10 +142,10 @@ export function AdminGestoreEventsScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-events"
+            testID="input-search-events"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -151,80 +154,87 @@ export function AdminGestoreEventsScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         {filteredEvents.length > 0 ? (
-          filteredEvents.map((event) => (
-            <TouchableOpacity
-              key={event.id}
-              onPress={() => navigation.navigate('AdminEventDetail', { eventId: event.id })}
-              activeOpacity={0.8}
-              data-testid={`card-event-${event.id}`}
-            >
-              <Card variant="glass" style={styles.eventCard}>
-                <View style={styles.eventHeader}>
-                  {event.imageUrl ? (
-                    <Image source={{ uri: event.imageUrl }} style={styles.eventImage} />
-                  ) : (
-                    <View style={[styles.eventImage, styles.eventImagePlaceholder]}>
-                      <Ionicons name="calendar-outline" size={24} color={colors.mutedForeground} />
+          <View style={(isTablet || isLandscape) ? styles.eventsGrid : undefined}>
+            {filteredEvents.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                onPress={() => navigation.navigate('AdminEventDetail', { eventId: event.id })}
+                activeOpacity={0.8}
+                testID={`card-event-${event.id}`}
+                style={(isTablet || isLandscape) ? styles.eventCardWrapper : undefined}
+              >
+                <Card variant="glass" style={styles.eventCard}>
+                  <View style={styles.eventHeader}>
+                    {event.imageUrl ? (
+                      <Image source={{ uri: event.imageUrl }} style={styles.eventImage} />
+                    ) : (
+                      <View style={[styles.eventImage, styles.eventImagePlaceholder]}>
+                        <Ionicons name="calendar-outline" size={24} color={colors.mutedForeground} />
+                      </View>
+                    )}
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventName} numberOfLines={1} testID={`text-event-name-${event.id}`}>{event.name}</Text>
+                      <View style={styles.eventDateRow}>
+                        <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                        <Text style={styles.eventDate}>{formatDate(event.date)}</Text>
+                      </View>
+                      <View style={styles.eventVenueRow}>
+                        <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                        <Text style={styles.eventVenue}>{event.venueName}</Text>
+                      </View>
                     </View>
-                  )}
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
-                    <View style={styles.eventDateRow}>
-                      <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-                      <Text style={styles.eventDate}>{formatDate(event.date)}</Text>
-                    </View>
-                    <View style={styles.eventVenueRow}>
-                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                      <Text style={styles.eventVenue}>{event.venueName}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(event.status)}20` }]}>
+                      <Text style={[styles.statusText, { color: getStatusColor(event.status) }]} testID={`text-status-${event.id}`}>
+                        {getStatusLabel(event.status)}
+                      </Text>
                     </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(event.status)}20` }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(event.status) }]}>
-                      {getStatusLabel(event.status)}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Biglietti</Text>
-                    <Text style={styles.statValue}>
-                      {event.ticketsSold} / {event.totalCapacity}
-                    </Text>
-                    <View style={styles.progressBar}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${getOccupancyPercentage(event.ticketsSold, event.totalCapacity)}%` },
-                        ]}
-                      />
+                  <View style={styles.statsRow}>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statLabel}>Biglietti</Text>
+                      <Text style={styles.statValue} testID={`text-tickets-${event.id}`}>
+                        {event.ticketsSold} / {event.totalCapacity}
+                      </Text>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${getOccupancyPercentage(event.ticketsSold, event.totalCapacity)}%` },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statLabel}>Ricavi</Text>
+                      <Text style={[styles.statValue, { color: colors.teal }]} testID={`text-revenue-${event.id}`}>
+                        {formatCurrency(event.revenue)}
+                      </Text>
                     </View>
                   </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Ricavi</Text>
-                    <Text style={[styles.statValue, { color: colors.teal }]}>
-                      {formatCurrency(event.revenue)}
-                    </Text>
-                  </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessun evento trovato</Text>
+            <Text style={styles.emptyText} testID="text-empty">Nessun evento trovato</Text>
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -236,6 +246,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -266,6 +284,15 @@ const styles = StyleSheet.create({
     height: 48,
     color: colors.foreground,
     fontSize: fontSize.base,
+  },
+  eventsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  eventCardWrapper: {
+    flex: 1,
+    minWidth: '45%',
   },
   eventCard: {
     marginBottom: spacing.md,

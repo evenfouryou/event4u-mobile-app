@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,28 +70,28 @@ function TransactionItem({ transaction }: TransactionItemProps) {
   const icon = categoryIcons[transaction.category] || 'cash-outline';
 
   return (
-    <TouchableOpacity style={styles.transactionItem} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.transactionItem} activeOpacity={0.7} testID={`button-transaction-${transaction.id}`}>
       <View style={[styles.transactionIcon, { backgroundColor: color + '15' }]}>
         <Ionicons name={icon} size={20} color={color} />
       </View>
       <View style={styles.transactionContent}>
-        <Text style={styles.transactionDescription} numberOfLines={1}>
+        <Text style={styles.transactionDescription} numberOfLines={1} testID={`text-transaction-desc-${transaction.id}`}>
           {transaction.description}
         </Text>
         <View style={styles.transactionMeta}>
-          <Text style={styles.transactionCategory}>
+          <Text style={styles.transactionCategory} testID={`text-transaction-category-${transaction.id}`}>
             {categoryLabels[transaction.category]}
           </Text>
           <Text style={styles.transactionDot}>•</Text>
-          <Text style={styles.transactionDate}>{formatDate(transaction.date)}</Text>
+          <Text style={styles.transactionDate} testID={`text-transaction-date-${transaction.id}`}>{formatDate(transaction.date)}</Text>
         </View>
       </View>
       <View style={styles.transactionAmountContainer}>
-        <Text style={[styles.transactionAmount, { color }]}>
+        <Text style={[styles.transactionAmount, { color }]} testID={`text-transaction-amount-${transaction.id}`}>
           {transaction.type === 'credit' ? '+' : '-'}€{Math.abs(transaction.amount).toFixed(2)}
         </Text>
         {transaction.status !== 'completed' && (
-          <Text style={[styles.transactionStatus, { color }]}>
+          <Text style={[styles.transactionStatus, { color }]} testID={`text-transaction-status-${transaction.id}`}>
             {transaction.status === 'pending' ? 'In attesa' : 'Fallito'}
           </Text>
         )}
@@ -102,10 +102,10 @@ function TransactionItem({ transaction }: TransactionItemProps) {
 
 function EmptyTransactions() {
   return (
-    <View style={styles.emptyTransactions}>
+    <View style={styles.emptyTransactions} testID="container-empty-transactions">
       <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
-      <Text style={styles.emptyTitle}>Nessun movimento</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={styles.emptyTitle} testID="text-empty-title">Nessun movimento</Text>
+      <Text style={styles.emptySubtitle} testID="text-empty-subtitle">
         I tuoi movimenti appariranno qui dopo il primo utilizzo
       </Text>
     </View>
@@ -114,7 +114,12 @@ function EmptyTransactions() {
 
 export function ClientWalletScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+
+  const useWideLayout = isTablet || isLandscape;
+  const maxContentWidth = useWideLayout ? 800 : undefined;
 
   const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery({
     queryKey: ['/api/public/account/wallet'],
@@ -146,18 +151,19 @@ export function ClientWalletScreen() {
   const withdrawEnabled = wallet?.withdrawEnabled ?? false;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']} testID="screen-wallet">
       <Header
         title="Wallet"
         showBack
         onBack={() => navigation.goBack()}
+        testID="header-wallet"
       />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + spacing.xl },
+          useWideLayout && styles.contentCentered,
         ]}
         refreshControl={
           <RefreshControl
@@ -167,120 +173,125 @@ export function ClientWalletScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+        testID="scroll-wallet"
       >
-        <Card variant="glass" style={styles.balanceCard}>
-          <LinearGradient
-            colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)', 'transparent']}
-            style={styles.balanceGradient}
-          />
-          <Text style={styles.balanceLabel}>Saldo disponibile</Text>
-          <View style={styles.balanceRow}>
-            <Text style={styles.currencySymbol}>€</Text>
-            <Text style={styles.balanceValue}>{balance.toFixed(2)}</Text>
-          </View>
-
-          {pendingBalance > 0 && (
-            <View style={styles.pendingContainer}>
-              <Ionicons name="time-outline" size={16} color={colors.warning} />
-              <Text style={styles.pendingText}>
-                €{pendingBalance.toFixed(2)} in attesa di conferma
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.balanceActions}>
-            <Button
-              title="Ricarica"
-              variant="primary"
-              size="md"
-              onPress={handleAddFunds}
-              icon={<Ionicons name="add-outline" size={20} color={colors.primaryForeground} />}
-              style={styles.actionButton}
+        <View style={[styles.innerContent, maxContentWidth ? { maxWidth: maxContentWidth, width: '100%' } : undefined]}>
+          <Card variant="glass" style={styles.balanceCard} testID="card-balance">
+            <LinearGradient
+              colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)', 'transparent']}
+              style={styles.balanceGradient}
             />
-            {withdrawEnabled && (
-              <Button
-                title="Preleva"
-                variant="outline"
-                size="md"
-                onPress={handleWithdraw}
-                icon={<Ionicons name="arrow-up-outline" size={20} color={colors.foreground} />}
-                style={styles.actionButton}
-              />
+            <Text style={styles.balanceLabel}>Saldo disponibile</Text>
+            <View style={styles.balanceRow}>
+              <Text style={styles.currencySymbol}>€</Text>
+              <Text style={styles.balanceValue} testID="text-balance">{balance.toFixed(2)}</Text>
+            </View>
+
+            {pendingBalance > 0 && (
+              <View style={styles.pendingContainer} testID="container-pending">
+                <Ionicons name="time-outline" size={16} color={colors.warning} />
+                <Text style={styles.pendingText} testID="text-pending-balance">
+                  €{pendingBalance.toFixed(2)} in attesa di conferma
+                </Text>
+              </View>
             )}
-          </View>
-        </Card>
 
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
-            <View style={styles.quickActionIcon}>
-              <Ionicons name="card-outline" size={22} color={colors.teal} />
+            <View style={styles.balanceActions}>
+              <Button
+                title="Ricarica"
+                variant="primary"
+                size="md"
+                onPress={handleAddFunds}
+                icon={<Ionicons name="add-outline" size={20} color={colors.primaryForeground} />}
+                style={styles.actionButton}
+                testID="button-add-funds"
+              />
+              {withdrawEnabled && (
+                <Button
+                  title="Preleva"
+                  variant="outline"
+                  size="md"
+                  onPress={handleWithdraw}
+                  icon={<Ionicons name="arrow-up-outline" size={20} color={colors.foreground} />}
+                  style={styles.actionButton}
+                  testID="button-withdraw"
+                />
+              )}
             </View>
-            <Text style={styles.quickActionLabel}>Metodi pagamento</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
-            <View style={styles.quickActionIcon}>
-              <Ionicons name="document-text-outline" size={22} color={colors.teal} />
-            </View>
-            <Text style={styles.quickActionLabel}>Storico completo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
-            <View style={styles.quickActionIcon}>
-              <Ionicons name="help-circle-outline" size={22} color={colors.teal} />
-            </View>
-            <Text style={styles.quickActionLabel}>Assistenza</Text>
-          </TouchableOpacity>
-        </View>
+          </Card>
 
-        <View style={styles.transactionsSection}>
-          <View style={styles.transactionsHeader}>
-            <Text style={styles.sectionTitle}>Movimenti recenti</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllLink}>Vedi tutti</Text>
+          <View style={[styles.quickActionsContainer, useWideLayout && styles.quickActionsWide]}>
+            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} testID="button-payment-methods">
+              <View style={styles.quickActionIcon}>
+                <Ionicons name="card-outline" size={22} color={colors.teal} />
+              </View>
+              <Text style={styles.quickActionLabel}>Metodi pagamento</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} testID="button-full-history">
+              <View style={styles.quickActionIcon}>
+                <Ionicons name="document-text-outline" size={22} color={colors.teal} />
+              </View>
+              <Text style={styles.quickActionLabel}>Storico completo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} testID="button-support">
+              <View style={styles.quickActionIcon}>
+                <Ionicons name="help-circle-outline" size={22} color={colors.teal} />
+              </View>
+              <Text style={styles.quickActionLabel}>Assistenza</Text>
             </TouchableOpacity>
           </View>
 
-          <Card variant="default" style={styles.transactionsCard}>
-            {transactionsLoading ? (
-              <View style={styles.loadingTransactions}>
-                {[1, 2, 3].map((i) => (
-                  <View key={i} style={styles.skeletonTransaction}>
-                    <View style={styles.skeletonIcon} />
-                    <View style={styles.skeletonContent}>
-                      <View style={styles.skeletonLine} />
-                      <View style={styles.skeletonLineShort} />
+          <View style={styles.transactionsSection}>
+            <View style={styles.transactionsHeader}>
+              <Text style={styles.sectionTitle} testID="text-section-transactions">Movimenti recenti</Text>
+              <TouchableOpacity testID="button-view-all">
+                <Text style={styles.viewAllLink}>Vedi tutti</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Card variant="default" style={styles.transactionsCard} testID="card-transactions">
+              {transactionsLoading ? (
+                <View style={styles.loadingTransactions} testID="container-loading-transactions">
+                  {[1, 2, 3].map((i) => (
+                    <View key={i} style={styles.skeletonTransaction}>
+                      <View style={styles.skeletonIcon} />
+                      <View style={styles.skeletonContent}>
+                        <View style={styles.skeletonLine} />
+                        <View style={styles.skeletonLineShort} />
+                      </View>
+                      <View style={styles.skeletonAmount} />
                     </View>
-                    <View style={styles.skeletonAmount} />
-                  </View>
-                ))}
+                  ))}
+                </View>
+              ) : !transactions || transactions.length === 0 ? (
+                <EmptyTransactions />
+              ) : (
+                <View testID="list-transactions">
+                  {transactions.slice(0, 10).map((transaction, index) => (
+                    <View key={transaction.id}>
+                      {index > 0 && <View style={styles.transactionDivider} />}
+                      <TransactionItem transaction={transaction} />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Card>
+          </View>
+
+          <Card variant="default" style={styles.infoCard} testID="card-security-info">
+            <View style={styles.infoRow}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoTitle}>Transazioni sicure</Text>
+                <Text style={styles.infoText} testID="text-security-info">
+                  Tutte le transazioni sono protette e criptate. Il tuo saldo è al sicuro.
+                </Text>
               </View>
-            ) : !transactions || transactions.length === 0 ? (
-              <EmptyTransactions />
-            ) : (
-              <View>
-                {transactions.slice(0, 10).map((transaction, index) => (
-                  <View key={transaction.id}>
-                    {index > 0 && <View style={styles.transactionDivider} />}
-                    <TransactionItem transaction={transaction} />
-                  </View>
-                ))}
-              </View>
-            )}
+            </View>
           </Card>
         </View>
-
-        <Card variant="default" style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Transazioni sicure</Text>
-              <Text style={styles.infoText}>
-                Tutte le transazioni sono protette e criptate. Il tuo saldo è al sicuro.
-              </Text>
-            </View>
-          </View>
-        </Card>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -294,6 +305,12 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.lg,
+  },
+  contentCentered: {
+    alignItems: 'center',
+  },
+  innerContent: {
     gap: spacing.lg,
   },
   balanceCard: {
@@ -359,8 +376,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
+  quickActionsWide: {
+    justifyContent: 'center',
+  },
   quickAction: {
     flex: 1,
+    maxWidth: 150,
     alignItems: 'center',
     padding: spacing.md,
     backgroundColor: colors.surface,

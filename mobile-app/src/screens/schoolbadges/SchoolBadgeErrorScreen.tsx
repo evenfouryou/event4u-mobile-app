@@ -1,13 +1,15 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 export function SchoolBadgeErrorScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const reason = route.params?.reason || 'Badge non valido';
   const errorCode = route.params?.errorCode;
@@ -61,12 +63,12 @@ export function SchoolBadgeErrorScreen() {
   const errorDetails = getErrorDetails();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -74,62 +76,75 @@ export function SchoolBadgeErrorScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.errorIconContainer}>
-          <View style={styles.errorIconOuter}>
-            <View style={styles.errorIconInner}>
-              <Ionicons name={errorDetails.icon} size={48} color={colors.destructive} />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
+      >
+        <View style={[
+          styles.content,
+          isTablet && styles.contentTablet,
+        ]}>
+          <View style={[styles.errorIconContainer, isLandscape && styles.errorIconContainerLandscape]}>
+            <View style={styles.errorIconOuter}>
+              <View style={styles.errorIconInner}>
+                <Ionicons name={errorDetails.icon} size={48} color={colors.destructive} />
+              </View>
             </View>
           </View>
-        </View>
 
-        <Text style={styles.errorTitle}>{errorDetails.title}</Text>
-        <Text style={styles.errorMessage}>{errorDetails.message}</Text>
+          <Text style={styles.errorTitle}>{errorDetails.title}</Text>
+          <Text style={styles.errorMessage}>{errorDetails.message}</Text>
 
-        <View style={styles.suggestionCard}>
-          <Ionicons name="bulb" size={24} color={colors.warning} />
-          <Text style={styles.suggestionText}>{errorDetails.suggestion}</Text>
-        </View>
-
-        {errorCode && (
-          <View style={styles.errorCodeContainer}>
-            <Text style={styles.errorCodeLabel}>Codice Errore</Text>
-            <Text style={styles.errorCode}>{errorCode}</Text>
+          <View style={[styles.suggestionCard, isTablet && styles.suggestionCardTablet]}>
+            <Ionicons name="bulb" size={24} color={colors.warning} />
+            <Text style={styles.suggestionText}>{errorDetails.suggestion}</Text>
           </View>
-        )}
+
+          {errorCode && (
+            <View style={styles.errorCodeContainer}>
+              <Text style={styles.errorCodeLabel}>Codice Errore</Text>
+              <Text style={styles.errorCode}>{errorCode}</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      <View style={[styles.actionsContainer, isLandscape && styles.actionsContainerLandscape]}>
+        <View style={[styles.actionsInner, isTablet && styles.actionsInnerTablet]}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleScanNew}
+            activeOpacity={0.8}
+            testID="button-scan-new"
+          >
+            <Ionicons name="scan" size={24} color={colors.primaryForeground} />
+            <Text style={styles.primaryButtonText}>Scansiona Nuovo Badge</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={handleRetry}
+            activeOpacity={0.8}
+            testID="button-retry"
+          >
+            <Ionicons name="refresh" size={24} color={colors.teal} />
+            <Text style={styles.secondaryButtonText}>Riprova</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.textButton}
+            onPress={handleGoHome}
+            activeOpacity={0.8}
+            testID="button-home"
+          >
+            <Text style={styles.textButtonText}>Torna alla Home</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={handleScanNew}
-          activeOpacity={0.8}
-          data-testid="button-scan-new"
-        >
-          <Ionicons name="scan" size={24} color={colors.primaryForeground} />
-          <Text style={styles.primaryButtonText}>Scansiona Nuovo Badge</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={handleRetry}
-          activeOpacity={0.8}
-          data-testid="button-retry"
-        >
-          <Ionicons name="refresh" size={24} color={colors.teal} />
-          <Text style={styles.secondaryButtonText}>Riprova</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.textButton}
-          onPress={handleGoHome}
-          activeOpacity={0.8}
-          data-testid="button-home"
-        >
-          <Text style={styles.textButtonText}>Torna alla Home</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -144,6 +159,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -161,14 +179,30 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  content: {
+  scrollView: {
     flex: 1,
-    alignItems: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
+  content: {
+    alignItems: 'center',
+  },
+  contentTablet: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
+  },
   errorIconContainer: {
     marginBottom: spacing['2xl'],
+  },
+  errorIconContainerLandscape: {
+    marginBottom: spacing.xl,
   },
   errorIconOuter: {
     width: 128,
@@ -210,6 +244,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     maxWidth: 320,
   },
+  suggestionCardTablet: {
+    maxWidth: 400,
+  },
   suggestionText: {
     flex: 1,
     fontSize: fontSize.sm,
@@ -235,7 +272,17 @@ const styles = StyleSheet.create({
   actionsContainer: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
+  },
+  actionsContainerLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
+  actionsInner: {
     gap: spacing.md,
+  },
+  actionsInnerTablet: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   primaryButton: {
     flexDirection: 'row',

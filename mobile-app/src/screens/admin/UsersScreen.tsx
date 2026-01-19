@@ -10,10 +10,11 @@ import {
   RefreshControl,
   Alert,
   Image,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -33,7 +34,9 @@ type RoleFilter = 'all' | 'admin' | 'organizer' | 'staff' | 'user';
 
 export function UsersScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -155,18 +158,18 @@ export function UsersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Utenti" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Gestione Utenti" showBack />
       
       <View style={styles.searchContainer}>
@@ -178,10 +181,10 @@ export function UsersScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-users"
+            testID="input-search-users"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} data-testid="button-clear-search">
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -199,7 +202,7 @@ export function UsersScreen() {
             key={filter.key}
             style={[styles.filterChip, roleFilter === filter.key && styles.filterChipActive]}
             onPress={() => setRoleFilter(filter.key)}
-            data-testid={`filter-${filter.key}`}
+            testID={`filter-${filter.key}`}
           >
             <Text style={[styles.filterChipText, roleFilter === filter.key && styles.filterChipTextActive]}>
               {filter.label}
@@ -210,58 +213,75 @@ export function UsersScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view-users"
       >
         {filteredUsers.length > 0 ? (
-          filteredUsers.map((user) => (
-            <Card key={user.id} variant="glass" style={styles.userCard}>
-              <View style={styles.userRow}>
-                {renderAvatar(user)}
-                <View style={styles.userInfo}>
-                  <View style={styles.userHeader}>
-                    <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
-                    <View style={[styles.roleBadge, { backgroundColor: `${getRoleColor(user.role)}20` }]}>
-                      <Text style={[styles.roleText, { color: getRoleColor(user.role) }]}>
-                        {getRoleLabel(user.role)}
-                      </Text>
+          <View style={[
+            styles.listContainer,
+            (isTablet || isLandscape) && styles.listContainerLandscape
+          ]}>
+            {filteredUsers.map((user) => (
+              <View 
+                key={user.id}
+                style={[
+                  styles.userCardWrapper,
+                  (isTablet || isLandscape) && styles.userCardWrapperLandscape
+                ]}
+              >
+                <Card variant="glass" style={styles.userCard} testID={`card-user-${user.id}`}>
+                  <View style={styles.userRow}>
+                    {renderAvatar(user)}
+                    <View style={styles.userInfo}>
+                      <View style={styles.userHeader}>
+                        <Text style={styles.userName} testID={`text-user-name-${user.id}`}>{user.firstName} {user.lastName}</Text>
+                        <View style={[styles.roleBadge, { backgroundColor: `${getRoleColor(user.role)}20` }]}>
+                          <Text style={[styles.roleText, { color: getRoleColor(user.role) }]} testID={`text-user-role-${user.id}`}>
+                            {getRoleLabel(user.role)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.userEmail} testID={`text-user-email-${user.id}`}>{user.email}</Text>
+                      <View style={styles.statusRow}>
+                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(user.status) }]} />
+                        <Text style={styles.statusText} testID={`text-user-status-${user.id}`}>
+                          {user.status === 'active' ? 'Attivo' : user.status === 'suspended' ? 'Sospeso' : 'Inattivo'}
+                        </Text>
+                      </View>
                     </View>
+                    <TouchableOpacity
+                      style={[styles.toggleButton, user.status === 'suspended' && styles.toggleButtonActive]}
+                      onPress={() => toggleUserStatus(user)}
+                      testID={`button-toggle-${user.id}`}
+                    >
+                      <Ionicons
+                        name={user.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'}
+                        size={22}
+                        color={user.status === 'active' ? colors.destructive : colors.success}
+                      />
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                  <View style={styles.statusRow}>
-                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(user.status) }]} />
-                    <Text style={styles.statusText}>
-                      {user.status === 'active' ? 'Attivo' : user.status === 'suspended' ? 'Sospeso' : 'Inattivo'}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[styles.toggleButton, user.status === 'suspended' && styles.toggleButtonActive]}
-                  onPress={() => toggleUserStatus(user)}
-                  data-testid={`button-toggle-${user.id}`}
-                >
-                  <Ionicons
-                    name={user.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'}
-                    size={22}
-                    color={user.status === 'active' ? colors.destructive : colors.success}
-                  />
-                </TouchableOpacity>
+                </Card>
               </View>
-            </Card>
-          ))
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty-state">
             <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>
+            <Text style={styles.emptyText} testID="text-empty-message">
               {searchQuery || roleFilter !== 'all' ? 'Nessun utente trovato' : 'Nessun utente registrato'}
             </Text>
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -273,6 +293,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -333,8 +359,23 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: colors.primaryForeground,
   },
-  userCard: {
+  listContainer: {
+    flex: 1,
+  },
+  listContainerLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  userCardWrapper: {
     marginBottom: spacing.md,
+  },
+  userCardWrapperLandscape: {
+    width: '48.5%',
+    marginBottom: 0,
+  },
+  userCard: {
+    padding: spacing.md,
   },
   userRow: {
     flexDirection: 'row',

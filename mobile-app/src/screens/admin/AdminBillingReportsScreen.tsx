@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -27,7 +27,10 @@ interface ReportData {
 }
 
 export function AdminBillingReportsScreen() {
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month');
@@ -91,39 +94,39 @@ export function AdminBillingReportsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Report Fatturazione" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!data) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Report Fatturazione" showBack />
-        <View style={styles.emptyContainer}>
+        <View style={styles.emptyContainer} testID="empty-container">
           <Ionicons name="bar-chart-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Impossibile caricare i report</Text>
+          <Text style={styles.emptyText} testID="text-error">Impossibile caricare i report</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Report Fatturazione" showBack />
       
-      <View style={styles.periodSelector}>
+      <View style={[styles.periodSelector, (isTablet || isLandscape) && styles.periodSelectorWide]}>
         {periods.map((period) => (
           <TouchableOpacity
             key={period.key}
             style={[styles.periodButton, selectedPeriod === period.key && styles.periodButtonActive]}
             onPress={() => setSelectedPeriod(period.key as any)}
-            data-testid={`button-period-${period.key}`}
+            testID={`button-period-${period.key}`}
           >
             <Text style={[styles.periodButtonText, selectedPeriod === period.key && styles.periodButtonTextActive]}>
               {period.label}
@@ -134,83 +137,89 @@ export function AdminBillingReportsScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
-        <View style={styles.statsGrid}>
-          <Card variant="glass" style={styles.statCard}>
+        <View style={[styles.statsGrid, (isTablet || isLandscape) && styles.statsGridWide]}>
+          <Card variant="glass" style={styles.statCard} testID="card-total-revenue">
             <Ionicons name="cash-outline" size={24} color={colors.primary} />
-            <Text style={styles.statValue}>{formatCurrency(data.totalRevenue)}</Text>
+            <Text style={styles.statValue} testID="text-total-revenue">{formatCurrency(data.totalRevenue)}</Text>
             <Text style={styles.statLabel}>Ricavi Totali</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-yearly-growth">
             <Ionicons name="trending-up-outline" size={24} color={colors.success} />
-            <Text style={[styles.statValue, { color: colors.success }]}>+{data.yearlyGrowth}%</Text>
+            <Text style={[styles.statValue, { color: colors.success }]} testID="text-yearly-growth">+{data.yearlyGrowth}%</Text>
             <Text style={styles.statLabel}>Crescita Annua</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-active-subs">
             <Ionicons name="people-outline" size={24} color={colors.teal} />
-            <Text style={styles.statValue}>{data.activeSubscriptions}</Text>
+            <Text style={styles.statValue} testID="text-active-subs">{data.activeSubscriptions}</Text>
             <Text style={styles.statLabel}>Abbonamenti Attivi</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-churn-rate">
             <Ionicons name="trending-down-outline" size={24} color={colors.warning} />
-            <Text style={[styles.statValue, { color: colors.warning }]}>{data.churnRate}%</Text>
+            <Text style={[styles.statValue, { color: colors.warning }]} testID="text-churn-rate">{data.churnRate}%</Text>
             <Text style={styles.statLabel}>Tasso Churn</Text>
           </Card>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Metriche Chiave</Text>
-          <Card variant="glass" style={styles.metricsCard}>
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Ricavi Mensili</Text>
-              <Text style={styles.metricValue}>{formatCurrency(data.monthlyRevenue)}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Valore Medio Transazione</Text>
-              <Text style={styles.metricValue}>{formatCurrency(data.averageTransactionValue)}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Transazioni Totali</Text>
-              <Text style={styles.metricValue}>{data.totalTransactions.toLocaleString()}</Text>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Andamento Mensile</Text>
-          <Card variant="glass" style={styles.chartCard}>
-            {data.monthlyBreakdown.map((item, index) => (
-              <View key={item.month} style={styles.chartRow}>
-                <Text style={styles.chartMonth}>{item.month}</Text>
-                <View style={styles.chartBarContainer}>
-                  <View
-                    style={[
-                      styles.chartBar,
-                      { width: `${(item.revenue / getMaxRevenue()) * 100}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.chartValue}>{formatCurrency(item.revenue)}</Text>
+        <View style={[styles.section, (isTablet || isLandscape) && styles.sectionRow]}>
+          <View style={[styles.sectionInner, (isTablet || isLandscape) && styles.sectionHalf]}>
+            <Text style={styles.sectionTitle}>Metriche Chiave</Text>
+            <Card variant="glass" style={styles.metricsCard} testID="card-metrics">
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Ricavi Mensili</Text>
+                <Text style={styles.metricValue} testID="text-monthly-revenue">{formatCurrency(data.monthlyRevenue)}</Text>
               </View>
-            ))}
-          </Card>
+              <View style={styles.divider} />
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Valore Medio Transazione</Text>
+                <Text style={styles.metricValue} testID="text-avg-transaction">{formatCurrency(data.averageTransactionValue)}</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Transazioni Totali</Text>
+                <Text style={styles.metricValue} testID="text-total-transactions">{data.totalTransactions.toLocaleString()}</Text>
+              </View>
+            </Card>
+          </View>
+
+          <View style={[styles.sectionInner, (isTablet || isLandscape) && styles.sectionHalf]}>
+            <Text style={styles.sectionTitle}>Andamento Mensile</Text>
+            <Card variant="glass" style={styles.chartCard} testID="card-chart">
+              {data.monthlyBreakdown.map((item, index) => (
+                <View key={item.month} style={styles.chartRow}>
+                  <Text style={styles.chartMonth} testID={`text-month-${index}`}>{item.month}</Text>
+                  <View style={styles.chartBarContainer}>
+                    <View
+                      style={[
+                        styles.chartBar,
+                        { width: `${(item.revenue / getMaxRevenue()) * 100}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.chartValue} testID={`text-revenue-${index}`}>{formatCurrency(item.revenue)}</Text>
+                </View>
+              ))}
+            </Card>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <TouchableOpacity style={styles.exportButton} data-testid="button-export">
+          <TouchableOpacity style={styles.exportButton} testID="button-export">
             <Ionicons name="download-outline" size={20} color={colors.primary} />
             <Text style={styles.exportButtonText}>Esporta Report</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -222,6 +231,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -248,6 +265,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.sm,
+  },
+  periodSelectorWide: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   periodButton: {
     flex: 1,
@@ -276,6 +298,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  statsGridWide: {
+    justifyContent: 'center',
+  },
   statCard: {
     flex: 1,
     minWidth: '45%',
@@ -295,6 +320,16 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: spacing.lg,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  sectionInner: {
+    flex: 1,
+  },
+  sectionHalf: {
+    flex: 1,
   },
   sectionTitle: {
     color: colors.foreground,

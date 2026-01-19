@@ -8,11 +8,12 @@ import {
   TextInput,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface BeverageItem {
   id: string;
@@ -26,7 +27,10 @@ interface BeverageItem {
 
 export function BeverageScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -105,13 +109,120 @@ export function BeverageScreen() {
   const lowStockCount = items.filter(item => item.stock < item.minStock).length;
   const totalValue = items.reduce((sum, item) => sum + (item.price * item.stock), 0);
 
+  const renderItemCard = (item: BeverageItem, index: number) => {
+    const stockStatus = getStockStatus(item);
+    const stockColor = getStockColor(stockStatus);
+    
+    return (
+      <View
+        key={item.id}
+        style={[
+          styles.itemCard,
+          !item.isActive && styles.itemCardInactive,
+          (isTablet || isLandscape) && {
+            flex: 1,
+            marginLeft: index % 2 === 1 ? spacing.md : 0,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.itemHeader}
+          onPress={() => handleEditItem(item)}
+          activeOpacity={0.8}
+          testID={`item-card-${item.id}`}
+        >
+          <View style={styles.itemInfo}>
+            <View style={styles.itemTitleRow}>
+              <Text style={[styles.itemName, !item.isActive && styles.itemNameInactive]}>
+                {item.name}
+              </Text>
+              {!item.isActive && (
+                <View style={styles.inactiveBadge}>
+                  <Text style={styles.inactiveBadgeText}>Disattivo</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.itemCategory}>{item.category}</Text>
+            <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
+          </View>
+          
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={() => handleToggleActive(item.id)}
+            testID={`toggle-${item.id}`}
+          >
+            <Ionicons
+              name={item.isActive ? 'eye' : 'eye-off'}
+              size={20}
+              color={item.isActive ? colors.teal : colors.mutedForeground}
+            />
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        <View style={styles.stockSection}>
+          <View style={styles.stockInfo}>
+            <Text style={styles.stockLabel}>Stock</Text>
+            <View style={styles.stockBarContainer}>
+              <View
+                style={[
+                  styles.stockBar,
+                  {
+                    width: `${Math.min((item.stock / (item.minStock * 2)) * 100, 100)}%`,
+                    backgroundColor: stockColor,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={[styles.stockValue, { color: stockColor }]}>
+              {item.stock} unità
+            </Text>
+          </View>
+          
+          <View style={styles.stockControls}>
+            <TouchableOpacity
+              style={styles.stockButton}
+              onPress={() => handleUpdateStock(item.id, -1)}
+              testID={`decrement-${item.id}`}
+            >
+              <Ionicons name="remove" size={20} color={colors.foreground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.stockButton, styles.stockButtonAdd]}
+              onPress={() => handleUpdateStock(item.id, 1)}
+              testID={`increment-${item.id}`}
+            >
+              <Ionicons name="add" size={20} color={colors.primaryForeground} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderItemRows = () => {
+    if (!isTablet && !isLandscape) {
+      return filteredItems.map((item, index) => renderItemCard(item, index));
+    }
+
+    const rows = [];
+    for (let i = 0; i < filteredItems.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.itemRow}>
+          {renderItemCard(filteredItems[i], 0)}
+          {filteredItems[i + 1] && renderItemCard(filteredItems[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -119,32 +230,32 @@ export function BeverageScreen() {
         <TouchableOpacity
           onPress={handleAddItem}
           style={styles.addButton}
-          data-testid="button-add-item"
+          testID="button-add-item"
         >
           <Ionicons name="add" size={24} color={colors.primaryForeground} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
+      <View style={[styles.statsRow, isLandscape && styles.statsRowLandscape]}>
+        <View style={[styles.statCard, isTablet && styles.statCardTablet]}>
           <Ionicons name="wine" size={24} color={colors.primary} />
           <Text style={styles.statValue}>{items.length}</Text>
           <Text style={styles.statLabel}>Prodotti</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, isTablet && styles.statCardTablet]}>
           <Ionicons name="alert-circle" size={24} color={colors.warning} />
           <Text style={styles.statValue}>{lowStockCount}</Text>
           <Text style={styles.statLabel}>Stock Basso</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, isTablet && styles.statCardTablet]}>
           <Ionicons name="cash" size={24} color={colors.teal} />
           <Text style={styles.statValue}>{formatCurrency(totalValue)}</Text>
           <Text style={styles.statLabel}>Valore</Text>
         </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+      <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
+        <View style={[styles.searchBar, isTablet && styles.searchBarTablet]}>
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
@@ -152,7 +263,7 @@ export function BeverageScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
         </View>
       </View>
@@ -160,12 +271,15 @@ export function BeverageScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContainer}
+        contentContainerStyle={[
+          styles.categoriesContainer,
+          isLandscape && styles.categoriesContainerLandscape,
+        ]}
       >
         <TouchableOpacity
           style={[styles.categoryPill, !selectedCategory && styles.categoryPillActive]}
           onPress={() => setSelectedCategory(null)}
-          data-testid="category-all"
+          testID="category-all"
         >
           <Text style={[styles.categoryText, !selectedCategory && styles.categoryTextActive]}>
             Tutti
@@ -176,7 +290,7 @@ export function BeverageScreen() {
             key={category}
             style={[styles.categoryPill, selectedCategory === category && styles.categoryPillActive]}
             onPress={() => setSelectedCategory(category)}
-            data-testid={`category-${category.toLowerCase()}`}
+            testID={`category-${category.toLowerCase().replace(' ', '-')}`}
           >
             <Text style={[styles.categoryText, selectedCategory === category && styles.categoryTextActive]}>
               {category}
@@ -187,7 +301,10 @@ export function BeverageScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -203,91 +320,10 @@ export function BeverageScreen() {
             <Text style={styles.emptyText}>Nessun prodotto trovato</Text>
           </View>
         ) : (
-          filteredItems.map(item => {
-            const stockStatus = getStockStatus(item);
-            const stockColor = getStockColor(stockStatus);
-            
-            return (
-              <View
-                key={item.id}
-                style={[styles.itemCard, !item.isActive && styles.itemCardInactive]}
-              >
-                <TouchableOpacity
-                  style={styles.itemHeader}
-                  onPress={() => handleEditItem(item)}
-                  activeOpacity={0.8}
-                  data-testid={`item-card-${item.id}`}
-                >
-                  <View style={styles.itemInfo}>
-                    <View style={styles.itemTitleRow}>
-                      <Text style={[styles.itemName, !item.isActive && styles.itemNameInactive]}>
-                        {item.name}
-                      </Text>
-                      {!item.isActive && (
-                        <View style={styles.inactiveBadge}>
-                          <Text style={styles.inactiveBadgeText}>Disattivo</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.itemCategory}>{item.category}</Text>
-                    <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
-                  </View>
-                  
-                  <TouchableOpacity
-                    style={styles.toggleButton}
-                    onPress={() => handleToggleActive(item.id)}
-                    data-testid={`toggle-${item.id}`}
-                  >
-                    <Ionicons
-                      name={item.isActive ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={item.isActive ? colors.teal : colors.mutedForeground}
-                    />
-                  </TouchableOpacity>
-                </TouchableOpacity>
-
-                <View style={styles.stockSection}>
-                  <View style={styles.stockInfo}>
-                    <Text style={styles.stockLabel}>Stock</Text>
-                    <View style={styles.stockBarContainer}>
-                      <View
-                        style={[
-                          styles.stockBar,
-                          {
-                            width: `${Math.min((item.stock / (item.minStock * 2)) * 100, 100)}%`,
-                            backgroundColor: stockColor,
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[styles.stockValue, { color: stockColor }]}>
-                      {item.stock} unità
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.stockControls}>
-                    <TouchableOpacity
-                      style={styles.stockButton}
-                      onPress={() => handleUpdateStock(item.id, -1)}
-                      data-testid={`decrement-${item.id}`}
-                    >
-                      <Ionicons name="remove" size={20} color={colors.foreground} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.stockButton, styles.stockButtonAdd]}
-                      onPress={() => handleUpdateStock(item.id, 1)}
-                      data-testid={`increment-${item.id}`}
-                    >
-                      <Ionicons name="add" size={20} color={colors.primaryForeground} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            );
-          })
+          renderItemRows()
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -302,6 +338,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -330,6 +369,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
+  statsRowLandscape: {
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+  },
   statCard: {
     flex: 1,
     alignItems: 'center',
@@ -338,6 +381,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  statCardTablet: {
+    maxWidth: 180,
   },
   statValue: {
     fontSize: fontSize.lg,
@@ -354,6 +400,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
+  searchContainerLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -363,6 +412,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
+  },
+  searchBarTablet: {
+    maxWidth: 500,
   },
   searchInput: {
     flex: 1,
@@ -374,6 +426,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     gap: spacing.sm,
+  },
+  categoriesContainerLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   categoryPill: {
     paddingHorizontal: spacing.lg,
@@ -401,6 +456,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   emptyState: {
     alignItems: 'center',
@@ -410,6 +469,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.mutedForeground,
     marginTop: spacing.md,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
   },
   itemCard: {
     backgroundColor: colors.card,
@@ -433,6 +496,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   itemName: {
     fontSize: fontSize.base,

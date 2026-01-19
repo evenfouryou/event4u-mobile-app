@@ -9,12 +9,13 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 
 interface Event {
@@ -46,11 +47,15 @@ interface PendingReturn {
 
 export default function ReturnToWarehouseScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: events } = useQuery<Event[]>({
     queryKey: ['/api/events/recent'],
@@ -155,9 +160,9 @@ export default function ReturnToWarehouseScreen() {
       ]}
       onPress={() => handleEventSelect(item)}
       activeOpacity={0.8}
-      data-testid={`card-event-${item.id}`}
+      testID={`card-event-${item.id}`}
     >
-      <Text style={styles.eventTitle}>{item.title}</Text>
+      <Text style={styles.eventTitle} testID={`text-event-title-${item.id}`}>{item.title}</Text>
       <View style={styles.eventMeta}>
         <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
         <Text style={styles.eventDate}>{item.date}</Text>
@@ -175,80 +180,82 @@ export default function ReturnToWarehouseScreen() {
   );
 
   const renderReturnItem = ({ item }: { item: ReturnItem }) => (
-    <Card variant="glass" style={styles.returnItemCard}>
-      <View style={styles.returnItemHeader}>
-        <View style={styles.returnItemInfo}>
-          <Text style={styles.returnItemName}>{item.productName}</Text>
-          <Text style={styles.returnItemCategory}>{item.category}</Text>
+    <View style={[styles.returnItemWrapper, numColumns === 2 && styles.returnItemGrid]}>
+      <Card variant="glass" style={styles.returnItemCard} testID={`card-return-item-${item.id}`}>
+        <View style={styles.returnItemHeader}>
+          <View style={styles.returnItemInfo}>
+            <Text style={styles.returnItemName} testID={`text-item-name-${item.id}`}>{item.productName}</Text>
+            <Text style={styles.returnItemCategory}>{item.category}</Text>
+          </View>
+          <Text style={styles.sentQuantity}>
+            Inviati: {item.sentQuantity} {item.unit}
+          </Text>
         </View>
-        <Text style={styles.sentQuantity}>
-          Inviati: {item.sentQuantity} {item.unit}
-        </Text>
-      </View>
 
-      <View style={styles.quantityRow}>
-        <Text style={styles.quantityLabel}>Quantità reso:</Text>
-        <View style={styles.quantityControls}>
-          <TouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => updateReturnQuantity(item.id, item.returnQuantity - 1)}
-            data-testid={`button-decrease-${item.id}`}
-          >
-            <Ionicons name="remove" size={20} color={colors.foreground} />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.quantityInput}
-            value={item.returnQuantity.toString()}
-            onChangeText={(text) => updateReturnQuantity(item.id, parseInt(text) || 0)}
-            keyboardType="number-pad"
-            data-testid={`input-quantity-${item.id}`}
-          />
-          <TouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => updateReturnQuantity(item.id, item.returnQuantity + 1)}
-            data-testid={`button-increase-${item.id}`}
-          >
-            <Ionicons name="add" size={20} color={colors.foreground} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.maxButton}
-            onPress={() => updateReturnQuantity(item.id, item.sentQuantity)}
-            data-testid={`button-max-${item.id}`}
-          >
-            <Text style={styles.maxButtonText}>MAX</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.conditionRow}>
-        <Text style={styles.conditionLabel}>Condizione:</Text>
-        <View style={styles.conditionButtons}>
-          {(['good', 'damaged', 'expired'] as const).map((condition) => (
+        <View style={styles.quantityRow}>
+          <Text style={styles.quantityLabel}>Quantità reso:</Text>
+          <View style={styles.quantityControls}>
             <TouchableOpacity
-              key={condition}
-              style={[
-                styles.conditionButton,
-                item.condition === condition && {
-                  backgroundColor: `${getConditionColor(condition)}20`,
-                  borderColor: getConditionColor(condition),
-                },
-              ]}
-              onPress={() => updateCondition(item.id, condition)}
-              data-testid={`button-condition-${condition}-${item.id}`}
+              style={styles.quantityButton}
+              onPress={() => updateReturnQuantity(item.id, item.returnQuantity - 1)}
+              testID={`button-decrease-${item.id}`}
             >
-              <Text
-                style={[
-                  styles.conditionButtonText,
-                  item.condition === condition && { color: getConditionColor(condition) },
-                ]}
-              >
-                {condition === 'good' ? 'Buono' : condition === 'damaged' ? 'Danneggiato' : 'Scaduto'}
-              </Text>
+              <Ionicons name="remove" size={20} color={colors.foreground} />
             </TouchableOpacity>
-          ))}
+            <TextInput
+              style={styles.quantityInput}
+              value={item.returnQuantity.toString()}
+              onChangeText={(text) => updateReturnQuantity(item.id, parseInt(text) || 0)}
+              keyboardType="number-pad"
+              testID={`input-quantity-${item.id}`}
+            />
+            <TouchableOpacity
+              style={styles.quantityButton}
+              onPress={() => updateReturnQuantity(item.id, item.returnQuantity + 1)}
+              testID={`button-increase-${item.id}`}
+            >
+              <Ionicons name="add" size={20} color={colors.foreground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.maxButton}
+              onPress={() => updateReturnQuantity(item.id, item.sentQuantity)}
+              testID={`button-max-${item.id}`}
+            >
+              <Text style={styles.maxButtonText}>MAX</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Card>
+
+        <View style={styles.conditionRow}>
+          <Text style={styles.conditionLabel}>Condizione:</Text>
+          <View style={styles.conditionButtons}>
+            {(['good', 'damaged', 'expired'] as const).map((condition) => (
+              <TouchableOpacity
+                key={condition}
+                style={[
+                  styles.conditionButton,
+                  item.condition === condition && {
+                    backgroundColor: `${getConditionColor(condition)}20`,
+                    borderColor: getConditionColor(condition),
+                  },
+                ]}
+                onPress={() => updateCondition(item.id, condition)}
+                testID={`button-condition-${condition}-${item.id}`}
+              >
+                <Text
+                  style={[
+                    styles.conditionButtonText,
+                    item.condition === condition && { color: getConditionColor(condition) },
+                  ]}
+                >
+                  {condition === 'good' ? 'Buono' : condition === 'damaged' ? 'Danneggiato' : 'Scaduto'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Card>
+    </View>
   );
 
   const renderPendingReturn = ({ item }: { item: PendingReturn }) => (
@@ -256,11 +263,11 @@ export default function ReturnToWarehouseScreen() {
       style={styles.pendingCard}
       onPress={() => navigation.navigate('ReturnDetail', { returnId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-pending-${item.id}`}
+      testID={`card-pending-${item.id}`}
     >
       <Card variant="glass" style={styles.pendingCardInner}>
         <View style={styles.pendingInfo}>
-          <Text style={styles.pendingTitle}>{item.eventTitle}</Text>
+          <Text style={styles.pendingTitle} testID={`text-pending-title-${item.id}`}>{item.eventTitle}</Text>
           <Text style={styles.pendingMeta}>{item.date} • {item.itemsCount} articoli</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${colors.warning}20` }]}>
@@ -271,17 +278,21 @@ export default function ReturnToWarehouseScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Resi al Magazzino" showBack onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-returns"
       >
         {!selectedEvent ? (
           <>
-            <View style={styles.section}>
+            <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
               <Text style={styles.sectionTitle}>Seleziona Evento</Text>
               <FlatList
                 data={mockEvents}
@@ -290,11 +301,12 @@ export default function ReturnToWarehouseScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.eventsList}
+                testID="list-events"
               />
             </View>
 
             {mockPendingReturns.length > 0 && (
-              <View style={styles.section}>
+              <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
                 <Text style={styles.sectionTitle}>Resi in Attesa</Text>
                 <FlatList
                   data={mockPendingReturns}
@@ -302,11 +314,12 @@ export default function ReturnToWarehouseScreen() {
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                   ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+                  testID="list-pending-returns"
                 />
               </View>
             )}
 
-            <Card style={styles.instructionCard} variant="glass">
+            <Card style={[styles.instructionCard, isLandscape && styles.instructionCardLandscape]} variant="glass" testID="card-instructions">
               <Ionicons name="information-circle-outline" size={24} color={colors.teal} />
               <Text style={styles.instructionText}>
                 Seleziona un evento per iniziare a registrare i resi dei prodotti non utilizzati.
@@ -317,19 +330,19 @@ export default function ReturnToWarehouseScreen() {
           <>
             <View style={styles.selectedEventHeader}>
               <View style={styles.selectedEventInfo}>
-                <Text style={styles.selectedEventTitle}>{selectedEvent.title}</Text>
+                <Text style={styles.selectedEventTitle} testID="text-selected-event">{selectedEvent.title}</Text>
                 <Text style={styles.selectedEventMeta}>{selectedEvent.date}</Text>
               </View>
               <TouchableOpacity
                 style={styles.changeEventButton}
                 onPress={() => setSelectedEvent(null)}
-                data-testid="button-change-event"
+                testID="button-change-event"
               >
                 <Text style={styles.changeEventText}>Cambia</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.searchContainer}>
+            <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
               <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
               <TextInput
                 style={styles.searchInput}
@@ -337,23 +350,27 @@ export default function ReturnToWarehouseScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                data-testid="input-search"
+                testID="input-search"
               />
             </View>
 
             {loadingItems ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
+                <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
               </View>
             ) : (
-              <View style={styles.section}>
+              <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
                 <Text style={styles.sectionTitle}>Prodotti ({filteredItems.length})</Text>
                 <FlatList
                   data={filteredItems}
                   renderItem={renderReturnItem}
                   keyExtractor={(item) => item.id}
+                  numColumns={numColumns}
+                  key={numColumns}
                   scrollEnabled={false}
+                  columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
                   ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+                  testID="list-return-items"
                 />
               </View>
             )}
@@ -362,17 +379,17 @@ export default function ReturnToWarehouseScreen() {
       </ScrollView>
 
       {selectedEvent && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View style={[styles.footer, isLandscape && styles.footerLandscape]}>
           <View style={styles.footerSummary}>
             <Text style={styles.footerLabel}>Articoli da restituire:</Text>
-            <Text style={styles.footerValue}>
+            <Text style={styles.footerValue} testID="text-return-count">
               {returnItems.filter(i => i.returnQuantity > 0).length}
             </Text>
           </View>
           <Button
             onPress={handleSubmitReturn}
             disabled={submitReturnMutation.isPending}
-            data-testid="button-submit-return"
+            testID="button-submit-return"
           >
             <Text style={styles.submitButtonText}>
               {submitReturnMutation.isPending ? 'Elaborazione...' : 'Conferma Reso'}
@@ -380,7 +397,7 @@ export default function ReturnToWarehouseScreen() {
           </Button>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -392,9 +409,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 80,
+  },
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  sectionLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -474,6 +500,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  instructionCardLandscape: {
+    marginHorizontal: spacing.xl,
+  },
   instructionText: {
     flex: 1,
     color: colors.mutedForeground,
@@ -525,6 +554,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
+  searchContainerLandscape: {
+    marginHorizontal: spacing.xl,
+  },
   searchInput: {
     flex: 1,
     color: colors.foreground,
@@ -533,6 +565,16 @@ const styles = StyleSheet.create({
   loadingContainer: {
     padding: spacing['3xl'],
     alignItems: 'center',
+  },
+  columnWrapper: {
+    gap: spacing.md,
+  },
+  returnItemWrapper: {
+    marginBottom: spacing.md,
+  },
+  returnItemGrid: {
+    flex: 1,
+    marginBottom: 0,
   },
   returnItemCard: {
     paddingVertical: spacing.lg,
@@ -613,6 +655,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   conditionLabel: {
     color: colors.foreground,
@@ -622,6 +666,7 @@ const styles = StyleSheet.create({
   conditionButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   conditionButton: {
     paddingHorizontal: spacing.md,
@@ -646,6 +691,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  footerLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   footerSummary: {
     flexDirection: 'row',

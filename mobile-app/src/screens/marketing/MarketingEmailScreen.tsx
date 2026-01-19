@@ -10,12 +10,13 @@ import {
   RefreshControl,
   Modal,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 
 interface EmailTemplate {
@@ -57,12 +58,16 @@ const CATEGORY_CONFIG = {
 
 export default function MarketingEmailScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'campaigns' | 'templates'>('campaigns');
   const [refreshing, setRefreshing] = useState(false);
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -108,7 +113,7 @@ export default function MarketingEmailScreen() {
   ];
 
   const mockTemplates: EmailTemplate[] = templates || [
-    { id: '1', name: 'Party Promo', subject: '🎉 This Weekend at Event4U!', previewText: 'Don\'t miss the biggest party...', category: 'promotional', lastModified: '2026-01-15', usageCount: 12 },
+    { id: '1', name: 'Party Promo', subject: 'This Weekend at Event4U!', previewText: 'Don\'t miss the biggest party...', category: 'promotional', lastModified: '2026-01-15', usageCount: 12 },
     { id: '2', name: 'VIP Template', subject: 'Exclusive VIP Access', previewText: 'As a valued VIP member...', category: 'promotional', lastModified: '2026-01-10', usageCount: 8 },
     { id: '3', name: 'Monthly Newsletter', subject: 'Event4U Monthly Update', previewText: 'Here\'s what happened...', category: 'newsletter', lastModified: '2026-01-01', usageCount: 24 },
     { id: '4', name: 'Event Invitation', subject: 'You\'re Invited!', previewText: 'We have a special event...', category: 'event', lastModified: '2026-01-12', usageCount: 15 },
@@ -132,148 +137,152 @@ export default function MarketingEmailScreen() {
     }
   };
 
-  const renderCampaignCard = ({ item }: { item: EmailCampaign }) => {
+  const renderCampaignCard = ({ item, index }: { item: EmailCampaign; index: number }) => {
     const statusConfig = getStatusConfig(item.status);
 
     return (
-      <TouchableOpacity
-        onPress={() => navigation.navigate('CampaignDetail', { campaignId: item.id })}
-        activeOpacity={0.8}
-        data-testid={`card-campaign-${item.id}`}
-      >
-        <Card variant="glass" style={styles.campaignCard}>
-          <View style={styles.campaignHeader}>
-            <View style={styles.campaignInfo}>
-              <Text style={styles.campaignName}>{item.name}</Text>
-              <Text style={styles.templateName}>Template: {item.templateName}</Text>
+      <View style={[numColumns === 2 && styles.gridItem]}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CampaignDetail', { campaignId: item.id })}
+          activeOpacity={0.8}
+          testID={`card-campaign-${item.id}`}
+        >
+          <Card variant="glass" style={styles.campaignCard}>
+            <View style={styles.campaignHeader}>
+              <View style={styles.campaignInfo}>
+                <Text style={styles.campaignName} testID={`text-campaign-name-${item.id}`}>{item.name}</Text>
+                <Text style={styles.templateName}>Template: {item.templateName}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]} testID={`badge-status-${item.id}`}>
+                <Ionicons name={statusConfig.icon as any} size={12} color={statusConfig.color} />
+                <Text style={[styles.statusText, { color: statusConfig.color }]}>
+                  {statusConfig.label}
+                </Text>
+              </View>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]}>
-              <Ionicons name={statusConfig.icon as any} size={12} color={statusConfig.color} />
-              <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                {statusConfig.label}
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.campaignMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>{item.recipients.toLocaleString()} destinatari</Text>
-            </View>
-            {item.scheduledAt && (
+            <View style={styles.campaignMeta}>
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.metaText}>{item.scheduledAt}</Text>
+                <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>{item.recipients.toLocaleString()} destinatari</Text>
+              </View>
+              {item.scheduledAt && (
+                <View style={styles.metaItem}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.metaText}>{item.scheduledAt}</Text>
+                </View>
+              )}
+            </View>
+
+            {item.status === 'sent' && (
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue} testID={`text-sent-${item.id}`}>{item.sentCount.toLocaleString()}</Text>
+                  <Text style={styles.statLabel}>Inviate</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: colors.teal }]} testID={`text-open-${item.id}`}>{item.openRate}%</Text>
+                  <Text style={styles.statLabel}>Aperture</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: colors.primary }]} testID={`text-click-${item.id}`}>{item.clickRate}%</Text>
+                  <Text style={styles.statLabel}>Click</Text>
+                </View>
               </View>
             )}
-          </View>
 
-          {item.status === 'sent' && (
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{item.sentCount.toLocaleString()}</Text>
-                <Text style={styles.statLabel}>Inviate</Text>
+            {item.status === 'sending' && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${(item.sentCount / item.recipients) * 100}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.progressText} testID={`text-progress-${item.id}`}>
+                  {item.sentCount.toLocaleString()} / {item.recipients.toLocaleString()}
+                </Text>
               </View>
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.teal }]}>{item.openRate}%</Text>
-                <Text style={styles.statLabel}>Aperture</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.primary }]}>{item.clickRate}%</Text>
-                <Text style={styles.statLabel}>Click</Text>
-              </View>
-            </View>
-          )}
+            )}
 
-          {item.status === 'sending' && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${(item.sentCount / item.recipients) * 100}%` },
-                  ]}
-                />
+            {item.status === 'draft' && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('EditCampaign', { campaignId: item.id })}
+                  testID={`button-edit-${item.id}`}
+                >
+                  <Ionicons name="create-outline" size={16} color={colors.foreground} />
+                  <Text style={styles.actionButtonText}>Modifica</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.sendButton]}
+                  onPress={() => sendCampaignMutation.mutate(item.id)}
+                  testID={`button-send-${item.id}`}
+                >
+                  <Ionicons name="paper-plane" size={16} color={colors.primaryForeground} />
+                  <Text style={styles.sendButtonText}>Invia</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.progressText}>
-                {item.sentCount.toLocaleString()} / {item.recipients.toLocaleString()}
-              </Text>
-            </View>
-          )}
-
-          {item.status === 'draft' && (
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('EditCampaign', { campaignId: item.id })}
-                data-testid={`button-edit-${item.id}`}
-              >
-                <Ionicons name="create-outline" size={16} color={colors.foreground} />
-                <Text style={styles.actionButtonText}>Modifica</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.sendButton]}
-                onPress={() => sendCampaignMutation.mutate(item.id)}
-                data-testid={`button-send-${item.id}`}
-              >
-                <Ionicons name="paper-plane" size={16} color={colors.primaryForeground} />
-                <Text style={styles.sendButtonText}>Invia</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </Card>
-      </TouchableOpacity>
+            )}
+          </Card>
+        </TouchableOpacity>
+      </View>
     );
   };
 
-  const renderTemplateCard = ({ item }: { item: EmailTemplate }) => {
+  const renderTemplateCard = ({ item, index }: { item: EmailTemplate; index: number }) => {
     const categoryConfig = CATEGORY_CONFIG[item.category];
 
     return (
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedTemplate(item);
-          setShowComposeModal(true);
-        }}
-        activeOpacity={0.8}
-        data-testid={`card-template-${item.id}`}
-      >
-        <Card variant="glass" style={styles.templateCard}>
-          <View style={styles.templateHeader}>
-            <View style={[styles.categoryBadge, { backgroundColor: `${categoryConfig.color}20` }]}>
-              <Text style={[styles.categoryText, { color: categoryConfig.color }]}>
-                {categoryConfig.label}
-              </Text>
+      <View style={[numColumns === 2 && styles.gridItem]}>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedTemplate(item);
+            setShowComposeModal(true);
+          }}
+          activeOpacity={0.8}
+          testID={`card-template-${item.id}`}
+        >
+          <Card variant="glass" style={styles.templateCard}>
+            <View style={styles.templateHeader}>
+              <View style={[styles.categoryBadge, { backgroundColor: `${categoryConfig.color}20` }]} testID={`badge-category-${item.id}`}>
+                <Text style={[styles.categoryText, { color: categoryConfig.color }]}>
+                  {categoryConfig.label}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('EditTemplate', { templateId: item.id })}
+                testID={`button-edit-template-${item.id}`}
+              >
+                <Ionicons name="create-outline" size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('EditTemplate', { templateId: item.id })}
-              data-testid={`button-edit-template-${item.id}`}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          </View>
 
-          <Text style={styles.templateName}>{item.name}</Text>
-          <Text style={styles.templateSubject}>{item.subject}</Text>
-          <Text style={styles.templatePreview} numberOfLines={2}>{item.previewText}</Text>
+            <Text style={styles.templateNameText} testID={`text-template-name-${item.id}`}>{item.name}</Text>
+            <Text style={styles.templateSubject}>{item.subject}</Text>
+            <Text style={styles.templatePreview} numberOfLines={2}>{item.previewText}</Text>
 
-          <View style={styles.templateMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>{item.lastModified}</Text>
+            <View style={styles.templateMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>{item.lastModified}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="mail-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>{item.usageCount} utilizzi</Text>
+              </View>
             </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="mail-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.metaText}>{item.usageCount} utilizzi</Text>
-            </View>
-          </View>
-        </Card>
-      </TouchableOpacity>
+          </Card>
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Email Marketing"
         showBack
@@ -281,7 +290,7 @@ export default function MarketingEmailScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('CreateTemplate')}
-            data-testid="button-create-template"
+            testID="button-create-template"
           >
             <Ionicons name="add" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -292,7 +301,7 @@ export default function MarketingEmailScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'campaigns' && styles.tabActive]}
           onPress={() => setActiveTab('campaigns')}
-          data-testid="tab-campaigns"
+          testID="tab-campaigns"
         >
           <Ionicons
             name="paper-plane-outline"
@@ -306,7 +315,7 @@ export default function MarketingEmailScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'templates' && styles.tabActive]}
           onPress={() => setActiveTab('templates')}
-          data-testid="tab-templates"
+          testID="tab-templates"
         >
           <Ionicons
             name="document-text-outline"
@@ -321,29 +330,35 @@ export default function MarketingEmailScreen() {
 
       {activeTab === 'campaigns' && (
         <FlatList
+          key={`campaigns-${numColumns}`}
           data={mockCampaigns}
           renderItem={renderCampaignCard}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          testID="list-campaigns"
         />
       )}
 
       {activeTab === 'templates' && (
         <FlatList
+          key={`templates-${numColumns}`}
           data={mockTemplates}
           renderItem={renderTemplateCard}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          testID="list-templates"
         />
       )}
 
@@ -354,17 +369,17 @@ export default function MarketingEmailScreen() {
         onRequestClose={() => setShowComposeModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nuova Campagna</Text>
-              <TouchableOpacity onPress={() => setShowComposeModal(false)} data-testid="button-close-modal">
+              <Text style={styles.modalTitle} testID="text-modal-title">Nuova Campagna</Text>
+              <TouchableOpacity onPress={() => setShowComposeModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {selectedTemplate && (
-                <Card variant="outline" style={styles.selectedTemplateCard}>
+                <Card variant="outline" style={styles.selectedTemplateCard} testID="card-selected-template">
                   <Text style={styles.selectedTemplateLabel}>Template selezionato</Text>
                   <Text style={styles.selectedTemplateName}>{selectedTemplate.name}</Text>
                   <Text style={styles.selectedTemplateSubject}>{selectedTemplate.subject}</Text>
@@ -379,7 +394,7 @@ export default function MarketingEmailScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={newCampaign.name}
                   onChangeText={(text) => setNewCampaign({ ...newCampaign, name: text })}
-                  data-testid="input-campaign-name"
+                  testID="input-campaign-name"
                 />
               </View>
 
@@ -387,11 +402,11 @@ export default function MarketingEmailScreen() {
                 <Text style={styles.formLabel}>Oggetto Email</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Es: 🎉 Questo weekend ti aspettiamo!"
+                  placeholder="Es: Questo weekend ti aspettiamo!"
                   placeholderTextColor={colors.mutedForeground}
                   value={newCampaign.subject}
                   onChangeText={(text) => setNewCampaign({ ...newCampaign, subject: text })}
-                  data-testid="input-subject"
+                  testID="input-subject"
                 />
               </View>
 
@@ -405,7 +420,7 @@ export default function MarketingEmailScreen() {
                       newCampaign.segmentId === segment.id && styles.segmentOptionActive,
                     ]}
                     onPress={() => setNewCampaign({ ...newCampaign, segmentId: segment.id })}
-                    data-testid={`segment-${segment.id}`}
+                    testID={`segment-${segment.id}`}
                   >
                     <View style={styles.segmentInfo}>
                       <Text style={styles.segmentName}>{segment.name}</Text>
@@ -426,7 +441,7 @@ export default function MarketingEmailScreen() {
                   navigation.navigate('CampaignEditor', { ...newCampaign, templateId: selectedTemplate?.id });
                 }}
                 disabled={!newCampaign.name || !newCampaign.segmentId}
-                data-testid="button-create-campaign"
+                testID="button-create-campaign"
               >
                 <Text style={styles.buttonText}>Crea Campagna</Text>
               </Button>
@@ -439,11 +454,11 @@ export default function MarketingEmailScreen() {
         style={styles.fab}
         onPress={() => setShowComposeModal(true)}
         activeOpacity={0.8}
-        data-testid="button-fab-compose"
+        testID="button-fab-compose"
       >
         <Ionicons name="create" size={24} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -484,6 +499,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
+    paddingBottom: 120,
+  },
+  gridItem: {
+    flex: 1,
+    marginHorizontal: spacing.sm,
   },
   campaignCard: {
     paddingVertical: spacing.lg,
@@ -622,24 +642,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },
-  templateSubject: {
+  templateNameText: {
     color: colors.foreground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  templateSubject: {
+    color: colors.foreground,
+    fontSize: fontSize.sm,
     marginBottom: spacing.sm,
   },
   templatePreview: {
     color: colors.mutedForeground,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
+    fontSize: fontSize.xs,
     marginBottom: spacing.md,
   },
   templateMeta: {
     flexDirection: 'row',
     gap: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
   },
   modalOverlay: {
     flex: 1,
@@ -683,7 +704,6 @@ const styles = StyleSheet.create({
   selectedTemplateSubject: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
-    marginTop: spacing.xs,
   },
   formGroup: {
     marginBottom: spacing.lg,
@@ -697,9 +717,9 @@ const styles = StyleSheet.create({
   formInput: {
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     color: colors.foreground,
     fontSize: fontSize.base,
@@ -708,19 +728,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    padding: spacing.md,
     backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.sm,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
   },
   segmentOptionActive: {
     borderColor: colors.primary,
     backgroundColor: `${colors.primary}10`,
   },
-  segmentInfo: {},
+  segmentInfo: {
+    flex: 1,
+  },
   segmentName: {
     color: colors.foreground,
     fontSize: fontSize.sm,
@@ -732,8 +753,6 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
   },
   buttonText: {
     color: colors.primaryForeground,

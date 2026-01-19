@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -26,11 +27,15 @@ interface ActivationCard {
 
 export function SIAEActivationCardsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cards, setCards] = useState<ActivationCard[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadCards = async () => {
     try {
@@ -94,12 +99,18 @@ export function SIAEActivationCardsScreen() {
     });
   };
 
-  const renderCard = ({ item }: { item: ActivationCard }) => (
+  const renderCard = ({ item, index }: { item: ActivationCard; index: number }) => (
     <TouchableOpacity
-      style={styles.cardItem}
+      style={[
+        styles.cardItem,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAEActivationCardDetail', { cardId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-activation-${item.id}`}
+      testID={`card-activation-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.cardRow}>
@@ -107,9 +118,9 @@ export function SIAEActivationCardsScreen() {
             <Ionicons name="card-outline" size={24} color={getStatusColor(item.status)} />
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.cardNumber}>{item.cardNumber}</Text>
+            <Text style={styles.cardNumber} testID={`text-card-number-${item.id}`}>{item.cardNumber}</Text>
             {item.assignedTo && (
-              <Text style={styles.assignedTo}>{item.assignedTo}</Text>
+              <Text style={styles.assignedTo} testID={`text-assigned-to-${item.id}`}>{item.assignedTo}</Text>
             )}
             <View style={styles.cardDetails}>
               {item.activatedAt && (
@@ -122,7 +133,7 @@ export function SIAEActivationCardsScreen() {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]} testID={`text-status-${item.id}`}>
               {getStatusLabel(item.status)}
             </Text>
           </View>
@@ -133,24 +144,24 @@ export function SIAEActivationCardsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Tessere SIAE" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Tessere SIAE"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAEActivationCardAdd')} data-testid="button-add-card">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAEActivationCardAdd')} testID="button-add-card">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -160,7 +171,13 @@ export function SIAEActivationCardsScreen() {
         data={cards}
         renderItem={renderCard}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={[
+          styles.listContent,
+          (isTablet || isLandscape) && styles.listContentLandscape,
+        ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -172,8 +189,9 @@ export function SIAEActivationCardsScreen() {
             <Text style={styles.emptySubtext}>Aggiungi tessere SIAE per la gestione</Text>
           </View>
         }
+        testID="list-activation-cards"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -195,6 +213,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   cardItem: {
     marginBottom: spacing.md,

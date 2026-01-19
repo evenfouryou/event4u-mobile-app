@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   FlatList,
@@ -11,9 +10,9 @@ import {
   Alert,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -34,9 +33,9 @@ interface ConsumptionEntry {
 export function BartenderDirectStockScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const stationId = route.params?.stationId;
   const eventId = route.params?.eventId;
@@ -48,6 +47,8 @@ export function BartenderDirectStockScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [consumptions, setConsumptions] = useState<Map<string, number>>(new Map());
   const [stationName, setStationName] = useState('');
+
+  const numColumns = isTablet ? 4 : isLandscape ? 4 : 2;
 
   useEffect(() => {
     loadProducts();
@@ -162,7 +163,7 @@ export function BartenderDirectStockScreen() {
           }
         }}
         activeOpacity={0.7}
-        data-testid={`product-${item.id}`}
+        testID={`card-product-${item.id}`}
       >
         <View style={styles.productHeader}>
           <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
@@ -179,7 +180,7 @@ export function BartenderDirectStockScreen() {
                 e.stopPropagation?.();
                 updateConsumption(item.id, -1);
               }}
-              data-testid={`button-decrement-${item.id}`}
+              testID={`button-decrement-${item.id}`}
             >
               <Ionicons name="remove" size={16} color={colors.foreground} />
             </TouchableOpacity>
@@ -191,7 +192,7 @@ export function BartenderDirectStockScreen() {
                 updateConsumption(item.id, 1);
               }}
               disabled={remainingStock <= 0}
-              data-testid={`button-increment-${item.id}`}
+              testID={`button-increment-${item.id}`}
             >
               <Ionicons name="add" size={16} color={colors.primaryForeground} />
             </TouchableOpacity>
@@ -203,18 +204,18 @@ export function BartenderDirectStockScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Registra Consumo" showBack onBack={() => navigation.goBack()} />
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Registra Consumo"
         subtitle={stationName}
@@ -231,10 +232,10 @@ export function BartenderDirectStockScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
           {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -262,16 +263,17 @@ export function BartenderDirectStockScreen() {
           data={filteredProducts}
           renderItem={renderProduct}
           keyExtractor={(item) => item.id}
-          numColumns={isLandscape ? 4 : 2}
-          key={isLandscape ? 'landscape' : 'portrait'}
+          numColumns={numColumns}
+          key={numColumns}
           contentContainerStyle={styles.gridContent}
           columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
+          testID="list-products"
         />
       )}
 
       {hasConsumptions && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View style={styles.footer}>
           <View style={styles.footerSummary}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Prodotti</Text>
@@ -287,10 +289,11 @@ export function BartenderDirectStockScreen() {
             onPress={handleSubmit}
             disabled={submitting}
             style={styles.submitButton}
+            testID="button-submit"
           />
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -332,15 +335,17 @@ const styles = StyleSheet.create({
   gridRow: {
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   productCard: {
-    flex: 0.48,
+    flex: 1,
     backgroundColor: colors.glass.background,
     borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
     minHeight: 100,
+    marginHorizontal: spacing.xxs,
   },
   productCardSelected: {
     borderColor: colors.primary,
@@ -431,12 +436,8 @@ const styles = StyleSheet.create({
     color: colors.destructive,
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,

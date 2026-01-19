@@ -8,11 +8,12 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface Printer {
   id: string;
@@ -26,7 +27,10 @@ interface Printer {
 
 export function PrinterSettingsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [isSearching, setIsSearching] = useState(false);
   const [autoPrint, setAutoPrint] = useState(false);
   const [printPreview, setPrintPreview] = useState(true);
@@ -109,13 +113,133 @@ export function PrinterSettingsScreen() {
     }
   };
 
+  const renderPrinterCard = (printer: Printer, index: number) => (
+    <View
+      key={printer.id}
+      style={[
+        styles.printerCard,
+        (isTablet || isLandscape) && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.md : 0,
+        },
+      ]}
+    >
+      <View style={styles.printerHeader}>
+        <View style={[
+          styles.printerIcon,
+          printer.isConnected ? styles.printerIconConnected : styles.printerIconDisconnected
+        ]}>
+          <Ionicons
+            name={getPrinterIcon(printer.type)}
+            size={24}
+            color={printer.isConnected ? colors.success : colors.mutedForeground}
+          />
+        </View>
+        <View style={styles.printerInfo}>
+          <View style={styles.printerNameRow}>
+            <Text style={styles.printerName}>{printer.name}</Text>
+            {printer.isDefault && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>Predefinita</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.printerMeta}>
+            {printer.type.toUpperCase()} • {printer.paperSize}
+          </Text>
+          <View style={styles.statusRow}>
+            <View style={[
+              styles.statusDot,
+              { backgroundColor: printer.isConnected ? colors.success : colors.mutedForeground }
+            ]} />
+            <Text style={styles.statusText}>
+              {printer.isConnected ? 'Connessa' : 'Disconnessa'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.printerActions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleConnect(printer.id)}
+          testID={`button-connect-${printer.id}`}
+        >
+          <Ionicons
+            name={printer.isConnected ? 'link' : 'link-outline'}
+            size={18}
+            color={colors.teal}
+          />
+          <Text style={[styles.actionText, { color: colors.teal }]}>
+            {printer.isConnected ? 'Disconnetti' : 'Connetti'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleTestPrint(printer.id)}
+          disabled={!printer.isConnected}
+          testID={`button-test-${printer.id}`}
+        >
+          <Ionicons
+            name="print-outline"
+            size={18}
+            color={printer.isConnected ? colors.primary : colors.mutedForeground}
+          />
+          <Text style={[
+            styles.actionText,
+            { color: printer.isConnected ? colors.primary : colors.mutedForeground }
+          ]}>
+            Test
+          </Text>
+        </TouchableOpacity>
+
+        {!printer.isDefault && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleSetDefault(printer.id)}
+            testID={`button-default-${printer.id}`}
+          >
+            <Ionicons name="star-outline" size={18} color={colors.foreground} />
+            <Text style={styles.actionText}>Predefinita</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleRemovePrinter(printer.id)}
+          testID={`button-remove-${printer.id}`}
+        >
+          <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderPrinterRows = () => {
+    if (!isTablet && !isLandscape) {
+      return printers.map((printer, index) => renderPrinterCard(printer, index));
+    }
+
+    const rows = [];
+    for (let i = 0; i < printers.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.printerRow}>
+          {renderPrinterCard(printers[i], 0)}
+          {printers[i + 1] && renderPrinterCard(printers[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -124,7 +248,7 @@ export function PrinterSettingsScreen() {
           onPress={handleSearchPrinters}
           style={styles.searchButton}
           disabled={isSearching}
-          data-testid="button-search-printers"
+          testID="button-search-printers"
         >
           {isSearching ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -136,7 +260,10 @@ export function PrinterSettingsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
@@ -149,109 +276,17 @@ export function PrinterSettingsScreen() {
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={handleSearchPrinters}
-                data-testid="button-add-printer"
+                testID="button-add-printer"
               >
                 <Text style={styles.addButtonText}>Cerca Stampanti</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            printers.map(printer => (
-              <View key={printer.id} style={styles.printerCard}>
-                <View style={styles.printerHeader}>
-                  <View style={[
-                    styles.printerIcon,
-                    printer.isConnected ? styles.printerIconConnected : styles.printerIconDisconnected
-                  ]}>
-                    <Ionicons
-                      name={getPrinterIcon(printer.type)}
-                      size={24}
-                      color={printer.isConnected ? colors.success : colors.mutedForeground}
-                    />
-                  </View>
-                  <View style={styles.printerInfo}>
-                    <View style={styles.printerNameRow}>
-                      <Text style={styles.printerName}>{printer.name}</Text>
-                      {printer.isDefault && (
-                        <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultBadgeText}>Predefinita</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.printerMeta}>
-                      {printer.type.toUpperCase()} • {printer.paperSize}
-                    </Text>
-                    <View style={styles.statusRow}>
-                      <View style={[
-                        styles.statusDot,
-                        { backgroundColor: printer.isConnected ? colors.success : colors.mutedForeground }
-                      ]} />
-                      <Text style={styles.statusText}>
-                        {printer.isConnected ? 'Connessa' : 'Disconnessa'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.printerActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleConnect(printer.id)}
-                    data-testid={`button-connect-${printer.id}`}
-                  >
-                    <Ionicons
-                      name={printer.isConnected ? 'link' : 'link-outline'}
-                      size={18}
-                      color={colors.teal}
-                    />
-                    <Text style={[styles.actionText, { color: colors.teal }]}>
-                      {printer.isConnected ? 'Disconnetti' : 'Connetti'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleTestPrint(printer.id)}
-                    disabled={!printer.isConnected}
-                    data-testid={`button-test-${printer.id}`}
-                  >
-                    <Ionicons
-                      name="print-outline"
-                      size={18}
-                      color={printer.isConnected ? colors.primary : colors.mutedForeground}
-                    />
-                    <Text style={[
-                      styles.actionText,
-                      { color: printer.isConnected ? colors.primary : colors.mutedForeground }
-                    ]}>
-                      Test
-                    </Text>
-                  </TouchableOpacity>
-
-                  {!printer.isDefault && (
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => handleSetDefault(printer.id)}
-                      data-testid={`button-default-${printer.id}`}
-                    >
-                      <Ionicons name="star-outline" size={18} color={colors.foreground} />
-                      <Text style={styles.actionText}>Predefinita</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleRemovePrinter(printer.id)}
-                    data-testid={`button-remove-${printer.id}`}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={colors.destructive} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
+            renderPrinterRows()
           )}
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, isTablet && styles.sectionTablet]}>
           <Text style={styles.sectionTitle}>Opzioni di Stampa</Text>
           <View style={styles.optionsCard}>
             <View style={styles.optionRow}>
@@ -269,6 +304,7 @@ export function PrinterSettingsScreen() {
                 onValueChange={setAutoPrint}
                 trackColor={{ false: colors.muted, true: colors.primary }}
                 thumbColor={colors.foreground}
+                testID="switch-auto-print"
               />
             </View>
 
@@ -289,12 +325,13 @@ export function PrinterSettingsScreen() {
                 onValueChange={setPrintPreview}
                 trackColor={{ false: colors.muted, true: colors.primary }}
                 thumbColor={colors.foreground}
+                testID="switch-print-preview"
               />
             </View>
           </View>
         </View>
 
-        <View style={styles.helpCard}>
+        <View style={[styles.helpCard, isTablet && styles.helpCardTablet]}>
           <Ionicons name="help-circle" size={24} color={colors.teal} />
           <View style={styles.helpContent}>
             <Text style={styles.helpTitle}>Problemi con la stampante?</Text>
@@ -304,7 +341,7 @@ export function PrinterSettingsScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -319,6 +356,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -346,9 +386,16 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   section: {
     marginBottom: spacing.xl,
+  },
+  sectionTablet: {
+    maxWidth: 600,
   },
   sectionTitle: {
     fontSize: fontSize.sm,
@@ -384,6 +431,10 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.primaryForeground,
   },
+  printerRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+  },
   printerCard: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.xl,
@@ -417,6 +468,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   printerName: {
     fontSize: fontSize.base,
@@ -456,6 +508,7 @@ const styles = StyleSheet.create({
   },
   printerActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.md,
@@ -518,6 +571,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  helpCardTablet: {
+    maxWidth: 600,
   },
   helpContent: {
     flex: 1,

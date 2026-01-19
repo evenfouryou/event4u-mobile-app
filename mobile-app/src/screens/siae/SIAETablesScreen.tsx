@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -25,11 +26,15 @@ interface Table {
 
 export function SIAETablesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tables, setTables] = useState<Table[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadTables = async () => {
     try {
@@ -79,12 +84,19 @@ export function SIAETablesScreen() {
     }
   };
 
-  const renderTable = ({ item }: { item: Table }) => (
+  const renderTable = ({ item, index }: { item: Table; index: number }) => (
     <TouchableOpacity
-      style={styles.tableCard}
+      style={[
+        styles.tableCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        }
+      ]}
       onPress={() => navigation.navigate('SIAETableDetail', { tableId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-table-${item.id}`}
+      testID={`card-table-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.tableRow}>
@@ -116,37 +128,44 @@ export function SIAETablesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Gestione Tavoli" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Gestione Tavoli"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAETableAdd')} data-testid="button-add-table">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAETableAdd')} testID="button-add-table">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       
       <FlatList
+        key={numColumns}
         data={tables}
         renderItem={renderTable}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+            testID="refresh-control"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -155,8 +174,9 @@ export function SIAETablesScreen() {
             <Text style={styles.emptySubtext}>Aggiungi tavoli per gestire la capienza</Text>
           </View>
         }
+        testID="tables-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -178,6 +198,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   tableCard: {
     marginBottom: spacing.md,

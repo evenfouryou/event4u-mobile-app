@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -42,7 +43,9 @@ interface IssuedTicket {
 
 export function SIAETicketingConsoleScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [issuing, setIssuing] = useState(false);
@@ -130,19 +133,19 @@ export function SIAETicketingConsoleScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Console Emissione" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!activeEvent) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Console Emissione" showBack onBack={() => navigation.goBack()} />
         <View style={styles.emptyContainer}>
           <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />
@@ -153,150 +156,183 @@ export function SIAETicketingConsoleScreen() {
           <Button
             onPress={() => navigation.navigate('SIAETicketedEvents')}
             style={styles.goToEventsButton}
-            data-testid="button-go-events"
+            testID="button-go-events"
           >
             <Text style={styles.goToEventsText}>Vai agli Eventi</Text>
           </Button>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Console Emissione" showBack onBack={() => navigation.goBack()} />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="console-scroll"
       >
-        <Card variant="glass" style={styles.eventCard}>
-          <View style={styles.eventHeader}>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-          </View>
-          <Text style={styles.eventName}>{activeEvent.name}</Text>
-          <View style={styles.eventStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{activeEvent.ticketsSold}</Text>
-              <Text style={styles.statLabel}>Venduti</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.success }]}>{activeEvent.ticketsAvailable}</Text>
-              <Text style={styles.statLabel}>Disponibili</Text>
-            </View>
-          </View>
-        </Card>
+        <View style={[
+          styles.mainLayout,
+          (isTablet || isLandscape) && styles.mainLayoutWide
+        ]}>
+          <View style={[
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.leftColumnWide
+          ]}>
+            <Card variant="glass" style={styles.eventCard}>
+              <View style={styles.eventHeader}>
+                <View style={styles.liveIndicator}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+              </View>
+              <Text style={styles.eventName}>{activeEvent.name}</Text>
+              <View style={styles.eventStats}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{activeEvent.ticketsSold}</Text>
+                  <Text style={styles.statLabel}>Venduti</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: colors.success }]}>{activeEvent.ticketsAvailable}</Text>
+                  <Text style={styles.statLabel}>Disponibili</Text>
+                </View>
+              </View>
+            </Card>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tipo Biglietto</Text>
-          <View style={styles.typesGrid}>
-            {ticketTypes.map(type => (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.typeOption,
-                  selectedType?.id === type.id && styles.typeOptionSelected
-                ]}
-                onPress={() => setSelectedType(type)}
-                activeOpacity={0.8}
-                data-testid={`option-type-${type.id}`}
-              >
-                <Text style={[
-                  styles.typeName,
-                  selectedType?.id === type.id && styles.typeNameSelected
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Tipo Biglietto</Text>
+              <View style={[
+                styles.typesGrid,
+                (isTablet || isLandscape) && styles.typesGridWide
+              ]}>
+                {ticketTypes.map(type => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      styles.typeOption,
+                      selectedType?.id === type.id && styles.typeOptionSelected
+                    ]}
+                    onPress={() => setSelectedType(type)}
+                    activeOpacity={0.8}
+                    testID={`option-type-${type.id}`}
+                  >
+                    <Text style={[
+                      styles.typeName,
+                      selectedType?.id === type.id && styles.typeNameSelected
+                    ]}>
+                      {type.name}
+                    </Text>
+                    <Text style={[
+                      styles.typePrice,
+                      selectedType?.id === type.id && styles.typePriceSelected
+                    ]}>
+                      {formatCurrency(type.price)}
+                    </Text>
+                    <Text style={styles.typeAvailable}>{type.available} disp.</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Intestatario</Text>
+              <Card variant="glass">
+                <View style={[
+                  styles.inputRow,
+                  (isTablet || isLandscape) && styles.inputRowWide
                 ]}>
-                  {type.name}
-                </Text>
-                <Text style={[
-                  styles.typePrice,
-                  selectedType?.id === type.id && styles.typePriceSelected
-                ]}>
-                  {formatCurrency(type.price)}
-                </Text>
-                <Text style={styles.typeAvailable}>{type.available} disp.</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Intestatario</Text>
-          <Card variant="glass">
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Nome e Cognome</Text>
-              <TextInput
-                style={styles.input}
-                value={holderName}
-                onChangeText={setHolderName}
-                placeholder="Mario Rossi"
-                placeholderTextColor={colors.mutedForeground}
-                data-testid="input-holder-name"
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Codice Fiscale</Text>
-              <TextInput
-                style={styles.input}
-                value={holderFiscalCode}
-                onChangeText={(text) => setHolderFiscalCode(text.toUpperCase())}
-                placeholder="RSSMRA80A01H501Z"
-                placeholderTextColor={colors.mutedForeground}
-                autoCapitalize="characters"
-                data-testid="input-holder-cf"
-              />
-            </View>
-          </Card>
-        </View>
-
-        <Button
-          onPress={handleIssueTicket}
-          disabled={issuing || !selectedType}
-          style={[
-            styles.issueButton,
-            (!selectedType) && styles.issueButtonDisabled
-          ]}
-          data-testid="button-issue"
-        >
-          {issuing ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <>
-              <Ionicons name="print-outline" size={24} color={colors.primaryForeground} />
-              <Text style={styles.issueButtonText}>
-                Emetti Biglietto
-                {selectedType && ` - ${formatCurrency(selectedType.price)}`}
-              </Text>
-            </>
-          )}
-        </Button>
-
-        {recentTickets.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ultimi Biglietti Emessi</Text>
-            {recentTickets.slice(0, 5).map(ticket => (
-              <Card key={ticket.id} variant="glass" style={styles.recentTicket}>
-                <View style={styles.ticketRow}>
-                  <View style={styles.ticketInfo}>
-                    <Text style={styles.ticketNumber}>{ticket.ticketNumber}</Text>
-                    <Text style={styles.ticketHolder}>{ticket.holderName}</Text>
+                  <View style={[
+                    styles.inputGroup,
+                    (isTablet || isLandscape) && styles.inputGroupHalf
+                  ]}>
+                    <Text style={styles.inputLabel}>Nome e Cognome</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={holderName}
+                      onChangeText={setHolderName}
+                      placeholder="Mario Rossi"
+                      placeholderTextColor={colors.mutedForeground}
+                      testID="input-holder-name"
+                    />
                   </View>
-                  <View style={styles.ticketMeta}>
-                    <Text style={styles.ticketType}>{ticket.type}</Text>
-                    <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
-                    <Text style={styles.ticketTime}>{formatTime(ticket.issuedAt)}</Text>
+                  <View style={[
+                    styles.inputGroup,
+                    (isTablet || isLandscape) && styles.inputGroupHalf
+                  ]}>
+                    <Text style={styles.inputLabel}>Codice Fiscale</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={holderFiscalCode}
+                      onChangeText={(text) => setHolderFiscalCode(text.toUpperCase())}
+                      placeholder="RSSMRA80A01H501Z"
+                      placeholderTextColor={colors.mutedForeground}
+                      autoCapitalize="characters"
+                      testID="input-holder-cf"
+                    />
                   </View>
                 </View>
               </Card>
-            ))}
+            </View>
+
+            <Button
+              onPress={handleIssueTicket}
+              disabled={issuing || !selectedType}
+              style={[
+                styles.issueButton,
+                (!selectedType) && styles.issueButtonDisabled
+              ]}
+              testID="button-issue"
+            >
+              {issuing ? (
+                <ActivityIndicator size="small" color={colors.primaryForeground} />
+              ) : (
+                <>
+                  <Ionicons name="print-outline" size={24} color={colors.primaryForeground} />
+                  <Text style={styles.issueButtonText}>
+                    Emetti Biglietto
+                    {selectedType && ` - ${formatCurrency(selectedType.price)}`}
+                  </Text>
+                </>
+              )}
+            </Button>
           </View>
-        )}
+
+          {recentTickets.length > 0 && (
+            <View style={[
+              styles.rightColumn,
+              (isTablet || isLandscape) && styles.rightColumnWide
+            ]}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Ultimi Biglietti Emessi</Text>
+                {recentTickets.slice(0, 5).map(ticket => (
+                  <Card key={ticket.id} variant="glass" style={styles.recentTicket}>
+                    <View style={styles.ticketRow}>
+                      <View style={styles.ticketInfo}>
+                        <Text style={styles.ticketNumber}>{ticket.ticketNumber}</Text>
+                        <Text style={styles.ticketHolder}>{ticket.holderName}</Text>
+                      </View>
+                      <View style={styles.ticketMeta}>
+                        <Text style={styles.ticketType}>{ticket.type}</Text>
+                        <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
+                        <Text style={styles.ticketTime}>{formatTime(ticket.issuedAt)}</Text>
+                      </View>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -317,7 +353,33 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.xl,
+  },
+  mainLayout: {
+    flex: 1,
+  },
+  mainLayoutWide: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnWide: {
+    flex: 2,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnWide: {
+    flex: 1,
+    marginTop: spacing.lg,
   },
   eventCard: {
     marginTop: spacing.lg,
@@ -391,6 +453,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  typesGridWide: {
+    flexDirection: 'row',
+  },
   typeOption: {
     flex: 1,
     minWidth: '45%',
@@ -426,8 +491,18 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
+  inputRow: {
+    gap: spacing.md,
+  },
+  inputRowWide: {
+    flexDirection: 'row',
+  },
   inputGroup: {
     marginBottom: spacing.md,
+  },
+  inputGroupHalf: {
+    flex: 1,
+    marginBottom: 0,
   },
   inputLabel: {
     color: colors.foreground,

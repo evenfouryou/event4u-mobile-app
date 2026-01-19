@@ -6,17 +6,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
-
-const { width } = Dimensions.get('window');
 
 interface PRStats {
   totalEarnings: number;
@@ -48,7 +46,9 @@ interface UpcomingEvent {
 
 export function PRDashboardScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: stats, refetch: refetchStats } = useQuery<PRStats>({
@@ -173,12 +173,17 @@ export function PRDashboardScreen() {
     }
   };
 
+  const statCardWidth = isTablet ? (width - spacing.lg * 2 - spacing.md * 3) / 4 - 1 : (width - spacing.lg * 2 - spacing.md) / 2 - 1;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Dashboard PR"
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('PRWallet')} data-testid="button-wallet">
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('PRWallet')} 
+            testID="button-wallet"
+          >
             <Ionicons name="wallet-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -186,13 +191,14 @@ export function PRDashboardScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
+        testID="scroll-pr-dashboard"
       >
-        <Card variant="elevated" style={styles.earningsCard}>
+        <Card variant="elevated" style={styles.earningsCard} testID="card-earnings">
           <View style={styles.earningsHeader}>
             <View>
               <Text style={styles.earningsLabel}>Guadagni Totali</Text>
@@ -224,32 +230,33 @@ export function PRDashboardScreen() {
             size="sm"
             onPress={() => navigation.navigate('PRWallet')}
             style={styles.withdrawButton}
+            testID="button-request-payout"
           />
         </Card>
 
-        <View style={styles.statsGrid}>
-          <Card variant="glass" style={styles.statCard}>
+        <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
+          <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-guests">
             <View style={[styles.statIcon, { backgroundColor: colors.purpleLight + '20' }]}>
               <Ionicons name="people" size={22} color={colors.purpleLight} />
             </View>
             <Text style={styles.statValue}>{stats?.totalGuests || 0}</Text>
             <Text style={styles.statLabel}>Ospiti Totali</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-pending">
             <View style={[styles.statIcon, { backgroundColor: colors.warning + '20' }]}>
               <Ionicons name="time" size={22} color={colors.warning} />
             </View>
             <Text style={styles.statValue}>{stats?.pendingGuests || 0}</Text>
             <Text style={styles.statLabel}>In Attesa</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-tables">
             <View style={[styles.statIcon, { backgroundColor: colors.purple + '20' }]}>
               <Ionicons name="grid" size={22} color={colors.purple} />
             </View>
             <Text style={styles.statValue}>{stats?.totalTables || 0}</Text>
             <Text style={styles.statLabel}>Tavoli</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-conversion">
             <View style={[styles.statIcon, { backgroundColor: colors.success + '20' }]}>
               <Ionicons name="analytics" size={22} color={colors.success} />
             </View>
@@ -262,16 +269,25 @@ export function PRDashboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('PRMyEvents')}>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('PRMyEvents')}
+                testID="button-see-all-events"
+              >
                 <Text style={styles.seeAllText}>Vedi tutti</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventsScroll}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.eventsScroll}
+              testID="scroll-upcoming-events"
+            >
               {upcomingEvents.map((event) => (
                 <TouchableOpacity
                   key={event.id}
                   onPress={() => navigation.navigate('PRGuestLists', { eventId: event.id })}
                   activeOpacity={0.8}
+                  testID={`button-event-${event.id}`}
                 >
                   <Card variant="glass" style={styles.eventCard}>
                     <View style={styles.eventImagePlaceholder}>
@@ -303,7 +319,7 @@ export function PRDashboardScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Attività Recente</Text>
           </View>
-          <Card variant="glass" style={styles.activitiesCard}>
+          <Card variant="glass" style={styles.activitiesCard} testID="card-activities">
             {activities.length === 0 ? (
               <View style={styles.emptyActivities}>
                 <Ionicons name="time-outline" size={40} color={colors.mutedForeground} />
@@ -317,6 +333,7 @@ export function PRDashboardScreen() {
                     styles.activityItem,
                     index < activities.length - 1 && styles.activityItemBorder,
                   ]}
+                  testID={`activity-item-${activity.id}`}
                 >
                   <View style={[styles.activityIcon, { backgroundColor: getActivityColor(activity.type) + '20' }]}>
                     <Ionicons
@@ -338,22 +355,24 @@ export function PRDashboardScreen() {
           </Card>
         </View>
 
-        <View style={styles.quickActions}>
+        <View style={[styles.quickActions, isLandscape && styles.quickActionsLandscape]}>
           <Button
             title="Aggiungi Ospite"
             variant="primary"
             icon={<Ionicons name="person-add" size={18} color={colors.primaryForeground} />}
             onPress={() => navigation.navigate('PREvents')}
+            testID="button-add-guest"
           />
           <Button
             title="Scansiona QR"
             variant="outline"
             icon={<Ionicons name="qr-code" size={18} color={colors.foreground} />}
             onPress={() => navigation.navigate('PRScanner')}
+            testID="button-scan-qr"
           />
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -365,6 +384,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  contentContainer: {
+    paddingBottom: spacing.xl,
   },
   earningsCard: {
     padding: spacing.xl,
@@ -433,8 +455,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
+  statsGridTablet: {
+    justifyContent: 'space-between',
+  },
   statCard: {
-    width: (width - spacing.lg * 2 - spacing.md) / 2 - 1,
     padding: spacing.lg,
     alignItems: 'flex-start',
   },
@@ -572,5 +596,8 @@ const styles = StyleSheet.create({
   quickActions: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  quickActionsLandscape: {
+    justifyContent: 'center',
   },
 });

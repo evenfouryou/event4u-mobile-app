@@ -8,11 +8,12 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -30,11 +31,16 @@ interface Venue {
 
 export function FloorPlanHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
+  const cardWidth = numColumns === 2 ? (width - spacing.lg * 2 - spacing.md) / 2 : width - spacing.lg * 2;
 
   const loadVenues = async (isRefresh = false) => {
     try {
@@ -73,47 +79,47 @@ export function FloorPlanHomeScreen() {
     loadVenues(true);
   };
 
-  const renderVenueCard = (venue: Venue) => (
+  const renderVenueCard = (venue: Venue, index: number) => (
     <TouchableOpacity
       key={venue.id}
-      style={styles.venueCard}
+      style={[styles.venueCard, { width: cardWidth }]}
       onPress={() => navigation.navigate('FloorPlanViewer', { venueId: venue.id, venueName: venue.name })}
       activeOpacity={0.8}
-      data-testid={`card-venue-${venue.id}`}
+      testID={`card-venue-${venue.id}`}
     >
       <Card variant="glass">
         <View style={styles.venueContent}>
           {venue.thumbnail ? (
-            <Image source={{ uri: venue.thumbnail }} style={styles.venueThumbnail} />
+            <Image source={{ uri: venue.thumbnail }} style={styles.venueThumbnail} testID={`image-venue-${venue.id}`} />
           ) : (
-            <View style={styles.venueThumbnailPlaceholder}>
+            <View style={styles.venueThumbnailPlaceholder} testID={`placeholder-venue-${venue.id}`}>
               <Ionicons name="map-outline" size={32} color={colors.mutedForeground} />
             </View>
           )}
           <View style={styles.venueInfo}>
-            <Text style={styles.venueName}>{venue.name}</Text>
+            <Text style={styles.venueName} testID={`text-venue-name-${venue.id}`}>{venue.name}</Text>
             <View style={styles.venueMetaRow}>
               <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.venueMetaText} numberOfLines={1}>{venue.address}</Text>
+              <Text style={styles.venueMetaText} numberOfLines={1} testID={`text-venue-address-${venue.id}`}>{venue.address}</Text>
             </View>
             <View style={styles.venueStats}>
               <View style={styles.venueStat}>
                 <Ionicons name="grid-outline" size={12} color={colors.teal} />
-                <Text style={styles.venueStatText}>{venue.zoneCount} zone</Text>
+                <Text style={styles.venueStatText} testID={`text-zone-count-${venue.id}`}>{venue.zoneCount} zone</Text>
               </View>
               <View style={styles.venueStat}>
                 <Ionicons name="people-outline" size={12} color={colors.primary} />
-                <Text style={styles.venueStatText}>{venue.totalCapacity} cap.</Text>
+                <Text style={styles.venueStatText} testID={`text-capacity-${venue.id}`}>{venue.totalCapacity} cap.</Text>
               </View>
               <View style={styles.venueStat}>
                 <Ionicons name="calendar-outline" size={12} color={colors.accent} />
-                <Text style={styles.venueStatText}>{venue.eventCount} eventi</Text>
+                <Text style={styles.venueStatText} testID={`text-event-count-${venue.id}`}>{venue.eventCount} eventi</Text>
               </View>
             </View>
             <View style={styles.venueFooter}>
-              <Text style={styles.lastUpdated}>Aggiornato: {venue.lastUpdated}</Text>
+              <Text style={styles.lastUpdated} testID={`text-updated-${venue.id}`}>Aggiornato: {venue.lastUpdated}</Text>
               {venue.hasFloorPlan && (
-                <View style={styles.floorPlanBadge}>
+                <View style={styles.floorPlanBadge} testID={`badge-floorplan-${venue.id}`}>
                   <Ionicons name="checkmark-circle" size={12} color={colors.success} />
                   <Text style={styles.floorPlanBadgeText}>Planimetria</Text>
                 </View>
@@ -128,44 +134,44 @@ export function FloorPlanHomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Planimetrie" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento venue...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento venue...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Planimetrie" />
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID="error-container">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText} testID="error-text">{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => loadVenues()}
-            data-testid="button-retry"
+            testID="button-retry"
           >
             <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
             <Text style={styles.retryButtonText}>Riprova</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Planimetrie"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('FloorPlanEditor', { mode: 'create' })}
-            data-testid="button-add-floorplan"
+            testID="button-add-floorplan"
           >
             <Ionicons name="add-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -173,7 +179,7 @@ export function FloorPlanHomeScreen() {
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -183,26 +189,29 @@ export function FloorPlanHomeScreen() {
             colors={[colors.primary]}
           />
         }
+        testID="scroll-view-venues"
       >
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Venue con Planimetria</Text>
-            <Text style={styles.venueCount}>{venues.length} venue</Text>
+            <Text style={styles.sectionTitle} testID="text-section-title">Venue con Planimetria</Text>
+            <Text style={styles.venueCount} testID="text-venue-count">{venues.length} venue</Text>
           </View>
           
           {venues.length > 0 ? (
-            venues.map(renderVenueCard)
+            <View style={[styles.venuesGrid, numColumns === 2 && styles.venuesGridTwo]}>
+              {venues.map((venue, index) => renderVenueCard(venue, index))}
+            </View>
           ) : (
-            <Card style={styles.emptyCard}>
+            <Card style={styles.emptyCard} testID="empty-state">
               <Ionicons name="map-outline" size={48} color={colors.mutedForeground} />
-              <Text style={styles.emptyTitle}>Nessuna planimetria</Text>
-              <Text style={styles.emptyText}>
+              <Text style={styles.emptyTitle} testID="empty-title">Nessuna planimetria</Text>
+              <Text style={styles.emptyText} testID="empty-text">
                 Aggiungi una planimetria per gestire le zone della venue
               </Text>
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => navigation.navigate('FloorPlanEditor', { mode: 'create' })}
-                data-testid="button-add-first-floorplan"
+                testID="button-add-first-floorplan"
               >
                 <Ionicons name="add-outline" size={20} color={colors.primaryForeground} />
                 <Text style={styles.addButtonText}>Aggiungi Planimetria</Text>
@@ -212,18 +221,18 @@ export function FloorPlanHomeScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Legenda Stato Zone</Text>
-          <Card variant="outline">
-            <View style={styles.legendContainer}>
-              <View style={styles.legendItem}>
+          <Text style={styles.sectionTitle} testID="text-legend-title">Legenda Stato Zone</Text>
+          <Card variant="outline" testID="card-legend">
+            <View style={[styles.legendContainer, isLandscape && styles.legendContainerLandscape]}>
+              <View style={styles.legendItem} testID="legend-available">
                 <View style={[styles.legendDot, { backgroundColor: colors.teal }]} />
                 <Text style={styles.legendText}>Disponibile</Text>
               </View>
-              <View style={styles.legendItem}>
+              <View style={styles.legendItem} testID="legend-reserved">
                 <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
                 <Text style={styles.legendText}>Prenotata</Text>
               </View>
-              <View style={styles.legendItem}>
+              <View style={styles.legendItem} testID="legend-sold">
                 <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
                 <Text style={styles.legendText}>Venduta</Text>
               </View>
@@ -231,7 +240,7 @@ export function FloorPlanHomeScreen() {
           </Card>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -242,6 +251,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,
@@ -298,6 +310,14 @@ const styles = StyleSheet.create({
   venueCount: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
+  },
+  venuesGrid: {
+    gap: spacing.md,
+  },
+  venuesGridTwo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
   venueCard: {
     marginBottom: spacing.md,
@@ -414,6 +434,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: spacing.sm,
+  },
+  legendContainerLandscape: {
+    justifyContent: 'center',
+    gap: spacing.xl,
   },
   legendItem: {
     flexDirection: 'row',

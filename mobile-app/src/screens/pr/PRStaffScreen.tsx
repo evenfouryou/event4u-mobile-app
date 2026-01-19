@@ -8,12 +8,13 @@ import {
   TextInput,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
@@ -35,10 +36,14 @@ type FilterRole = 'all' | 'sub_pr' | 'promoter' | 'hostess';
 
 export function PRStaffScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<FilterRole>('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: staff = [], refetch } = useQuery<StaffMember[]>({
     queryKey: ['/api/pr/staff'],
@@ -180,12 +185,12 @@ export function PRStaffScreen() {
   const totalGuests = staff.reduce((sum, s) => sum + s.guestsThisMonth, 0);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Il Mio Staff"
         showBack
         rightAction={
-          <TouchableOpacity onPress={handleInviteStaff} data-testid="button-invite-staff">
+          <TouchableOpacity onPress={handleInviteStaff} testID="button-invite-staff">
             <Ionicons name="person-add" size={24} color={colors.purple} />
           </TouchableOpacity>
         }
@@ -193,22 +198,23 @@ export function PRStaffScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
+        testID="scroll-staff"
       >
-        <View style={styles.statsRow}>
-          <Card variant="glass" style={styles.statCard}>
+        <View style={[styles.statsRow, isTablet && styles.statsRowTablet]}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-total">
             <Text style={styles.statValue}>{staff.length}</Text>
             <Text style={styles.statLabel}>Totale Staff</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-active">
             <Text style={[styles.statValue, { color: colors.success }]}>{activeCount}</Text>
             <Text style={styles.statLabel}>Attivi</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-guests">
             <Text style={[styles.statValue, { color: colors.purpleLight }]}>{totalGuests}</Text>
             <Text style={styles.statLabel}>Ospiti Mese</Text>
           </Card>
@@ -223,10 +229,10 @@ export function PRStaffScreen() {
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              data-testid="input-search-staff"
+              testID="input-search-staff"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
                 <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
@@ -238,13 +244,14 @@ export function PRStaffScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.filtersContainer}
           contentContainerStyle={styles.filtersContent}
+          testID="scroll-filters"
         >
           {filterOptions.map((option) => (
             <TouchableOpacity
               key={option.value}
               style={[styles.filterPill, filterRole === option.value && styles.filterPillActive]}
               onPress={() => setFilterRole(option.value)}
-              data-testid={`filter-${option.value}`}
+              testID={`filter-${option.value}`}
             >
               <Text
                 style={[
@@ -259,7 +266,7 @@ export function PRStaffScreen() {
         </ScrollView>
 
         {filteredStaff.length === 0 ? (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyTitle}>Nessun membro dello staff</Text>
             <Text style={styles.emptySubtitle}>
@@ -271,17 +278,23 @@ export function PRStaffScreen() {
                 variant="primary"
                 onPress={handleInviteStaff}
                 style={styles.inviteButton}
+                testID="button-invite-staff-empty"
               />
             )}
           </Card>
         ) : (
-          <View style={styles.staffList}>
-            {filteredStaff.map((member) => (
+          <View style={[styles.staffList, numColumns === 2 && styles.staffListGrid]}>
+            {filteredStaff.map((member, index) => (
               <TouchableOpacity
                 key={member.id}
                 onPress={() => handleStaffPress(member)}
                 activeOpacity={0.8}
-                data-testid={`staff-item-${member.id}`}
+                style={[
+                  numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+                  numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+                  numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+                ]}
+                testID={`button-staff-${member.id}`}
               >
                 <Card variant="glass" style={styles.staffCard}>
                   <View style={styles.staffHeader}>
@@ -333,7 +346,7 @@ export function PRStaffScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -346,10 +359,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
+  contentContainer: {
+    paddingBottom: spacing.xl,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  statsRowTablet: {
+    justifyContent: 'center',
   },
   statCard: {
     flex: 1,
@@ -415,8 +434,13 @@ const styles = StyleSheet.create({
   staffList: {
     gap: spacing.md,
   },
+  staffListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   staffCard: {
     padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   staffHeader: {
     flexDirection: 'row',

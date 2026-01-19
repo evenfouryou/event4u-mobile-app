@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -40,7 +41,9 @@ interface Seat {
 export function SIAENumberedSeatsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const eventId = route.params?.eventId;
   
@@ -49,6 +52,9 @@ export function SIAENumberedSeatsScreen() {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
+  const seatsPerRow = isTablet ? 15 : (isLandscape ? 12 : 10);
 
   const loadSectors = async () => {
     try {
@@ -121,12 +127,19 @@ export function SIAENumberedSeatsScreen() {
     }
   };
 
-  const renderSector = ({ item }: { item: Sector }) => (
+  const renderSector = ({ item, index }: { item: Sector; index: number }) => (
     <TouchableOpacity
-      style={styles.sectorCard}
+      style={[
+        styles.sectorCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        }
+      ]}
       onPress={() => setSelectedSector(item)}
       activeOpacity={0.8}
-      data-testid={`card-sector-${item.id}`}
+      testID={`card-sector-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.sectorHeader}>
@@ -184,7 +197,7 @@ export function SIAENumberedSeatsScreen() {
         }
       }}
       activeOpacity={0.8}
-      data-testid={`seat-${item.id}`}
+      testID={`seat-${item.id}`}
     >
       <Text style={[styles.seatNumber, { color: getStatusColor(item.status) }]}>
         {item.row}{item.number}
@@ -194,19 +207,19 @@ export function SIAENumberedSeatsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Posti Numerati" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (selectedSector) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header 
           title={selectedSector.name} 
           showBack 
@@ -216,7 +229,10 @@ export function SIAENumberedSeatsScreen() {
           }} 
         />
         
-        <View style={styles.legendRow}>
+        <View style={[
+          styles.legendRow,
+          (isTablet || isLandscape) && styles.legendRowWide
+        ]}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
             <Text style={styles.legendText}>Disponibile</Text>
@@ -239,8 +255,9 @@ export function SIAENumberedSeatsScreen() {
           data={seats}
           renderItem={renderSeat}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={10}
-          contentContainerStyle={[styles.seatsGrid, { paddingBottom: insets.bottom + 100 }]}
+          numColumns={seatsPerRow}
+          key={seatsPerRow}
+          contentContainerStyle={styles.seatsGrid}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -248,32 +265,40 @@ export function SIAENumberedSeatsScreen() {
               <Text style={styles.emptyText}>Nessun posto configurato</Text>
             </View>
           }
+          testID="seats-grid"
         />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Posti Numerati"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAESectorAdd', { eventId })} data-testid="button-add-sector">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAESectorAdd', { eventId })} testID="button-add-sector">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       
       <FlatList
+        key={numColumns}
         data={sectors}
         renderItem={renderSector}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+            testID="refresh-control"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -282,8 +307,9 @@ export function SIAENumberedSeatsScreen() {
             <Text style={styles.emptySubtext}>Configura i settori per i posti numerati</Text>
           </View>
         }
+        testID="sectors-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -305,6 +331,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   sectorCard: {
     marginBottom: spacing.lg,
@@ -373,6 +400,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  legendRowWide: {
+    justifyContent: 'center',
+    gap: spacing.xl,
+  },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -390,6 +421,7 @@ const styles = StyleSheet.create({
   seatsGrid: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   seatItem: {
     flex: 1,

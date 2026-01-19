@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Share,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -57,7 +58,9 @@ interface StationSummary {
 export function NightFileScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const eventId = route.params?.eventId;
 
   const [summary, setSummary] = useState<NightFileSummary | null>(null);
@@ -141,44 +144,44 @@ Staff: ${summary.staffCount} persone
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Night File" showBack onBack={() => navigation.goBack()} />
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !summary) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Night File" showBack onBack={() => navigation.goBack()} />
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error || 'Dati non disponibili'}</Text>
-          <Button title="Riprova" onPress={loadNightFile} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadNightFile} style={styles.retryButton} testID="button-retry" />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Night File"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity style={styles.shareButton} onPress={handleShare} data-testid="button-share">
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare} testID="button-share">
             <Ionicons name="share-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
         }
       />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.heroCard} variant="elevated">
+        <Card style={styles.heroCard} variant="elevated" testID="card-hero">
           <Text style={styles.eventName}>{summary.eventName}</Text>
           <View style={styles.eventMeta}>
             <View style={styles.metaItem}>
@@ -198,20 +201,34 @@ Staff: ${summary.staffCount} persone
           </View>
         </Card>
 
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard} variant="elevated">
+        <View style={[styles.statsGrid, (isTablet || isLandscape) && styles.statsGridWide]}>
+          <Card style={styles.statCard} variant="elevated" testID="card-stat-attendees">
             <Ionicons name="people" size={24} color={colors.teal} />
             <Text style={styles.statValue}>{summary.totalAttendees}</Text>
             <Text style={styles.statLabel}>Presenze</Text>
           </Card>
-          <Card style={styles.statCard} variant="elevated">
+          <Card style={styles.statCard} variant="elevated" testID="card-stat-tickets">
             <Ionicons name="ticket" size={24} color={colors.primary} />
             <Text style={styles.statValue}>{summary.ticketsScanned}/{summary.ticketsSold}</Text>
             <Text style={styles.statLabel}>Scansionati</Text>
           </Card>
+          {(isTablet || isLandscape) && (
+            <>
+              <Card style={styles.statCard} variant="elevated" testID="card-stat-staff">
+                <Ionicons name="people-circle" size={24} color={colors.success} />
+                <Text style={styles.statValue}>{summary.staffCount}</Text>
+                <Text style={styles.statLabel}>Staff</Text>
+              </Card>
+              <Card style={styles.statCard} variant="elevated" testID="card-stat-revenue">
+                <Ionicons name="cash" size={24} color={colors.warning} />
+                <Text style={styles.statValue}>{formatCurrency(summary.totalRevenue)}</Text>
+                <Text style={styles.statLabel}>Incasso</Text>
+              </Card>
+            </>
+          )}
         </View>
 
-        <Card style={styles.revenueCard} variant="elevated">
+        <Card style={styles.revenueCard} variant="elevated" testID="card-revenue">
           <View style={styles.revenueHeader}>
             <Text style={styles.sectionTitle}>Incasso Totale</Text>
             <Text style={styles.totalRevenue}>{formatCurrency(summary.totalRevenue)}</Text>
@@ -249,10 +266,10 @@ Staff: ${summary.staffCount} persone
         </Card>
 
         {summary.topProducts.length > 0 && (
-          <Card style={styles.section} variant="elevated">
+          <Card style={styles.section} variant="elevated" testID="card-top-products">
             <Text style={styles.sectionTitle}>Top Prodotti</Text>
             {summary.topProducts.map((product, index) => (
-              <View key={product.id} style={styles.productRow}>
+              <TouchableOpacity key={product.id} style={styles.productRow} testID={`row-product-${product.id}`}>
                 <View style={styles.productRank}>
                   <Text style={styles.rankText}>{index + 1}</Text>
                 </View>
@@ -261,16 +278,16 @@ Staff: ${summary.staffCount} persone
                   <Text style={styles.productQty}>{product.quantity} venduti</Text>
                 </View>
                 <Text style={styles.productRevenue}>{formatCurrency(product.revenue)}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </Card>
         )}
 
         {summary.stations.length > 0 && (
-          <Card style={styles.section} variant="elevated">
+          <Card style={styles.section} variant="elevated" testID="card-stations">
             <Text style={styles.sectionTitle}>Stazioni</Text>
             {summary.stations.map((station) => (
-              <View key={station.id} style={styles.stationRow}>
+              <TouchableOpacity key={station.id} style={styles.stationRow} testID={`row-station-${station.id}`}>
                 <View style={styles.stationIcon}>
                   <Ionicons name="beer" size={18} color={colors.primary} />
                 </View>
@@ -279,12 +296,12 @@ Staff: ${summary.staffCount} persone
                   <Text style={styles.stationSales}>{station.totalSales} vendite</Text>
                 </View>
                 <Text style={styles.stationRevenue}>{formatCurrency(station.revenue)}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </Card>
         )}
 
-        <Card style={styles.section} variant="elevated">
+        <Card style={styles.section} variant="elevated" testID="card-staff">
           <View style={styles.staffHeader}>
             <Text style={styles.sectionTitle}>Staff</Text>
             <View style={styles.staffBadge}>
@@ -298,7 +315,7 @@ Staff: ${summary.staffCount} persone
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -367,10 +384,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
+  statsGridWide: {
+    flexWrap: 'wrap',
+  },
   statCard: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.lg,
+    minWidth: '45%',
   },
   statValue: {
     fontSize: fontSize['2xl'],

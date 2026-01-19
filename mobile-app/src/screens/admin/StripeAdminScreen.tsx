@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
@@ -43,13 +45,15 @@ interface StripeStats {
 
 export function StripeAdminScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedSettings, setEditedSettings] = useState<Partial<StripeSettings>>({});
 
-  const { data: settings, isLoading } = useQuery<StripeSettings>({
+  const { data: settings, isLoading, refetch, isRefetching } = useQuery<StripeSettings>({
     queryKey: ['/api/admin/stripe/settings'],
     queryFn: () =>
       api.get<StripeSettings>('/api/admin/stripe/settings').catch(() => ({
@@ -157,25 +161,25 @@ export function StripeAdminScreen() {
 
   if (isLoading || !settings) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Stripe Settings" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento impostazioni...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento impostazioni...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Stripe Settings"
         showBack
         rightAction={
           <TouchableOpacity
             onPress={() => Linking.openURL('https://dashboard.stripe.com')}
-            data-testid="button-stripe-dashboard"
+            testID="button-stripe-dashboard"
           >
             <Ionicons name="open-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -184,10 +188,17 @@ export function StripeAdminScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+        }
+        testID="scroll-view"
       >
-        <Card variant="glass" style={styles.modeCard}>
+        <Card variant="glass" style={styles.modeCard} testID="card-mode">
           <View style={styles.modeHeader}>
             <View style={styles.modeInfo}>
               <View
@@ -197,10 +208,10 @@ export function StripeAdminScreen() {
                 ]}
               />
               <View>
-                <Text style={styles.modeTitle}>
+                <Text style={styles.modeTitle} testID="text-mode-title">
                   {settings.testMode ? 'Modalità Test' : 'Modalità Live'}
                 </Text>
-                <Text style={styles.modeSubtitle}>
+                <Text style={styles.modeSubtitle} testID="text-mode-subtitle">
                   {settings.testMode
                     ? 'I pagamenti non sono reali'
                     : 'I pagamenti vengono processati'}
@@ -212,7 +223,7 @@ export function StripeAdminScreen() {
               onValueChange={handleToggleTestMode}
               trackColor={{ false: colors.success + '40', true: colors.warning + '40' }}
               thumbColor={settings.testMode ? colors.warning : colors.success}
-              data-testid="switch-test-mode"
+              testID="switch-test-mode"
             />
           </View>
         </Card>
@@ -220,168 +231,176 @@ export function StripeAdminScreen() {
         {stats && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Statistiche Pagamenti</Text>
-            <View style={styles.statsGrid}>
-              <Card variant="glass" style={styles.statCard}>
+            <View style={[styles.statsGrid, (isTablet || isLandscape) && styles.statsGridWide]}>
+              <Card variant="glass" style={styles.statCard} testID="card-total-revenue">
                 <Ionicons name="cash" size={24} color={colors.success} />
-                <Text style={styles.statValue}>{formatCurrency(stats.totalRevenue)}</Text>
+                <Text style={styles.statValue} testID="text-total-revenue">{formatCurrency(stats.totalRevenue)}</Text>
                 <Text style={styles.statLabel}>Ricavi Totali</Text>
               </Card>
-              <Card variant="glass" style={styles.statCard}>
+              <Card variant="glass" style={styles.statCard} testID="card-successful-payments">
                 <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-                <Text style={styles.statValue}>{stats.successfulPayments}</Text>
+                <Text style={styles.statValue} testID="text-successful-payments">{stats.successfulPayments}</Text>
                 <Text style={styles.statLabel}>Pagamenti OK</Text>
               </Card>
-              <Card variant="glass" style={styles.statCard}>
+              <Card variant="glass" style={styles.statCard} testID="card-failed-payments">
                 <Ionicons name="close-circle" size={24} color={colors.destructive} />
-                <Text style={styles.statValue}>{stats.failedPayments}</Text>
+                <Text style={styles.statValue} testID="text-failed-payments">{stats.failedPayments}</Text>
                 <Text style={styles.statLabel}>Falliti</Text>
               </Card>
-              <Card variant="glass" style={styles.statCard}>
+              <Card variant="glass" style={styles.statCard} testID="card-refunds">
                 <Ionicons name="return-down-back" size={24} color={colors.warning} />
-                <Text style={styles.statValue}>{stats.refunds}</Text>
+                <Text style={styles.statValue} testID="text-refunds">{stats.refunds}</Text>
                 <Text style={styles.statLabel}>Rimborsi</Text>
               </Card>
             </View>
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configurazione Webhook</Text>
-          <Card variant="glass" style={styles.webhookCard}>
-            <View style={styles.webhookHeader}>
-              <View style={styles.webhookStatus}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: getWebhookStatusColor(settings.webhookStatus) },
-                  ]}
-                />
-                <Text
-                  style={[styles.statusText, { color: getWebhookStatusColor(settings.webhookStatus) }]}
-                >
-                  {getWebhookStatusLabel(settings.webhookStatus)}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.testButton}
-                onPress={() => testWebhookMutation.mutate()}
-                disabled={testWebhookMutation.isPending}
-                data-testid="button-test-webhook"
-              >
-                {testWebhookMutation.isPending ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <>
-                    <Ionicons name="flash" size={16} color={colors.primary} />
-                    <Text style={styles.testButtonText}>Test</Text>
-                  </>
+        <View style={(isTablet || isLandscape) ? styles.columnsContainer : undefined}>
+          <View style={(isTablet || isLandscape) ? styles.column : undefined}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Configurazione Webhook</Text>
+              <Card variant="glass" style={styles.webhookCard} testID="card-webhook">
+                <View style={styles.webhookHeader}>
+                  <View style={styles.webhookStatus}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: getWebhookStatusColor(settings.webhookStatus) },
+                      ]}
+                    />
+                    <Text
+                      style={[styles.statusText, { color: getWebhookStatusColor(settings.webhookStatus) }]}
+                      testID="text-webhook-status"
+                    >
+                      {getWebhookStatusLabel(settings.webhookStatus)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.testButton}
+                    onPress={() => testWebhookMutation.mutate()}
+                    disabled={testWebhookMutation.isPending}
+                    testID="button-test-webhook"
+                  >
+                    {testWebhookMutation.isPending ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <Ionicons name="flash" size={16} color={colors.primary} />
+                        <Text style={styles.testButtonText}>Test</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.webhookField}>
+                  <Text style={styles.fieldLabel}>URL Webhook</Text>
+                  <View style={styles.fieldValue}>
+                    <Text style={styles.fieldText} numberOfLines={1} testID="text-webhook-url">
+                      {settings.webhookUrl}
+                    </Text>
+                    <TouchableOpacity onPress={() => {}} testID="button-copy-webhook-url">
+                      <Ionicons name="copy" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.webhookField}>
+                  <Text style={styles.fieldLabel}>Webhook Secret</Text>
+                  <View style={styles.fieldValue}>
+                    <Text style={styles.fieldText} testID="text-webhook-secret">{settings.webhookSecret}</Text>
+                  </View>
+                </View>
+
+                {settings.lastWebhookReceived && (
+                  <Text style={styles.lastWebhook} testID="text-last-webhook">
+                    Ultimo webhook ricevuto:{' '}
+                    {new Date(settings.lastWebhookReceived).toLocaleString('it-IT')}
+                  </Text>
                 )}
-              </TouchableOpacity>
+              </Card>
             </View>
 
-            <View style={styles.webhookField}>
-              <Text style={styles.fieldLabel}>URL Webhook</Text>
-              <View style={styles.fieldValue}>
-                <Text style={styles.fieldText} numberOfLines={1}>
-                  {settings.webhookUrl}
-                </Text>
-                <TouchableOpacity onPress={() => {}}>
-                  <Ionicons name="copy" size={18} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.webhookField}>
-              <Text style={styles.fieldLabel}>Webhook Secret</Text>
-              <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>{settings.webhookSecret}</Text>
-              </View>
-            </View>
-
-            {settings.lastWebhookReceived && (
-              <Text style={styles.lastWebhook}>
-                Ultimo webhook ricevuto:{' '}
-                {new Date(settings.lastWebhookReceived).toLocaleString('it-IT')}
-              </Text>
-            )}
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Eventi Webhook Attivi</Text>
-          <Card variant="glass" style={styles.eventsCard}>
-            {settings.webhookEvents.map((event, index) => (
-              <View
-                key={event}
-                style={[
-                  styles.eventItem,
-                  index < settings.webhookEvents.length - 1 && styles.eventItemBorder,
-                ]}
-              >
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                <Text style={styles.eventName}>{event}</Text>
-              </View>
-            ))}
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chiavi API</Text>
-          <Card variant="glass" style={styles.keysCard}>
-            <View style={styles.keyField}>
-              <Text style={styles.fieldLabel}>Publishable Key</Text>
-              <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>{settings.publishableKey}</Text>
-                <TouchableOpacity onPress={() => {}}>
-                  <Ionicons name="copy" size={18} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.keyField}>
-              <Text style={styles.fieldLabel}>Secret Key</Text>
-              <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>{settings.secretKey}</Text>
-                <TouchableOpacity onPress={() => {}}>
-                  <Ionicons name="eye-off" size={18} color={colors.mutedForeground} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Impostazioni Pagamento</Text>
-          <Card variant="glass" style={styles.settingsCard}>
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Valuta</Text>
-              <Text style={styles.settingValue}>{settings.currency}</Text>
-            </View>
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Descrizione Estratto Conto</Text>
-              <Text style={styles.settingValue}>{settings.statementDescriptor}</Text>
-            </View>
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Metodi di Pagamento</Text>
-              <View style={styles.paymentMethods}>
-                {settings.paymentMethods.map((method) => (
-                  <View key={method} style={styles.methodBadge}>
-                    <Text style={styles.methodText}>{method.toUpperCase()}</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Eventi Webhook Attivi</Text>
+              <Card variant="glass" style={styles.eventsCard} testID="card-events">
+                {settings.webhookEvents.map((event, index) => (
+                  <View
+                    key={event}
+                    style={[
+                      styles.eventItem,
+                      index < settings.webhookEvents.length - 1 && styles.eventItemBorder,
+                    ]}
+                  >
+                    <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                    <Text style={styles.eventName} testID={`text-event-${index}`}>{event}</Text>
                   </View>
                 ))}
-              </View>
+              </Card>
             </View>
-          </Card>
+          </View>
+
+          <View style={(isTablet || isLandscape) ? styles.column : undefined}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Chiavi API</Text>
+              <Card variant="glass" style={styles.keysCard} testID="card-api-keys">
+                <View style={styles.keyField}>
+                  <Text style={styles.fieldLabel}>Publishable Key</Text>
+                  <View style={styles.fieldValue}>
+                    <Text style={styles.fieldText} testID="text-publishable-key">{settings.publishableKey}</Text>
+                    <TouchableOpacity onPress={() => {}} testID="button-copy-publishable-key">
+                      <Ionicons name="copy" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.keyField}>
+                  <Text style={styles.fieldLabel}>Secret Key</Text>
+                  <View style={styles.fieldValue}>
+                    <Text style={styles.fieldText} testID="text-secret-key">{settings.secretKey}</Text>
+                    <TouchableOpacity onPress={() => {}} testID="button-toggle-secret-key">
+                      <Ionicons name="eye-off" size={18} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Card>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Impostazioni Pagamento</Text>
+              <Card variant="glass" style={styles.settingsCard} testID="card-payment-settings">
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel}>Valuta</Text>
+                  <Text style={styles.settingValue} testID="text-currency">{settings.currency}</Text>
+                </View>
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel}>Descrizione Estratto Conto</Text>
+                  <Text style={styles.settingValue} testID="text-statement-descriptor">{settings.statementDescriptor}</Text>
+                </View>
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel}>Metodi di Pagamento</Text>
+                  <View style={styles.paymentMethods}>
+                    {settings.paymentMethods.map((method, index) => (
+                      <View key={method} style={styles.methodBadge}>
+                        <Text style={styles.methodText} testID={`text-method-${index}`}>{method.toUpperCase()}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </Card>
+            </View>
+          </View>
         </View>
 
-        <Button
-          title="Modifica Impostazioni"
-          variant="outline"
-          icon={<Ionicons name="create-outline" size={20} color={colors.foreground} />}
-          onPress={() => setIsEditing(true)}
+        <TouchableOpacity
           style={styles.editButton}
-        />
+          onPress={() => setIsEditing(true)}
+          testID="button-edit-settings"
+        >
+          <Ionicons name="create-outline" size={20} color={colors.foreground} />
+          <Text style={styles.editButtonText}>Modifica Impostazioni</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -392,7 +411,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -403,6 +430,13 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.mutedForeground,
     fontSize: fontSize.base,
+  },
+  columnsContainer: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  column: {
+    flex: 1,
   },
   modeCard: {
     padding: spacing.lg,
@@ -446,9 +480,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  statsGridWide: {
+    justifyContent: 'center',
+  },
   statCard: {
-    width: '48%',
-    flexGrow: 1,
+    flex: 1,
+    minWidth: '45%',
     padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.sm,
@@ -575,6 +612,7 @@ const styles = StyleSheet.create({
   paymentMethods: {
     flexDirection: 'row',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   methodBadge: {
     backgroundColor: colors.primary + '20',
@@ -588,6 +626,22 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.glass.background,
+    borderWidth: 1,
+    borderColor: colors.glass.border,
     marginTop: spacing.md,
   },
+  editButtonText: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+  },
 });
+
+export default StripeAdminScreen;

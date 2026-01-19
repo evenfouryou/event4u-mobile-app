@@ -8,12 +8,13 @@ import {
   FlatList,
   RefreshControl,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface Ticket {
@@ -57,13 +58,18 @@ const TICKET_TYPES = ['VIP', 'Standard', 'Early Bird', 'Backstage'];
 export default function ScannerTicketsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const eventId = route.params?.eventId;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
+  const contentMaxWidth = isTablet ? 1200 : undefined;
 
   const { data: tickets, refetch: refetchTickets } = useQuery<Ticket[]>({
     queryKey: ['/api/events', eventId, 'tickets'],
@@ -106,14 +112,23 @@ export default function ScannerTicketsScreen() {
     return matchesSearch && matchesFilter && matchesType;
   });
 
-  const renderTicketCard = ({ item }: { item: Ticket }) => {
+  const renderTicketCard = ({ item, index }: { item: Ticket; index: number }) => {
     const statusConfig = STATUS_CONFIG[item.status];
+    const isLeftColumn = index % 2 === 0;
 
     return (
       <TouchableOpacity
         onPress={() => navigation.navigate('TicketDetail', { ticketId: item.id })}
         activeOpacity={0.8}
-        data-testid={`card-ticket-${item.id}`}
+        testID={`card-ticket-${item.id}`}
+        style={[
+          styles.ticketCardWrapper,
+          numColumns === 2 && {
+            flex: 0.5,
+            paddingLeft: isLeftColumn ? 0 : spacing.sm,
+            paddingRight: isLeftColumn ? spacing.sm : 0,
+          },
+        ]}
       >
         <Card variant="glass" style={styles.ticketCard}>
           <View style={styles.ticketHeader}>
@@ -161,7 +176,7 @@ export default function ScannerTicketsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Biglietti Evento"
         showBack
@@ -169,141 +184,146 @@ export default function ScannerTicketsScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('ExportTickets', { eventId })}
-            data-testid="button-export"
+            testID="button-export"
           >
             <Ionicons name="download-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
 
-      <View style={styles.statsContainer}>
-        <Card variant="glass" style={styles.statsCard}>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{mockStats.total}</Text>
-              <Text style={styles.statLabel}>Totale</Text>
+      <View style={[styles.contentContainer, contentMaxWidth ? { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' } : undefined]}>
+        <View style={styles.statsContainer}>
+          <Card variant="glass" style={styles.statsCard}>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue} testID="text-total-tickets">{mockStats.total}</Text>
+                <Text style={styles.statLabel}>Totale</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.teal }]} testID="text-valid-tickets">{mockStats.valid}</Text>
+                <Text style={styles.statLabel}>Validi</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.emerald }]} testID="text-used-tickets">{mockStats.used}</Text>
+                <Text style={styles.statLabel}>Usati</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.destructive }]} testID="text-cancelled-tickets">{mockStats.cancelled}</Text>
+                <Text style={styles.statLabel}>Annullati</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.teal }]}>{mockStats.valid}</Text>
-              <Text style={styles.statLabel}>Validi</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.emerald }]}>{mockStats.used}</Text>
-              <Text style={styles.statLabel}>Usati</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.destructive }]}>{mockStats.cancelled}</Text>
-              <Text style={styles.statLabel}>Annullati</Text>
-            </View>
-          </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressSegment, { flex: mockStats.used, backgroundColor: colors.emerald }]} />
-              <View style={[styles.progressSegment, { flex: mockStats.valid, backgroundColor: colors.teal }]} />
-              <View style={[styles.progressSegment, { flex: mockStats.expired + mockStats.cancelled, backgroundColor: colors.mutedForeground }]} />
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressSegment, { flex: mockStats.used, backgroundColor: colors.emerald }]} />
+                <View style={[styles.progressSegment, { flex: mockStats.valid, backgroundColor: colors.teal }]} />
+                <View style={[styles.progressSegment, { flex: mockStats.expired + mockStats.cancelled, backgroundColor: colors.mutedForeground }]} />
+              </View>
+              <Text style={styles.progressText} testID="text-progress">
+                {mockStats.used} / {mockStats.total} ingressi ({Math.round((mockStats.used / mockStats.total) * 100)}%)
+              </Text>
             </View>
-            <Text style={styles.progressText}>
-              {mockStats.used} / {mockStats.total} ingressi ({Math.round((mockStats.used / mockStats.total) * 100)}%)
-            </Text>
-          </View>
-        </Card>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cerca per codice, nome o email..."
-          placeholderTextColor={colors.mutedForeground}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          data-testid="input-search"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} data-testid="button-clear-search">
-            <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
-      >
-        {FILTER_OPTIONS.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterPill,
-              activeFilter === filter.id && styles.filterPillActive,
-            ]}
-            onPress={() => setActiveFilter(filter.id)}
-            data-testid={`filter-${filter.id}`}
-          >
-            <Text
-              style={[
-                styles.filterPillText,
-                activeFilter === filter.id && styles.filterPillTextActive,
-              ]}
-            >
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-        <View style={styles.filterDivider} />
-        {TICKET_TYPES.map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[
-              styles.filterPill,
-              styles.typePill,
-              selectedType === type && styles.typePillActive,
-            ]}
-            onPress={() => setSelectedType(selectedType === type ? null : type)}
-            data-testid={`type-${type}`}
-          >
-            <Text
-              style={[
-                styles.filterPillText,
-                selectedType === type && styles.typePillTextActive,
-              ]}
-            >
-              {type}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <FlatList
-        data={filteredTickets}
-        renderItem={renderTicketCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
-        }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
-            <Ionicons name="ticket-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyTitle}>Nessun biglietto trovato</Text>
-            <Text style={styles.emptyText}>Prova a modificare i filtri di ricerca</Text>
           </Card>
-        }
-        ListHeaderComponent={
-          <Text style={styles.resultCount}>
-            {filteredTickets.length} biglietti trovati
-          </Text>
-        }
-      />
-    </View>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cerca per codice, nome o email..."
+            placeholderTextColor={colors.mutedForeground}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            testID="input-search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filtersContainer}
+          contentContainerStyle={styles.filtersContent}
+        >
+          {FILTER_OPTIONS.map((filter) => (
+            <TouchableOpacity
+              key={filter.id}
+              style={[
+                styles.filterPill,
+                activeFilter === filter.id && styles.filterPillActive,
+              ]}
+              onPress={() => setActiveFilter(filter.id)}
+              testID={`filter-${filter.id}`}
+            >
+              <Text
+                style={[
+                  styles.filterPillText,
+                  activeFilter === filter.id && styles.filterPillTextActive,
+                ]}
+              >
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <View style={styles.filterDivider} />
+          {TICKET_TYPES.map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.filterPill,
+                styles.typePill,
+                selectedType === type && styles.typePillActive,
+              ]}
+              onPress={() => setSelectedType(selectedType === type ? null : type)}
+              testID={`type-${type}`}
+            >
+              <Text
+                style={[
+                  styles.filterPillText,
+                  selectedType === type && styles.typePillTextActive,
+                ]}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <FlatList
+          data={filteredTickets}
+          renderItem={renderTicketCard}
+          keyExtractor={(item) => item.id}
+          key={numColumns}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald} />
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          ListEmptyComponent={
+            <Card style={styles.emptyCard} variant="glass">
+              <Ionicons name="ticket-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle} testID="text-empty-title">Nessun biglietto trovato</Text>
+              <Text style={styles.emptyText} testID="text-empty-subtitle">Prova a modificare i filtri di ricerca</Text>
+            </Card>
+          }
+          ListHeaderComponent={
+            <Text style={styles.resultCount} testID="text-result-count">
+              {filteredTickets.length} biglietti trovati
+            </Text>
+          }
+          testID="list-tickets"
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -311,6 +331,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentContainer: {
+    flex: 1,
   },
   statsContainer: {
     paddingHorizontal: spacing.lg,
@@ -428,6 +451,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
+  },
+  ticketCardWrapper: {
+    flex: 1,
   },
   resultCount: {
     color: colors.mutedForeground,

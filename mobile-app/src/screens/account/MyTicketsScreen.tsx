@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { TicketCard } from '../../components/TicketCard';
 import { Card } from '../../components/Card';
@@ -37,9 +37,13 @@ type TabType = 'tickets' | 'subscriptions';
 
 export function MyTicketsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [filter, setFilter] = useState<FilterType>('all');
   const [activeTab, setActiveTab] = useState<TabType>('tickets');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const { data: ticketsData, isLoading: ticketsLoading, refetch: refetchTickets, isRefetching: isRefetchingTickets } = useQuery({
     queryKey: ['/api/public/account/tickets'],
@@ -80,85 +84,106 @@ export function MyTicketsScreen() {
     }
   };
 
-  const renderTicket = ({ item }: { item: Ticket }) => (
-    <TicketCard
-      id={item.id}
-      eventTitle={item.eventTitle}
-      date={item.eventDate}
-      time={item.eventTime}
-      location={item.eventLocation}
-      ticketType={item.ticketType}
-      ticketCode={item.ticketCode}
-      status={item.status}
-      onPress={() => navigation.navigate('TicketDetail', { ticketId: item.id })}
-    />
+  const renderTicket = ({ item, index }: { item: Ticket; index: number }) => (
+    <View style={[
+      styles.ticketItemContainer,
+      numColumns === 2 && {
+        flex: 1,
+        maxWidth: '50%',
+        paddingLeft: index % 2 === 0 ? 0 : spacing.sm,
+        paddingRight: index % 2 === 0 ? spacing.sm : 0,
+      }
+    ]}>
+      <TicketCard
+        id={item.id}
+        eventTitle={item.eventTitle}
+        date={item.eventDate}
+        time={item.eventTime}
+        location={item.eventLocation}
+        ticketType={item.ticketType}
+        ticketCode={item.ticketCode}
+        status={item.status}
+        onPress={() => navigation.navigate('TicketDetail', { ticketId: item.id })}
+        testID={`ticket-card-${item.id}`}
+      />
+    </View>
   );
 
-  const renderSubscription = ({ item }: { item: Subscription }) => (
-    <Card style={styles.subscriptionCard}>
-      <View style={styles.subscriptionHeader}>
-        <View style={styles.subscriptionInfo}>
-          <Text style={styles.subscriptionName}>{item.name}</Text>
-          <Text style={styles.subscriptionEvent}>{item.eventName}</Text>
-        </View>
-        <View style={[
-          styles.statusBadge,
-          item.status === 'active' && styles.statusActive,
-          item.status === 'expired' && styles.statusExpired,
-          item.status === 'cancelled' && styles.statusCancelled,
-        ]}>
-          <Text style={[
-            styles.statusText,
-            item.status === 'active' && styles.statusTextActive,
-            item.status === 'expired' && styles.statusTextExpired,
-            item.status === 'cancelled' && styles.statusTextCancelled,
-          ]}>
-            {item.status === 'active' ? 'Attivo' : item.status === 'expired' ? 'Scaduto' : 'Annullato'}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.subscriptionDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
-          <Text style={styles.detailText}>
-            {item.startDate} - {item.endDate}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="albums-outline" size={16} color={colors.mutedForeground} />
-          <Text style={styles.detailText}>
-            {item.eventsUsed} / {item.eventsIncluded} eventi
-          </Text>
-        </View>
-      </View>
-      
-      {item.status === 'active' && (
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${(item.eventsUsed / item.eventsIncluded) * 100}%` }
-              ]} 
-            />
+  const renderSubscription = ({ item, index }: { item: Subscription; index: number }) => (
+    <View style={[
+      styles.subscriptionItemContainer,
+      numColumns === 2 && {
+        flex: 1,
+        maxWidth: '50%',
+        paddingLeft: index % 2 === 0 ? 0 : spacing.sm,
+        paddingRight: index % 2 === 0 ? spacing.sm : 0,
+      }
+    ]}>
+      <Card style={styles.subscriptionCard} testID={`subscription-card-${item.id}`}>
+        <View style={styles.subscriptionHeader}>
+          <View style={styles.subscriptionInfo}>
+            <Text style={styles.subscriptionName} testID={`text-subscription-name-${item.id}`}>{item.name}</Text>
+            <Text style={styles.subscriptionEvent} testID={`text-subscription-event-${item.id}`}>{item.eventName}</Text>
+          </View>
+          <View style={[
+            styles.statusBadge,
+            item.status === 'active' && styles.statusActive,
+            item.status === 'expired' && styles.statusExpired,
+            item.status === 'cancelled' && styles.statusCancelled,
+          ]} testID={`badge-status-${item.id}`}>
+            <Text style={[
+              styles.statusText,
+              item.status === 'active' && styles.statusTextActive,
+              item.status === 'expired' && styles.statusTextExpired,
+              item.status === 'cancelled' && styles.statusTextCancelled,
+            ]}>
+              {item.status === 'active' ? 'Attivo' : item.status === 'expired' ? 'Scaduto' : 'Annullato'}
+            </Text>
           </View>
         </View>
-      )}
-    </Card>
+        
+        <View style={styles.subscriptionDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
+            <Text style={styles.detailText} testID={`text-subscription-dates-${item.id}`}>
+              {item.startDate} - {item.endDate}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="albums-outline" size={16} color={colors.mutedForeground} />
+            <Text style={styles.detailText} testID={`text-subscription-events-${item.id}`}>
+              {item.eventsUsed} / {item.eventsIncluded} eventi
+            </Text>
+          </View>
+        </View>
+        
+        {item.status === 'active' && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar} testID={`progress-bar-${item.id}`}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${(item.eventsUsed / item.eventsIncluded) * 100}%` }
+                ]} 
+              />
+            </View>
+          </View>
+        )}
+      </Card>
+    </View>
   );
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
+    <View style={styles.emptyContainer} testID="empty-state">
       <Ionicons 
         name={activeTab === 'tickets' ? 'ticket-outline' : 'card-outline'} 
         size={64} 
         color={colors.mutedForeground} 
       />
-      <Text style={styles.emptyTitle}>
+      <Text style={styles.emptyTitle} testID="text-empty-title">
         {activeTab === 'tickets' ? 'Nessun biglietto' : 'Nessun abbonamento'}
       </Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={styles.emptySubtitle} testID="text-empty-subtitle">
         {activeTab === 'tickets'
           ? filter === 'all' 
             ? 'Non hai ancora acquistato biglietti'
@@ -169,19 +194,21 @@ export function MyTicketsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="I miei biglietti" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-my-tickets"
       />
       
-      <View style={styles.tabsContainer}>
+      <View style={styles.tabsContainer} testID="tabs-container">
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
+            testID={`tab-${tab.key}`}
           >
             <Ionicons 
               name={tab.icon} 
@@ -196,7 +223,7 @@ export function MyTicketsScreen() {
       </View>
       
       {activeTab === 'tickets' && (
-        <View style={styles.filtersContainer}>
+        <View style={styles.filtersContainer} testID="filters-container">
           <FlatList
             data={filters}
             horizontal
@@ -207,6 +234,7 @@ export function MyTicketsScreen() {
               <TouchableOpacity
                 style={[styles.filterPill, filter === item.key && styles.filterPillActive]}
                 onPress={() => setFilter(item.key)}
+                testID={`filter-${item.key}`}
               >
                 <Text style={[styles.filterText, filter === item.key && styles.filterTextActive]}>
                   {item.label}
@@ -219,12 +247,13 @@ export function MyTicketsScreen() {
 
       {activeTab === 'tickets' ? (
         <FlatList
+          key={`tickets-${numColumns}`}
           data={filteredTickets}
           keyExtractor={(item) => item.id}
           renderItem={renderTicket}
+          numColumns={numColumns}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + spacing.lg },
             filteredTickets.length === 0 && styles.listEmpty,
           ]}
           ListEmptyComponent={renderEmpty}
@@ -233,17 +262,20 @@ export function MyTicketsScreen() {
               refreshing={isRefetchingTickets}
               onRefresh={handleRefresh}
               tintColor={colors.primary}
+              testID="refresh-control-tickets"
             />
           }
+          testID="flatlist-tickets"
         />
       ) : (
         <FlatList
+          key={`subscriptions-${numColumns}`}
           data={subscriptions}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderSubscription}
+          numColumns={numColumns}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + spacing.lg },
             subscriptions.length === 0 && styles.listEmpty,
           ]}
           ListEmptyComponent={renderEmpty}
@@ -252,11 +284,13 @@ export function MyTicketsScreen() {
               refreshing={isRefetchingSubscriptions}
               onRefresh={handleRefresh}
               tintColor={colors.primary}
+              testID="refresh-control-subscriptions"
             />
           }
+          testID="flatlist-subscriptions"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -327,6 +361,12 @@ const styles = StyleSheet.create({
   listEmpty: {
     flex: 1,
     justifyContent: 'center',
+  },
+  ticketItemContainer: {
+    marginBottom: spacing.md,
+  },
+  subscriptionItemContainer: {
+    marginBottom: spacing.md,
   },
   emptyContainer: {
     alignItems: 'center',

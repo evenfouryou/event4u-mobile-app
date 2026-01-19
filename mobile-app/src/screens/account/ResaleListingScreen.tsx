@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -28,11 +28,15 @@ type RouteParams = {
 export function ResaleListingScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'ResaleListing'>>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { ticketId } = route.params;
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [price, setPrice] = useState('');
+
+  const maxFormWidth = (isTablet || isLandscape) ? 600 : undefined;
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ['/api/public/account/tickets', ticketId, 'resale-info'],
@@ -85,21 +89,22 @@ export function ResaleListingScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Header title="Metti in vendita" showBack onBack={() => navigation.goBack()} />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']} testID="screen-resale-listing-loading">
+        <Header title="Metti in vendita" showBack onBack={() => navigation.goBack()} testID="header-resale-listing" />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Caricamento...</Text>
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']} testID="screen-resale-listing">
       <Header 
         title="Metti in vendita" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-resale-listing"
       />
       
       <KeyboardAvoidingView 
@@ -108,95 +113,103 @@ export function ResaleListingScreen() {
       >
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+          contentContainerStyle={[
+            styles.content,
+            (isTablet || isLandscape) && styles.contentCentered,
+          ]}
           keyboardShouldPersistTaps="handled"
+          testID="scroll-resale-listing"
         >
-          <Card style={styles.ticketCard}>
-            <View style={styles.ticketHeader}>
-              <Ionicons name="ticket-outline" size={24} color={colors.primary} />
-              <View style={styles.ticketInfo}>
-                <Text style={styles.ticketTitle}>{ticket?.eventTitle}</Text>
-                <Text style={styles.ticketType}>{ticket?.ticketType}</Text>
+          <View style={[styles.formContainer, maxFormWidth ? { maxWidth: maxFormWidth, width: '100%' } : undefined]}>
+            <Card style={styles.ticketCard} testID="card-ticket-info">
+              <View style={styles.ticketHeader}>
+                <Ionicons name="ticket-outline" size={24} color={colors.primary} />
+                <View style={styles.ticketInfo}>
+                  <Text style={styles.ticketTitle} testID="text-ticket-title">{ticket?.eventTitle}</Text>
+                  <Text style={styles.ticketType} testID="text-ticket-type">{ticket?.ticketType}</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.ticketMeta}>
-              <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
-                <Text style={styles.metaText}>{ticket?.eventDate}</Text>
+              <View style={styles.ticketMeta}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
+                  <Text style={styles.metaText} testID="text-event-date">{ticket?.eventDate}</Text>
+                </View>
+                <View style={styles.metaItem}>
+                  <Ionicons name="pricetag-outline" size={16} color={colors.mutedForeground} />
+                  <Text style={styles.metaText} testID="text-original-price">Prezzo originale: €{ticket?.originalPrice.toFixed(2)}</Text>
+                </View>
               </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="pricetag-outline" size={16} color={colors.mutedForeground} />
-                <Text style={styles.metaText}>Prezzo originale: €{ticket?.originalPrice.toFixed(2)}</Text>
+            </Card>
+
+            <Card style={styles.priceCard} testID="card-price-input">
+              <Text style={styles.sectionTitle}>Imposta il prezzo</Text>
+              
+              <View style={styles.priceInputContainer}>
+                <Text style={styles.currencySymbol}>€</Text>
+                <Input
+                  value={price}
+                  onChangeText={setPrice}
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                  containerStyle={styles.priceInput}
+                  testID="input-price"
+                />
               </View>
-            </View>
-          </Card>
 
-          <Card style={styles.priceCard}>
-            <Text style={styles.sectionTitle}>Imposta il prezzo</Text>
-            
-            <View style={styles.priceInputContainer}>
-              <Text style={styles.currencySymbol}>€</Text>
-              <Input
-                value={price}
-                onChangeText={setPrice}
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                containerStyle={styles.priceInput}
-              />
-            </View>
+              {ticket && (
+                <Text style={styles.maxPriceNote} testID="text-max-price">
+                  Prezzo massimo consentito: €{ticket.maxResalePrice.toFixed(2)}
+                </Text>
+              )}
+            </Card>
 
-            {ticket && (
-              <Text style={styles.maxPriceNote}>
-                Prezzo massimo consentito: €{ticket.maxResalePrice.toFixed(2)}
-              </Text>
-            )}
-          </Card>
+            <Card style={styles.summaryCard} testID="card-summary">
+              <Text style={styles.sectionTitle}>Riepilogo</Text>
+              
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Prezzo di vendita</Text>
+                <Text style={styles.summaryValue} testID="text-sale-price">€{priceNumber.toFixed(2)}</Text>
+              </View>
+              
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>
+                  Commissione piattaforma ({ticket?.platformFeePercent}%)
+                </Text>
+                <Text style={[styles.summaryValue, styles.feeValue]} testID="text-platform-fee">
+                  -€{platformFee.toFixed(2)}
+                </Text>
+              </View>
+              
+              <View style={styles.divider} />
+              
+              <View style={styles.summaryRow}>
+                <Text style={styles.totalLabel}>Guadagno netto</Text>
+                <Text style={styles.totalValue} testID="text-net-earnings">€{netEarnings.toFixed(2)}</Text>
+              </View>
+            </Card>
 
-          <Card style={styles.summaryCard}>
-            <Text style={styles.sectionTitle}>Riepilogo</Text>
-            
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Prezzo di vendita</Text>
-              <Text style={styles.summaryValue}>€{priceNumber.toFixed(2)}</Text>
-            </View>
-            
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                Commissione piattaforma ({ticket?.platformFeePercent}%)
-              </Text>
-              <Text style={[styles.summaryValue, styles.feeValue]}>
-                -€{platformFee.toFixed(2)}
-              </Text>
-            </View>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Guadagno netto</Text>
-              <Text style={styles.totalValue}>€{netEarnings.toFixed(2)}</Text>
-            </View>
-          </Card>
+            <Card style={styles.infoCard} testID="card-info">
+              <View style={styles.infoRow}>
+                <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+                <Text style={styles.infoText} testID="text-info">
+                  Il biglietto rimarrà valido fino a quando non verrà acquistato. 
+                  Potrai rimuoverlo dalla vendita in qualsiasi momento dalla sezione "Le mie rivendite".
+                </Text>
+              </View>
+            </Card>
 
-          <Card style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.infoText}>
-                Il biglietto rimarrà valido fino a quando non verrà acquistato. 
-                Potrai rimuoverlo dalla vendita in qualsiasi momento dalla sezione "Le mie rivendite".
-              </Text>
-            </View>
-          </Card>
-
-          <Button
-            title="Metti in vendita"
-            onPress={handleCreateListing}
-            loading={createListingMutation.isPending}
-            disabled={!price || priceNumber <= 0 || (ticket ? priceNumber > ticket.maxResalePrice : false)}
-            icon={<Ionicons name="pricetag-outline" size={20} color={colors.primaryForeground} />}
-          />
+            <Button
+              title="Metti in vendita"
+              onPress={handleCreateListing}
+              loading={createListingMutation.isPending}
+              disabled={!price || priceNumber <= 0 || (ticket ? priceNumber > ticket.maxResalePrice : false)}
+              icon={<Ionicons name="pricetag-outline" size={20} color={colors.primaryForeground} />}
+              testID="button-create-listing"
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -222,6 +235,12 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.md,
+  },
+  contentCentered: {
+    alignItems: 'center',
+  },
+  formContainer: {
     gap: spacing.md,
   },
   ticketCard: {

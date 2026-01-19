@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -48,9 +48,10 @@ const statusConfig = {
 interface SubscriptionCardProps {
   subscription: Subscription;
   onPress?: () => void;
+  isWide?: boolean;
 }
 
-function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
+function SubscriptionCard({ subscription, onPress, isWide }: SubscriptionCardProps) {
   const status = statusConfig[subscription.status];
 
   const formatDate = (dateString: string) => {
@@ -67,18 +68,18 @@ function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
   };
 
   return (
-    <Card variant="default" style={styles.subscriptionCard}>
+    <Card variant="default" style={[styles.subscriptionCard, isWide && styles.subscriptionCardWide]} testID={`card-subscription-${subscription.id}`}>
       <View style={styles.cardHeader}>
         <View style={styles.venueInfo}>
           <View style={styles.venueIconContainer}>
             <Ionicons name="business-outline" size={24} color={colors.primary} />
           </View>
           <View style={styles.venueDetails}>
-            <Text style={styles.venueName}>{subscription.venueName}</Text>
-            <Text style={styles.planName}>{subscription.planName}</Text>
+            <Text style={styles.venueName} testID={`text-venue-name-${subscription.id}`}>{subscription.venueName}</Text>
+            <Text style={styles.planName} testID={`text-plan-name-${subscription.id}`}>{subscription.planName}</Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
+        <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]} testID={`badge-status-${subscription.id}`}>
           <Ionicons name={status.icon} size={14} color={status.color} />
           <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
         </View>
@@ -88,12 +89,12 @@ function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
         <View style={styles.dateRow}>
           <View style={styles.dateItem}>
             <Text style={styles.dateLabel}>Data inizio</Text>
-            <Text style={styles.dateValue}>{formatDate(subscription.startDate)}</Text>
+            <Text style={styles.dateValue} testID={`text-start-date-${subscription.id}`}>{formatDate(subscription.startDate)}</Text>
           </View>
           {subscription.endDate && (
             <View style={styles.dateItem}>
               <Text style={styles.dateLabel}>Data fine</Text>
-              <Text style={styles.dateValue}>{formatDate(subscription.endDate)}</Text>
+              <Text style={styles.dateValue} testID={`text-end-date-${subscription.id}`}>{formatDate(subscription.endDate)}</Text>
             </View>
           )}
         </View>
@@ -101,7 +102,7 @@ function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
         {subscription.benefits && subscription.benefits.length > 0 && (
           <View style={styles.benefitsContainer}>
             {subscription.benefits.slice(0, 3).map((benefit, index) => (
-              <View key={index} style={styles.benefitItem}>
+              <View key={index} style={styles.benefitItem} testID={`item-benefit-${subscription.id}-${index}`}>
                 <Ionicons name="checkmark" size={14} color={colors.success} />
                 <Text style={styles.benefitText}>{benefit}</Text>
               </View>
@@ -112,7 +113,7 @@ function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
 
       <View style={styles.cardFooter}>
         <View style={styles.priceContainer}>
-          <Text style={styles.priceValue}>€{subscription.price.toFixed(2)}</Text>
+          <Text style={styles.priceValue} testID={`text-price-${subscription.id}`}>€{subscription.price.toFixed(2)}</Text>
           <Text style={styles.priceCycle}>{getBillingLabel(subscription.billingCycle)}</Text>
         </View>
         <Button
@@ -120,6 +121,7 @@ function SubscriptionCard({ subscription, onPress }: SubscriptionCardProps) {
           variant="outline"
           size="sm"
           onPress={onPress || (() => {})}
+          testID={`button-manage-${subscription.id}`}
         />
       </View>
     </Card>
@@ -130,12 +132,12 @@ function EmptyState() {
   const navigation = useNavigation<any>();
 
   return (
-    <View style={styles.emptyContainer}>
+    <View style={styles.emptyContainer} testID="container-empty-subscriptions">
       <View style={styles.emptyIconContainer}>
         <Ionicons name="card-outline" size={64} color={colors.mutedForeground} />
       </View>
-      <Text style={styles.emptyTitle}>Nessun abbonamento</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={styles.emptyTitle} testID="text-empty-title">Nessun abbonamento</Text>
+      <Text style={styles.emptySubtitle} testID="text-empty-subtitle">
         Non hai ancora abbonamenti attivi. Esplora i locali per trovare offerte esclusive.
       </Text>
       <Button
@@ -144,6 +146,7 @@ function EmptyState() {
         onPress={() => navigation.navigate('Venues')}
         icon={<Ionicons name="search-outline" size={18} color={colors.primaryForeground} />}
         style={styles.exploreButton}
+        testID="button-explore-venues"
       />
     </View>
   );
@@ -151,7 +154,11 @@ function EmptyState() {
 
 export function AccountSubscriptionsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+
+  const useGridLayout = isTablet || isLandscape;
 
   const { data: subscriptionsData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['/api/public/account/subscriptions'],
@@ -168,19 +175,17 @@ export function AccountSubscriptionsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']} testID="screen-subscriptions">
       <Header
         title="I miei abbonamenti"
         showBack
         onBack={() => navigation.goBack()}
+        testID="header-subscriptions"
       />
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + spacing.xl },
-        ]}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -189,11 +194,12 @@ export function AccountSubscriptionsScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+        testID="scroll-subscriptions"
       >
         {isLoading ? (
-          <View style={styles.loadingContainer}>
+          <View style={[styles.loadingContainer, useGridLayout && styles.gridContainer]} testID="container-loading">
             {[1, 2].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
+              <View key={i} style={[styles.skeletonCard, useGridLayout && styles.gridItem]}>
                 <View style={styles.skeletonHeader} />
                 <View style={styles.skeletonBody} />
               </View>
@@ -205,33 +211,41 @@ export function AccountSubscriptionsScreen() {
           <>
             {activeSubscriptions.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Abbonamenti attivi</Text>
-                {activeSubscriptions.map((subscription) => (
-                  <SubscriptionCard
-                    key={subscription.id}
-                    subscription={subscription}
-                    onPress={() => handleSubscriptionPress(subscription)}
-                  />
-                ))}
+                <Text style={styles.sectionTitle} testID="text-section-active">Abbonamenti attivi</Text>
+                <View style={useGridLayout ? styles.gridContainer : undefined}>
+                  {activeSubscriptions.map((subscription) => (
+                    <View key={subscription.id} style={useGridLayout ? styles.gridItem : undefined}>
+                      <SubscriptionCard
+                        subscription={subscription}
+                        onPress={() => handleSubscriptionPress(subscription)}
+                        isWide={useGridLayout}
+                      />
+                    </View>
+                  ))}
+                </View>
               </View>
             )}
 
             {otherSubscriptions.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Altri abbonamenti</Text>
-                {otherSubscriptions.map((subscription) => (
-                  <SubscriptionCard
-                    key={subscription.id}
-                    subscription={subscription}
-                    onPress={() => handleSubscriptionPress(subscription)}
-                  />
-                ))}
+                <Text style={styles.sectionTitle} testID="text-section-other">Altri abbonamenti</Text>
+                <View style={useGridLayout ? styles.gridContainer : undefined}>
+                  {otherSubscriptions.map((subscription) => (
+                    <View key={subscription.id} style={useGridLayout ? styles.gridItem : undefined}>
+                      <SubscriptionCard
+                        subscription={subscription}
+                        onPress={() => handleSubscriptionPress(subscription)}
+                        isWide={useGridLayout}
+                      />
+                    </View>
+                  ))}
+                </View>
               </View>
             )}
           </>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -248,6 +262,16 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     gap: spacing.md,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.sm,
+  },
+  gridItem: {
+    width: '50%',
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.md,
   },
   skeletonCard: {
     backgroundColor: colors.surface,
@@ -278,6 +302,9 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: 'hidden',
     marginBottom: spacing.md,
+  },
+  subscriptionCardWide: {
+    marginBottom: 0,
   },
   cardHeader: {
     flexDirection: 'row',

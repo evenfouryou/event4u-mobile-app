@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header, Card } from '../../components';
 
 interface ScannerOperator {
@@ -26,8 +26,13 @@ interface ScannerOperator {
 
 export function ScannerOperatorsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [searchQuery, setSearchQuery] = useState('');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
+  const contentMaxWidth = isTablet ? 1200 : undefined;
 
   const { data: operators, isLoading, refetch, isRefetching } = useQuery<ScannerOperator[]>({
     queryKey: ['/api/scanners'],
@@ -53,12 +58,19 @@ export function ScannerOperatorsScreen() {
   const onlineCount = (operators || []).filter(op => op.status === 'online').length;
   const totalCount = (operators || []).length;
 
-  const renderOperatorItem = useCallback(({ item }: { item: ScannerOperator }) => (
+  const renderOperatorItem = useCallback(({ item, index }: { item: ScannerOperator; index: number }) => (
     <TouchableOpacity
-      style={styles.operatorCard}
+      style={[
+        styles.operatorCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        },
+      ]}
       onPress={() => handleOperatorPress(item)}
       activeOpacity={0.7}
-      data-testid={`button-operator-${item.id}`}
+      testID={`button-operator-${item.id}`}
     >
       <View style={styles.operatorHeader}>
         <View style={styles.avatarContainer}>
@@ -131,86 +143,89 @@ export function ScannerOperatorsScreen() {
         )}
       </View>
     </TouchableOpacity>
-  ), [handleOperatorPress]);
+  ), [handleOperatorPress, numColumns]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header
-        title="Operatori Scanner"
-        showBack
-        onBack={() => navigation.goBack()}
-        rightAction={
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddOperator}
-            data-testid="button-add-operator"
-          >
-            <Ionicons name="add" size={24} color={colors.emeraldForeground} />
-          </TouchableOpacity>
-        }
-      />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.contentWrapper, contentMaxWidth && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+        <Header
+          title="Operatori Scanner"
+          showBack
+          onBack={() => navigation.goBack()}
+          rightAction={
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddOperator}
+              testID="button-add-operator"
+            >
+              <Ionicons name="add" size={24} color={colors.emeraldForeground} />
+            </TouchableOpacity>
+          }
+        />
 
-      <View style={styles.statsBar}>
-        <Card style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: colors.success + '20' }]}>
-            <Ionicons name="radio-button-on" size={16} color={colors.success} />
-          </View>
-          <Text style={styles.statValue}>{onlineCount}</Text>
-          <Text style={styles.statLabel}>Online</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: colors.emerald + '20' }]}>
-            <Ionicons name="people" size={16} color={colors.emerald} />
-          </View>
-          <Text style={styles.statValue}>{totalCount}</Text>
-          <Text style={styles.statLabel}>Totali</Text>
-        </Card>
-      </View>
-
-      <FlatList
-        data={filteredOperators}
-        renderItem={renderOperatorItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: insets.bottom + spacing.lg },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            tintColor={colors.emerald}
-          />
-        }
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.loadingContainer}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.skeletonCard} />
-              ))}
+        <View style={[styles.statsBar, isLandscape && styles.statsBarLandscape]}>
+          <Card style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: colors.success + '20' }]}>
+              <Ionicons name="radio-button-on" size={16} color={colors.success} />
             </View>
-          ) : (
-            <Card style={styles.emptyCard}>
-              <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-              <Text style={styles.emptyTitle}>Nessun operatore</Text>
-              <Text style={styles.emptyText}>
-                Aggiungi operatori per gestire la scansione dei biglietti
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyButton}
-                onPress={handleAddOperator}
-                data-testid="button-add-operator-empty"
-              >
-                <Ionicons name="add" size={20} color={colors.emeraldForeground} />
-                <Text style={styles.emptyButtonText}>Aggiungi Operatore</Text>
-              </TouchableOpacity>
-            </Card>
-          )
-        }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
-    </View>
+            <Text style={styles.statValue} testID="text-online-count">{onlineCount}</Text>
+            <Text style={styles.statLabel}>Online</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: colors.emerald + '20' }]}>
+              <Ionicons name="people" size={16} color={colors.emerald} />
+            </View>
+            <Text style={styles.statValue} testID="text-total-count">{totalCount}</Text>
+            <Text style={styles.statLabel}>Totali</Text>
+          </Card>
+        </View>
+
+        <FlatList
+          key={numColumns}
+          data={filteredOperators}
+          renderItem={renderOperatorItem}
+          keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.emerald}
+              testID="refresh-control"
+            />
+          }
+          ListEmptyComponent={
+            isLoading ? (
+              <View style={styles.loadingContainer}>
+                {[1, 2, 3].map((i) => (
+                  <View key={i} style={styles.skeletonCard} />
+                ))}
+              </View>
+            ) : (
+              <Card style={styles.emptyCard}>
+                <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+                <Text style={styles.emptyTitle}>Nessun operatore</Text>
+                <Text style={styles.emptyText}>
+                  Aggiungi operatori per gestire la scansione dei biglietti
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={handleAddOperator}
+                  testID="button-add-operator-empty"
+                >
+                  <Ionicons name="add" size={20} color={colors.emeraldForeground} />
+                  <Text style={styles.emptyButtonText}>Aggiungi Operatore</Text>
+                </TouchableOpacity>
+              </Card>
+            )
+          }
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          testID="list-operators"
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -218,6 +233,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   addButton: {
     width: 40,
@@ -232,6 +250,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.md,
+  },
+  statsBarLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   statCard: {
     flex: 1,
@@ -265,6 +286,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.md,
   },
   operatorHeader: {
     flexDirection: 'row',

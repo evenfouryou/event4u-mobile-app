@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 
 interface StatCardProps {
@@ -13,11 +13,12 @@ interface StatCardProps {
   trend?: string;
   trendUp?: boolean;
   color?: string;
+  testID?: string;
 }
 
-function StatCard({ title, value, icon, trend, trendUp, color = colors.purple }: StatCardProps) {
+function StatCard({ title, value, icon, trend, trendUp, color = colors.purple, testID }: StatCardProps) {
   return (
-    <Card style={styles.statCard}>
+    <Card style={styles.statCard} testID={testID}>
       <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
         <Ionicons name={icon} size={24} color={color} />
       </View>
@@ -40,6 +41,7 @@ function StatCard({ title, value, icon, trend, trendUp, color = colors.purple }:
 }
 
 interface EventItemProps {
+  id: number;
   name: string;
   date: string;
   venue: string;
@@ -47,9 +49,14 @@ interface EventItemProps {
   onPress: () => void;
 }
 
-function EventItem({ name, date, venue, guestCount, onPress }: EventItemProps) {
+function EventItem({ id, name, date, venue, guestCount, onPress }: EventItemProps) {
   return (
-    <TouchableOpacity style={styles.eventItem} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={styles.eventItem} 
+      onPress={onPress} 
+      activeOpacity={0.7}
+      testID={`button-event-${id}`}
+    >
       <View style={styles.eventImagePlaceholder}>
         <Ionicons name="calendar" size={28} color={colors.purple} />
       </View>
@@ -71,7 +78,9 @@ function EventItem({ name, date, venue, guestCount, onPress }: EventItemProps) {
 
 export function PRHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = React.useCallback(() => {
@@ -85,19 +94,24 @@ export function PRHomeScreen() {
     { id: 3, name: 'Electronic Sunday', date: 'Dom 19 Gen, 21:00', venue: 'Space Club', guestCount: 12 },
   ];
 
+  const numColumns = isTablet || isLandscape ? 2 : 1;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Dashboard PR" 
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('PRWallet')}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('PRWallet')}
+            testID="button-wallet"
+          >
             <Ionicons name="wallet-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -105,8 +119,9 @@ export function PRHomeScreen() {
             tintColor={colors.purple}
           />
         }
+        testID="scroll-pr-home"
       >
-        <View style={styles.statsGrid}>
+        <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
           <StatCard 
             title="Commissioni Totali"
             value="€1,250.00"
@@ -114,6 +129,7 @@ export function PRHomeScreen() {
             trend="+12%"
             trendUp
             color={colors.success}
+            testID="card-total-commissions"
           />
           <StatCard 
             title="Questo Mese"
@@ -122,22 +138,25 @@ export function PRHomeScreen() {
             trend="+8%"
             trendUp
             color={colors.purple}
+            testID="card-monthly-earnings"
           />
           <StatCard 
             title="Ospiti Totali"
             value="156"
             icon="people-outline"
             color={colors.purpleLight}
+            testID="card-total-guests"
           />
           <StatCard 
             title="Tavoli Prenotati"
             value="23"
             icon="grid-outline"
             color={colors.warning}
+            testID="card-booked-tables"
           />
         </View>
 
-        <Card style={styles.balanceCard}>
+        <Card style={styles.balanceCard} testID="card-balance">
           <View style={styles.balanceHeader}>
             <View>
               <Text style={styles.balanceLabel}>Saldo Disponibile</Text>
@@ -148,6 +167,7 @@ export function PRHomeScreen() {
               variant="primary"
               size="sm"
               onPress={() => navigation.navigate('PRWallet')}
+              testID="button-request-payment"
             />
           </View>
           <View style={styles.balanceDivider} />
@@ -165,42 +185,65 @@ export function PRHomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Eventi Assegnati</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('PREvents')}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('PREvents')}
+            testID="button-see-all-events"
+          >
             <Text style={styles.seeAllText}>Vedi tutti</Text>
           </TouchableOpacity>
         </View>
 
-        <Card style={styles.eventsCard}>
-          {mockEvents.map((event, index) => (
-            <React.Fragment key={event.id}>
-              <EventItem
-                name={event.name}
-                date={event.date}
-                venue={event.venue}
-                guestCount={event.guestCount}
-                onPress={() => navigation.navigate('PRGuestLists', { eventId: event.id })}
-              />
-              {index < mockEvents.length - 1 && <View style={styles.eventDivider} />}
-            </React.Fragment>
-          ))}
+        <Card style={styles.eventsCard} testID="card-events">
+          {numColumns === 2 ? (
+            <View style={styles.eventsGrid}>
+              {mockEvents.map((event) => (
+                <View key={event.id} style={styles.eventGridItem}>
+                  <EventItem
+                    id={event.id}
+                    name={event.name}
+                    date={event.date}
+                    venue={event.venue}
+                    guestCount={event.guestCount}
+                    onPress={() => navigation.navigate('PRGuestLists', { eventId: event.id })}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : (
+            mockEvents.map((event, index) => (
+              <React.Fragment key={event.id}>
+                <EventItem
+                  id={event.id}
+                  name={event.name}
+                  date={event.date}
+                  venue={event.venue}
+                  guestCount={event.guestCount}
+                  onPress={() => navigation.navigate('PRGuestLists', { eventId: event.id })}
+                />
+                {index < mockEvents.length - 1 && <View style={styles.eventDivider} />}
+              </React.Fragment>
+            ))
+          )}
         </Card>
 
-        <View style={styles.quickActions}>
+        <View style={[styles.quickActions, isLandscape && styles.quickActionsLandscape]}>
           <Button 
             title="Aggiungi Ospite"
             variant="primary"
             icon={<Ionicons name="person-add" size={18} color={colors.primaryForeground} />}
             onPress={() => navigation.navigate('PREvents')}
+            testID="button-add-guest"
           />
           <Button 
             title="Prenota Tavolo"
             variant="outline"
             icon={<Ionicons name="grid-outline" size={18} color={colors.foreground} />}
             onPress={() => navigation.navigate('PREvents')}
+            testID="button-book-table"
           />
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -220,6 +263,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  statsGridTablet: {
+    justifyContent: 'space-between',
   },
   statCard: {
     width: '48%',
@@ -313,6 +359,15 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: 'hidden',
   },
+  eventsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  eventGridItem: {
+    width: '50%',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   eventItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,5 +426,8 @@ const styles = StyleSheet.create({
   quickActions: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  quickActionsLandscape: {
+    justifyContent: 'center',
   },
 });

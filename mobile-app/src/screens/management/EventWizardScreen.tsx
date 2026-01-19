@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize } from '../../theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -55,7 +56,9 @@ const steps: { key: WizardStep; label: string; icon: string }[] = [
 
 export function EventWizardScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [currentStep, setCurrentStep] = useState<WizardStep>('info');
   const [saving, setSaving] = useState(false);
@@ -160,7 +163,7 @@ export function EventWizardScreen() {
   };
 
   const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
+    <View style={[styles.stepIndicator, (isTablet || isLandscape) && styles.stepIndicatorLandscape]}>
       {steps.map((step, index) => (
         <React.Fragment key={step.key}>
           <TouchableOpacity
@@ -171,6 +174,7 @@ export function EventWizardScreen() {
             ]}
             onPress={() => index < currentStepIndex && setCurrentStep(step.key)}
             disabled={index > currentStepIndex}
+            testID={`step-${step.key}`}
           >
             <Ionicons
               name={step.icon as any}
@@ -187,165 +191,168 @@ export function EventWizardScreen() {
   );
 
   const renderInfoStep = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.formCard} variant="elevated">
-        <Text style={styles.sectionTitle}>Informazioni Evento</Text>
-        
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Nome Evento *</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Es. Serata Disco"
-            placeholderTextColor={colors.mutedForeground}
-            value={formData.name}
-            onChangeText={(v) => updateForm('name', v)}
-            data-testid="input-event-name"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Descrizione</Text>
-          <TextInput
-            style={[styles.textInput, styles.textArea]}
-            placeholder="Descrizione dell'evento..."
-            placeholderTextColor={colors.mutedForeground}
-            value={formData.description}
-            onChangeText={(v) => updateForm('description', v)}
-            multiline
-            numberOfLines={4}
-            data-testid="input-event-description"
-          />
-        </View>
-
-        <View style={styles.inputRow}>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>Data *</Text>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false} testID="scroll-info-step">
+      <View style={(isTablet || isLandscape) ? styles.formGrid : undefined}>
+        <Card style={[styles.formCard, (isTablet || isLandscape) && styles.formCardFull]} variant="elevated">
+          <Text style={styles.sectionTitle}>Informazioni Evento</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Nome Evento *</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="GG/MM/AAAA"
+              placeholder="Es. Serata Disco"
               placeholderTextColor={colors.mutedForeground}
-              value={formData.date}
-              onChangeText={(v) => updateForm('date', v)}
-              data-testid="input-event-date"
+              value={formData.name}
+              onChangeText={(v) => updateForm('name', v)}
+              testID="input-event-name"
             />
           </View>
-        </View>
 
-        <View style={styles.inputRow}>
-          <View style={[styles.inputGroup, { flex: 1, marginRight: spacing.sm }]}>
-            <Text style={styles.inputLabel}>Inizio</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Descrizione</Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="22:00"
+              style={[styles.textInput, styles.textArea]}
+              placeholder="Descrizione dell'evento..."
               placeholderTextColor={colors.mutedForeground}
-              value={formData.startTime}
-              onChangeText={(v) => updateForm('startTime', v)}
-              data-testid="input-start-time"
+              value={formData.description}
+              onChangeText={(v) => updateForm('description', v)}
+              multiline
+              numberOfLines={4}
+              testID="input-event-description"
             />
           </View>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>Fine</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="04:00"
-              placeholderTextColor={colors.mutedForeground}
-              value={formData.endTime}
-              onChangeText={(v) => updateForm('endTime', v)}
-              data-testid="input-end-time"
-            />
-          </View>
-        </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Capacità</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="500"
-            placeholderTextColor={colors.mutedForeground}
-            value={formData.capacity}
-            onChangeText={(v) => updateForm('capacity', v)}
-            keyboardType="numeric"
-            data-testid="input-capacity"
-          />
-        </View>
-      </Card>
+          <View style={(isTablet || isLandscape) ? styles.inputRowResponsive : styles.inputRow}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Data *</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="GG/MM/AAAA"
+                placeholderTextColor={colors.mutedForeground}
+                value={formData.date}
+                onChangeText={(v) => updateForm('date', v)}
+                testID="input-event-date"
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: spacing.sm }]}>
+              <Text style={styles.inputLabel}>Capacità</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="500"
+                placeholderTextColor={colors.mutedForeground}
+                value={formData.capacity}
+                onChangeText={(v) => updateForm('capacity', v)}
+                keyboardType="numeric"
+                testID="input-capacity"
+              />
+            </View>
+          </View>
+
+          <View style={(isTablet || isLandscape) ? styles.inputRowResponsive : styles.inputRow}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: spacing.sm }]}>
+              <Text style={styles.inputLabel}>Inizio</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="22:00"
+                placeholderTextColor={colors.mutedForeground}
+                value={formData.startTime}
+                onChangeText={(v) => updateForm('startTime', v)}
+                testID="input-start-time"
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Fine</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="04:00"
+                placeholderTextColor={colors.mutedForeground}
+                value={formData.endTime}
+                onChangeText={(v) => updateForm('endTime', v)}
+                testID="input-end-time"
+              />
+            </View>
+          </View>
+        </Card>
+      </View>
     </ScrollView>
   );
 
   const renderTicketsStep = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false} testID="scroll-tickets-step">
       <Card style={styles.formCard} variant="elevated">
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Tipi Biglietto</Text>
-          <TouchableOpacity style={styles.addTicketButton} onPress={addTicketType} data-testid="button-add-ticket">
+          <TouchableOpacity style={styles.addTicketButton} onPress={addTicketType} testID="button-add-ticket">
             <Ionicons name="add" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        {formData.tickets.map((ticket, index) => (
-          <View key={ticket.id} style={styles.ticketCard}>
-            <View style={styles.ticketHeader}>
-              <Text style={styles.ticketNumber}>Biglietto {index + 1}</Text>
-              {formData.tickets.length > 1 && (
-                <TouchableOpacity onPress={() => removeTicket(index)} data-testid={`button-remove-ticket-${index}`}>
-                  <Ionicons name="trash-outline" size={18} color={colors.destructive} />
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Nome *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Es. VIP, Standard"
-                placeholderTextColor={colors.mutedForeground}
-                value={ticket.name}
-                onChangeText={(v) => updateTicket(index, 'name', v)}
-                data-testid={`input-ticket-name-${index}`}
-              />
-            </View>
+        <View style={(isTablet || isLandscape) ? styles.ticketsGrid : undefined}>
+          {formData.tickets.map((ticket, index) => (
+            <View key={ticket.id} style={[styles.ticketCard, (isTablet || isLandscape) && styles.ticketCardResponsive]}>
+              <View style={styles.ticketHeader}>
+                <Text style={styles.ticketNumber}>Biglietto {index + 1}</Text>
+                {formData.tickets.length > 1 && (
+                  <TouchableOpacity onPress={() => removeTicket(index)} testID={`button-remove-ticket-${index}`}>
+                    <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nome *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Es. VIP, Standard"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={ticket.name}
+                  onChangeText={(v) => updateTicket(index, 'name', v)}
+                  testID={`input-ticket-name-${index}`}
+                />
+              </View>
 
-            <View style={styles.inputRow}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: spacing.sm }]}>
-                <Text style={styles.inputLabel}>Prezzo (€) *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="15.00"
-                  placeholderTextColor={colors.mutedForeground}
-                  value={ticket.price}
-                  onChangeText={(v) => updateTicket(index, 'price', v)}
-                  keyboardType="decimal-pad"
-                  data-testid={`input-ticket-price-${index}`}
-                />
-              </View>
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.inputLabel}>Quantità</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="100"
-                  placeholderTextColor={colors.mutedForeground}
-                  value={ticket.quantity}
-                  onChangeText={(v) => updateTicket(index, 'quantity', v)}
-                  keyboardType="numeric"
-                  data-testid={`input-ticket-quantity-${index}`}
-                />
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: spacing.sm }]}>
+                  <Text style={styles.inputLabel}>Prezzo (€) *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="15.00"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={ticket.price}
+                    onChangeText={(v) => updateTicket(index, 'price', v)}
+                    keyboardType="decimal-pad"
+                    testID={`input-ticket-price-${index}`}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Quantità</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="100"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={ticket.quantity}
+                    onChangeText={(v) => updateTicket(index, 'quantity', v)}
+                    keyboardType="numeric"
+                    testID={`input-ticket-quantity-${index}`}
+                  />
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </Card>
     </ScrollView>
   );
 
   const renderStaffStep = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false} testID="scroll-staff-step">
       <Card style={styles.formCard} variant="elevated">
         <Text style={styles.sectionTitle}>Assegnazione Staff</Text>
         <Text style={styles.helperText}>
           Puoi assegnare lo staff all'evento dopo la creazione dalla pagina di gestione evento.
         </Text>
         
-        <View style={styles.emptyState}>
+        <View style={styles.emptyState} testID="empty-staff-state">
           <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>Nessuno staff assegnato</Text>
           <Text style={styles.emptySubtext}>Potrai aggiungere lo staff dopo la creazione</Text>
@@ -355,49 +362,51 @@ export function EventWizardScreen() {
   );
 
   const renderReviewStep = () => (
-    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-      <Card style={styles.formCard} variant="elevated">
-        <Text style={styles.sectionTitle}>Riepilogo Evento</Text>
-        
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Nome</Text>
-          <Text style={styles.reviewValue}>{formData.name || '-'}</Text>
-        </View>
-
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Data</Text>
-          <Text style={styles.reviewValue}>{formData.date || '-'}</Text>
-        </View>
-
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Orario</Text>
-          <Text style={styles.reviewValue}>
-            {formData.startTime && formData.endTime ? `${formData.startTime} - ${formData.endTime}` : '-'}
-          </Text>
-        </View>
-
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Capacità</Text>
-          <Text style={styles.reviewValue}>{formData.capacity || '-'}</Text>
-        </View>
-
-        <View style={styles.reviewDivider} />
-
-        <Text style={styles.reviewSubtitle}>Biglietti ({formData.tickets.length})</Text>
-        {formData.tickets.map((ticket, index) => (
-          <View key={ticket.id} style={styles.reviewTicket}>
-            <Text style={styles.reviewTicketName}>{ticket.name}</Text>
-            <Text style={styles.reviewTicketPrice}>€ {ticket.price} x {ticket.quantity}</Text>
+    <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false} testID="scroll-review-step">
+      <View style={(isTablet || isLandscape) ? styles.reviewGrid : undefined}>
+        <Card style={[styles.formCard, (isTablet || isLandscape) && styles.reviewCardLeft]} variant="elevated">
+          <Text style={styles.sectionTitle}>Riepilogo Evento</Text>
+          
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewLabel}>Nome</Text>
+            <Text style={styles.reviewValue}>{formData.name || '-'}</Text>
           </View>
-        ))}
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={20} color={colors.destructive} />
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewLabel}>Data</Text>
+            <Text style={styles.reviewValue}>{formData.date || '-'}</Text>
           </View>
-        )}
-      </Card>
+
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewLabel}>Orario</Text>
+            <Text style={styles.reviewValue}>
+              {formData.startTime && formData.endTime ? `${formData.startTime} - ${formData.endTime}` : '-'}
+            </Text>
+          </View>
+
+          <View style={styles.reviewSection}>
+            <Text style={styles.reviewLabel}>Capacità</Text>
+            <Text style={styles.reviewValue}>{formData.capacity || '-'}</Text>
+          </View>
+        </Card>
+
+        <Card style={[styles.formCard, (isTablet || isLandscape) && styles.reviewCardRight]} variant="elevated">
+          <Text style={styles.reviewSubtitle}>Biglietti ({formData.tickets.length})</Text>
+          {formData.tickets.map((ticket, index) => (
+            <View key={ticket.id} style={styles.reviewTicket} testID={`review-ticket-${index}`}>
+              <Text style={styles.reviewTicketName}>{ticket.name}</Text>
+              <Text style={styles.reviewTicketPrice}>€ {ticket.price} x {ticket.quantity}</Text>
+            </View>
+          ))}
+
+          {error && (
+            <View style={styles.errorContainer} testID="error-container">
+              <Ionicons name="alert-circle" size={20} color={colors.destructive} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+        </Card>
+      </View>
     </ScrollView>
   );
 
@@ -411,40 +420,44 @@ export function EventWizardScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Header
-        title="Crea Evento"
-        showBack
-        onBack={prevStep}
-      />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Header
+          title="Crea Evento"
+          showBack
+          onBack={prevStep}
+        />
 
-      {renderStepIndicator()}
-      
-      <Text style={styles.stepTitle}>{steps[currentStepIndex].label}</Text>
+        {renderStepIndicator()}
+        
+        <Text style={styles.stepTitle}>{steps[currentStepIndex].label}</Text>
 
-      {renderCurrentStep()}
+        {renderCurrentStep()}
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        {currentStep !== 'review' ? (
-          <Button
-            title="Continua"
-            onPress={nextStep}
-            disabled={!canProceed()}
-            style={styles.footerButton}
-          />
-        ) : (
-          <Button
-            title={saving ? 'Creazione...' : 'Crea Evento'}
-            onPress={handleSubmit}
-            disabled={saving}
-            style={styles.footerButton}
-          />
-        )}
-      </View>
-    </KeyboardAvoidingView>
+        <View style={styles.footer}>
+          {currentStep !== 'review' ? (
+            <Button
+              title="Continua"
+              onPress={nextStep}
+              disabled={!canProceed()}
+              style={styles.footerButton}
+              testID="button-continue"
+            />
+          ) : (
+            <Button
+              title={saving ? 'Creazione...' : 'Crea Evento'}
+              onPress={handleSubmit}
+              disabled={saving}
+              style={styles.footerButton}
+              testID="button-submit"
+            />
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -453,6 +466,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  keyboardAvoid: {
+    flex: 1,
+  },
   stepIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -460,10 +476,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
+  stepIndicatorLandscape: {
+    paddingHorizontal: spacing['3xl'],
+  },
   stepDot: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -489,7 +508,7 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: fontSize.xl,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
     textAlign: 'center',
     marginBottom: spacing.md,
@@ -498,8 +517,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
+  formGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   formCard: {
     marginBottom: spacing.lg,
+  },
+  formCardFull: {
+    flex: 1,
+    minWidth: 300,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -509,13 +537,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
   },
   addTicketButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: borderRadius.full,
     backgroundColor: `${colors.primary}20`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -525,13 +553,13 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: fontSize.sm,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.mutedForeground,
     marginBottom: spacing.xs,
   },
   textInput: {
     backgroundColor: colors.glass.background,
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
     paddingHorizontal: spacing.md,
@@ -546,13 +574,26 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
   },
+  inputRowResponsive: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  ticketsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   ticketCard: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  ticketCardResponsive: {
+    flex: 1,
+    minWidth: 280,
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -562,7 +603,7 @@ const styles = StyleSheet.create({
   },
   ticketNumber: {
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
   helperText: {
@@ -584,6 +625,19 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     marginTop: spacing.xs,
   },
+  reviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  reviewCardLeft: {
+    flex: 1,
+    minWidth: 280,
+  },
+  reviewCardRight: {
+    flex: 1,
+    minWidth: 280,
+  },
   reviewSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -597,7 +651,7 @@ const styles = StyleSheet.create({
   },
   reviewValue: {
     fontSize: fontSize.base,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.foreground,
   },
   reviewDivider: {
@@ -607,7 +661,7 @@ const styles = StyleSheet.create({
   },
   reviewSubtitle: {
     fontSize: fontSize.base,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
     marginBottom: spacing.sm,
   },
@@ -629,7 +683,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: `${colors.destructive}20`,
     padding: spacing.md,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
     marginTop: spacing.md,
     gap: spacing.sm,
   },
@@ -641,6 +695,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,

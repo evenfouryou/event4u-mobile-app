@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -30,7 +31,9 @@ interface GestoreUser {
 
 export function AdminGestoreUsersScreen() {
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const gestoreId = route.params?.gestoreId;
   const gestoreName = route.params?.gestoreName || 'Gestore';
   
@@ -122,18 +125,18 @@ export function AdminGestoreUsersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={`Utenti - ${gestoreName}`} showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title={`Utenti - ${gestoreName}`} showBack />
       
       <View style={styles.searchContainer}>
@@ -145,23 +148,23 @@ export function AdminGestoreUsersScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-users"
+            testID="input-search-users"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      <View style={styles.summaryRow}>
-        <Card variant="glass" style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{users.length}</Text>
+      <View style={[styles.summaryRow, (isTablet || isLandscape) && styles.summaryRowWide]}>
+        <Card variant="glass" style={styles.summaryCard} testID="card-total-users">
+          <Text style={styles.summaryValue} testID="text-total-users">{users.length}</Text>
           <Text style={styles.summaryLabel}>Totale</Text>
         </Card>
-        <Card variant="glass" style={styles.summaryCard}>
-          <Text style={[styles.summaryValue, { color: colors.success }]}>
+        <Card variant="glass" style={styles.summaryCard} testID="card-active-users">
+          <Text style={[styles.summaryValue, { color: colors.success }]} testID="text-active-users">
             {users.filter(u => u.status === 'active').length}
           </Text>
           <Text style={styles.summaryLabel}>Attivi</Text>
@@ -170,47 +173,53 @@ export function AdminGestoreUsersScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         {filteredUsers.length > 0 ? (
-          filteredUsers.map((user) => (
-            <Card key={user.id} variant="glass" style={styles.userCard}>
-              <View style={styles.userRow}>
-                {renderAvatar(user)}
-                <View style={styles.userInfo}>
-                  <View style={styles.userHeader}>
-                    <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
-                    <View style={[styles.roleBadge, { backgroundColor: `${getRoleColor(user.role)}20` }]}>
-                      <Text style={[styles.roleText, { color: getRoleColor(user.role) }]}>
-                        {getRoleLabel(user.role)}
+          <View style={(isTablet || isLandscape) ? styles.usersGrid : undefined}>
+            {filteredUsers.map((user) => (
+              <Card key={user.id} variant="glass" style={[styles.userCard, (isTablet || isLandscape) && styles.userCardWide]} testID={`card-user-${user.id}`}>
+                <View style={styles.userRow}>
+                  {renderAvatar(user)}
+                  <View style={styles.userInfo}>
+                    <View style={styles.userHeader}>
+                      <Text style={styles.userName} testID={`text-user-name-${user.id}`}>{user.firstName} {user.lastName}</Text>
+                      <View style={[styles.roleBadge, { backgroundColor: `${getRoleColor(user.role)}20` }]}>
+                        <Text style={[styles.roleText, { color: getRoleColor(user.role) }]} testID={`text-role-${user.id}`}>
+                          {getRoleLabel(user.role)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.userEmail} testID={`text-email-${user.id}`}>{user.email}</Text>
+                    <View style={styles.userMeta}>
+                      <View style={[styles.statusDot, { backgroundColor: user.status === 'active' ? colors.success : colors.destructive }]} />
+                      <Text style={styles.metaText} testID={`text-status-${user.id}`}>
+                        {user.status === 'active' ? 'Attivo' : 'Inattivo'}
                       </Text>
+                      <Text style={styles.metaDot}>•</Text>
+                      <Text style={styles.metaText}>Ultimo accesso: {formatLastActive(user.lastActive)}</Text>
                     </View>
                   </View>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                  <View style={styles.userMeta}>
-                    <View style={[styles.statusDot, { backgroundColor: user.status === 'active' ? colors.success : colors.destructive }]} />
-                    <Text style={styles.metaText}>
-                      {user.status === 'active' ? 'Attivo' : 'Inattivo'}
-                    </Text>
-                    <Text style={styles.metaDot}>•</Text>
-                    <Text style={styles.metaText}>Ultimo accesso: {formatLastActive(user.lastActive)}</Text>
-                  </View>
                 </View>
-              </View>
-            </Card>
-          ))
+              </Card>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessun utente trovato</Text>
+            <Text style={styles.emptyText} testID="text-empty">Nessun utente trovato</Text>
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -222,6 +231,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -259,6 +276,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
+  summaryRowWide: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
+  },
   summaryCard: {
     flex: 1,
     flexDirection: 'row',
@@ -276,9 +298,19 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
+  usersGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   userCard: {
     marginBottom: spacing.md,
     padding: spacing.lg,
+  },
+  userCardWide: {
+    flex: 1,
+    minWidth: '45%',
+    marginBottom: 0,
   },
   userRow: {
     flexDirection: 'row',

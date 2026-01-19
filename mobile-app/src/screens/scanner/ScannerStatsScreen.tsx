@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header, Card } from '../../components';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface HourlyStat {
   hour: string;
@@ -37,7 +35,9 @@ const TIME_FILTERS = [
 export function ScannerStatsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const { eventId } = route.params || {};
   const [activeTimeFilter, setActiveTimeFilter] = useState('today');
@@ -63,36 +63,39 @@ export function ScannerStatsScreen() {
     : 0;
 
   const maxHourlyCount = Math.max(...(currentStats.hourlyStats?.map(h => h.count) || [1]));
+  const contentMaxWidth = isTablet ? 900 : undefined;
+  const statsColumns = isTablet || isLandscape ? 4 : 2;
 
   const renderBarChart = () => {
     if (!currentStats.hourlyStats || currentStats.hourlyStats.length === 0) {
       return (
-        <View style={styles.noDataContainer}>
+        <View style={styles.noDataContainer} testID="container-no-chart-data">
           <Ionicons name="bar-chart-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.noDataText}>Nessun dato disponibile</Text>
+          <Text style={styles.noDataText} testID="text-no-chart-data">Nessun dato disponibile</Text>
         </View>
       );
     }
 
     return (
-      <View style={styles.chartContainer}>
-        <View style={styles.barChart}>
-          {currentStats.hourlyStats.map((stat, index) => {
-            const barHeight = (stat.count / maxHourlyCount) * 120;
-            const validHeight = (stat.valid / maxHourlyCount) * 120;
-            const invalidHeight = ((stat.count - stat.valid) / maxHourlyCount) * 120;
+      <View style={styles.chartContainer} testID="container-chart">
+        <ScrollView horizontal={isLandscape || isTablet} showsHorizontalScrollIndicator={false}>
+          <View style={[styles.barChart, (isLandscape || isTablet) && { minWidth: Math.max(width * 0.5, 400) }]}>
+            {currentStats.hourlyStats.map((stat, index) => {
+              const validHeight = (stat.valid / maxHourlyCount) * 120;
+              const invalidHeight = ((stat.count - stat.valid) / maxHourlyCount) * 120;
 
-            return (
-              <View key={index} style={styles.barColumn}>
-                <View style={styles.barWrapper}>
-                  <View style={[styles.bar, { height: invalidHeight, backgroundColor: colors.destructive }]} />
-                  <View style={[styles.bar, { height: validHeight, backgroundColor: colors.success }]} />
+              return (
+                <View key={index} style={styles.barColumn} testID={`bar-column-${index}`}>
+                  <View style={styles.barWrapper}>
+                    <View style={[styles.bar, { height: invalidHeight, backgroundColor: colors.destructive }]} />
+                    <View style={[styles.bar, { height: validHeight, backgroundColor: colors.success }]} />
+                  </View>
+                  <Text style={styles.barLabel}>{stat.hour}</Text>
                 </View>
-                <Text style={styles.barLabel}>{stat.hour}</Text>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        </ScrollView>
         <View style={styles.chartLegend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
@@ -108,17 +111,22 @@ export function ScannerStatsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Statistiche"
         showBack
         onBack={() => navigation.goBack()}
+        testID="header-stats"
       />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { maxWidth: contentMaxWidth, alignSelf: contentMaxWidth ? 'center' : undefined, width: contentMaxWidth ? '100%' : undefined }
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scrollview-stats"
       >
         <View style={styles.timeFiltersContainer}>
           {TIME_FILTERS.map((filter) => (
@@ -129,7 +137,7 @@ export function ScannerStatsScreen() {
                 activeTimeFilter === filter.id && styles.timeFilterButtonActive,
               ]}
               onPress={() => setActiveTimeFilter(filter.id)}
-              data-testid={`button-time-${filter.id}`}
+              testID={`button-time-${filter.id}`}
             >
               <Text
                 style={[
@@ -143,77 +151,79 @@ export function ScannerStatsScreen() {
           ))}
         </View>
 
-        <View style={styles.overviewSection}>
-          <View style={styles.mainStatCard}>
+        <View style={[styles.overviewSection, (isTablet || isLandscape) && styles.overviewSectionLandscape]}>
+          <View style={[styles.mainStatCard, (isTablet || isLandscape) && { flex: 1 }]} testID="card-main-stat">
             <View style={styles.mainStatContent}>
-              <Text style={styles.mainStatValue}>{currentStats.totalScans}</Text>
+              <Text style={styles.mainStatValue} testID="text-total-scans">{currentStats.totalScans}</Text>
               <Text style={styles.mainStatLabel}>Scansioni Totali</Text>
             </View>
             <View style={styles.rateCircle}>
-              <Text style={styles.rateValue}>{validRate}%</Text>
+              <Text style={styles.rateValue} testID="text-valid-rate">{validRate}%</Text>
               <Text style={styles.rateLabel}>validi</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.statsGrid}>
-          <Card style={[styles.statCard, styles.statCardSuccess]}>
+        <View style={[styles.statsGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+          <Card style={[styles.statCard, styles.statCardSuccess, { minWidth: `${100 / statsColumns - 2}%` }]} testID="card-stat-valid">
             <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-            <Text style={[styles.statValue, { color: colors.success }]}>{currentStats.validScans}</Text>
+            <Text style={[styles.statValue, { color: colors.success }]} testID="text-valid-scans">{currentStats.validScans}</Text>
             <Text style={styles.statLabel}>Validi</Text>
           </Card>
 
-          <Card style={[styles.statCard, styles.statCardError]}>
+          <Card style={[styles.statCard, styles.statCardError, { minWidth: `${100 / statsColumns - 2}%` }]} testID="card-stat-invalid">
             <Ionicons name="close-circle" size={28} color={colors.destructive} />
-            <Text style={[styles.statValue, { color: colors.destructive }]}>{currentStats.invalidScans}</Text>
+            <Text style={[styles.statValue, { color: colors.destructive }]} testID="text-invalid-scans">{currentStats.invalidScans}</Text>
             <Text style={styles.statLabel}>Non Validi</Text>
           </Card>
 
-          <Card style={[styles.statCard, styles.statCardWarning]}>
+          <Card style={[styles.statCard, styles.statCardWarning, { minWidth: `${100 / statsColumns - 2}%` }]} testID="card-stat-duplicate">
             <Ionicons name="copy" size={28} color={colors.warning} />
-            <Text style={[styles.statValue, { color: colors.warning }]}>{currentStats.duplicateScans}</Text>
+            <Text style={[styles.statValue, { color: colors.warning }]} testID="text-duplicate-scans">{currentStats.duplicateScans}</Text>
             <Text style={styles.statLabel}>Duplicati</Text>
           </Card>
 
-          <Card style={styles.statCard}>
+          <Card style={[styles.statCard, { minWidth: `${100 / statsColumns - 2}%` }]} testID="card-stat-visitors">
             <Ionicons name="people" size={28} color={colors.emerald} />
-            <Text style={[styles.statValue, { color: colors.emerald }]}>{currentStats.uniqueVisitors}</Text>
+            <Text style={[styles.statValue, { color: colors.emerald }]} testID="text-visitors">{currentStats.uniqueVisitors}</Text>
             <Text style={styles.statLabel}>Visitatori</Text>
           </Card>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Scansioni per Ora</Text>
-          <Card style={styles.chartCard}>
-            {renderBarChart()}
-          </Card>
+        <View style={[styles.section, (isTablet || isLandscape) && styles.sectionRow]}>
+          <View style={(isTablet || isLandscape) ? { flex: 2 } : undefined}>
+            <Text style={styles.sectionTitle} testID="text-section-hourly">Scansioni per Ora</Text>
+            <Card style={styles.chartCard} testID="card-chart">
+              {renderBarChart()}
+            </Card>
+          </View>
+
+          <View style={(isTablet || isLandscape) ? { flex: 1, marginLeft: spacing.lg } : { marginTop: spacing.lg }}>
+            <Text style={styles.sectionTitle} testID="text-section-info">Informazioni Aggiuntive</Text>
+            <Card style={styles.infoCard} testID="card-info">
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Ionicons name="time-outline" size={24} color={colors.emerald} />
+                  <Text style={styles.infoLabel}>Ora di Punta</Text>
+                  <Text style={styles.infoValue} testID="text-peak-hour">{currentStats.peakHour}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+                <View style={styles.infoItem}>
+                  <Ionicons name="trending-up-outline" size={24} color={colors.emerald} />
+                  <Text style={styles.infoLabel}>Media/Ora</Text>
+                  <Text style={styles.infoValue} testID="text-avg-hour">{currentStats.avgScansPerHour.toFixed(1)}</Text>
+                </View>
+              </View>
+            </Card>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informazioni Aggiuntive</Text>
-          <Card style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={styles.infoItem}>
-                <Ionicons name="time-outline" size={24} color={colors.emerald} />
-                <Text style={styles.infoLabel}>Ora di Punta</Text>
-                <Text style={styles.infoValue}>{currentStats.peakHour}</Text>
-              </View>
-              <View style={styles.infoDivider} />
-              <View style={styles.infoItem}>
-                <Ionicons name="trending-up-outline" size={24} color={colors.emerald} />
-                <Text style={styles.infoLabel}>Media/Ora</Text>
-                <Text style={styles.infoValue}>{currentStats.avgScansPerHour.toFixed(1)}</Text>
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Riepilogo</Text>
-          <Card style={styles.summaryCard}>
+          <Text style={styles.sectionTitle} testID="text-section-summary">Riepilogo</Text>
+          <Card style={[styles.summaryCard, isTablet && { maxWidth: 600 }]} testID="card-summary">
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tasso di successo</Text>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>{validRate}%</Text>
+              <Text style={[styles.summaryValue, { color: colors.success }]} testID="text-success-rate">{validRate}%</Text>
             </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${validRate}%` }]} />
@@ -221,7 +231,7 @@ export function ScannerStatsScreen() {
             
             <View style={[styles.summaryRow, { marginTop: spacing.lg }]}>
               <Text style={styles.summaryLabel}>Tasso di errore</Text>
-              <Text style={[styles.summaryValue, { color: colors.destructive }]}>{100 - validRate}%</Text>
+              <Text style={[styles.summaryValue, { color: colors.destructive }]} testID="text-error-rate">{100 - validRate}%</Text>
             </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFillError, { width: `${100 - validRate}%` }]} />
@@ -229,7 +239,7 @@ export function ScannerStatsScreen() {
           </Card>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -243,6 +253,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   timeFiltersContainer: {
     flexDirection: 'row',
@@ -270,6 +281,9 @@ const styles = StyleSheet.create({
   },
   overviewSection: {
     marginBottom: spacing.lg,
+  },
+  overviewSectionLandscape: {
+    flexDirection: 'row',
   },
   mainStatCard: {
     backgroundColor: colors.card,
@@ -348,6 +362,9 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: spacing.lg,
+  },
+  sectionRow: {
+    flexDirection: 'row',
   },
   sectionTitle: {
     color: colors.foreground,

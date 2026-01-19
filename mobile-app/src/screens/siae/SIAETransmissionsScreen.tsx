@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -29,13 +30,17 @@ interface Transmission {
 
 export function SIAETransmissionsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [transmissions, setTransmissions] = useState<Transmission[]>([]);
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadTransmissions = async () => {
     try {
@@ -135,10 +140,11 @@ export function SIAETransmissionsScreen() {
     onPress: () => void
   ) => (
     <TouchableOpacity
+      key={value}
       style={[styles.filterPill, isActive && styles.filterPillActive]}
       onPress={onPress}
       activeOpacity={0.8}
-      data-testid={`filter-${value}`}
+      testID={`filter-${value}`}
     >
       <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
         {label}
@@ -146,12 +152,18 @@ export function SIAETransmissionsScreen() {
     </TouchableOpacity>
   );
 
-  const renderTransmission = ({ item }: { item: Transmission }) => (
+  const renderTransmission = ({ item, index }: { item: Transmission; index: number }) => (
     <TouchableOpacity
-      style={styles.transmissionCard}
+      style={[
+        styles.transmissionCard,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAETransmissionDetail', { transmissionId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-transmission-${item.id}`}
+      testID={`card-transmission-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.transmissionRow}>
@@ -196,22 +208,22 @@ export function SIAETransmissionsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header
           title="Trasmissioni SIAE"
           showBack
           onBack={() => navigation.goBack()}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Trasmissioni SIAE"
         showBack
@@ -219,36 +231,43 @@ export function SIAETransmissionsScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('SIAEReports')}
-            data-testid="button-new-report"
+            testID="button-new-report"
           >
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       
-      <View style={styles.filtersSection}>
-        <Text style={styles.filterLabel}>Tipo</Text>
-        <View style={styles.filterRow}>
-          {typeFilters.map((type) => 
-            renderFilterPill(
-              type,
-              type === 'all' ? 'Tutti' : type,
-              filterType === type,
-              () => setFilterType(type)
-            )
-          )}
+      <View style={[
+        styles.filtersSection,
+        (isTablet || isLandscape) && styles.filtersSectionLandscape,
+      ]}>
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Tipo</Text>
+          <View style={styles.filterRow}>
+            {typeFilters.map((type) => 
+              renderFilterPill(
+                type,
+                type === 'all' ? 'Tutti' : type,
+                filterType === type,
+                () => setFilterType(type)
+              )
+            )}
+          </View>
         </View>
         
-        <Text style={styles.filterLabel}>Stato</Text>
-        <View style={styles.filterRow}>
-          {statusFilters.map((status) => 
-            renderFilterPill(
-              status,
-              status === 'all' ? 'Tutti' : getStatusLabel(status),
-              filterStatus === status,
-              () => setFilterStatus(status)
-            )
-          )}
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Stato</Text>
+          <View style={styles.filterRow}>
+            {statusFilters.map((status) => 
+              renderFilterPill(
+                status,
+                status === 'all' ? 'Tutti' : getStatusLabel(status),
+                filterStatus === status,
+                () => setFilterStatus(status)
+              )
+            )}
+          </View>
         </View>
       </View>
       
@@ -256,10 +275,13 @@ export function SIAETransmissionsScreen() {
         data={filteredTransmissions}
         renderItem={renderTransmission}
         keyExtractor={(item) => item.id.toString()}
+        key={numColumns}
+        numColumns={numColumns}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + 100 }
+          (isTablet || isLandscape) && styles.listContentLandscape,
         ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -277,8 +299,9 @@ export function SIAETransmissionsScreen() {
             </Text>
           </View>
         }
+        testID="list-transmissions"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -302,6 +325,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  filtersSectionLandscape: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.xl,
+  },
+  filterGroup: {
+    flex: 1,
   },
   filterLabel: {
     color: colors.mutedForeground,
@@ -338,6 +370,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   transmissionCard: {
     marginBottom: spacing.md,
@@ -360,6 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.sm,
+    flexWrap: 'wrap',
   },
   typeBadge: {
     paddingHorizontal: spacing.md,

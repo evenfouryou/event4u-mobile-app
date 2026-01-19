@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -33,7 +34,9 @@ interface Gestore {
 
 export function GestoriListScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -126,18 +129,18 @@ export function GestoriListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Gestori" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Gestori" showBack />
       
       <View style={styles.searchContainer}>
@@ -149,10 +152,10 @@ export function GestoriListScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-gestori"
+            testID="input-search-gestori"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} data-testid="button-clear-search">
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -161,7 +164,10 @@ export function GestoriListScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -170,62 +176,71 @@ export function GestoriListScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-view-gestori"
       >
         {filteredGestori.length > 0 ? (
-          filteredGestori.map((gestore) => (
-            <TouchableOpacity
-              key={gestore.id}
-              style={styles.gestoreCard}
-              onPress={() => navigation.navigate('GestoreDetail', { gestoreId: gestore.id })}
-              activeOpacity={0.8}
-              data-testid={`card-gestore-${gestore.id}`}
-            >
-              <Card variant="glass">
-                <View style={styles.gestoreRow}>
-                  {renderAvatar(gestore)}
-                  <View style={styles.gestoreInfo}>
-                    <View style={styles.gestoreHeader}>
-                      <Text style={styles.gestoreName}>
-                        {gestore.firstName} {gestore.lastName}
-                      </Text>
-                      <View style={styles.badges}>
-                        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(gestore.status)}20` }]}>
-                          <View style={[styles.statusDot, { backgroundColor: getStatusColor(gestore.status) }]} />
-                          <Text style={[styles.statusText, { color: getStatusColor(gestore.status) }]}>
-                            {getStatusLabel(gestore.status)}
-                          </Text>
-                        </View>
-                        {gestore.siaeEnabled && (
-                          <View style={[styles.siaeBadge, { backgroundColor: `${colors.accent}20` }]}>
-                            <Ionicons name="shield-checkmark" size={12} color={colors.accent} />
-                            <Text style={[styles.siaeText, { color: colors.accent }]}>SIAE</Text>
+          <View style={[
+            styles.listContainer,
+            (isTablet || isLandscape) && styles.listContainerLandscape
+          ]}>
+            {filteredGestori.map((gestore) => (
+              <TouchableOpacity
+                key={gestore.id}
+                style={[
+                  styles.gestoreCard,
+                  (isTablet || isLandscape) && styles.gestoreCardLandscape
+                ]}
+                onPress={() => navigation.navigate('GestoreDetail', { gestoreId: gestore.id })}
+                activeOpacity={0.8}
+                testID={`card-gestore-${gestore.id}`}
+              >
+                <Card variant="glass">
+                  <View style={styles.gestoreRow}>
+                    {renderAvatar(gestore)}
+                    <View style={styles.gestoreInfo}>
+                      <View style={styles.gestoreHeader}>
+                        <Text style={styles.gestoreName} testID={`text-gestore-name-${gestore.id}`}>
+                          {gestore.firstName} {gestore.lastName}
+                        </Text>
+                        <View style={styles.badges}>
+                          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(gestore.status)}20` }]}>
+                            <View style={[styles.statusDot, { backgroundColor: getStatusColor(gestore.status) }]} />
+                            <Text style={[styles.statusText, { color: getStatusColor(gestore.status) }]} testID={`text-gestore-status-${gestore.id}`}>
+                              {getStatusLabel(gestore.status)}
+                            </Text>
                           </View>
-                        )}
+                          {gestore.siaeEnabled && (
+                            <View style={[styles.siaeBadge, { backgroundColor: `${colors.accent}20` }]}>
+                              <Ionicons name="shield-checkmark" size={12} color={colors.accent} />
+                              <Text style={[styles.siaeText, { color: colors.accent }]}>SIAE</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
+                      <Text style={styles.gestoreEmail} testID={`text-gestore-email-${gestore.id}`}>{gestore.email}</Text>
+                      {gestore.companyName && (
+                        <View style={styles.companyRow}>
+                          <Ionicons name="business-outline" size={14} color={colors.mutedForeground} />
+                          <Text style={styles.companyName} testID={`text-gestore-company-${gestore.id}`}>{gestore.companyName}</Text>
+                        </View>
+                      )}
                     </View>
-                    <Text style={styles.gestoreEmail}>{gestore.email}</Text>
-                    {gestore.companyName && (
-                      <View style={styles.companyRow}>
-                        <Ionicons name="business-outline" size={14} color={colors.mutedForeground} />
-                        <Text style={styles.companyName}>{gestore.companyName}</Text>
-                      </View>
-                    )}
+                    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty-state">
             <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>
+            <Text style={styles.emptyText} testID="text-empty-message">
               {searchQuery ? 'Nessun gestore trovato' : 'Nessun gestore registrato'}
             </Text>
             <TouchableOpacity
               style={styles.emptyButton}
               onPress={() => navigation.navigate('GestoreDetail', { mode: 'create' })}
-              data-testid="button-add-first-gestore"
+              testID="button-add-first-gestore"
             >
               <Ionicons name="add" size={20} color={colors.primaryForeground} />
               <Text style={styles.emptyButtonText}>Aggiungi Gestore</Text>
@@ -235,14 +250,14 @@ export function GestoriListScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        style={[styles.fab, { bottom: 90 }]}
         onPress={() => navigation.navigate('GestoreDetail', { mode: 'create' })}
         activeOpacity={0.8}
-        data-testid="button-fab-add-gestore"
+        testID="button-fab-add-gestore"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -254,6 +269,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -285,8 +306,20 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.base,
   },
+  listContainer: {
+    flex: 1,
+  },
+  listContainerLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   gestoreCard: {
     marginBottom: spacing.md,
+  },
+  gestoreCardLandscape: {
+    width: '48.5%',
+    marginBottom: 0,
   },
   gestoreRow: {
     flexDirection: 'row',

@@ -9,10 +9,11 @@ import {
   Switch,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -30,7 +31,9 @@ interface SystemConfig {
 
 export function SIAESystemConfigScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,167 +81,187 @@ export function SIAESystemConfigScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Configurazione Sistema" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Configurazione Sistema" showBack onBack={() => navigation.goBack()} />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-config"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Identificativi</Text>
-          <Card variant="glass">
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Codice Locale</Text>
-              <TextInput
-                style={styles.input}
-                value={config.venueCode}
-                onChangeText={(text) => updateConfig('venueCode', text)}
-                placeholder="Inserisci codice locale"
-                placeholderTextColor={colors.mutedForeground}
-                data-testid="input-venue-code"
-              />
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Codice SIAE</Text>
-              <TextInput
-                style={styles.input}
-                value={config.siaeCode}
-                onChangeText={(text) => updateConfig('siaeCode', text)}
-                placeholder="Inserisci codice SIAE"
-                placeholderTextColor={colors.mutedForeground}
-                data-testid="input-siae-code"
-              />
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trasmissione Automatica</Text>
-          <Card variant="glass">
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Trasmissione Automatica</Text>
-                <Text style={styles.switchDescription}>Invia report automaticamente ogni giorno</Text>
-              </View>
-              <Switch
-                value={config.autoTransmit}
-                onValueChange={(value) => updateConfig('autoTransmit', value)}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.foreground}
-                data-testid="switch-auto-transmit"
-              />
-            </View>
-            {config.autoTransmit && (
-              <>
-                <View style={styles.divider} />
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentLandscape,
+        ]}>
+          <View style={[
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.leftColumnLandscape,
+          ]}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Identificativi</Text>
+              <Card variant="glass">
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Orario Trasmissione</Text>
+                  <Text style={styles.inputLabel}>Codice Locale</Text>
                   <TextInput
                     style={styles.input}
-                    value={config.transmitTime}
-                    onChangeText={(text) => updateConfig('transmitTime', text)}
-                    placeholder="HH:MM"
+                    value={config.venueCode}
+                    onChangeText={(text) => updateConfig('venueCode', text)}
+                    placeholder="Inserisci codice locale"
                     placeholderTextColor={colors.mutedForeground}
-                    data-testid="input-transmit-time"
+                    testID="input-venue-code"
                   />
                 </View>
-              </>
-            )}
-          </Card>
-        </View>
+                <View style={styles.divider} />
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Codice SIAE</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={config.siaeCode}
+                    onChangeText={(text) => updateConfig('siaeCode', text)}
+                    placeholder="Inserisci codice SIAE"
+                    placeholderTextColor={colors.mutedForeground}
+                    testID="input-siae-code"
+                  />
+                </View>
+              </Card>
+            </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Opzioni</Text>
-          <Card variant="glass">
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Firma Digitale</Text>
-                <Text style={styles.switchDescription}>Firma i report con smart card SIAE</Text>
-              </View>
-              <Switch
-                value={config.signatureEnabled}
-                onValueChange={(value) => updateConfig('signatureEnabled', value)}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.foreground}
-                data-testid="switch-signature"
-              />
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Trasmissione Automatica</Text>
+              <Card variant="glass">
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Trasmissione Automatica</Text>
+                    <Text style={styles.switchDescription}>Invia report automaticamente ogni giorno</Text>
+                  </View>
+                  <Switch
+                    value={config.autoTransmit}
+                    onValueChange={(value) => updateConfig('autoTransmit', value)}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.foreground}
+                    testID="switch-auto-transmit"
+                  />
+                </View>
+                {config.autoTransmit && (
+                  <>
+                    <View style={styles.divider} />
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Orario Trasmissione</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={config.transmitTime}
+                        onChangeText={(text) => updateConfig('transmitTime', text)}
+                        placeholder="HH:MM"
+                        placeholderTextColor={colors.mutedForeground}
+                        testID="input-transmit-time"
+                      />
+                    </View>
+                  </>
+                )}
+              </Card>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Stampa Ricevute</Text>
-                <Text style={styles.switchDescription}>Stampa automaticamente le ricevute</Text>
-              </View>
-              <Switch
-                value={config.printReceipts}
-                onValueChange={(value) => updateConfig('printReceipts', value)}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.foreground}
-                data-testid="switch-print"
-              />
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Backup Automatico</Text>
-                <Text style={styles.switchDescription}>Salva backup dei dati giornalmente</Text>
-              </View>
-              <Switch
-                value={config.backupEnabled}
-                onValueChange={(value) => updateConfig('backupEnabled', value)}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.foreground}
-                data-testid="switch-backup"
-              />
-            </View>
-          </Card>
-        </View>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Avanzate</Text>
-          <Card variant="glass">
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Modalità Debug</Text>
-                <Text style={styles.switchDescription}>Mostra log dettagliati per diagnosi</Text>
-              </View>
-              <Switch
-                value={config.debugMode}
-                onValueChange={(value) => updateConfig('debugMode', value)}
-                trackColor={{ false: colors.border, true: colors.warning }}
-                thumbColor={colors.foreground}
-                data-testid="switch-debug"
-              />
+          <View style={[
+            styles.rightColumn,
+            (isTablet || isLandscape) && styles.rightColumnLandscape,
+          ]}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Opzioni</Text>
+              <Card variant="glass">
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Firma Digitale</Text>
+                    <Text style={styles.switchDescription}>Firma i report con smart card SIAE</Text>
+                  </View>
+                  <Switch
+                    value={config.signatureEnabled}
+                    onValueChange={(value) => updateConfig('signatureEnabled', value)}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.foreground}
+                    testID="switch-signature"
+                  />
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Stampa Ricevute</Text>
+                    <Text style={styles.switchDescription}>Stampa automaticamente le ricevute</Text>
+                  </View>
+                  <Switch
+                    value={config.printReceipts}
+                    onValueChange={(value) => updateConfig('printReceipts', value)}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.foreground}
+                    testID="switch-print"
+                  />
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Backup Automatico</Text>
+                    <Text style={styles.switchDescription}>Salva backup dei dati giornalmente</Text>
+                  </View>
+                  <Switch
+                    value={config.backupEnabled}
+                    onValueChange={(value) => updateConfig('backupEnabled', value)}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.foreground}
+                    testID="switch-backup"
+                  />
+                </View>
+              </Card>
             </View>
-          </Card>
-        </View>
 
-        <View style={styles.section}>
-          <Button
-            onPress={handleSave}
-            disabled={saving}
-            style={styles.saveButton}
-            data-testid="button-save-config"
-          >
-            <Text style={styles.saveButtonText}>{saving ? 'Salvataggio...' : 'Salva Configurazione'}</Text>
-          </Button>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Avanzate</Text>
+              <Card variant="glass">
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Modalità Debug</Text>
+                    <Text style={styles.switchDescription}>Mostra log dettagliati per diagnosi</Text>
+                  </View>
+                  <Switch
+                    value={config.debugMode}
+                    onValueChange={(value) => updateConfig('debugMode', value)}
+                    trackColor={{ false: colors.border, true: colors.warning }}
+                    thumbColor={colors.foreground}
+                    testID="switch-debug"
+                  />
+                </View>
+              </Card>
+            </View>
+
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={saving}
+                activeOpacity={0.8}
+                testID="button-save-config"
+              >
+                <Text style={styles.saveButtonText}>{saving ? 'Salvataggio...' : 'Salva Configurazione'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -259,7 +282,33 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentLandscape: {
+    flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnLandscape: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnLandscape: {
+    flex: 1,
+    paddingLeft: spacing.md,
   },
   section: {
     marginTop: spacing.xl,
@@ -321,6 +370,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
     color: colors.primaryForeground,

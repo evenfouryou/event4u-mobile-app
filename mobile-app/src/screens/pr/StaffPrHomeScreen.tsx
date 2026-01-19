@@ -6,12 +6,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
@@ -43,8 +44,12 @@ interface Notification {
 
 export function StaffPrHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: stats, refetch: refetchStats } = useQuery<StaffStats>({
     queryKey: ['/api/staff/stats'],
@@ -164,12 +169,16 @@ export function StaffPrHomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Staff PR"
         rightAction={
           <View style={styles.headerRight}>
-            <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.notificationButton}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Notifications')} 
+              style={styles.notificationButton}
+              testID="button-notifications"
+            >
               <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
               {unreadNotifications.length > 0 && (
                 <View style={styles.notificationBadge}>
@@ -183,16 +192,18 @@ export function StaffPrHomeScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
+        testID="scroll-staff-home"
       >
         {activeEvent && (
           <TouchableOpacity
             onPress={() => navigation.navigate('StaffPrEventPanel', { eventId: activeEvent.id })}
             activeOpacity={0.8}
+            testID="button-active-event"
           >
             <Card variant="elevated" style={styles.activeEventCard}>
               <View style={styles.activeEventBadge}>
@@ -217,27 +228,28 @@ export function StaffPrHomeScreen() {
                 variant="primary"
                 onPress={() => navigation.navigate('StaffPrEventPanel', { eventId: activeEvent.id })}
                 style={styles.manageButton}
+                testID="button-manage-event"
               />
             </Card>
           </TouchableOpacity>
         )}
 
-        <View style={styles.statsGrid}>
-          <Card variant="glass" style={styles.statCard}>
+        <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-today">
             <View style={[styles.statIcon, { backgroundColor: colors.purple + '20' }]}>
               <Ionicons name="today" size={22} color={colors.purple} />
             </View>
             <Text style={styles.statValue}>{stats?.guestsToday || 0}</Text>
             <Text style={styles.statLabel}>Oggi</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-week">
             <View style={[styles.statIcon, { backgroundColor: colors.purpleLight + '20' }]}>
               <Ionicons name="calendar" size={22} color={colors.purpleLight} />
             </View>
             <Text style={styles.statValue}>{stats?.guestsThisWeek || 0}</Text>
             <Text style={styles.statLabel}>Questa Settimana</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-pending">
             <View style={[styles.statIcon, { backgroundColor: colors.warning + '20' }]}>
               <Ionicons name="time" size={22} color={colors.warning} />
             </View>
@@ -246,12 +258,12 @@ export function StaffPrHomeScreen() {
           </Card>
         </View>
 
-        <View style={styles.quickActions}>
+        <View style={[styles.quickActions, isLandscape && styles.quickActionsLandscape]}>
           <TouchableOpacity
             style={styles.quickAction}
             onPress={() => navigation.navigate('PRScanner')}
             activeOpacity={0.8}
-            data-testid="button-scan-qr"
+            testID="button-scan-qr"
           >
             <View style={[styles.quickActionIcon, { backgroundColor: colors.purple }]}>
               <Ionicons name="qr-code" size={28} color={colors.primaryForeground} />
@@ -262,7 +274,7 @@ export function StaffPrHomeScreen() {
             style={styles.quickAction}
             onPress={() => navigation.navigate('GuestSearch')}
             activeOpacity={0.8}
-            data-testid="button-search-guest"
+            testID="button-search-guest"
           >
             <View style={[styles.quickActionIcon, { backgroundColor: colors.purpleLight }]}>
               <Ionicons name="search" size={28} color={colors.primaryForeground} />
@@ -273,7 +285,7 @@ export function StaffPrHomeScreen() {
             style={styles.quickAction}
             onPress={() => navigation.navigate('GuestList')}
             activeOpacity={0.8}
-            data-testid="button-guest-list"
+            testID="button-guest-list"
           >
             <View style={[styles.quickActionIcon, { backgroundColor: colors.success }]}>
               <Ionicons name="list" size={28} color={colors.primaryForeground} />
@@ -286,50 +298,58 @@ export function StaffPrHomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('PRMyEvents')}>
+              <TouchableOpacity onPress={() => navigation.navigate('PRMyEvents')} testID="button-see-all-events">
                 <Text style={styles.seeAllText}>Vedi tutti</Text>
               </TouchableOpacity>
             </View>
-            {upcomingEvents.map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                onPress={() => navigation.navigate('StaffPrEventPanel', { eventId: event.id })}
-                activeOpacity={0.8}
-              >
-                <Card variant="glass" style={styles.eventCard}>
-                  <View style={styles.eventLeft}>
-                    <View style={styles.eventDate}>
-                      <Text style={styles.eventDay}>
-                        {new Date(event.date).getDate()}
-                      </Text>
-                      <Text style={styles.eventMonth}>
-                        {new Date(event.date).toLocaleDateString('it-IT', { month: 'short' })}
-                      </Text>
+            <View style={[styles.eventsList, numColumns === 2 && styles.eventsListGrid]}>
+              {upcomingEvents.map((event, index) => (
+                <TouchableOpacity
+                  key={event.id}
+                  onPress={() => navigation.navigate('StaffPrEventPanel', { eventId: event.id })}
+                  activeOpacity={0.8}
+                  style={[
+                    numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+                    numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+                    numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+                  ]}
+                  testID={`button-event-${event.id}`}
+                >
+                  <Card variant="glass" style={styles.eventCard}>
+                    <View style={styles.eventLeft}>
+                      <View style={styles.eventDate}>
+                        <Text style={styles.eventDay}>
+                          {new Date(event.date).getDate()}
+                        </Text>
+                        <Text style={styles.eventMonth}>
+                          {new Date(event.date).toLocaleDateString('it-IT', { month: 'short' })}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventName}>{event.name}</Text>
-                    <View style={styles.eventMeta}>
-                      <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-                      <Text style={styles.eventMetaText}>{event.time}</Text>
-                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                      <Text style={styles.eventMetaText}>{event.venue}</Text>
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventName}>{event.name}</Text>
+                      <View style={styles.eventMeta}>
+                        <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                        <Text style={styles.eventMetaText}>{event.time}</Text>
+                        <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                        <Text style={styles.eventMetaText}>{event.venue}</Text>
+                      </View>
+                      <View style={styles.roleBadge}>
+                        <Text style={styles.roleText}>{event.role}</Text>
+                      </View>
                     </View>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleText}>{event.role}</Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-                </Card>
-              </TouchableOpacity>
-            ))}
+                    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                  </Card>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
         {notifications.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notifiche Recenti</Text>
-            <Card variant="glass" style={styles.notificationsCard}>
+            <Card variant="glass" style={styles.notificationsCard} testID="card-notifications">
               {notifications.slice(0, 3).map((notification, index) => (
                 <View
                   key={notification.id}
@@ -337,6 +357,7 @@ export function StaffPrHomeScreen() {
                     styles.notificationItem,
                     index < Math.min(notifications.length, 3) - 1 && styles.notificationItemBorder,
                   ]}
+                  testID={`notification-${notification.id}`}
                 >
                   <View
                     style={[
@@ -362,7 +383,7 @@ export function StaffPrHomeScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -374,6 +395,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  contentContainer: {
+    paddingBottom: spacing.xl,
   },
   headerRight: {
     flexDirection: 'row',
@@ -450,6 +474,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
+  statsGridTablet: {
+    justifyContent: 'center',
+  },
   statCard: {
     flex: 1,
     padding: spacing.lg,
@@ -478,6 +505,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: spacing.xl,
+  },
+  quickActionsLandscape: {
+    justifyContent: 'center',
+    gap: spacing.xxl,
   },
   quickAction: {
     alignItems: 'center',
@@ -513,6 +544,13 @@ const styles = StyleSheet.create({
     color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
+  },
+  eventsList: {
+    gap: spacing.md,
+  },
+  eventsListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   eventCard: {
     flexDirection: 'row',

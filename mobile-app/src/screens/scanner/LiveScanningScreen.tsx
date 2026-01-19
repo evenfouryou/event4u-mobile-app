@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Vibration, Dimensions, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Vibration, TextInput, Modal, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { api } from '../../lib/api';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SCAN_AREA_SIZE = SCREEN_WIDTH * 0.7;
 
 type ScanResult = 'idle' | 'valid' | 'invalid' | 'duplicate' | 'scanning';
 
@@ -31,8 +28,12 @@ interface TodayStats {
 export function LiveScanningScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+
+  const scanAreaSize = isLandscape ? Math.min(width * 0.4, height * 0.7) : width * 0.7;
 
   const { eventId, eventTitle } = route.params || {};
   const [permission, requestPermission] = useCameraPermissions();
@@ -193,32 +194,32 @@ export function LiveScanningScreen() {
 
   if (!permission) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.permissionContainer}>
           <Ionicons name="camera-outline" size={64} color={colors.mutedForeground} />
           <Text style={styles.permissionText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!permission.granted) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.permissionContainer}>
           <Ionicons name="camera-off-outline" size={64} color={colors.mutedForeground} />
           <Text style={styles.permissionTitle}>Permesso Camera Richiesto</Text>
           <Text style={styles.permissionText}>
             Per scansionare i biglietti QR, è necessario consentire l'accesso alla fotocamera.
           </Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission} testID="button-request-permission">
             <Text style={styles.permissionButtonText}>Consenti Accesso</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.backButton} onPress={handleClose}>
+          <TouchableOpacity style={styles.backButton} onPress={handleClose} testID="button-go-back">
             <Text style={styles.backButtonText}>Torna Indietro</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -265,11 +266,11 @@ export function LiveScanningScreen() {
 
   const scanLineTranslateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, SCAN_AREA_SIZE - 4],
+    outputRange: [0, scanAreaSize - 4],
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
@@ -280,115 +281,224 @@ export function LiveScanningScreen() {
         onBarcodeScanned={scanResult === 'idle' ? handleBarCodeScanned : undefined}
       />
 
-      <View style={styles.overlay}>
-        <View style={[styles.overlayTop, { paddingTop: insets.top }]}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.headerButton} onPress={handleClose} data-testid="button-close">
-              <Ionicons name="close" size={28} color={colors.foreground} />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle} numberOfLines={1}>{eventTitle || 'Scansione'}</Text>
-              <TouchableOpacity style={styles.modeToggle} onPress={toggleScanMode} data-testid="button-toggle-mode">
-                <Ionicons 
-                  name={scanMode === 'entry' ? 'enter-outline' : 'exit-outline'} 
-                  size={16} 
-                  color={scanMode === 'entry' ? colors.teal : colors.warning} 
+      <View style={[styles.overlay, isLandscape && styles.overlayLandscape]}>
+        {isLandscape ? (
+          <>
+            <View style={styles.landscapeLeft}>
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleClose} testID="button-close">
+                  <Ionicons name="close" size={28} color={colors.foreground} />
+                </TouchableOpacity>
+                <View style={styles.headerCenter}>
+                  <Text style={styles.headerTitle} numberOfLines={1}>{eventTitle || 'Scansione'}</Text>
+                  <TouchableOpacity style={styles.modeToggle} onPress={toggleScanMode} testID="button-toggle-mode">
+                    <Ionicons 
+                      name={scanMode === 'entry' ? 'enter-outline' : 'exit-outline'} 
+                      size={16} 
+                      color={scanMode === 'entry' ? colors.teal : colors.warning} 
+                    />
+                    <Text style={[styles.modeText, { color: scanMode === 'entry' ? colors.teal : colors.warning }]}>
+                      {scanMode === 'entry' ? 'Entrata' : 'Uscita'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.headerButton} onPress={toggleFlash} testID="button-flash">
+                  <Ionicons name={flashEnabled ? 'flash' : 'flash-off'} size={24} color={colors.foreground} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.statsRow}>
+                <Animated.View style={[styles.statBadge, { transform: [{ scale: pulseAnim }] }]}>
+                  <Ionicons name="scan" size={16} color={colors.emerald} />
+                  <Text style={styles.statBadgeValue} testID="text-total-scans">{stats.totalScans}</Text>
+                  <Text style={styles.statBadgeLabel}>oggi</Text>
+                </Animated.View>
+                <View style={[styles.statBadge, { backgroundColor: colors.teal + '20' }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.teal} />
+                  <Text style={[styles.statBadgeValue, { color: colors.teal }]} testID="text-valid-scans">{stats.validScans}</Text>
+                </View>
+                <View style={[styles.statBadge, { backgroundColor: colors.destructive + '20' }]}>
+                  <Ionicons name="close-circle" size={16} color={colors.destructive} />
+                  <Text style={[styles.statBadgeValue, { color: colors.destructive }]} testID="text-invalid-scans">{stats.invalidScans}</Text>
+                </View>
+              </View>
+
+              <View style={styles.statusContainer}>
+                <Ionicons
+                  name={getFeedbackIcon() as any}
+                  size={32}
+                  color={getFeedbackColor() || colors.foreground}
                 />
-                <Text style={[styles.modeText, { color: scanMode === 'entry' ? colors.teal : colors.warning }]}>
-                  {scanMode === 'entry' ? 'Entrata' : 'Uscita'}
+                <Text style={[styles.statusText, { color: getFeedbackColor() || colors.foreground }]}>
+                  {getFeedbackMessage()}
                 </Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={styles.headerButton} onPress={toggleFlash} data-testid="button-flash">
-              <Ionicons name={flashEnabled ? 'flash' : 'flash-off'} size={24} color={colors.foreground} />
-            </TouchableOpacity>
-          </View>
+              </View>
 
-          <View style={styles.statsRow}>
-            <Animated.View style={[styles.statBadge, { transform: [{ scale: pulseAnim }] }]}>
-              <Ionicons name="scan" size={16} color={colors.emerald} />
-              <Text style={styles.statBadgeValue}>{stats.totalScans}</Text>
-              <Text style={styles.statBadgeLabel}>oggi</Text>
-            </Animated.View>
-            <View style={[styles.statBadge, { backgroundColor: colors.teal + '20' }]}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.teal} />
-              <Text style={[styles.statBadgeValue, { color: colors.teal }]}>{stats.validScans}</Text>
-            </View>
-            <View style={[styles.statBadge, { backgroundColor: colors.destructive + '20' }]}>
-              <Ionicons name="close-circle" size={16} color={colors.destructive} />
-              <Text style={[styles.statBadgeValue, { color: colors.destructive }]}>{stats.invalidScans}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.overlayMiddle}>
-          <View style={styles.overlaySide} />
-          <View style={styles.scanAreaContainer}>
-            <View style={[styles.scanArea, { borderColor: getFeedbackColor() || colors.foreground }]}>
-              <View style={[styles.corner, styles.cornerTopLeft]} />
-              <View style={[styles.corner, styles.cornerTopRight]} />
-              <View style={[styles.corner, styles.cornerBottomLeft]} />
-              <View style={[styles.corner, styles.cornerBottomRight]} />
-              
-              {scanResult === 'idle' && (
-                <Animated.View
-                  style={[
-                    styles.scanLine,
-                    { transform: [{ translateY: scanLineTranslateY }] },
-                  ]}
-                />
-              )}
-            </View>
-          </View>
-          <View style={styles.overlaySide} />
-        </View>
-
-        <View style={[styles.overlayBottom, { paddingBottom: insets.bottom + spacing.lg }]}>
-          <View style={styles.statusContainer}>
-            <Ionicons
-              name={getFeedbackIcon() as any}
-              size={32}
-              color={getFeedbackColor() || colors.foreground}
-            />
-            <Text style={[styles.statusText, { color: getFeedbackColor() || colors.foreground }]}>
-              {getFeedbackMessage()}
-            </Text>
-          </View>
-
-          <Animated.View style={[styles.ticketInfoCard, { opacity: feedbackOpacity }]}>
-            {ticketInfo && (
-              <View style={[styles.ticketInfo, { borderLeftColor: getFeedbackColor() }]}>
-                <View style={styles.ticketInfoRow}>
-                  <Text style={styles.ticketInfoLabel}>Codice:</Text>
-                  <Text style={styles.ticketInfoValue}>{ticketInfo.ticketCode}</Text>
-                </View>
-                <View style={styles.ticketInfoRow}>
-                  <Text style={styles.ticketInfoLabel}>Titolare:</Text>
-                  <Text style={styles.ticketInfoValue}>{ticketInfo.holderName}</Text>
-                </View>
-                <View style={styles.ticketInfoRow}>
-                  <Text style={styles.ticketInfoLabel}>Tipo:</Text>
-                  <Text style={styles.ticketInfoValue}>{ticketInfo.ticketType}</Text>
-                </View>
-                {ticketInfo.status && (
-                  <View style={styles.ticketInfoRow}>
-                    <Text style={styles.ticketInfoLabel}>Stato:</Text>
-                    <Text style={[styles.ticketInfoValue, { color: getFeedbackColor() }]}>{ticketInfo.status}</Text>
+              <Animated.View style={[styles.ticketInfoCard, { opacity: feedbackOpacity }]}>
+                {ticketInfo && (
+                  <View style={[styles.ticketInfo, { borderLeftColor: getFeedbackColor() }]}>
+                    <View style={styles.ticketInfoRow}>
+                      <Text style={styles.ticketInfoLabel}>Codice:</Text>
+                      <Text style={styles.ticketInfoValue} testID="text-ticket-code">{ticketInfo.ticketCode}</Text>
+                    </View>
+                    <View style={styles.ticketInfoRow}>
+                      <Text style={styles.ticketInfoLabel}>Titolare:</Text>
+                      <Text style={styles.ticketInfoValue}>{ticketInfo.holderName}</Text>
+                    </View>
+                    <View style={styles.ticketInfoRow}>
+                      <Text style={styles.ticketInfoLabel}>Tipo:</Text>
+                      <Text style={styles.ticketInfoValue}>{ticketInfo.ticketType}</Text>
+                    </View>
+                    {ticketInfo.status && (
+                      <View style={styles.ticketInfoRow}>
+                        <Text style={styles.ticketInfoLabel}>Stato:</Text>
+                        <Text style={[styles.ticketInfoValue, { color: getFeedbackColor() }]}>{ticketInfo.status}</Text>
+                      </View>
+                    )}
                   </View>
                 )}
-              </View>
-            )}
-          </Animated.View>
+              </Animated.View>
 
-          <TouchableOpacity
-            style={styles.manualEntryButton}
-            onPress={() => setShowManualEntry(true)}
-            data-testid="button-manual-entry"
-          >
-            <Ionicons name="keypad-outline" size={20} color={colors.foreground} />
-            <Text style={styles.manualEntryText}>Inserimento Manuale</Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={styles.manualEntryButton}
+                onPress={() => setShowManualEntry(true)}
+                testID="button-manual-entry"
+              >
+                <Ionicons name="keypad-outline" size={20} color={colors.foreground} />
+                <Text style={styles.manualEntryText}>Inserimento Manuale</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.landscapeRight}>
+              <View style={[styles.scanArea, { width: scanAreaSize, height: scanAreaSize, borderColor: getFeedbackColor() || colors.foreground }]}>
+                <View style={[styles.corner, styles.cornerTopLeft]} />
+                <View style={[styles.corner, styles.cornerTopRight]} />
+                <View style={[styles.corner, styles.cornerBottomLeft]} />
+                <View style={[styles.corner, styles.cornerBottomRight]} />
+                
+                {scanResult === 'idle' && (
+                  <Animated.View
+                    style={[
+                      styles.scanLine,
+                      { transform: [{ translateY: scanLineTranslateY }] },
+                    ]}
+                  />
+                )}
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.overlayTop}>
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleClose} testID="button-close">
+                  <Ionicons name="close" size={28} color={colors.foreground} />
+                </TouchableOpacity>
+                <View style={styles.headerCenter}>
+                  <Text style={styles.headerTitle} numberOfLines={1}>{eventTitle || 'Scansione'}</Text>
+                  <TouchableOpacity style={styles.modeToggle} onPress={toggleScanMode} testID="button-toggle-mode">
+                    <Ionicons 
+                      name={scanMode === 'entry' ? 'enter-outline' : 'exit-outline'} 
+                      size={16} 
+                      color={scanMode === 'entry' ? colors.teal : colors.warning} 
+                    />
+                    <Text style={[styles.modeText, { color: scanMode === 'entry' ? colors.teal : colors.warning }]}>
+                      {scanMode === 'entry' ? 'Entrata' : 'Uscita'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.headerButton} onPress={toggleFlash} testID="button-flash">
+                  <Ionicons name={flashEnabled ? 'flash' : 'flash-off'} size={24} color={colors.foreground} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.statsRow}>
+                <Animated.View style={[styles.statBadge, { transform: [{ scale: pulseAnim }] }]}>
+                  <Ionicons name="scan" size={16} color={colors.emerald} />
+                  <Text style={styles.statBadgeValue} testID="text-total-scans">{stats.totalScans}</Text>
+                  <Text style={styles.statBadgeLabel}>oggi</Text>
+                </Animated.View>
+                <View style={[styles.statBadge, { backgroundColor: colors.teal + '20' }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.teal} />
+                  <Text style={[styles.statBadgeValue, { color: colors.teal }]} testID="text-valid-scans">{stats.validScans}</Text>
+                </View>
+                <View style={[styles.statBadge, { backgroundColor: colors.destructive + '20' }]}>
+                  <Ionicons name="close-circle" size={16} color={colors.destructive} />
+                  <Text style={[styles.statBadgeValue, { color: colors.destructive }]} testID="text-invalid-scans">{stats.invalidScans}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.overlayMiddle}>
+              <View style={styles.overlaySide} />
+              <View style={styles.scanAreaContainer}>
+                <View style={[styles.scanArea, { width: scanAreaSize, height: scanAreaSize, borderColor: getFeedbackColor() || colors.foreground }]}>
+                  <View style={[styles.corner, styles.cornerTopLeft]} />
+                  <View style={[styles.corner, styles.cornerTopRight]} />
+                  <View style={[styles.corner, styles.cornerBottomLeft]} />
+                  <View style={[styles.corner, styles.cornerBottomRight]} />
+                  
+                  {scanResult === 'idle' && (
+                    <Animated.View
+                      style={[
+                        styles.scanLine,
+                        { transform: [{ translateY: scanLineTranslateY }] },
+                      ]}
+                    />
+                  )}
+                </View>
+              </View>
+              <View style={styles.overlaySide} />
+            </View>
+
+            <View style={styles.overlayBottom}>
+              <View style={styles.statusContainer}>
+                <Ionicons
+                  name={getFeedbackIcon() as any}
+                  size={32}
+                  color={getFeedbackColor() || colors.foreground}
+                />
+                <Text style={[styles.statusText, { color: getFeedbackColor() || colors.foreground }]}>
+                  {getFeedbackMessage()}
+                </Text>
+              </View>
+
+              <Animated.View style={[styles.ticketInfoCard, { opacity: feedbackOpacity }]}>
+                {ticketInfo && (
+                  <View style={[styles.ticketInfo, { borderLeftColor: getFeedbackColor() }]}>
+                    <View style={styles.ticketInfoRow}>
+                      <Text style={styles.ticketInfoLabel}>Codice:</Text>
+                      <Text style={styles.ticketInfoValue} testID="text-ticket-code">{ticketInfo.ticketCode}</Text>
+                    </View>
+                    <View style={styles.ticketInfoRow}>
+                      <Text style={styles.ticketInfoLabel}>Titolare:</Text>
+                      <Text style={styles.ticketInfoValue}>{ticketInfo.holderName}</Text>
+                    </View>
+                    <View style={styles.ticketInfoRow}>
+                      <Text style={styles.ticketInfoLabel}>Tipo:</Text>
+                      <Text style={styles.ticketInfoValue}>{ticketInfo.ticketType}</Text>
+                    </View>
+                    {ticketInfo.status && (
+                      <View style={styles.ticketInfoRow}>
+                        <Text style={styles.ticketInfoLabel}>Stato:</Text>
+                        <Text style={[styles.ticketInfoValue, { color: getFeedbackColor() }]}>{ticketInfo.status}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </Animated.View>
+
+              <TouchableOpacity
+                style={styles.manualEntryButton}
+                onPress={() => setShowManualEntry(true)}
+                testID="button-manual-entry"
+              >
+                <Ionicons name="keypad-outline" size={20} color={colors.foreground} />
+                <Text style={styles.manualEntryText}>Inserimento Manuale</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
 
       <Modal
@@ -401,10 +511,10 @@ export function LiveScanningScreen() {
           style={styles.modalOverlay} 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={[styles.manualEntryModal, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={[styles.manualEntryModal, (isTablet || isLandscape) && styles.manualEntryModalWide]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Inserimento Manuale</Text>
-              <TouchableOpacity onPress={() => setShowManualEntry(false)} data-testid="button-close-manual">
+              <TouchableOpacity onPress={() => setShowManualEntry(false)} testID="button-close-manual">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -422,14 +532,14 @@ export function LiveScanningScreen() {
               autoCapitalize="characters"
               autoCorrect={false}
               autoFocus
-              data-testid="input-manual-code"
+              testID="input-manual-code"
             />
 
             <TouchableOpacity
               style={[styles.submitButton, !manualCode.trim() && styles.submitButtonDisabled]}
               onPress={handleManualSubmit}
               disabled={!manualCode.trim()}
-              data-testid="button-submit-manual"
+              testID="button-submit-manual"
             >
               <Ionicons name="checkmark" size={20} color={colors.emeraldForeground} />
               <Text style={styles.submitButtonText}>Verifica Biglietto</Text>
@@ -437,7 +547,7 @@ export function LiveScanningScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -487,6 +597,20 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
+  },
+  overlayLandscape: {
+    flexDirection: 'row',
+  },
+  landscapeLeft: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: spacing.lg,
+    justifyContent: 'space-between',
+  },
+  landscapeRight: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   overlayTop: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -563,12 +687,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   scanAreaContainer: {
-    width: SCAN_AREA_SIZE,
-    height: SCAN_AREA_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanArea: {
-    width: SCAN_AREA_SIZE,
-    height: SCAN_AREA_SIZE,
     borderWidth: 2,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
@@ -620,6 +742,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     alignItems: 'center',
     paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   statusContainer: {
     alignItems: 'center',
@@ -678,6 +801,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  manualEntryModalWide: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
+    borderRadius: borderRadius['2xl'],
+    marginBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -702,9 +833,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     color: colors.foreground,
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    fontFamily: 'monospace',
     textAlign: 'center',
-    letterSpacing: 2,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: spacing.lg,

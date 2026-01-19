@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -45,7 +46,9 @@ const CATEGORIES = [
 
 export function TransactionsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,18 +155,18 @@ export function TransactionsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Transazioni" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento transazioni...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento transazioni...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Transazioni" showBack onBack={() => navigation.goBack()} />
 
       <View style={styles.searchContainer}>
@@ -175,10 +178,10 @@ export function TransactionsScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-transactions"
+            testID="input-search-transactions"
           />
           {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -190,6 +193,7 @@ export function TransactionsScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtersContainer}
         style={styles.filtersScroll}
+        testID="scroll-filters"
       >
         {TYPE_FILTERS.map((filter) => (
           <TouchableOpacity
@@ -199,7 +203,7 @@ export function TransactionsScreen() {
               selectedType === filter.id && styles.filterPillActive,
             ]}
             onPress={() => setSelectedType(filter.id)}
-            data-testid={`pill-type-${filter.id}`}
+            testID={`pill-type-${filter.id}`}
           >
             <Ionicons
               name={filter.icon as any}
@@ -222,7 +226,7 @@ export function TransactionsScreen() {
             selectedCategory !== 'Tutti' && styles.filterPillActive,
           ]}
           onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-          data-testid="pill-category"
+          testID="pill-category"
         >
           <Ionicons
             name="pricetag-outline"
@@ -247,7 +251,7 @@ export function TransactionsScreen() {
 
       {showCategoryPicker && (
         <View style={styles.categoryPicker}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="scroll-categories">
             {CATEGORIES.map((category) => (
               <TouchableOpacity
                 key={category}
@@ -259,6 +263,7 @@ export function TransactionsScreen() {
                   setSelectedCategory(category);
                   setShowCategoryPicker(false);
                 }}
+                testID={`option-category-${category}`}
               >
                 <Text
                   style={[
@@ -274,15 +279,15 @@ export function TransactionsScreen() {
         </View>
       )}
 
-      <View style={styles.summaryBar}>
-        <View style={styles.summaryItem}>
+      <View style={[styles.summaryBar, (isLandscape || isTablet) && styles.summaryBarWide]}>
+        <View style={styles.summaryItem} testID="summary-income">
           <Text style={styles.summaryLabel}>Entrate</Text>
           <Text style={[styles.summaryValue, { color: colors.primary }]}>
             +{formatCurrency(totalIncome)}
           </Text>
         </View>
         <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
+        <View style={styles.summaryItem} testID="summary-expense">
           <Text style={styles.summaryLabel}>Uscite</Text>
           <Text style={[styles.summaryValue, { color: colors.destructive }]}>
             -{formatCurrency(totalExpense)}
@@ -292,7 +297,10 @@ export function TransactionsScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -301,43 +309,54 @@ export function TransactionsScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-transactions"
       >
         {sortedDates.length > 0 ? (
           sortedDates.map((dateKey) => (
             <View key={dateKey} style={styles.dateGroup}>
-              <Text style={styles.dateHeader}>{formatDate(dateKey)}</Text>
-              {groupedTransactions[dateKey].map((transaction) => (
-                <Card key={transaction.id} variant="glass" style={styles.transactionCard}>
-                  <View style={styles.transactionRow}>
-                    <View style={[
-                      styles.transactionIcon,
-                      { backgroundColor: transaction.type === 'income' ? `${colors.primary}20` : `${colors.destructive}20` }
-                    ]}>
-                      <Ionicons
-                        name={transaction.type === 'income' ? 'arrow-down' : 'arrow-up'}
-                        size={20}
-                        color={transaction.type === 'income' ? colors.primary : colors.destructive}
-                      />
-                    </View>
-                    <View style={styles.transactionInfo}>
-                      <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryBadgeText}>{transaction.category}</Text>
+              <Text style={styles.dateHeader} testID={`header-date-${dateKey}`}>{formatDate(dateKey)}</Text>
+              <View style={(isLandscape || isTablet) ? styles.transactionsGrid : undefined}>
+                {groupedTransactions[dateKey].map((transaction) => (
+                  <Card 
+                    key={transaction.id} 
+                    variant="glass" 
+                    style={[
+                      styles.transactionCard,
+                      (isLandscape || isTablet) && styles.transactionCardWide,
+                    ]}
+                    testID={`card-transaction-${transaction.id}`}
+                  >
+                    <View style={styles.transactionRow}>
+                      <View style={[
+                        styles.transactionIcon,
+                        { backgroundColor: transaction.type === 'income' ? `${colors.primary}20` : `${colors.destructive}20` }
+                      ]}>
+                        <Ionicons
+                          name={transaction.type === 'income' ? 'arrow-down' : 'arrow-up'}
+                          size={20}
+                          color={transaction.type === 'income' ? colors.primary : colors.destructive}
+                        />
                       </View>
+                      <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionDescription}>{transaction.description}</Text>
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryBadgeText}>{transaction.category}</Text>
+                        </View>
+                      </View>
+                      <Text style={[
+                        styles.transactionAmount,
+                        { color: transaction.type === 'income' ? colors.primary : colors.destructive }
+                      ]}>
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                      </Text>
                     </View>
-                    <Text style={[
-                      styles.transactionAmount,
-                      { color: transaction.type === 'income' ? colors.primary : colors.destructive }
-                    ]}>
-                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </Text>
-                  </View>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </View>
             </View>
           ))
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="empty-state">
             <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>Nessuna transazione trovata</Text>
             <Text style={styles.emptySubtext}>
@@ -346,7 +365,7 @@ export function TransactionsScreen() {
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -358,6 +377,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -456,6 +481,9 @@ const styles = StyleSheet.create({
     borderColor: colors.glass.border,
     padding: spacing.md,
   },
+  summaryBarWide: {
+    marginHorizontal: spacing.xl,
+  },
   summaryItem: {
     flex: 1,
     alignItems: 'center',
@@ -486,8 +514,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  transactionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
   transactionCard: {
     marginBottom: spacing.sm,
+  },
+  transactionCardWide: {
+    width: '50%',
+    paddingHorizontal: spacing.xs,
   },
   transactionRow: {
     flexDirection: 'row',

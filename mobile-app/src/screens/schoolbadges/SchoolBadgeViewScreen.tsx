@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  useWindowDimensions,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface BadgeData {
   id: string;
@@ -22,7 +31,10 @@ interface BadgeData {
 export function SchoolBadgeViewScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [loading, setLoading] = useState(true);
   const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
 
@@ -65,36 +77,36 @@ export function SchoolBadgeViewScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, styles.centerContent]} edges={['top', 'bottom', 'left', 'right']}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Caricamento badge...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!badgeData) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, styles.centerContent]} edges={['top', 'bottom', 'left', 'right']}>
         <Ionicons name="alert-circle-outline" size={64} color={colors.destructive} />
         <Text style={styles.errorText}>Badge non trovato</Text>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={() => navigation.goBack()}
-          data-testid="button-back-error"
+          testID="button-back-error"
         >
           <Text style={styles.retryButtonText}>Torna Indietro</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -104,111 +116,129 @@ export function SchoolBadgeViewScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[
-          styles.statusBanner,
-          badgeData.isActive && !isExpired() ? styles.statusValid : styles.statusInvalid
+          isLandscape && styles.landscapeLayout,
+          isTablet && styles.tabletLayout,
         ]}>
-          <Ionicons
-            name={badgeData.isActive && !isExpired() ? 'checkmark-circle' : 'close-circle'}
-            size={24}
-            color={badgeData.isActive && !isExpired() ? colors.success : colors.destructive}
-          />
-          <Text style={[
-            styles.statusText,
-            { color: badgeData.isActive && !isExpired() ? colors.success : colors.destructive }
+          <View style={[
+            styles.leftColumn,
+            (isLandscape || isTablet) && styles.leftColumnWide,
           ]}>
-            {badgeData.isActive && !isExpired() ? 'Badge Valido' : 'Badge Non Valido'}
-          </Text>
-        </View>
+            <View style={[
+              styles.statusBanner,
+              badgeData.isActive && !isExpired() ? styles.statusValid : styles.statusInvalid
+            ]}>
+              <Ionicons
+                name={badgeData.isActive && !isExpired() ? 'checkmark-circle' : 'close-circle'}
+                size={24}
+                color={badgeData.isActive && !isExpired() ? colors.success : colors.destructive}
+              />
+              <Text style={[
+                styles.statusText,
+                { color: badgeData.isActive && !isExpired() ? colors.success : colors.destructive }
+              ]}>
+                {badgeData.isActive && !isExpired() ? 'Badge Valido' : 'Badge Non Valido'}
+              </Text>
+            </View>
 
-        <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            {badgeData.photoUrl ? (
-              <Image source={{ uri: badgeData.photoUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={48} color={colors.mutedForeground} />
+            <View style={[styles.profileCard, isTablet && styles.profileCardTablet]}>
+              <View style={styles.avatarContainer}>
+                {badgeData.photoUrl ? (
+                  <Image source={{ uri: badgeData.photoUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Ionicons name="person" size={48} color={colors.mutedForeground} />
+                  </View>
+                )}
+              </View>
+              <Text style={styles.studentName}>{badgeData.studentName}</Text>
+              <Text style={styles.studentId}>{badgeData.studentId}</Text>
+              
+              <View style={styles.badgeRow}>
+                <View style={styles.badgePill}>
+                  <Ionicons name="school" size={14} color={colors.primary} />
+                  <Text style={styles.badgePillText}>{badgeData.className}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={[
+            styles.rightColumn,
+            (isLandscape || isTablet) && styles.rightColumnWide,
+          ]}>
+            <View style={styles.detailsSection}>
+              <Text style={styles.sectionTitle}>Informazioni Badge</Text>
+              
+              <View style={[styles.detailCard, isTablet && styles.detailCardTablet]}>
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Ionicons name="barcode" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Codice Badge</Text>
+                    <Text style={styles.detailValue}>{badgeData.code}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailDivider} />
+
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Ionicons name="business" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Istituto</Text>
+                    <Text style={styles.detailValue}>{badgeData.schoolName}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailDivider} />
+
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Ionicons name="calendar" size={20} color={colors.teal} />
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Valido dal</Text>
+                    <Text style={styles.detailValue}>{formatDate(badgeData.validFrom)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailDivider} />
+
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Ionicons name="calendar-outline" size={20} color={isExpired() ? colors.destructive : colors.teal} />
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Scadenza</Text>
+                    <Text style={[styles.detailValue, isExpired() && styles.expiredText]}>
+                      {formatDate(badgeData.validUntil)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {badgeData.lastVerified && (
+              <View style={styles.verificationInfo}>
+                <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
+                <Text style={styles.verificationText}>
+                  Ultima verifica: {formatDate(badgeData.lastVerified)}
+                </Text>
               </View>
             )}
           </View>
-          <Text style={styles.studentName}>{badgeData.studentName}</Text>
-          <Text style={styles.studentId}>{badgeData.studentId}</Text>
-          
-          <View style={styles.badgeRow}>
-            <View style={styles.badgePill}>
-              <Ionicons name="school" size={14} color={colors.primary} />
-              <Text style={styles.badgePillText}>{badgeData.className}</Text>
-            </View>
-          </View>
         </View>
-
-        <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Informazioni Badge</Text>
-          
-          <View style={styles.detailCard}>
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="barcode" size={20} color={colors.primary} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Codice Badge</Text>
-                <Text style={styles.detailValue}>{badgeData.code}</Text>
-              </View>
-            </View>
-
-            <View style={styles.detailDivider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="business" size={20} color={colors.primary} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Istituto</Text>
-                <Text style={styles.detailValue}>{badgeData.schoolName}</Text>
-              </View>
-            </View>
-
-            <View style={styles.detailDivider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="calendar" size={20} color={colors.teal} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Valido dal</Text>
-                <Text style={styles.detailValue}>{formatDate(badgeData.validFrom)}</Text>
-              </View>
-            </View>
-
-            <View style={styles.detailDivider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="calendar-outline" size={20} color={isExpired() ? colors.destructive : colors.teal} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Scadenza</Text>
-                <Text style={[styles.detailValue, isExpired() && styles.expiredText]}>
-                  {formatDate(badgeData.validUntil)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {badgeData.lastVerified && (
-          <View style={styles.verificationInfo}>
-            <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
-            <Text style={styles.verificationText}>
-              Ultima verifica: {formatDate(badgeData.lastVerified)}
-            </Text>
-          </View>
-        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -227,6 +257,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -249,6 +282,32 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
+  landscapeLayout: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  tabletLayout: {
+    maxWidth: 900,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnWide: {
+    flex: 1,
+    maxWidth: 400,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnWide: {
+    flex: 1,
   },
   statusBanner: {
     flexDirection: 'row',
@@ -277,6 +336,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  profileCardTablet: {
+    padding: spacing['2xl'],
   },
   avatarContainer: {
     marginBottom: spacing.lg,
@@ -338,6 +400,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  detailCardTablet: {
+    padding: spacing.xl,
   },
   detailRow: {
     flexDirection: 'row',

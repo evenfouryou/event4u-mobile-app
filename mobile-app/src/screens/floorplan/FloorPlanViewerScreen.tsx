@@ -1,30 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
-import Svg, { Rect, Path, G, Text as SvgText, Circle } from 'react-native-svg';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import Svg, { Rect, G, Text as SvgText, Circle } from 'react-native-svg';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const FLOOR_PLAN_SIZE = SCREEN_WIDTH - spacing.lg * 2;
 
 interface Zone {
   id: string;
@@ -61,8 +57,12 @@ const STATUS_COLORS = {
 export function FloorPlanViewerScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { venueId, venueName } = route.params || {};
+
+  const FLOOR_PLAN_SIZE = isLandscape ? Math.min(height - 200, width * 0.5) : width - spacing.lg * 2;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -262,189 +262,194 @@ export function FloorPlanViewerScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={venueName || 'Planimetria'} showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento planimetria...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento planimetria...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={venueName || 'Planimetria'} showBack onBack={() => navigation.goBack()} />
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID="error-container">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadFloorPlan} data-testid="button-retry">
+          <Text style={styles.errorText} testID="error-text">{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadFloorPlan} testID="button-retry">
             <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
             <Text style={styles.retryButtonText}>Riprova</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <Header
-        title={floorPlan?.venueName || 'Planimetria'}
-        showBack
-        onBack={() => navigation.goBack()}
-        rightAction={
-          <TouchableOpacity
-            onPress={() => navigation.navigate('FloorPlanEditor', { venueId })}
-            data-testid="button-edit-floorplan"
-          >
-            <Ionicons name="create-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        }
-      />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <Header
+          title={floorPlan?.venueName || 'Planimetria'}
+          showBack
+          onBack={() => navigation.goBack()}
+          rightAction={
+            <TouchableOpacity
+              onPress={() => navigation.navigate('FloorPlanEditor', { venueId })}
+              testID="button-edit-floorplan"
+            >
+              <Ionicons name="create-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          }
+        />
 
-      <View style={styles.content}>
-        <View style={styles.toolbar}>
-          <TouchableOpacity style={styles.toolButton} onPress={resetView} data-testid="button-reset-view">
-            <Ionicons name="scan-outline" size={20} color={colors.foreground} />
-          </TouchableOpacity>
-          <View style={styles.zoomIndicator}>
-            <Text style={styles.zoomText}>Pizzica per zoom</Text>
-          </View>
-        </View>
-
-        <View style={styles.floorPlanContainer}>
-          <GestureDetector gesture={composedGesture}>
-            <Animated.View style={[styles.svgContainer, animatedStyle]}>
-              <Svg
-                width={FLOOR_PLAN_SIZE}
-                height={FLOOR_PLAN_SIZE * 1.27}
-                viewBox={`0 0 ${FLOOR_PLAN_SIZE} ${FLOOR_PLAN_SIZE * 1.27}`}
-              >
-                <Rect
-                  x={0}
-                  y={0}
-                  width={FLOOR_PLAN_SIZE}
-                  height={FLOOR_PLAN_SIZE * 1.27}
-                  fill={colors.surface}
-                  stroke={colors.border}
-                  strokeWidth={2}
-                  rx={12}
-                />
-                {floorPlan?.zones.map(renderZone)}
-              </Svg>
-            </Animated.View>
-          </GestureDetector>
-        </View>
-
-        <View style={styles.legendContainer}>
-          <Card variant="glass">
-            <View style={styles.legendContent}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.teal }]} />
-                <Text style={styles.legendText}>Disponibile</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-                <Text style={styles.legendText}>Prenotata</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
-                <Text style={styles.legendText}>Venduta</Text>
+        <View style={[styles.content, isLandscape && styles.contentLandscape]}>
+          <View style={[styles.floorPlanSection, isLandscape && styles.floorPlanSectionLandscape]}>
+            <View style={styles.toolbar}>
+              <TouchableOpacity style={styles.toolButton} onPress={resetView} testID="button-reset-view">
+                <Ionicons name="scan-outline" size={20} color={colors.foreground} />
+              </TouchableOpacity>
+              <View style={styles.zoomIndicator} testID="zoom-indicator">
+                <Text style={styles.zoomText}>Pizzica per zoom</Text>
               </View>
             </View>
-          </Card>
-        </View>
-      </View>
 
-      <Modal
-        visible={showZonePanel}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowZonePanel(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowZonePanel(false)}
-        >
-          <View style={[styles.zonePanel, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <TouchableOpacity activeOpacity={1}>
-              <View style={styles.zonePanelHandle} />
-              
-              {selectedZone && (
-                <>
-                  <View style={styles.zonePanelHeader}>
-                    <View style={[styles.zoneTypeIcon, { backgroundColor: `${STATUS_COLORS[selectedZone.status]}20` }]}>
-                      <Ionicons
-                        name={getZoneTypeIcon(selectedZone.type) as any}
-                        size={24}
-                        color={STATUS_COLORS[selectedZone.status]}
-                      />
-                    </View>
-                    <View style={styles.zonePanelInfo}>
-                      <Text style={styles.zoneName}>{selectedZone.name}</Text>
-                      <Text style={styles.zoneType}>{getZoneTypeLabel(selectedZone.type)}</Text>
-                    </View>
-                    <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS[selectedZone.status]}20` }]}>
-                      <Text style={[styles.statusText, { color: STATUS_COLORS[selectedZone.status] }]}>
-                        {selectedZone.status === 'available' ? 'Disponibile' : selectedZone.status === 'reserved' ? 'Prenotata' : 'Venduta'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.zoneStats}>
-                    <View style={styles.zoneStat}>
-                      <Text style={styles.zoneStatValue}>{selectedZone.capacity}</Text>
-                      <Text style={styles.zoneStatLabel}>Capacità</Text>
-                    </View>
-                    <View style={styles.zoneStatDivider} />
-                    <View style={styles.zoneStat}>
-                      <Text style={styles.zoneStatValue}>{selectedZone.currentOccupancy}</Text>
-                      <Text style={styles.zoneStatLabel}>Occupazione</Text>
-                    </View>
-                    {selectedZone.priceTier && (
-                      <>
-                        <View style={styles.zoneStatDivider} />
-                        <View style={styles.zoneStat}>
-                          <Text style={styles.zoneStatValue}>{selectedZone.priceTier}</Text>
-                          <Text style={styles.zoneStatLabel}>Tariffa</Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-
-                  <View style={styles.zoneActions}>
-                    <TouchableOpacity
-                      style={styles.zoneActionButton}
-                      onPress={() => {
-                        setShowZonePanel(false);
-                        navigation.navigate('ZoneDetail', { zoneId: selectedZone.id, zoneName: selectedZone.name });
-                      }}
-                      data-testid="button-view-zone-detail"
-                    >
-                      <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-                      <Text style={styles.zoneActionText}>Dettagli</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.zoneActionButton}
-                      onPress={() => {
-                        setShowZonePanel(false);
-                        navigation.navigate('FloorPlanEditor', { venueId, zoneId: selectedZone.id });
-                      }}
-                      data-testid="button-edit-zone"
-                    >
-                      <Ionicons name="create-outline" size={20} color={colors.primary} />
-                      <Text style={styles.zoneActionText}>Modifica</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-            </TouchableOpacity>
+            <View style={styles.floorPlanContainer}>
+              <GestureDetector gesture={composedGesture}>
+                <Animated.View style={[styles.svgContainer, animatedStyle]} testID="floor-plan-svg">
+                  <Svg
+                    width={FLOOR_PLAN_SIZE}
+                    height={FLOOR_PLAN_SIZE * 1.27}
+                    viewBox={`0 0 ${FLOOR_PLAN_SIZE} ${FLOOR_PLAN_SIZE * 1.27}`}
+                  >
+                    <Rect
+                      x={0}
+                      y={0}
+                      width={FLOOR_PLAN_SIZE}
+                      height={FLOOR_PLAN_SIZE * 1.27}
+                      fill={colors.surface}
+                      stroke={colors.border}
+                      strokeWidth={2}
+                      rx={12}
+                    />
+                    {floorPlan?.zones.map(renderZone)}
+                  </Svg>
+                </Animated.View>
+              </GestureDetector>
+            </View>
           </View>
-        </TouchableOpacity>
-      </Modal>
+
+          <View style={[styles.legendSection, isLandscape && styles.legendSectionLandscape]}>
+            <Card variant="glass" testID="card-legend">
+              <View style={[styles.legendContent, isLandscape && styles.legendContentLandscape]}>
+                <View style={styles.legendItem} testID="legend-available">
+                  <View style={[styles.legendDot, { backgroundColor: colors.teal }]} />
+                  <Text style={styles.legendText}>Disponibile</Text>
+                </View>
+                <View style={styles.legendItem} testID="legend-reserved">
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={styles.legendText}>Prenotata</Text>
+                </View>
+                <View style={styles.legendItem} testID="legend-sold">
+                  <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
+                  <Text style={styles.legendText}>Venduta</Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+        </View>
+
+        <Modal
+          visible={showZonePanel}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowZonePanel(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowZonePanel(false)}
+            testID="modal-overlay"
+          >
+            <View style={styles.zonePanel}>
+              <TouchableOpacity activeOpacity={1}>
+                <View style={styles.zonePanelHandle} />
+                
+                {selectedZone && (
+                  <>
+                    <View style={styles.zonePanelHeader}>
+                      <View style={[styles.zoneTypeIcon, { backgroundColor: `${STATUS_COLORS[selectedZone.status]}20` }]}>
+                        <Ionicons
+                          name={getZoneTypeIcon(selectedZone.type) as any}
+                          size={24}
+                          color={STATUS_COLORS[selectedZone.status]}
+                        />
+                      </View>
+                      <View style={styles.zonePanelInfo}>
+                        <Text style={styles.zoneName} testID="text-zone-name">{selectedZone.name}</Text>
+                        <Text style={styles.zoneType} testID="text-zone-type">{getZoneTypeLabel(selectedZone.type)}</Text>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS[selectedZone.status]}20` }]} testID="badge-zone-status">
+                        <Text style={[styles.statusText, { color: STATUS_COLORS[selectedZone.status] }]}>
+                          {selectedZone.status === 'available' ? 'Disponibile' : selectedZone.status === 'reserved' ? 'Prenotata' : 'Venduta'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.zoneStats}>
+                      <View style={styles.zoneStat}>
+                        <Text style={styles.zoneStatValue} testID="text-zone-capacity">{selectedZone.capacity}</Text>
+                        <Text style={styles.zoneStatLabel}>Capacità</Text>
+                      </View>
+                      <View style={styles.zoneStatDivider} />
+                      <View style={styles.zoneStat}>
+                        <Text style={styles.zoneStatValue} testID="text-zone-occupancy">{selectedZone.currentOccupancy}</Text>
+                        <Text style={styles.zoneStatLabel}>Occupazione</Text>
+                      </View>
+                      {selectedZone.priceTier && (
+                        <>
+                          <View style={styles.zoneStatDivider} />
+                          <View style={styles.zoneStat}>
+                            <Text style={styles.zoneStatValue} testID="text-zone-price">{selectedZone.priceTier}</Text>
+                            <Text style={styles.zoneStatLabel}>Tariffa</Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+
+                    <View style={styles.zoneActions}>
+                      <TouchableOpacity
+                        style={styles.zoneActionButton}
+                        onPress={() => {
+                          setShowZonePanel(false);
+                          navigation.navigate('ZoneDetail', { zoneId: selectedZone.id, zoneName: selectedZone.name });
+                        }}
+                        testID="button-view-zone-detail"
+                      >
+                        <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+                        <Text style={styles.zoneActionText}>Dettagli</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.zoneActionButton}
+                        onPress={() => {
+                          setShowZonePanel(false);
+                          navigation.navigate('FloorPlanEditor', { venueId, zoneId: selectedZone.id });
+                        }}
+                        testID="button-edit-zone"
+                      >
+                        <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        <Text style={styles.zoneActionText}>Modifica</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </SafeAreaView>
     </GestureHandlerRootView>
   );
 }
@@ -456,6 +461,23 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentLandscape: {
+    flexDirection: 'row',
+  },
+  floorPlanSection: {
+    flex: 1,
+  },
+  floorPlanSectionLandscape: {
+    flex: 2,
+  },
+  legendSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  legendSectionLandscape: {
+    flex: 1,
+    justifyContent: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -534,14 +556,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
   },
-  legendContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
   legendContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: spacing.sm,
+  },
+  legendContentLandscape: {
+    flexDirection: 'column',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
   },
   legendItem: {
     flexDirection: 'row',
@@ -568,6 +591,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius['2xl'],
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   zonePanelHandle: {
     width: 40,
@@ -649,9 +673,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.muted,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   zoneActionText: {
     color: colors.primary,

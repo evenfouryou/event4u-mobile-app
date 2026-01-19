@@ -7,17 +7,20 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
 const CASHIER_ACCENT = colors.cashier;
 const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+const TABLET_BREAKPOINT = 768;
+const CONTENT_MAX_WIDTH = 800;
 
 interface Event {
   id: string;
@@ -44,8 +47,10 @@ type PaymentMethod = 'cash' | 'card' | 'mixed';
 
 export function CassaBigliettiScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= TABLET_BREAKPOINT;
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -145,143 +150,166 @@ export function CassaBigliettiScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Vendita Biglietti" showBack />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.scrollContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seleziona Evento</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventsScroll}>
-            {events.map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                onPress={() => {
-                  setSelectedEvent(event);
-                  setCart([]);
-                }}
-                activeOpacity={0.8}
-              >
-                <Card
-                  variant={selectedEvent?.id === event.id ? 'elevated' : 'glass'}
-                  style={[
-                    styles.eventCard,
-                    selectedEvent?.id === event.id && styles.eventCardSelected,
-                  ]}
-                >
-                  <Text style={styles.eventName}>{event.name}</Text>
-                  <View style={styles.eventMeta}>
-                    <Ionicons name="calendar" size={14} color={colors.accent} />
-                    <Text style={styles.eventMetaText}>
-                      {new Date(event.date).toLocaleDateString('it-IT', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                      })}
-                    </Text>
-                  </View>
-                  <View style={styles.eventMeta}>
-                    <Ionicons name="location" size={14} color={colors.mutedForeground} />
-                    <Text style={styles.eventVenue}>{event.venue}</Text>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {selectedEvent && (
+        <View style={[styles.contentWrapper, isTablet && { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', width: '100%' }]}>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Biglietti Disponibili</Text>
-            <View style={styles.ticketsList}>
-              {ticketTypes.map((ticket) => {
-                const quantity = getCartQuantity(ticket.id);
-                return (
-                  <Card key={ticket.id} variant="glass" style={styles.ticketCard}>
-                    <View style={styles.ticketInfo}>
-                      <Text style={styles.ticketName}>{ticket.name}</Text>
-                      {ticket.description && (
-                        <Text style={styles.ticketDescription}>{ticket.description}</Text>
-                      )}
-                      <View style={styles.ticketMeta}>
-                        <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
-                        <Text style={styles.ticketAvailable}>{ticket.available} disponibili</Text>
-                      </View>
+            <Text style={styles.sectionTitle}>Seleziona Evento</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.eventsScroll}
+              testID="scroll-events"
+            >
+              {events.map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  onPress={() => {
+                    setSelectedEvent(event);
+                    setCart([]);
+                  }}
+                  activeOpacity={0.8}
+                  testID={`button-event-${event.id}`}
+                >
+                  <Card
+                    variant={selectedEvent?.id === event.id ? 'elevated' : 'glass'}
+                    style={[
+                      styles.eventCard,
+                      selectedEvent?.id === event.id && styles.eventCardSelected,
+                    ]}
+                  >
+                    <Text style={styles.eventName}>{event.name}</Text>
+                    <View style={styles.eventMeta}>
+                      <Ionicons name="calendar" size={14} color={colors.accent} />
+                      <Text style={styles.eventMetaText}>
+                        {new Date(event.date).toLocaleDateString('it-IT', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </Text>
                     </View>
-                    <View style={styles.quantityControls}>
-                      <TouchableOpacity
-                        style={[styles.quantityButton, quantity === 0 && styles.quantityButtonDisabled]}
-                        onPress={() => removeFromCart(ticket.id)}
-                        disabled={quantity === 0}
-                        data-testid={`button-remove-${ticket.id}`}
-                      >
-                        <Ionicons
-                          name="remove"
-                          size={20}
-                          color={quantity === 0 ? colors.mutedForeground : colors.foreground}
-                        />
-                      </TouchableOpacity>
-                      <Text style={styles.quantityText}>{quantity}</Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.quantityButton,
-                          styles.quantityButtonAdd,
-                          quantity >= ticket.available && styles.quantityButtonDisabled,
-                        ]}
-                        onPress={() => addToCart(ticket)}
-                        disabled={quantity >= ticket.available}
-                        data-testid={`button-add-${ticket.id}`}
-                      >
-                        <Ionicons
-                          name="add"
-                          size={20}
-                          color={quantity >= ticket.available ? colors.mutedForeground : colors.primaryForeground}
-                        />
-                      </TouchableOpacity>
+                    <View style={styles.eventMeta}>
+                      <Ionicons name="location" size={14} color={colors.mutedForeground} />
+                      <Text style={styles.eventVenue}>{event.venue}</Text>
                     </View>
                   </Card>
-                );
-              })}
-            </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-        )}
+
+          {selectedEvent && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Biglietti Disponibili</Text>
+              <View style={styles.ticketsList}>
+                {ticketTypes.map((ticket) => {
+                  const quantity = getCartQuantity(ticket.id);
+                  return (
+                    <Card 
+                      key={ticket.id} 
+                      variant="glass" 
+                      style={[styles.ticketCard, isLandscape && styles.ticketCardLandscape]}
+                      testID={`card-ticket-${ticket.id}`}
+                    >
+                      <View style={styles.ticketInfo}>
+                        <Text style={styles.ticketName}>{ticket.name}</Text>
+                        {ticket.description && (
+                          <Text style={styles.ticketDescription}>{ticket.description}</Text>
+                        )}
+                        <View style={styles.ticketMeta}>
+                          <Text style={styles.ticketPrice} testID={`text-ticket-price-${ticket.id}`}>
+                            {formatCurrency(ticket.price)}
+                          </Text>
+                          <Text style={styles.ticketAvailable}>{ticket.available} disponibili</Text>
+                        </View>
+                      </View>
+                      <View style={styles.quantityControls}>
+                        <TouchableOpacity
+                          style={[styles.quantityButton, quantity === 0 && styles.quantityButtonDisabled]}
+                          onPress={() => removeFromCart(ticket.id)}
+                          disabled={quantity === 0}
+                          testID={`button-remove-${ticket.id}`}
+                        >
+                          <Ionicons
+                            name="remove"
+                            size={20}
+                            color={quantity === 0 ? colors.mutedForeground : colors.foreground}
+                          />
+                        </TouchableOpacity>
+                        <Text style={styles.quantityText} testID={`text-quantity-${ticket.id}`}>{quantity}</Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.quantityButton,
+                            styles.quantityButtonAdd,
+                            quantity >= ticket.available && styles.quantityButtonDisabled,
+                          ]}
+                          onPress={() => addToCart(ticket)}
+                          disabled={quantity >= ticket.available}
+                          testID={`button-add-${ticket.id}`}
+                        >
+                          <Ionicons
+                            name="add"
+                            size={20}
+                            color={quantity >= ticket.available ? colors.mutedForeground : colors.primaryForeground}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </Card>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {cart.length > 0 && (
-        <View style={[styles.cartBar, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View style={styles.cartBar} testID="cart-bar">
           <View style={styles.cartInfo}>
             <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartItemCount}</Text>
+              <Text style={styles.cartBadgeText} testID="text-cart-count">{cartItemCount}</Text>
             </View>
-            <Text style={styles.cartTotal}>{formatCurrency(cartTotal)}</Text>
+            <Text style={styles.cartTotal} testID="text-cart-total">{formatCurrency(cartTotal)}</Text>
           </View>
           <Button
             title="Procedi al Pagamento"
             variant="primary"
             onPress={() => setShowCheckout(true)}
             style={styles.checkoutButton}
+            testID="button-checkout"
           />
         </View>
       )}
 
       <Modal visible={showCheckout} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isTablet && { maxWidth: CONTENT_MAX_WIDTH }]} testID="modal-checkout">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Riepilogo Ordine</Text>
-              <TouchableOpacity onPress={() => setShowCheckout(false)}>
+              <TouchableOpacity 
+                onPress={() => setShowCheckout(false)}
+                testID="button-close-checkout"
+              >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalScroll}>
-              <Card variant="glass" style={styles.orderCard}>
+              <Card variant="glass" style={styles.orderCard} testID="card-order-summary">
                 <Text style={styles.orderEventName}>{selectedEvent?.name}</Text>
                 {cart.map((item) => (
-                  <View key={item.ticketType.id} style={styles.orderItem}>
+                  <View key={item.ticketType.id} style={styles.orderItem} testID={`row-order-item-${item.ticketType.id}`}>
                     <View style={styles.orderItemInfo}>
                       <Text style={styles.orderItemName}>{item.ticketType.name}</Text>
                       <Text style={styles.orderItemQuantity}>x{item.quantity}</Text>
@@ -294,7 +322,7 @@ export function CassaBigliettiScreen() {
                 <View style={styles.orderDivider} />
                 <View style={styles.orderTotal}>
                   <Text style={styles.orderTotalLabel}>Totale</Text>
-                  <Text style={styles.orderTotalValue}>{formatCurrency(cartTotal)}</Text>
+                  <Text style={styles.orderTotalValue} testID="text-order-total">{formatCurrency(cartTotal)}</Text>
                 </View>
               </Card>
 
@@ -304,7 +332,7 @@ export function CassaBigliettiScreen() {
                   <TouchableOpacity
                     style={[styles.paymentOption, paymentMethod === 'cash' && styles.paymentOptionActive]}
                     onPress={() => setPaymentMethod('cash')}
-                    data-testid="payment-cash"
+                    testID="button-payment-cash"
                   >
                     <Ionicons
                       name="cash"
@@ -323,7 +351,7 @@ export function CassaBigliettiScreen() {
                   <TouchableOpacity
                     style={[styles.paymentOption, paymentMethod === 'card' && styles.paymentOptionActive]}
                     onPress={() => setPaymentMethod('card')}
-                    data-testid="payment-card"
+                    testID="button-payment-card"
                   >
                     <Ionicons
                       name="card"
@@ -342,7 +370,7 @@ export function CassaBigliettiScreen() {
                   <TouchableOpacity
                     style={[styles.paymentOption, paymentMethod === 'mixed' && styles.paymentOptionActive]}
                     onPress={() => setPaymentMethod('mixed')}
-                    data-testid="payment-mixed"
+                    testID="button-payment-mixed"
                   >
                     <Ionicons
                       name="swap-horizontal"
@@ -363,18 +391,24 @@ export function CassaBigliettiScreen() {
             </ScrollView>
 
             <View style={styles.modalActions}>
-              <Button title="Annulla" variant="outline" onPress={() => setShowCheckout(false)} />
+              <Button 
+                title="Annulla" 
+                variant="outline" 
+                onPress={() => setShowCheckout(false)} 
+                testID="button-cancel-checkout"
+              />
               <Button
                 title={`Paga ${formatCurrency(cartTotal)}`}
                 variant="primary"
                 onPress={handleCheckout}
                 loading={checkoutMutation.isPending}
+                testID="button-confirm-checkout"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -385,7 +419,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
+    paddingBottom: 140,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   section: {
     marginBottom: spacing.xl,
@@ -436,6 +479,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.lg,
+  },
+  ticketCardLandscape: {
+    flexDirection: 'row',
   },
   ticketInfo: {
     flex: 1,
@@ -501,6 +547,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
   },

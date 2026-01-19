@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -31,11 +32,15 @@ interface Subscription {
 
 export function SIAESubscriptionsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadSubscriptions = async () => {
     try {
@@ -101,12 +106,19 @@ export function SIAESubscriptionsScreen() {
     }).format(amount);
   };
 
-  const renderSubscription = ({ item }: { item: Subscription }) => (
+  const renderSubscription = ({ item, index }: { item: Subscription; index: number }) => (
     <TouchableOpacity
-      style={styles.subscriptionCard}
+      style={[
+        styles.subscriptionCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        }
+      ]}
       onPress={() => navigation.navigate('SIAESubscriptionDetail', { subscriptionId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-subscription-${item.id}`}
+      testID={`card-subscription-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.subscriptionHeader}>
@@ -164,37 +176,44 @@ export function SIAESubscriptionsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Abbonamenti SIAE" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Abbonamenti SIAE"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAESubscriptionAdd')} data-testid="button-add-subscription">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAESubscriptionAdd')} testID="button-add-subscription">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       
       <FlatList
+        key={numColumns}
         data={subscriptions}
         renderItem={renderSubscription}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+            testID="refresh-control"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -203,8 +222,9 @@ export function SIAESubscriptionsScreen() {
             <Text style={styles.emptySubtext}>Gli abbonamenti venduti appariranno qui</Text>
           </View>
         }
+        testID="subscriptions-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -226,6 +246,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   subscriptionCard: {
     marginBottom: spacing.lg,

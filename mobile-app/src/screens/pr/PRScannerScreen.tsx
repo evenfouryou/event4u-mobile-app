@@ -7,12 +7,13 @@ import {
   Alert,
   Vibration,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
@@ -32,7 +33,9 @@ interface ScanResult {
 export function PRScannerScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const eventId = route.params?.eventId;
 
@@ -132,8 +135,10 @@ export function PRScannerScreen() {
     }
   };
 
+  const scannerSize = isLandscape ? height * 0.5 : width * 0.8;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Scansiona QR"
         showBack
@@ -146,8 +151,8 @@ export function PRScannerScreen() {
         }
       />
 
-      <View style={styles.scannerContainer}>
-        <View style={styles.cameraPlaceholder}>
+      <View style={[styles.scannerContainer, isLandscape && styles.scannerContainerLandscape]}>
+        <View style={[styles.cameraPlaceholder, { width: scannerSize, height: scannerSize }]}>
           <View style={styles.scanFrame}>
             <View style={[styles.corner, styles.topLeft]} />
             <View style={[styles.corner, styles.topRight]} />
@@ -160,11 +165,11 @@ export function PRScannerScreen() {
           </Text>
         </View>
 
-        <View style={styles.controlsRow}>
+        <View style={[styles.controlsRow, isLandscape && styles.controlsRowLandscape]}>
           <TouchableOpacity
             style={styles.controlButton}
             onPress={() => setFlashOn(!flashOn)}
-            data-testid="button-flash-toggle"
+            testID="button-flash-toggle"
           >
             <Ionicons
               name={flashOn ? 'flash' : 'flash-off'}
@@ -177,7 +182,7 @@ export function PRScannerScreen() {
             onPress={() => {
               handleBarCodeScanned('MANUAL_ENTRY_' + Date.now());
             }}
-            data-testid="button-manual-entry"
+            testID="button-manual-entry"
           >
             <Ionicons name="keypad" size={24} color={colors.foreground} />
             <Text style={styles.manualButtonText}>Inserisci manualmente</Text>
@@ -185,8 +190,8 @@ export function PRScannerScreen() {
         </View>
       </View>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Card variant="glass" style={styles.statsCard}>
+      <View style={styles.footer}>
+        <Card variant="glass" style={styles.statsCard} testID="card-stats">
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{scanCount}</Text>
             <Text style={styles.statLabel}>Check-in</Text>
@@ -228,7 +233,7 @@ export function PRScannerScreen() {
                   {getStatusLabel(scanResult.guest.status)}
                 </Text>
 
-                <Card variant="glass" style={styles.guestCard}>
+                <Card variant="glass" style={styles.guestCard} testID="card-scanned-guest">
                   <View style={styles.guestHeader}>
                     <View style={styles.guestAvatar}>
                       <Ionicons name="person" size={28} color={colors.purple} />
@@ -261,6 +266,7 @@ export function PRScannerScreen() {
                         variant="outline"
                         onPress={resetScanner}
                         style={styles.actionButton}
+                        testID="button-cancel-checkin"
                       />
                       <Button
                         title="Conferma Check-in"
@@ -268,6 +274,7 @@ export function PRScannerScreen() {
                         onPress={handleConfirmCheckIn}
                         loading={checkInMutation.isPending}
                         style={styles.actionButton}
+                        testID="button-confirm-checkin"
                       />
                     </>
                   ) : (
@@ -276,6 +283,7 @@ export function PRScannerScreen() {
                       variant="primary"
                       onPress={resetScanner}
                       style={styles.fullButton}
+                      testID="button-scan-another"
                     />
                   )}
                 </View>
@@ -284,7 +292,7 @@ export function PRScannerScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -314,9 +322,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
+  scannerContainerLandscape: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
   cameraPlaceholder: {
-    width: '100%',
-    aspectRatio: 1,
     backgroundColor: colors.surface,
     borderRadius: borderRadius['2xl'],
     justifyContent: 'center',
@@ -380,6 +390,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: spacing.xl,
     gap: spacing.md,
+  },
+  controlsRowLandscape: {
+    flexDirection: 'column',
+    marginTop: 0,
   },
   controlButton: {
     padding: spacing.lg,

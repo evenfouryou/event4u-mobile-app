@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -32,9 +32,11 @@ type RouteParams = {
 export function NameChangeScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'NameChange'>>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { ticketId } = route.params;
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -110,21 +112,27 @@ export function NameChangeScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Header title="Cambio nominativo" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Caricamento...</Text>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <Header 
+          title="Cambio nominativo" 
+          showBack 
+          onBack={() => navigation.goBack()}
+          testID="header-name-change"
+        />
+        <View style={styles.loadingContainer} testID="loading-container">
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Cambio nominativo" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-name-change"
       />
       
       <KeyboardAvoidingView 
@@ -133,143 +141,162 @@ export function NameChangeScreen() {
       >
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+          contentContainerStyle={[
+            styles.content,
+            isTablet && styles.contentTablet,
+            isLandscape && styles.contentLandscape,
+          ]}
           keyboardShouldPersistTaps="handled"
+          testID="scroll-view-name-change"
         >
-          <Card style={styles.ticketInfoCard}>
-            <View style={styles.ticketInfo}>
-              <Ionicons name="ticket-outline" size={24} color={colors.primary} />
-              <View style={styles.ticketInfoContent}>
-                <Text style={styles.ticketTitle}>{ticket?.eventTitle}</Text>
-                <Text style={styles.ticketType}>{ticket?.ticketType}</Text>
+          <View style={[
+            styles.contentWrapper,
+            isTablet && { maxWidth: 600, alignSelf: 'center', width: '100%' },
+          ]}>
+            <Card style={styles.ticketInfoCard} testID="card-ticket-info">
+              <View style={styles.ticketInfo}>
+                <Ionicons name="ticket-outline" size={24} color={colors.primary} />
+                <View style={styles.ticketInfoContent}>
+                  <Text style={styles.ticketTitle} testID="text-event-title">{ticket?.eventTitle}</Text>
+                  <Text style={styles.ticketType} testID="text-ticket-type">{ticket?.ticketType}</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.currentHolder}>
-              <Text style={styles.holderLabel}>Intestatario attuale</Text>
-              <Text style={styles.holderName}>{ticket?.currentHolder}</Text>
-            </View>
-          </Card>
-
-          <Card style={styles.warningCard}>
-            <View style={styles.warningContent}>
-              <Ionicons name="warning-outline" size={24} color={colors.warning} />
-              <View style={styles.warningText}>
-                <Text style={styles.warningTitle}>Attenzione</Text>
-                <Text style={styles.warningDescription}>
-                  Il cambio nominativo è definitivo e non può essere annullato. 
-                  Assicurati che i dati inseriti siano corretti.
-                </Text>
+              <View style={styles.currentHolder}>
+                <Text style={styles.holderLabel}>Intestatario attuale</Text>
+                <Text style={styles.holderName} testID="text-current-holder">{ticket?.currentHolder}</Text>
               </View>
-            </View>
-          </Card>
-
-          <Card style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Dati nuovo intestatario</Text>
-            
-            <Input
-              label="Nome *"
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="Nome del nuovo intestatario"
-              autoCapitalize="words"
-            />
-            
-            <Input
-              label="Cognome *"
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Cognome del nuovo intestatario"
-              autoCapitalize="words"
-            />
-            
-            <Input
-              label="Email *"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Email del nuovo intestatario"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            
-            <Input
-              label="Conferma email *"
-              value={confirmEmail}
-              onChangeText={setConfirmEmail}
-              placeholder="Ripeti l'indirizzo email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            
-            <Input
-              label="Codice Fiscale *"
-              value={codiceFiscale}
-              onChangeText={setCodiceFiscale}
-              placeholder="Codice fiscale del nuovo intestatario"
-              autoCapitalize="characters"
-              maxLength={16}
-            />
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Tipo documento *</Text>
-              <View style={styles.documentTypeRow}>
-                {DOCUMENT_TYPES.map((type) => (
-                  <TouchableOpacity
-                    key={type.value}
-                    style={[
-                      styles.documentTypeButton,
-                      documentType === type.value && styles.documentTypeButtonActive
-                    ]}
-                    onPress={() => setDocumentType(type.value)}
-                  >
-                    <Text style={[
-                      styles.documentTypeText,
-                      documentType === type.value && styles.documentTypeTextActive
-                    ]}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <Input
-              label="Numero documento *"
-              value={documentNumber}
-              onChangeText={setDocumentNumber}
-              placeholder="Numero del documento di identità"
-              autoCapitalize="characters"
-            />
-            
-            <Input
-              label="Data di nascita *"
-              value={dateOfBirth}
-              onChangeText={setDateOfBirth}
-              placeholder="GG/MM/AAAA"
-              keyboardType="numeric"
-            />
-          </Card>
-
-          {ticket?.transferFee && ticket.transferFee > 0 && (
-            <Card style={styles.feeCard}>
-              <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>Costo servizio</Text>
-                <Text style={styles.feeValue}>€{ticket.transferFee.toFixed(2)}</Text>
-              </View>
-              <Text style={styles.feeNote}>
-                L'importo verrà addebitato sul metodo di pagamento salvato
-              </Text>
             </Card>
-          )}
 
-          <Button
-            title="Conferma cambio nominativo"
-            onPress={handleTransfer}
-            loading={transferMutation.isPending}
-            icon={<Ionicons name="swap-horizontal-outline" size={20} color={colors.primaryForeground} />}
-          />
+            <Card style={styles.warningCard} testID="card-warning">
+              <View style={styles.warningContent}>
+                <Ionicons name="warning-outline" size={24} color={colors.warning} />
+                <View style={styles.warningText}>
+                  <Text style={styles.warningTitle} testID="text-warning-title">Attenzione</Text>
+                  <Text style={styles.warningDescription} testID="text-warning-description">
+                    Il cambio nominativo è definitivo e non può essere annullato. 
+                    Assicurati che i dati inseriti siano corretti.
+                  </Text>
+                </View>
+              </View>
+            </Card>
+
+            <Card style={styles.formCard} testID="card-form">
+              <Text style={styles.sectionTitle} testID="text-section-title">Dati nuovo intestatario</Text>
+              
+              <Input
+                label="Nome *"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Nome del nuovo intestatario"
+                autoCapitalize="words"
+                testID="input-first-name"
+              />
+              
+              <Input
+                label="Cognome *"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Cognome del nuovo intestatario"
+                autoCapitalize="words"
+                testID="input-last-name"
+              />
+              
+              <Input
+                label="Email *"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email del nuovo intestatario"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                testID="input-email"
+              />
+              
+              <Input
+                label="Conferma email *"
+                value={confirmEmail}
+                onChangeText={setConfirmEmail}
+                placeholder="Ripeti l'indirizzo email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                testID="input-confirm-email"
+              />
+              
+              <Input
+                label="Codice Fiscale *"
+                value={codiceFiscale}
+                onChangeText={setCodiceFiscale}
+                placeholder="Codice fiscale del nuovo intestatario"
+                autoCapitalize="characters"
+                maxLength={16}
+                testID="input-codice-fiscale"
+              />
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Tipo documento *</Text>
+                <View style={styles.documentTypeRow}>
+                  {DOCUMENT_TYPES.map((type) => (
+                    <TouchableOpacity
+                      key={type.value}
+                      style={[
+                        styles.documentTypeButton,
+                        documentType === type.value && styles.documentTypeButtonActive
+                      ]}
+                      onPress={() => setDocumentType(type.value)}
+                      testID={`button-document-type-${type.value}`}
+                    >
+                      <Text style={[
+                        styles.documentTypeText,
+                        documentType === type.value && styles.documentTypeTextActive
+                      ]}>
+                        {type.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              <Input
+                label="Numero documento *"
+                value={documentNumber}
+                onChangeText={setDocumentNumber}
+                placeholder="Numero del documento di identità"
+                autoCapitalize="characters"
+                testID="input-document-number"
+              />
+              
+              <Input
+                label="Data di nascita *"
+                value={dateOfBirth}
+                onChangeText={setDateOfBirth}
+                placeholder="GG/MM/AAAA"
+                keyboardType="numeric"
+                testID="input-date-of-birth"
+              />
+            </Card>
+
+            {ticket?.transferFee && ticket.transferFee > 0 && (
+              <Card style={styles.feeCard} testID="card-fee">
+                <View style={styles.feeRow}>
+                  <Text style={styles.feeLabel} testID="text-fee-label">Costo servizio</Text>
+                  <Text style={styles.feeValue} testID="text-fee-value">€{ticket.transferFee.toFixed(2)}</Text>
+                </View>
+                <Text style={styles.feeNote} testID="text-fee-note">
+                  L'importo verrà addebitato sul metodo di pagamento salvato
+                </Text>
+              </Card>
+            )}
+
+            <Button
+              title="Conferma cambio nominativo"
+              onPress={handleTransfer}
+              loading={transferMutation.isPending}
+              icon={<Ionicons name="swap-horizontal-outline" size={20} color={colors.primaryForeground} />}
+              testID="button-confirm-transfer"
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -295,6 +322,16 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  contentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentLandscape: {
+    paddingHorizontal: spacing.lg,
+  },
+  contentWrapper: {
     gap: spacing.md,
   },
   ticketInfoCard: {

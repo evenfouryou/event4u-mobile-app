@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -32,7 +33,9 @@ interface ActivityLog {
 
 export function AdminHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -177,24 +180,24 @@ export function AdminHomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Admin Dashboard" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Admin Dashboard"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('SystemSettings')}
-            data-testid="button-system-settings"
+            testID="button-system-settings"
           >
             <Ionicons name="settings-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -203,7 +206,10 @@ export function AdminHomeScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -212,125 +218,147 @@ export function AdminHomeScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-view-content"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Panoramica Sistema</Text>
-          <View style={styles.statsGrid}>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
-                <Ionicons name="people-outline" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.statValue}>{stats.totalGestori}</Text>
-              <Text style={styles.statLabel}>Gestori Totali</Text>
-            </Card>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.success}20` }]}>
-                <Ionicons name="business-outline" size={24} color={colors.success} />
-              </View>
-              <Text style={styles.statValue}>{stats.activeCompanies}</Text>
-              <Text style={styles.statLabel}>Aziende Attive</Text>
-            </Card>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${colors.accent}20` }]}>
-                <Ionicons name="calendar-outline" size={24} color={colors.accent} />
-              </View>
-              <Text style={styles.statValue}>{stats.totalEvents}</Text>
-              <Text style={styles.statLabel}>Eventi Totali</Text>
-            </Card>
-            <Card variant="glass" style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: `${getHealthColor(stats.systemHealth)}20` }]}>
-                <Ionicons name="pulse-outline" size={24} color={getHealthColor(stats.systemHealth)} />
-              </View>
-              <Text style={[styles.statValue, { color: getHealthColor(stats.systemHealth) }]}>
-                {getHealthLabel(stats.systemHealth)}
-              </Text>
-              <Text style={styles.statLabel}>Stato Sistema</Text>
-            </Card>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('GestoreDetail', { mode: 'create' })}
-              activeOpacity={0.8}
-              data-testid="button-add-gestore"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
-                <Ionicons name="person-add-outline" size={28} color={colors.primaryForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Aggiungi Gestore</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('GestoriList')}
-              activeOpacity={0.8}
-              data-testid="button-manage-gestori"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.success }]}>
-                <Ionicons name="people-outline" size={28} color={colors.successForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Gestisci Gestori</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('Companies')}
-              activeOpacity={0.8}
-              data-testid="button-manage-companies"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
-                <Ionicons name="business-outline" size={28} color={colors.accentForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Aziende</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('SystemSettings')}
-              activeOpacity={0.8}
-              data-testid="button-settings"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.warning }]}>
-                <Ionicons name="settings-outline" size={28} color={colors.warningForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Impostazioni</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Attività Recenti</Text>
-          </View>
-          
-          {activityLog.map((activity) => (
-            <Card key={activity.id} variant="glass" style={styles.activityCard}>
-              <View style={styles.activityRow}>
-                <View style={[styles.activityIcon, { backgroundColor: `${getActivityColor(activity.type)}20` }]}>
-                  <Ionicons
-                    name={getActivityIcon(activity.type) as any}
-                    size={18}
-                    color={getActivityColor(activity.type)}
-                  />
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityAction}>{activity.action}</Text>
-                  <View style={styles.activityMeta}>
-                    <Text style={styles.activityUser}>{activity.user}</Text>
-                    <Text style={styles.activityDot}>•</Text>
-                    <Text style={styles.activityTime}>{formatDate(activity.timestamp)}</Text>
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentLandscape
+        ]}>
+          <View style={[
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.leftColumnLandscape
+          ]}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} testID="text-section-overview">Panoramica Sistema</Text>
+              <View style={[
+                styles.statsGrid,
+                (isTablet || isLandscape) && styles.statsGridLandscape
+              ]}>
+                <Card variant="glass" style={styles.statCard} testID="card-stat-gestori">
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
+                    <Ionicons name="people-outline" size={24} color={colors.primary} />
                   </View>
-                </View>
+                  <Text style={styles.statValue} testID="text-stat-gestori-value">{stats.totalGestori}</Text>
+                  <Text style={styles.statLabel} testID="text-stat-gestori-label">Gestori Totali</Text>
+                </Card>
+                <Card variant="glass" style={styles.statCard} testID="card-stat-companies">
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.success}20` }]}>
+                    <Ionicons name="business-outline" size={24} color={colors.success} />
+                  </View>
+                  <Text style={styles.statValue} testID="text-stat-companies-value">{stats.activeCompanies}</Text>
+                  <Text style={styles.statLabel} testID="text-stat-companies-label">Aziende Attive</Text>
+                </Card>
+                <Card variant="glass" style={styles.statCard} testID="card-stat-events">
+                  <View style={[styles.statIcon, { backgroundColor: `${colors.accent}20` }]}>
+                    <Ionicons name="calendar-outline" size={24} color={colors.accent} />
+                  </View>
+                  <Text style={styles.statValue} testID="text-stat-events-value">{stats.totalEvents}</Text>
+                  <Text style={styles.statLabel} testID="text-stat-events-label">Eventi Totali</Text>
+                </Card>
+                <Card variant="glass" style={styles.statCard} testID="card-stat-health">
+                  <View style={[styles.statIcon, { backgroundColor: `${getHealthColor(stats.systemHealth)}20` }]}>
+                    <Ionicons name="pulse-outline" size={24} color={getHealthColor(stats.systemHealth)} />
+                  </View>
+                  <Text style={[styles.statValue, { color: getHealthColor(stats.systemHealth) }]} testID="text-stat-health-value">
+                    {getHealthLabel(stats.systemHealth)}
+                  </Text>
+                  <Text style={styles.statLabel} testID="text-stat-health-label">Stato Sistema</Text>
+                </Card>
               </View>
-            </Card>
-          ))}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} testID="text-section-actions">Azioni Rapide</Text>
+              <View style={[
+                styles.actionsGrid,
+                (isTablet || isLandscape) && styles.actionsGridLandscape
+              ]}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('GestoreDetail', { mode: 'create' })}
+                  activeOpacity={0.8}
+                  testID="button-add-gestore"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="person-add-outline" size={28} color={colors.primaryForeground} />
+                  </View>
+                  <Text style={styles.actionLabel}>Aggiungi Gestore</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('GestoriList')}
+                  activeOpacity={0.8}
+                  testID="button-manage-gestori"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.success }]}>
+                    <Ionicons name="people-outline" size={28} color={colors.successForeground} />
+                  </View>
+                  <Text style={styles.actionLabel}>Gestisci Gestori</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('Companies')}
+                  activeOpacity={0.8}
+                  testID="button-manage-companies"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
+                    <Ionicons name="business-outline" size={28} color={colors.accentForeground} />
+                  </View>
+                  <Text style={styles.actionLabel}>Aziende</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('SystemSettings')}
+                  activeOpacity={0.8}
+                  testID="button-settings"
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.warning }]}>
+                    <Ionicons name="settings-outline" size={28} color={colors.warningForeground} />
+                  </View>
+                  <Text style={styles.actionLabel}>Impostazioni</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={[
+            styles.rightColumn,
+            (isTablet || isLandscape) && styles.rightColumnLandscape
+          ]}>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle} testID="text-section-activity">Attività Recenti</Text>
+              </View>
+              
+              {activityLog.map((activity) => (
+                <Card key={activity.id} variant="glass" style={styles.activityCard} testID={`card-activity-${activity.id}`}>
+                  <View style={styles.activityRow}>
+                    <View style={[styles.activityIcon, { backgroundColor: `${getActivityColor(activity.type)}20` }]}>
+                      <Ionicons
+                        name={getActivityIcon(activity.type) as any}
+                        size={18}
+                        color={getActivityColor(activity.type)}
+                      />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityAction} testID={`text-activity-action-${activity.id}`}>{activity.action}</Text>
+                      <View style={styles.activityMeta}>
+                        <Text style={styles.activityUser} testID={`text-activity-user-${activity.id}`}>{activity.user}</Text>
+                        <Text style={styles.activityDot}>•</Text>
+                        <Text style={styles.activityTime} testID={`text-activity-time-${activity.id}`}>{formatDate(activity.timestamp)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </Card>
+              ))}
+            </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -340,6 +368,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentLandscape: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnLandscape: {
+    flex: 1,
+    marginRight: spacing.lg,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnLandscape: {
     flex: 1,
   },
   loadingContainer: {
@@ -373,6 +427,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  statsGridLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   statCard: {
     flex: 1,
     minWidth: '45%',
@@ -402,6 +460,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  actionsGridLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   actionButton: {
     flex: 1,

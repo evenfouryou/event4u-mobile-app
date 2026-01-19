@@ -8,11 +8,11 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface MarketingStats {
@@ -47,9 +47,13 @@ interface RecentActivity {
 
 export default function MarketingDashboardScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 4 : 2;
+  const cardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const { data: stats, refetch: refetchStats } = useQuery<MarketingStats>({
     queryKey: ['/api/marketing/stats'],
@@ -68,8 +72,6 @@ export default function MarketingDashboardScreen() {
     await Promise.all([refetchStats(), refetchCampaigns(), refetchActivities()]);
     setRefreshing(false);
   }, [refetchStats, refetchCampaigns, refetchActivities]);
-
-  const cardWidth = (width - spacing.lg * 2 - spacing.md) / 2;
 
   const mockStats: MarketingStats = stats || {
     totalCampaigns: 24,
@@ -124,7 +126,7 @@ export default function MarketingDashboardScreen() {
       style={styles.quickAction}
       onPress={() => navigation.navigate(route)}
       activeOpacity={0.8}
-      data-testid={`button-${route.toLowerCase()}`}
+      testID={`button-${route.toLowerCase()}`}
     >
       <View style={[styles.quickActionIcon, { backgroundColor: `${color}20` }]}>
         <Ionicons name={icon as any} size={24} color={color} />
@@ -134,13 +136,13 @@ export default function MarketingDashboardScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Marketing"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('MarketingSettings')}
-            data-testid="button-settings"
+            testID="button-settings"
           >
             <Ionicons name="settings-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -149,37 +151,38 @@ export default function MarketingDashboardScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Panoramica</Text>
+          <Text style={styles.sectionTitle} testID="text-overview-title">Panoramica</Text>
           <View style={styles.statsGrid}>
-            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]}>
+            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]} testID="stat-emails">
               <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
                 <Ionicons name="mail" size={20} color={colors.primary} />
               </View>
               <Text style={styles.statValue}>{mockStats.emailsSent.toLocaleString()}</Text>
               <Text style={styles.statLabel}>Email Inviate</Text>
             </Card>
-            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]}>
+            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]} testID="stat-open-rate">
               <View style={[styles.statIcon, { backgroundColor: `${colors.teal}20` }]}>
                 <Ionicons name="eye" size={20} color={colors.teal} />
               </View>
               <Text style={styles.statValue}>{mockStats.openRate}%</Text>
               <Text style={styles.statLabel}>Tasso Apertura</Text>
             </Card>
-            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]}>
+            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]} testID="stat-click-rate">
               <View style={[styles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
                 <Ionicons name="hand-left" size={20} color={colors.warning} />
               </View>
               <Text style={styles.statValue}>{mockStats.clickRate}%</Text>
               <Text style={styles.statLabel}>Tasso Click</Text>
             </Card>
-            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]}>
+            <Card variant="glass" style={[styles.statCard, { width: cardWidth }]} testID="stat-revenue">
               <View style={[styles.statIcon, { backgroundColor: `${colors.success}20` }]}>
                 <Ionicons name="cash" size={20} color={colors.success} />
               </View>
@@ -190,9 +193,9 @@ export default function MarketingDashboardScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-          <Card variant="glass" style={styles.quickActionsCard}>
-            <View style={styles.quickActionsGrid}>
+          <Text style={styles.sectionTitle} testID="text-actions-title">Azioni Rapide</Text>
+          <Card variant="glass" style={styles.quickActionsCard} testID="card-quick-actions">
+            <View style={[styles.quickActionsGrid, isLandscape && styles.quickActionsGridLandscape]}>
               {renderQuickAction('mail-outline', 'Email', 'MarketingEmail', colors.primary)}
               {renderQuickAction('ribbon-outline', 'Fedeltà', 'LoyaltyAdmin', colors.warning)}
               {renderQuickAction('people-outline', 'Referral', 'ReferralAdmin', colors.teal)}
@@ -203,71 +206,74 @@ export default function MarketingDashboardScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Campagne Recenti</Text>
+            <Text style={styles.sectionTitle} testID="text-campaigns-title">Campagne Recenti</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('CampaignsList')}
-              data-testid="button-view-all-campaigns"
+              testID="button-view-all-campaigns"
             >
               <Text style={styles.viewAllText}>Vedi tutte</Text>
             </TouchableOpacity>
           </View>
 
-          {mockCampaigns.map((campaign) => {
-            const statusConfig = getStatusConfig(campaign.status);
-            return (
-              <TouchableOpacity
-                key={campaign.id}
-                onPress={() => navigation.navigate('CampaignDetail', { campaignId: campaign.id })}
-                activeOpacity={0.8}
-                data-testid={`card-campaign-${campaign.id}`}
-              >
-                <Card variant="glass" style={styles.campaignCard}>
-                  <View style={styles.campaignHeader}>
-                    <View style={styles.campaignInfo}>
-                      <Text style={styles.campaignName}>{campaign.name}</Text>
-                      <View style={styles.campaignMeta}>
-                        <Ionicons
-                          name={campaign.type === 'email' ? 'mail-outline' : 'notifications-outline'}
-                          size={14}
-                          color={colors.mutedForeground}
-                        />
-                        <Text style={styles.campaignDate}>{campaign.startDate}</Text>
+          <View style={[styles.campaignsContainer, isTablet && styles.campaignsContainerTablet]}>
+            {mockCampaigns.map((campaign) => {
+              const statusConfig = getStatusConfig(campaign.status);
+              return (
+                <TouchableOpacity
+                  key={campaign.id}
+                  onPress={() => navigation.navigate('CampaignDetail', { campaignId: campaign.id })}
+                  activeOpacity={0.8}
+                  testID={`card-campaign-${campaign.id}`}
+                  style={isTablet ? styles.campaignCardTablet : undefined}
+                >
+                  <Card variant="glass" style={styles.campaignCard}>
+                    <View style={styles.campaignHeader}>
+                      <View style={styles.campaignInfo}>
+                        <Text style={styles.campaignName} testID={`text-campaign-name-${campaign.id}`}>{campaign.name}</Text>
+                        <View style={styles.campaignMeta}>
+                          <Ionicons
+                            name={campaign.type === 'email' ? 'mail-outline' : 'notifications-outline'}
+                            size={14}
+                            color={colors.mutedForeground}
+                          />
+                          <Text style={styles.campaignDate}>{campaign.startDate}</Text>
+                        </View>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]} testID={`badge-status-${campaign.id}`}>
+                        <Text style={[styles.statusText, { color: statusConfig.color }]}>
+                          {statusConfig.label}
+                        </Text>
                       </View>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]}>
-                      <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                        {statusConfig.label}
-                      </Text>
-                    </View>
-                  </View>
-                  {campaign.status === 'completed' && (
-                    <View style={styles.campaignStats}>
-                      <View style={styles.campaignStatItem}>
-                        <Text style={styles.campaignStatValue}>{campaign.sentCount.toLocaleString()}</Text>
-                        <Text style={styles.campaignStatLabel}>Inviate</Text>
+                    {campaign.status === 'completed' && (
+                      <View style={styles.campaignStats}>
+                        <View style={styles.campaignStatItem}>
+                          <Text style={styles.campaignStatValue}>{campaign.sentCount.toLocaleString()}</Text>
+                          <Text style={styles.campaignStatLabel}>Inviate</Text>
+                        </View>
+                        <View style={styles.campaignStatItem}>
+                          <Text style={styles.campaignStatValue}>{campaign.openRate}%</Text>
+                          <Text style={styles.campaignStatLabel}>Aperture</Text>
+                        </View>
+                        <View style={styles.campaignStatItem}>
+                          <Text style={styles.campaignStatValue}>{campaign.clickRate}%</Text>
+                          <Text style={styles.campaignStatLabel}>Click</Text>
+                        </View>
                       </View>
-                      <View style={styles.campaignStatItem}>
-                        <Text style={styles.campaignStatValue}>{campaign.openRate}%</Text>
-                        <Text style={styles.campaignStatLabel}>Aperture</Text>
-                      </View>
-                      <View style={styles.campaignStatItem}>
-                        <Text style={styles.campaignStatValue}>{campaign.clickRate}%</Text>
-                        <Text style={styles.campaignStatLabel}>Click</Text>
-                      </View>
-                    </View>
-                  )}
-                </Card>
-              </TouchableOpacity>
-            );
-          })}
+                    )}
+                  </Card>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Attività Recenti</Text>
+            <Text style={styles.sectionTitle} testID="text-activities-title">Attività Recenti</Text>
           </View>
 
-          <Card variant="glass" style={styles.activitiesCard}>
+          <Card variant="glass" style={styles.activitiesCard} testID="card-activities">
             {mockActivities.map((activity, index) => {
               const iconConfig = getActivityIcon(activity.type);
               return (
@@ -277,6 +283,7 @@ export default function MarketingDashboardScreen() {
                     styles.activityItem,
                     index !== mockActivities.length - 1 && styles.activityItemBorder,
                   ]}
+                  testID={`activity-${activity.id}`}
                 >
                   <View style={[styles.activityIcon, { backgroundColor: `${iconConfig.color}20` }]}>
                     <Ionicons name={iconConfig.icon as any} size={18} color={iconConfig.color} />
@@ -293,9 +300,9 @@ export default function MarketingDashboardScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Abbonati</Text>
+          <Text style={styles.sectionTitle} testID="text-subscribers-title">Abbonati</Text>
           <View style={styles.subscriberCards}>
-            <Card variant="glass" style={styles.subscriberCard}>
+            <Card variant="glass" style={styles.subscriberCard} testID="card-new-subscribers">
               <View style={styles.subscriberCardContent}>
                 <View style={[styles.subscriberIcon, { backgroundColor: `${colors.teal}20` }]}>
                   <Ionicons name="trending-up" size={20} color={colors.teal} />
@@ -306,7 +313,7 @@ export default function MarketingDashboardScreen() {
                 </View>
               </View>
             </Card>
-            <Card variant="glass" style={styles.subscriberCard}>
+            <Card variant="glass" style={styles.subscriberCard} testID="card-unsubscribers">
               <View style={styles.subscriberCardContent}>
                 <View style={[styles.subscriberIcon, { backgroundColor: `${colors.destructive}20` }]}>
                   <Ionicons name="trending-down" size={20} color={colors.destructive} />
@@ -325,11 +332,11 @@ export default function MarketingDashboardScreen() {
         style={styles.fab}
         onPress={() => navigation.navigate('CreateCampaign')}
         activeOpacity={0.8}
-        data-testid="button-create-campaign"
+        testID="button-create-campaign"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -340,6 +347,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
   },
   section: {
     marginBottom: spacing.lg,
@@ -397,6 +407,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
+  quickActionsGridLandscape: {
+    justifyContent: 'center',
+    gap: spacing.xl * 2,
+  },
   quickAction: {
     alignItems: 'center',
     gap: spacing.sm,
@@ -412,6 +426,16 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
+  },
+  campaignsContainer: {
+    gap: spacing.md,
+  },
+  campaignsContainerTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  campaignCardTablet: {
+    width: '48%',
   },
   campaignCard: {
     marginBottom: spacing.md,

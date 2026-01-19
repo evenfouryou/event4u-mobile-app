@@ -8,10 +8,11 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -52,12 +53,16 @@ const formatColors: string[] = [
 
 export function EventFormatsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [formats, setFormats] = useState<EventFormat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   useEffect(() => {
     loadFormats();
@@ -125,65 +130,67 @@ export function EventFormatsScreen() {
     const iconName = formatIcons[item.icon] || formatIcons.default;
 
     return (
-      <Card style={styles.formatCard} variant="elevated" data-testid={`format-${item.id}`}>
-        <View style={styles.formatHeader}>
-          <View style={[styles.formatIcon, { backgroundColor: `${item.color}20` }]}>
-            <Ionicons name={iconName as any} size={24} color={item.color} />
+      <View style={numColumns > 1 ? styles.columnItem : undefined}>
+        <Card style={styles.formatCard} variant="elevated" testID={`card-format-${item.id}`}>
+          <View style={styles.formatHeader}>
+            <View style={[styles.formatIcon, { backgroundColor: `${item.color}20` }]}>
+              <Ionicons name={iconName as any} size={24} color={item.color} />
+            </View>
+            <View style={styles.formatInfo}>
+              <Text style={styles.formatName}>{item.name}</Text>
+              <Text style={styles.formatDescription} numberOfLines={2}>
+                {item.description || 'Nessuna descrizione'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.moreButton}
+              onPress={() => {
+                Alert.alert(item.name, '', [
+                  { text: 'Modifica', onPress: () => handleEditFormat(item.id) },
+                  { text: 'Elimina', style: 'destructive', onPress: () => handleDeleteFormat(item) },
+                  { text: 'Annulla', style: 'cancel' },
+                ]);
+              }}
+              testID={`button-more-${item.id}`}
+            >
+              <Ionicons name="ellipsis-vertical" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
           </View>
-          <View style={styles.formatInfo}>
-            <Text style={styles.formatName}>{item.name}</Text>
-            <Text style={styles.formatDescription} numberOfLines={2}>
-              {item.description || 'Nessuna descrizione'}
-            </Text>
+
+          <View style={styles.formatStats}>
+            <View style={styles.statItem}>
+              <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.statText}>{item.defaultCapacity} cap.</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="pricetag-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.statText}>€ {item.defaultPrice}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="ticket-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.statText}>{item.ticketTypes} tipi</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="repeat-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.statText}>{item.usageCount}x usato</Text>
+            </View>
           </View>
+
           <TouchableOpacity
-            style={styles.moreButton}
-            onPress={() => {
-              Alert.alert(item.name, '', [
-                { text: 'Modifica', onPress: () => handleEditFormat(item.id) },
-                { text: 'Elimina', style: 'destructive', onPress: () => handleDeleteFormat(item) },
-                { text: 'Annulla', style: 'cancel' },
-              ]);
-            }}
-            data-testid={`button-more-${item.id}`}
+            style={[styles.useButton, { backgroundColor: item.color }]}
+            onPress={() => handleUseFormat(item)}
+            testID={`button-use-${item.id}`}
           >
-            <Ionicons name="ellipsis-vertical" size={18} color={colors.mutedForeground} />
+            <Ionicons name="add-circle-outline" size={18} color={colors.primaryForeground} />
+            <Text style={styles.useButtonText}>Usa questo formato</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.formatStats}>
-          <View style={styles.statItem}>
-            <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.statText}>{item.defaultCapacity} cap.</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="pricetag-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.statText}>€ {item.defaultPrice}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="ticket-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.statText}>{item.ticketTypes} tipi</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="repeat-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.statText}>{item.usageCount}x usato</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.useButton, { backgroundColor: item.color }]}
-          onPress={() => handleUseFormat(item)}
-          data-testid={`button-use-${item.id}`}
-        >
-          <Ionicons name="add-circle-outline" size={18} color={colors.primaryForeground} />
-          <Text style={styles.useButtonText}>Usa questo formato</Text>
-        </TouchableOpacity>
-      </Card>
+        </Card>
+      </View>
     );
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Formati Evento"
         showBack
@@ -192,7 +199,7 @@ export function EventFormatsScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CreateEventFormat')}
-            data-testid="button-add-format"
+            testID="button-add-format"
           >
             <Ionicons name="add" size={24} color={colors.primaryForeground} />
           </TouchableOpacity>
@@ -208,21 +215,26 @@ export function EventFormatsScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
-          <Button title="Riprova" onPress={loadFormats} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadFormats} style={styles.retryButton} testID="button-retry" />
         </View>
       ) : filteredFormats.length === 0 ? (
         <View style={styles.centerContainer}>
@@ -235,6 +247,7 @@ export function EventFormatsScreen() {
             title="Crea Formato"
             onPress={() => navigation.navigate('CreateEventFormat')}
             style={styles.createButton}
+            testID="button-create-format"
           />
         </View>
       ) : (
@@ -242,11 +255,15 @@ export function EventFormatsScreen() {
           data={filteredFormats}
           renderItem={renderFormatCard}
           keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          key={numColumns}
           contentContainerStyle={styles.listContent}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
+          testID="list-formats"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -278,6 +295,12 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  columnItem: {
+    flex: 0.48,
   },
   formatCard: {
     marginBottom: spacing.md,

@@ -1,12 +1,14 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 export function SchoolBadgeLandingScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const handleScanBadge = () => {
     navigation.navigate('SchoolBadgeScanner');
@@ -39,13 +41,16 @@ export function SchoolBadgeLandingScreen() {
   ];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroSection}>
+        <View style={[styles.heroSection, isLandscape && styles.heroSectionLandscape]}>
           <View style={styles.logoContainer}>
             <View style={styles.logoBackground}>
               <Ionicons name="school" size={48} color={colors.primary} />
@@ -57,12 +62,15 @@ export function SchoolBadgeLandingScreen() {
           </Text>
         </View>
 
-        <View style={styles.actionsSection}>
+        <View style={[
+          styles.actionsSection,
+          (isTablet || isLandscape) && styles.actionsSectionWide,
+        ]}>
           <TouchableOpacity
-            style={styles.primaryAction}
+            style={[styles.primaryAction, isTablet && styles.primaryActionTablet]}
             onPress={handleScanBadge}
             activeOpacity={0.8}
-            data-testid="button-scan-badge"
+            testID="button-scan-badge"
           >
             <View style={styles.actionIconContainer}>
               <Ionicons name="scan" size={32} color={colors.primaryForeground} />
@@ -72,10 +80,10 @@ export function SchoolBadgeLandingScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.secondaryAction}
+            style={[styles.secondaryAction, isTablet && styles.secondaryActionTablet]}
             onPress={handleVerifyManually}
             activeOpacity={0.8}
-            data-testid="button-verify-manual"
+            testID="button-verify-manual"
           >
             <View style={styles.secondaryIconContainer}>
               <Ionicons name="keypad" size={28} color={colors.teal} />
@@ -88,22 +96,30 @@ export function SchoolBadgeLandingScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.featuresSection}>
+        <View style={[styles.featuresSection, (isTablet || isLandscape) && styles.featuresSectionWide]}>
           <Text style={styles.sectionTitle}>Caratteristiche</Text>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name={feature.icon} size={24} color={colors.teal} />
+          <View style={(isTablet || isLandscape) ? styles.featuresGrid : undefined}>
+            {features.map((feature, index) => (
+              <View 
+                key={index} 
+                style={[
+                  styles.featureCard,
+                  (isTablet || isLandscape) && styles.featureCardWide,
+                ]}
+              >
+                <View style={styles.featureIcon}>
+                  <Ionicons name={feature.icon} size={24} color={colors.teal} />
+                </View>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureDescription}>{feature.description}</Text>
+                </View>
               </View>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-              </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
 
-        <View style={styles.infoCard}>
+        <View style={[styles.infoCard, isTablet && styles.infoCardTablet]}>
           <Ionicons name="information-circle" size={24} color={colors.primary} />
           <Text style={styles.infoText}>
             Per gestire i template e creare nuovi badge, accedi all'area amministrativa
@@ -111,18 +127,18 @@ export function SchoolBadgeLandingScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.bottomBar, isLandscape && styles.bottomBarLandscape]}>
         <TouchableOpacity
-          style={styles.adminButton}
+          style={[styles.adminButton, isTablet && styles.adminButtonTablet]}
           onPress={handleAdminAccess}
           activeOpacity={0.8}
-          data-testid="button-admin-access"
+          testID="button-admin-access"
         >
           <Ionicons name="settings-outline" size={20} color={colors.primary} />
           <Text style={styles.adminButtonText}>Accesso Amministratore</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -138,9 +154,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['4xl'],
   },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing['2xl'],
+  },
   heroSection: {
     alignItems: 'center',
     paddingVertical: spacing['3xl'],
+  },
+  heroSectionLandscape: {
+    paddingVertical: spacing.xl,
   },
   logoContainer: {
     marginBottom: spacing.xl,
@@ -171,6 +193,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing['2xl'],
   },
+  actionsSectionWide: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
   primaryAction: {
     backgroundColor: colors.primary,
     borderRadius: borderRadius.xl,
@@ -181,6 +208,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  primaryActionTablet: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.lg,
   },
   actionIconContainer: {
     width: 64,
@@ -210,6 +242,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  secondaryActionTablet: {
+    justifyContent: 'center',
+  },
   secondaryIconContainer: {
     width: 56,
     height: 56,
@@ -235,11 +270,21 @@ const styles = StyleSheet.create({
   featuresSection: {
     marginBottom: spacing['2xl'],
   },
+  featuresSectionWide: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
+  },
   sectionTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.foreground,
     marginBottom: spacing.md,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
   featureCard: {
     flexDirection: 'row',
@@ -250,6 +295,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
+  },
+  featureCardWide: {
+    flex: 1,
+    minWidth: 250,
+    marginBottom: 0,
   },
   featureIcon: {
     width: 48,
@@ -281,6 +331,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  infoCardTablet: {
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
   infoText: {
     flex: 1,
     fontSize: fontSize.sm,
@@ -290,9 +344,13 @@ const styles = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.background,
+  },
+  bottomBarLandscape: {
+    paddingHorizontal: spacing['2xl'],
   },
   adminButton: {
     flexDirection: 'row',
@@ -303,6 +361,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.primary,
+  },
+  adminButtonTablet: {
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   adminButtonText: {
     fontSize: fontSize.base,

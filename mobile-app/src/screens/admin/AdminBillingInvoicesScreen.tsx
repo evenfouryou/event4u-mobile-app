@@ -8,9 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -30,7 +31,9 @@ interface Invoice {
 type StatusFilter = 'all' | 'paid' | 'pending' | 'overdue';
 
 export function AdminBillingInvoicesScreen() {
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -117,28 +120,28 @@ export function AdminBillingInvoicesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Fatture" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Tutte le Fatture" showBack />
       
-      <View style={styles.summaryRow}>
-        <Card variant="glass" style={styles.summaryCard}>
+      <View style={[styles.summaryRow, (isTablet || isLandscape) && styles.summaryRowWide]}>
+        <Card variant="glass" style={styles.summaryCard} testID="card-pending-summary">
           <Text style={styles.summaryLabel}>In Attesa</Text>
-          <Text style={[styles.summaryValue, { color: colors.warning }]}>{formatCurrency(totalPending)}</Text>
+          <Text style={[styles.summaryValue, { color: colors.warning }]} testID="text-pending-total">{formatCurrency(totalPending)}</Text>
         </Card>
-        <Card variant="glass" style={styles.summaryCard}>
+        <Card variant="glass" style={styles.summaryCard} testID="card-overdue-summary">
           <Text style={styles.summaryLabel}>Scadute</Text>
-          <Text style={[styles.summaryValue, { color: colors.destructive }]}>{formatCurrency(totalOverdue)}</Text>
+          <Text style={[styles.summaryValue, { color: colors.destructive }]} testID="text-overdue-total">{formatCurrency(totalOverdue)}</Text>
         </Card>
       </View>
 
@@ -151,10 +154,10 @@ export function AdminBillingInvoicesScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-invoices"
+            testID="input-search-invoices"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -172,7 +175,7 @@ export function AdminBillingInvoicesScreen() {
             key={filter.key}
             style={[styles.filterChip, statusFilter === filter.key && styles.filterChipActive]}
             onPress={() => setStatusFilter(filter.key)}
-            data-testid={`filter-${filter.key}`}
+            testID={`filter-${filter.key}`}
           >
             <Text style={[styles.filterChipText, statusFilter === filter.key && styles.filterChipTextActive]}>
               {filter.label}
@@ -183,55 +186,61 @@ export function AdminBillingInvoicesScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         {filteredInvoices.length > 0 ? (
-          filteredInvoices.map((invoice) => (
-            <Card key={invoice.id} variant="glass" style={styles.invoiceCard}>
-              <View style={styles.invoiceHeader}>
-                <View style={styles.invoiceInfo}>
-                  <Text style={styles.invoiceNumber}>{invoice.number}</Text>
-                  <Text style={styles.invoiceOrganizer}>{invoice.organizerName}</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
-                  <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
-                    {getStatusLabel(invoice.status)}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.invoiceDetails}>
-                <View style={styles.invoiceDetail}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.invoiceDetailText}>Scadenza: {formatDate(invoice.dueDate)}</Text>
-                </View>
-                {invoice.paidDate && (
-                  <View style={styles.invoiceDetail}>
-                    <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
-                    <Text style={styles.invoiceDetailText}>Pagata: {formatDate(invoice.paidDate)}</Text>
+          <View style={(isTablet || isLandscape) ? styles.invoicesGrid : undefined}>
+            {filteredInvoices.map((invoice) => (
+              <Card key={invoice.id} variant="glass" style={[styles.invoiceCard, (isTablet || isLandscape) && styles.invoiceCardWide]} testID={`card-invoice-${invoice.id}`}>
+                <View style={styles.invoiceHeader}>
+                  <View style={styles.invoiceInfo}>
+                    <Text style={styles.invoiceNumber} testID={`text-invoice-number-${invoice.id}`}>{invoice.number}</Text>
+                    <Text style={styles.invoiceOrganizer} testID={`text-organizer-${invoice.id}`}>{invoice.organizerName}</Text>
                   </View>
-                )}
-              </View>
-              <View style={styles.invoiceFooter}>
-                <Text style={styles.invoiceAmount}>{formatCurrency(invoice.amount)}</Text>
-                <TouchableOpacity style={styles.viewButton} data-testid={`button-view-${invoice.id}`}>
-                  <Text style={styles.viewButtonText}>Dettagli</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-            </Card>
-          ))
+                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]} testID={`text-status-${invoice.id}`}>
+                      {getStatusLabel(invoice.status)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.invoiceDetails}>
+                  <View style={styles.invoiceDetail}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.invoiceDetailText}>Scadenza: {formatDate(invoice.dueDate)}</Text>
+                  </View>
+                  {invoice.paidDate && (
+                    <View style={styles.invoiceDetail}>
+                      <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
+                      <Text style={styles.invoiceDetailText}>Pagata: {formatDate(invoice.paidDate)}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.invoiceFooter}>
+                  <Text style={styles.invoiceAmount} testID={`text-amount-${invoice.id}`}>{formatCurrency(invoice.amount)}</Text>
+                  <TouchableOpacity style={styles.viewButton} testID={`button-view-${invoice.id}`}>
+                    <Text style={styles.viewButtonText}>Dettagli</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="document-text-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessuna fattura trovata</Text>
+            <Text style={styles.emptyText} testID="text-empty">Nessuna fattura trovata</Text>
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -243,6 +252,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -259,6 +276,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     marginVertical: spacing.md,
+  },
+  summaryRowWide: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   summaryCard: {
     flex: 1,
@@ -323,9 +345,19 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: colors.primaryForeground,
   },
+  invoicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   invoiceCard: {
     marginBottom: spacing.md,
     padding: spacing.lg,
+  },
+  invoiceCardWide: {
+    flex: 1,
+    minWidth: '45%',
+    marginBottom: 0,
   },
   invoiceHeader: {
     flexDirection: 'row',

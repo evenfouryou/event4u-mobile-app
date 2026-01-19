@@ -8,17 +8,20 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
 const CASHIER_ACCENT = colors.cashier;
 const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+const TABLET_BREAKPOINT = 768;
+const CONTENT_MAX_WIDTH = 800;
 
 interface Event {
   id: string;
@@ -50,8 +53,10 @@ interface AvailableCashier {
 
 export function EventCashierAllocationsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= TABLET_BREAKPOINT;
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -249,152 +254,167 @@ export function EventCashierAllocationsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Allocazione Cassieri" showBack />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.scrollContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={CASHIER_ACCENT} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={CASHIER_ACCENT} 
+            testID="refresh-control"
+          />
         }
+        testID="scroll-view"
       >
-        <Card variant="glass" style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{events.length}</Text>
-              <Text style={styles.summaryLabel}>Eventi</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.warning }]}>
-                {events.filter((e) => e.cashiersAssigned < e.cashiersNeeded).length}
-              </Text>
-              <Text style={styles.summaryLabel}>Da Completare</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>
-                {events.reduce((sum, e) => sum + e.cashiersAssigned, 0)}
-              </Text>
-              <Text style={styles.summaryLabel}>Assegnati</Text>
-            </View>
-          </View>
-        </Card>
-
-        {events.map((event) => (
-          <Card key={event.id} variant="glass" style={styles.eventCard}>
-            <View style={styles.eventHeader}>
-              <View style={styles.eventInfo}>
-                <Text style={styles.eventName}>{event.name}</Text>
-                <View style={styles.eventMeta}>
-                  <Ionicons name="calendar" size={14} color={colors.accent} />
-                  <Text style={styles.eventMetaText}>{formatDate(event.date)}</Text>
-                  <Ionicons name="time" size={14} color={colors.accent} />
-                  <Text style={styles.eventMetaText}>{event.time}</Text>
-                </View>
-                <View style={styles.eventMeta}>
-                  <Ionicons name="location" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.eventVenue}>{event.venue}</Text>
-                </View>
+        <View style={[styles.contentWrapper, isTablet && { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', width: '100%' }]}>
+          <Card variant="glass" style={styles.summaryCard} testID="card-summary">
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue} testID="text-events-count">{events.length}</Text>
+                <Text style={styles.summaryLabel}>Eventi</Text>
               </View>
-              <View style={styles.coverageContainer}>
-                <View
-                  style={[
-                    styles.coverageBadge,
-                    { backgroundColor: getCoverageColor(event.cashiersAssigned, event.cashiersNeeded) + '20' },
-                  ]}
-                >
-                  <Text
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: colors.warning }]} testID="text-incomplete-count">
+                  {events.filter((e) => e.cashiersAssigned < e.cashiersNeeded).length}
+                </Text>
+                <Text style={styles.summaryLabel}>Da Completare</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: colors.success }]} testID="text-assigned-count">
+                  {events.reduce((sum, e) => sum + e.cashiersAssigned, 0)}
+                </Text>
+                <Text style={styles.summaryLabel}>Assegnati</Text>
+              </View>
+            </View>
+          </Card>
+
+          {events.map((event) => (
+            <Card key={event.id} variant="glass" style={styles.eventCard} testID={`card-event-${event.id}`}>
+              <View style={styles.eventHeader}>
+                <View style={styles.eventInfo}>
+                  <Text style={styles.eventName} testID={`text-event-name-${event.id}`}>{event.name}</Text>
+                  <View style={styles.eventMeta}>
+                    <Ionicons name="calendar" size={14} color={colors.accent} />
+                    <Text style={styles.eventMetaText}>{formatDate(event.date)}</Text>
+                    <Ionicons name="time" size={14} color={colors.accent} />
+                    <Text style={styles.eventMetaText}>{event.time}</Text>
+                  </View>
+                  <View style={styles.eventMeta}>
+                    <Ionicons name="location" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.eventVenue}>{event.venue}</Text>
+                  </View>
+                </View>
+                <View style={styles.coverageContainer}>
+                  <View
                     style={[
-                      styles.coverageText,
-                      { color: getCoverageColor(event.cashiersAssigned, event.cashiersNeeded) },
+                      styles.coverageBadge,
+                      { backgroundColor: getCoverageColor(event.cashiersAssigned, event.cashiersNeeded) + '20' },
                     ]}
                   >
-                    {event.cashiersAssigned}/{event.cashiersNeeded}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.coverageText,
+                        { color: getCoverageColor(event.cashiersAssigned, event.cashiersNeeded) },
+                      ]}
+                      testID={`text-coverage-${event.id}`}
+                    >
+                      {event.cashiersAssigned}/{event.cashiersNeeded}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {event.allocations.length > 0 && (
-              <View style={styles.allocationsList}>
-                {event.allocations.map((allocation) => (
-                  <View key={allocation.id} style={styles.allocationItem}>
-                    <View style={styles.allocationInfo}>
-                      <View style={styles.allocationAvatar}>
-                        <Ionicons name="person" size={16} color={CASHIER_ACCENT} />
+              {event.allocations.length > 0 && (
+                <View style={styles.allocationsList}>
+                  {event.allocations.map((allocation) => (
+                    <View key={allocation.id} style={styles.allocationItem} testID={`row-allocation-${allocation.id}`}>
+                      <View style={styles.allocationInfo}>
+                        <View style={styles.allocationAvatar}>
+                          <Ionicons name="person" size={16} color={CASHIER_ACCENT} />
+                        </View>
+                        <View>
+                          <Text style={styles.allocationName}>{allocation.cashierName}</Text>
+                          <Text style={styles.allocationDetails}>
+                            {allocation.shift} • {allocation.station}
+                          </Text>
+                        </View>
                       </View>
-                      <View>
-                        <Text style={styles.allocationName}>{allocation.cashierName}</Text>
-                        <Text style={styles.allocationDetails}>
-                          {allocation.shift} • {allocation.station}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.allocationActions}>
-                      <View
-                        style={[
-                          styles.allocationStatus,
-                          { backgroundColor: getStatusColor(allocation.status) + '20' },
-                        ]}
-                      >
+                      <View style={styles.allocationActions}>
                         <View
-                          style={[styles.statusDot, { backgroundColor: getStatusColor(allocation.status) }]}
-                        />
-                        <Text
-                          style={[styles.allocationStatusText, { color: getStatusColor(allocation.status) }]}
+                          style={[
+                            styles.allocationStatus,
+                            { backgroundColor: getStatusColor(allocation.status) + '20' },
+                          ]}
                         >
-                          {getStatusLabel(allocation.status)}
-                        </Text>
+                          <View
+                            style={[styles.statusDot, { backgroundColor: getStatusColor(allocation.status) }]}
+                          />
+                          <Text
+                            style={[styles.allocationStatusText, { color: getStatusColor(allocation.status) }]}
+                          >
+                            {getStatusLabel(allocation.status)}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleRemoveAllocation(allocation)}
+                          testID={`button-remove-allocation-${allocation.id}`}
+                        >
+                          <Ionicons name="close-circle" size={20} color={colors.destructive} />
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => handleRemoveAllocation(allocation)}
-                        data-testid={`button-remove-${allocation.id}`}
-                      >
-                        <Ionicons name="close-circle" size={20} color={colors.destructive} />
-                      </TouchableOpacity>
                     </View>
-                  </View>
-                ))}
-              </View>
-            )}
+                  ))}
+                </View>
+              )}
 
-            {event.cashiersAssigned < event.cashiersNeeded && (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => openAssignModal(event)}
-                data-testid={`button-add-cashier-${event.id}`}
-              >
-                <Ionicons name="add" size={20} color={CASHIER_ACCENT} />
-                <Text style={styles.addButtonText}>Aggiungi Cassiere</Text>
-              </TouchableOpacity>
-            )}
-          </Card>
-        ))}
+              {event.cashiersAssigned < event.cashiersNeeded && (
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => openAssignModal(event)}
+                  testID={`button-add-cashier-${event.id}`}
+                >
+                  <Ionicons name="add" size={20} color={CASHIER_ACCENT} />
+                  <Text style={styles.addButtonText}>Aggiungi Cassiere</Text>
+                </TouchableOpacity>
+              )}
+            </Card>
+          ))}
 
-        {events.length === 0 && (
-          <Card variant="glass" style={styles.emptyCard}>
-            <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyTitle}>Nessun evento</Text>
-            <Text style={styles.emptySubtitle}>Non ci sono eventi che richiedono cassieri</Text>
-          </Card>
-        )}
+          {events.length === 0 && (
+            <Card variant="glass" style={styles.emptyCard} testID="card-empty">
+              <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle}>Nessun evento</Text>
+              <Text style={styles.emptySubtitle}>Non ci sono eventi che richiedono cassieri</Text>
+            </Card>
+          )}
+        </View>
       </ScrollView>
 
       <Modal visible={showAssignModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isTablet && { maxWidth: CONTENT_MAX_WIDTH }]} testID="modal-assign-cashier">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Assegna Cassiere</Text>
-              <TouchableOpacity onPress={() => setShowAssignModal(false)}>
+              <TouchableOpacity 
+                onPress={() => setShowAssignModal(false)}
+                testID="button-close-assign-modal"
+              >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
 
             {selectedEvent && (
-              <Text style={styles.modalSubtitle}>
+              <Text style={styles.modalSubtitle} testID="text-modal-event-info">
                 {selectedEvent.name} - {formatDate(selectedEvent.date)}
               </Text>
             )}
@@ -411,7 +431,7 @@ export function EventCashierAllocationsScreen() {
                     ]}
                     onPress={() => handleAssignCashier(cashier)}
                     disabled={!cashier.availability || isAssigned}
-                    data-testid={`cashier-select-${cashier.id}`}
+                    testID={`button-select-cashier-${cashier.id}`}
                   >
                     <View style={styles.cashierInfo}>
                       <View style={styles.cashierAvatar}>
@@ -438,11 +458,16 @@ export function EventCashierAllocationsScreen() {
               })}
             </ScrollView>
 
-            <Button title="Chiudi" variant="outline" onPress={() => setShowAssignModal(false)} />
+            <Button 
+              title="Chiudi" 
+              variant="outline" 
+              onPress={() => setShowAssignModal(false)} 
+              testID="button-close-modal"
+            />
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -453,7 +478,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
+    paddingBottom: 100,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   summaryCard: {
     padding: spacing.lg,

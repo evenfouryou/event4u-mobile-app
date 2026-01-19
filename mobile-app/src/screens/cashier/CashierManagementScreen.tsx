@@ -10,17 +10,20 @@ import {
   Alert,
   Modal,
   Switch,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
 const CASHIER_ACCENT = colors.cashier;
 const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+const TABLET_BREAKPOINT = 768;
+const CONTENT_MAX_WIDTH = 800;
 
 interface Cashier {
   id: string;
@@ -42,8 +45,10 @@ interface Cashier {
 
 export function CashierManagementScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= TABLET_BREAKPOINT;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -217,13 +222,18 @@ export function CashierManagementScreen() {
     manageInventory: 'Gestione Inventario',
   };
 
+  const numColumns = isLandscape || isTablet ? 3 : 1;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Gestione Cassieri"
         showBack
         rightAction={
-          <TouchableOpacity onPress={() => setShowAddModal(true)} data-testid="button-add-cashier">
+          <TouchableOpacity 
+            onPress={() => setShowAddModal(true)} 
+            testID="button-add-cashier"
+          >
             <Ionicons name="add-circle" size={28} color={CASHIER_ACCENT} />
           </TouchableOpacity>
         }
@@ -231,125 +241,148 @@ export function CashierManagementScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.scrollContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={CASHIER_ACCENT} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={CASHIER_ACCENT} 
+            testID="refresh-control"
+          />
         }
+        testID="scroll-view"
       >
-        <View style={styles.statsRow}>
-          <Card variant="glass" style={styles.statCard}>
-            <Text style={styles.statValue}>{cashiers.length}</Text>
-            <Text style={styles.statLabel}>Totale</Text>
-          </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.success }]}>
-              {cashiers.filter((c) => c.status === 'active').length}
-            </Text>
-            <Text style={styles.statLabel}>Attivi</Text>
-          </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: CASHIER_ACCENT }]}>
-              {formatCurrency(cashiers.reduce((sum, c) => sum + c.totalSales, 0))}
-            </Text>
-            <Text style={styles.statLabel}>Vendite Totali</Text>
-          </Card>
-        </View>
-
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons name="search" size={20} color={colors.mutedForeground} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Cerca cassiere..."
-              placeholderTextColor={colors.mutedForeground}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              data-testid="input-search-cashier"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            )}
+        <View style={[styles.contentWrapper, isTablet && { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', width: '100%' }]}>
+          <View style={[styles.statsRow, isLandscape && styles.statsRowLandscape]}>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-total">
+              <Text style={styles.statValue} testID="text-total-cashiers">{cashiers.length}</Text>
+              <Text style={styles.statLabel}>Totale</Text>
+            </Card>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-active">
+              <Text style={[styles.statValue, { color: colors.success }]} testID="text-active-cashiers">
+                {cashiers.filter((c) => c.status === 'active').length}
+              </Text>
+              <Text style={styles.statLabel}>Attivi</Text>
+            </Card>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-sales">
+              <Text style={[styles.statValue, { color: CASHIER_ACCENT }]} testID="text-total-sales">
+                {formatCurrency(cashiers.reduce((sum, c) => sum + c.totalSales, 0))}
+              </Text>
+              <Text style={styles.statLabel}>Vendite Totali</Text>
+            </Card>
           </View>
-        </View>
 
-        {filteredCashiers.length === 0 ? (
-          <Card variant="glass" style={styles.emptyCard}>
-            <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyTitle}>Nessun cassiere trovato</Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery ? 'Prova a modificare la ricerca' : 'Aggiungi il primo cassiere'}
-            </Text>
-          </Card>
-        ) : (
-          <View style={styles.cashiersList}>
-            {filteredCashiers.map((cashier) => (
-              <TouchableOpacity
-                key={cashier.id}
-                onPress={() => handleEditCashier(cashier)}
-                activeOpacity={0.8}
-                data-testid={`cashier-item-${cashier.id}`}
-              >
-                <Card variant="glass" style={styles.cashierCard}>
-                  <View style={styles.cashierHeader}>
-                    <View style={styles.cashierInfo}>
-                      <View style={styles.avatar}>
-                        <Ionicons name="person" size={24} color={CASHIER_ACCENT} />
-                      </View>
-                      <View style={styles.cashierDetails}>
-                        <Text style={styles.cashierName}>{cashier.name}</Text>
-                        <Text style={styles.cashierEmail}>{cashier.email}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statusContainer}>
-                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(cashier.status) + '20' }]}>
-                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(cashier.status) }]} />
-                        <Text style={[styles.statusText, { color: getStatusColor(cashier.status) }]}>
-                          {getStatusLabel(cashier.status)}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-                    </View>
-                  </View>
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputWrapper}>
+              <Ionicons name="search" size={20} color={colors.mutedForeground} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Cerca cassiere..."
+                placeholderTextColor={colors.mutedForeground}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                testID="input-search-cashier"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setSearchQuery('')}
+                  testID="button-clear-search"
+                >
+                  <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
-                  <View style={styles.cashierStats}>
-                    <View style={styles.cashierStat}>
-                      <Text style={styles.cashierStatValue}>{formatCurrency(cashier.totalSales)}</Text>
-                      <Text style={styles.cashierStatLabel}>Vendite</Text>
-                    </View>
-                    <View style={styles.cashierStatDivider} />
-                    <View style={styles.cashierStat}>
-                      <Text style={styles.cashierStatValue}>{cashier.transactionsCount}</Text>
-                      <Text style={styles.cashierStatLabel}>Transazioni</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.permissionsRow}>
-                    {Object.entries(cashier.permissions)
-                      .filter(([, enabled]) => enabled)
-                      .map(([key]) => (
-                        <View key={key} style={styles.permissionBadge}>
-                          <Text style={styles.permissionText}>
-                            {permissionLabels[key as keyof Cashier['permissions']]}
+          {filteredCashiers.length === 0 ? (
+            <Card variant="glass" style={styles.emptyCard} testID="card-empty">
+              <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle}>Nessun cassiere trovato</Text>
+              <Text style={styles.emptySubtitle}>
+                {searchQuery ? 'Prova a modificare la ricerca' : 'Aggiungi il primo cassiere'}
+              </Text>
+            </Card>
+          ) : (
+            <View style={styles.cashiersList}>
+              {filteredCashiers.map((cashier) => (
+                <TouchableOpacity
+                  key={cashier.id}
+                  onPress={() => handleEditCashier(cashier)}
+                  activeOpacity={0.8}
+                  testID={`button-cashier-${cashier.id}`}
+                >
+                  <Card variant="glass" style={styles.cashierCard} testID={`card-cashier-${cashier.id}`}>
+                    <View style={styles.cashierHeader}>
+                      <View style={styles.cashierInfo}>
+                        <View style={styles.avatar}>
+                          <Ionicons name="person" size={24} color={CASHIER_ACCENT} />
+                        </View>
+                        <View style={styles.cashierDetails}>
+                          <Text style={styles.cashierName} testID={`text-cashier-name-${cashier.id}`}>
+                            {cashier.name}
+                          </Text>
+                          <Text style={styles.cashierEmail}>{cashier.email}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.statusContainer}>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(cashier.status) + '20' }]}>
+                          <View style={[styles.statusDot, { backgroundColor: getStatusColor(cashier.status) }]} />
+                          <Text style={[styles.statusText, { color: getStatusColor(cashier.status) }]}>
+                            {getStatusLabel(cashier.status)}
                           </Text>
                         </View>
-                      ))}
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+                        <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                      </View>
+                    </View>
+
+                    <View style={styles.cashierStats}>
+                      <View style={styles.cashierStat}>
+                        <Text style={styles.cashierStatValue} testID={`text-cashier-sales-${cashier.id}`}>
+                          {formatCurrency(cashier.totalSales)}
+                        </Text>
+                        <Text style={styles.cashierStatLabel}>Vendite</Text>
+                      </View>
+                      <View style={styles.cashierStatDivider} />
+                      <View style={styles.cashierStat}>
+                        <Text style={styles.cashierStatValue} testID={`text-cashier-transactions-${cashier.id}`}>
+                          {cashier.transactionsCount}
+                        </Text>
+                        <Text style={styles.cashierStatLabel}>Transazioni</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.permissionsRow}>
+                      {Object.entries(cashier.permissions)
+                        .filter(([, enabled]) => enabled)
+                        .map(([key]) => (
+                          <View key={key} style={styles.permissionBadge}>
+                            <Text style={styles.permissionText}>
+                              {permissionLabels[key as keyof Cashier['permissions']]}
+                            </Text>
+                          </View>
+                        ))}
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <Modal visible={showAddModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isTablet && { maxWidth: CONTENT_MAX_WIDTH }]} testID="modal-add-cashier">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Aggiungi Cassiere</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity 
+                onPress={() => setShowAddModal(false)}
+                testID="button-close-add-modal"
+              >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -363,7 +396,7 @@ export function CashierManagementScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={newCashier.name}
                   onChangeText={(text) => setNewCashier({ ...newCashier, name: text })}
-                  data-testid="input-cashier-name"
+                  testID="input-new-cashier-name"
                 />
               </View>
               <View style={styles.formField}>
@@ -376,7 +409,7 @@ export function CashierManagementScreen() {
                   onChangeText={(text) => setNewCashier({ ...newCashier, email: text })}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  data-testid="input-cashier-email"
+                  testID="input-new-cashier-email"
                 />
               </View>
               <View style={styles.formField}>
@@ -388,7 +421,7 @@ export function CashierManagementScreen() {
                   value={newCashier.phone}
                   onChangeText={(text) => setNewCashier({ ...newCashier, phone: text })}
                   keyboardType="phone-pad"
-                  data-testid="input-cashier-phone"
+                  testID="input-new-cashier-phone"
                 />
               </View>
 
@@ -407,6 +440,7 @@ export function CashierManagementScreen() {
                       }
                       trackColor={{ false: colors.borderSubtle, true: CASHIER_ACCENT + '60' }}
                       thumbColor={newCashier.permissions[key] ? CASHIER_ACCENT : colors.mutedForeground}
+                      testID={`switch-permission-${key}`}
                     />
                   </View>
                 )
@@ -414,12 +448,18 @@ export function CashierManagementScreen() {
             </ScrollView>
 
             <View style={styles.modalActions}>
-              <Button title="Annulla" variant="outline" onPress={() => setShowAddModal(false)} />
+              <Button 
+                title="Annulla" 
+                variant="outline" 
+                onPress={() => setShowAddModal(false)} 
+                testID="button-cancel-add-cashier"
+              />
               <Button
                 title="Aggiungi"
                 variant="primary"
                 onPress={handleAddCashier}
                 loading={addCashierMutation.isPending}
+                testID="button-submit-add-cashier"
               />
             </View>
           </View>
@@ -428,10 +468,13 @@ export function CashierManagementScreen() {
 
       <Modal visible={showEditModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isTablet && { maxWidth: CONTENT_MAX_WIDTH }]} testID="modal-edit-cashier">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Modifica Cassiere</Text>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+              <TouchableOpacity 
+                onPress={() => setShowEditModal(false)}
+                testID="button-close-edit-modal"
+              >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -444,6 +487,7 @@ export function CashierManagementScreen() {
                     style={styles.textInput}
                     value={selectedCashier.name}
                     onChangeText={(text) => setSelectedCashier({ ...selectedCashier, name: text })}
+                    testID="input-edit-cashier-name"
                   />
                 </View>
                 <View style={styles.formField}>
@@ -454,6 +498,7 @@ export function CashierManagementScreen() {
                     onChangeText={(text) => setSelectedCashier({ ...selectedCashier, email: text })}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    testID="input-edit-cashier-email"
                   />
                 </View>
 
@@ -474,6 +519,7 @@ export function CashierManagementScreen() {
                         thumbColor={
                           selectedCashier.permissions[key] ? CASHIER_ACCENT : colors.mutedForeground
                         }
+                        testID={`switch-edit-permission-${key}`}
                       />
                     </View>
                   )
@@ -482,18 +528,24 @@ export function CashierManagementScreen() {
             )}
 
             <View style={styles.modalActions}>
-              <Button title="Annulla" variant="outline" onPress={() => setShowEditModal(false)} />
+              <Button 
+                title="Annulla" 
+                variant="outline" 
+                onPress={() => setShowEditModal(false)} 
+                testID="button-cancel-edit-cashier"
+              />
               <Button
                 title="Salva"
                 variant="primary"
                 onPress={handleUpdateCashier}
                 loading={updateCashierMutation.isPending}
+                testID="button-submit-edit-cashier"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -504,12 +556,24 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
+    paddingBottom: 100,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  statsRowLandscape: {
+    justifyContent: 'center',
   },
   statCard: {
     flex: 1,
@@ -671,7 +735,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.xl,
-    maxHeight: '85%',
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -691,18 +755,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   fieldLabel: {
-    color: colors.mutedForeground,
+    color: colors.foreground,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   textInput: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    padding: spacing.lg,
     color: colors.foreground,
     fontSize: fontSize.base,
   },
@@ -710,13 +773,13 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
-    marginTop: spacing.md,
     marginBottom: spacing.md,
+    marginTop: spacing.md,
   },
   permissionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,

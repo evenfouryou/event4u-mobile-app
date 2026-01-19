@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button, Input } from '../../components';
 
 interface TableReservation {
@@ -29,7 +29,9 @@ const mockTables: TableReservation[] = [
 export function PRTablesScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [tables, setTables] = useState(mockTables);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -43,6 +45,7 @@ export function PRTablesScreen() {
   });
 
   const eventName = route.params?.eventName || 'Evento';
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -93,75 +96,81 @@ export function PRTablesScreen() {
     setShowAddModal(false);
   };
 
-  const renderTable = ({ item }: { item: TableReservation }) => (
-    <Card style={styles.tableCard}>
-      <View style={styles.tableHeader}>
-        <View style={styles.tableIconContainer}>
-          <Ionicons name="grid" size={24} color={colors.purple} />
-        </View>
-        <View style={styles.tableMainInfo}>
-          <Text style={styles.tableName}>{item.tableName}</Text>
-          <View style={styles.tableTimeRow}>
-            <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.tableTime}>{item.time}</Text>
-            <Text style={styles.tableDot}>•</Text>
-            <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.tableGuests}>{item.guests} ospiti</Text>
+  const renderTable = ({ item, index }: { item: TableReservation; index: number }) => (
+    <View style={[
+      numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+      numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+      numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+    ]}>
+      <Card style={styles.tableCard} testID={`card-table-${item.id}`}>
+        <View style={styles.tableHeader}>
+          <View style={styles.tableIconContainer}>
+            <Ionicons name="grid" size={24} color={colors.purple} />
+          </View>
+          <View style={styles.tableMainInfo}>
+            <Text style={styles.tableName}>{item.tableName}</Text>
+            <View style={styles.tableTimeRow}>
+              <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.tableTime}>{item.time}</Text>
+              <Text style={styles.tableDot}>•</Text>
+              <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
+              <Text style={styles.tableGuests}>{item.guests} ospiti</Text>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              {getStatusLabel(item.status)}
+            </Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {getStatusLabel(item.status)}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.clientSection}>
-        <View style={styles.clientAvatar}>
-          <Text style={styles.clientAvatarText}>{item.clientName.charAt(0)}</Text>
+        <View style={styles.clientSection}>
+          <View style={styles.clientAvatar}>
+            <Text style={styles.clientAvatarText}>{item.clientName.charAt(0)}</Text>
+          </View>
+          <View style={styles.clientInfo}>
+            <Text style={styles.clientName}>{item.clientName}</Text>
+            <Text style={styles.clientPhone}>{item.clientPhone}</Text>
+          </View>
+          <View style={styles.clientActions}>
+            <TouchableOpacity style={styles.clientAction} testID={`button-call-${item.id}`}>
+              <Ionicons name="call-outline" size={18} color={colors.purple} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.clientAction} testID={`button-message-${item.id}`}>
+              <Ionicons name="chatbubble-outline" size={18} color={colors.purple} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.clientInfo}>
-          <Text style={styles.clientName}>{item.clientName}</Text>
-          <Text style={styles.clientPhone}>{item.clientPhone}</Text>
-        </View>
-        <View style={styles.clientActions}>
-          <TouchableOpacity style={styles.clientAction}>
-            <Ionicons name="call-outline" size={18} color={colors.purple} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.clientAction}>
-            <Ionicons name="chatbubble-outline" size={18} color={colors.purple} />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      <View style={styles.tableFooter}>
-        <View style={styles.footerItem}>
-          <Text style={styles.footerLabel}>Min. Spesa</Text>
-          <Text style={styles.footerValue}>{item.minSpend}</Text>
+        <View style={styles.tableFooter}>
+          <View style={styles.footerItem}>
+            <Text style={styles.footerLabel}>Min. Spesa</Text>
+            <Text style={styles.footerValue}>{item.minSpend}</Text>
+          </View>
+          <View style={styles.footerItem}>
+            <Text style={styles.footerLabel}>Commissione</Text>
+            <Text style={[styles.footerValue, { color: colors.success }]}>{item.commission}</Text>
+          </View>
         </View>
-        <View style={styles.footerItem}>
-          <Text style={styles.footerLabel}>Commissione</Text>
-          <Text style={[styles.footerValue, { color: colors.success }]}>{item.commission}</Text>
-        </View>
-      </View>
 
-      {item.notes && (
-        <View style={styles.notesSection}>
-          <Ionicons name="document-text-outline" size={14} color={colors.mutedForeground} />
-          <Text style={styles.notesText}>{item.notes}</Text>
-        </View>
-      )}
-    </Card>
+        {item.notes && (
+          <View style={styles.notesSection}>
+            <Ionicons name="document-text-outline" size={14} color={colors.mutedForeground} />
+            <Text style={styles.notesText}>{item.notes}</Text>
+          </View>
+        )}
+      </Card>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Prenotazioni Tavoli" 
         showBack 
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => setShowAddModal(true)}>
+          <TouchableOpacity onPress={() => setShowAddModal(true)} testID="button-add-table">
             <Ionicons name="add-circle" size={28} color={colors.purple} />
           </TouchableOpacity>
         }
@@ -186,10 +195,13 @@ export function PRTablesScreen() {
       </View>
 
       <FlatList
+        key={numColumns}
         data={tables}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderTable}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing.lg }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -204,6 +216,7 @@ export function PRTablesScreen() {
             <Text style={styles.emptySubtitle}>Prenota il tuo primo tavolo</Text>
           </View>
         }
+        testID="tables-list"
       />
 
       <Modal
@@ -213,10 +226,10 @@ export function PRTablesScreen() {
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nuova Prenotazione</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity onPress={() => setShowAddModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -226,12 +239,14 @@ export function PRTablesScreen() {
               placeholder="es. Tavolo VIP 1"
               value={newReservation.tableName}
               onChangeText={(text) => setNewReservation({ ...newReservation, tableName: text })}
+              testID="input-table-name"
             />
             <Input
               label="Nome Cliente"
               placeholder="Mario Rossi"
               value={newReservation.clientName}
               onChangeText={(text) => setNewReservation({ ...newReservation, clientName: text })}
+              testID="input-client-name"
             />
             <Input
               label="Telefono"
@@ -239,6 +254,7 @@ export function PRTablesScreen() {
               value={newReservation.clientPhone}
               onChangeText={(text) => setNewReservation({ ...newReservation, clientPhone: text })}
               keyboardType="phone-pad"
+              testID="input-client-phone"
             />
             <View style={styles.inputRow}>
               <Input
@@ -248,6 +264,7 @@ export function PRTablesScreen() {
                 onChangeText={(text) => setNewReservation({ ...newReservation, guests: text })}
                 keyboardType="number-pad"
                 containerStyle={{ flex: 1 }}
+                testID="input-guests-count"
               />
               <Input
                 label="Orario"
@@ -255,6 +272,7 @@ export function PRTablesScreen() {
                 value={newReservation.time}
                 onChangeText={(text) => setNewReservation({ ...newReservation, time: text })}
                 containerStyle={{ flex: 1 }}
+                testID="input-time"
               />
             </View>
             <Input
@@ -262,6 +280,7 @@ export function PRTablesScreen() {
               placeholder="Richieste speciali..."
               value={newReservation.notes}
               onChangeText={(text) => setNewReservation({ ...newReservation, notes: text })}
+              testID="input-notes"
             />
 
             <View style={styles.modalActions}>
@@ -270,18 +289,20 @@ export function PRTablesScreen() {
                 variant="outline"
                 onPress={() => setShowAddModal(false)}
                 style={{ flex: 1 }}
+                testID="button-cancel-add"
               />
               <Button
                 title="Prenota"
                 variant="primary"
                 onPress={handleAddReservation}
                 style={{ flex: 1 }}
+                testID="button-confirm-add"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -322,6 +343,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+    gap: spacing.md,
+  },
+  columnWrapper: {
     gap: spacing.md,
   },
   tableCard: {
@@ -481,6 +505,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',

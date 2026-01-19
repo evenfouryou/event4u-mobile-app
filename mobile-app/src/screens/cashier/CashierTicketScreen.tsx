@@ -8,16 +8,19 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Input, Header } from '../../components';
 import { api } from '../../lib/api';
 
 const CASHIER_ACCENT = colors.cashier;
 const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
+const TABLET_BREAKPOINT = 768;
+const CONTENT_MAX_WIDTH = 600;
 
 interface TicketType {
   id: string;
@@ -94,7 +97,9 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 
 export function CashierTicketScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= TABLET_BREAKPOINT;
 
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -121,12 +126,10 @@ export function CashierTicketScreen() {
     }
 
     setIsProcessing(true);
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsProcessing(false);
     setShowConfirmation(false);
 
-    // Navigate to success screen
     navigation.navigate('CashierSuccess', {
       ticketType: selectedTicketData?.name,
       quantity,
@@ -134,7 +137,6 @@ export function CashierTicketScreen() {
       paymentMethod: selectedPaymentData?.name,
     });
 
-    // Reset form
     setSelectedTicket(null);
     setQuantity(1);
     setCustomerName('');
@@ -143,9 +145,10 @@ export function CashierTicketScreen() {
   };
 
   const canProceed = selectedTicket && selectedPayment && quantity > 0;
+  const numColumns = isLandscape || isTablet ? 2 : 1;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Vendi Biglietto"
         showBack
@@ -154,181 +157,187 @@ export function CashierTicketScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.scrollContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view"
       >
-        {/* Step 1: Select Ticket Type */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>1. Seleziona Tipo Biglietto</Text>
-          <FlatList
-            data={TICKET_TYPES}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.ticketTypeButton,
-                  selectedTicket === item.id && styles.ticketTypeButtonSelected,
-                ]}
-                onPress={() => setSelectedTicket(item.id)}
-                activeOpacity={0.7}
-                data-testid={`button-ticket-type-${item.id}`}
-              >
-                <View
-                  style={[
-                    styles.ticketTypeIcon,
-                    selectedTicket === item.id && styles.ticketTypeIconSelected,
-                  ]}
-                >
-                  <Ionicons
-                    name={item.icon as any}
-                    size={28}
-                    color={selectedTicket === item.id ? CASHIER_ACCENT_FOREGROUND : CASHIER_ACCENT}
-                  />
-                </View>
-                <View style={styles.ticketTypeContent}>
-                  <Text style={styles.ticketTypeName}>{item.name}</Text>
-                  {item.description && (
-                    <Text style={styles.ticketTypeDescription}>{item.description}</Text>
-                  )}
-                </View>
-                <Text style={styles.ticketTypePrice}>€ {item.price.toFixed(2)}</Text>
-              </TouchableOpacity>
-            )}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-        </View>
-
-        {/* Step 2: Select Quantity */}
-        {selectedTicket && (
+        <View style={[styles.contentWrapper, isTablet && { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', width: '100%' }]}>
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>2. Quantità</Text>
-            <Card style={styles.quantityCard}>
-              <View style={styles.quantitySelector}>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => handleQuantityChange(-1)}
-                  disabled={quantity <= 1}
-                  data-testid="button-quantity-decrease"
-                >
-                  <Ionicons
-                    name="remove"
-                    size={24}
-                    color={quantity <= 1 ? colors.mutedForeground : CASHIER_ACCENT}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.quantityValue}>{quantity}</Text>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => handleQuantityChange(1)}
-                  disabled={quantity >= 20}
-                  data-testid="button-quantity-increase"
-                >
-                  <Ionicons
-                    name="add"
-                    size={24}
-                    color={quantity >= 20 ? colors.mutedForeground : CASHIER_ACCENT}
-                  />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.subtotalRow}>
-                <Text style={styles.subtotalLabel}>Subtotale</Text>
-                <Text style={styles.subtotalValue}>€ {totalPrice.toFixed(2)}</Text>
-              </View>
-            </Card>
-          </View>
-        )}
-
-        {/* Step 3: Customer Information */}
-        {selectedTicket && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>3. Dati Cliente (Opzionale)</Text>
-            <Input
-              label="Nome"
-              placeholder="Nome cliente"
-              value={customerName}
-              onChangeText={setCustomerName}
-              containerStyle={styles.inputContainer}
-            />
-            <Input
-              label="Email"
-              placeholder="Email cliente"
-              value={customerEmail}
-              onChangeText={setCustomerEmail}
-              keyboardType="email-address"
-              containerStyle={styles.inputContainer}
-            />
-          </View>
-        )}
-
-        {/* Step 4: Select Payment Method */}
-        {selectedTicket && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>4. Metodo Pagamento</Text>
+            <Text style={styles.sectionLabel}>1. Seleziona Tipo Biglietto</Text>
             <FlatList
-              data={PAYMENT_METHODS}
+              data={TICKET_TYPES}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
-                    styles.paymentMethodButton,
-                    selectedPayment === item.id && styles.paymentMethodButtonSelected,
+                    styles.ticketTypeButton,
+                    selectedTicket === item.id && styles.ticketTypeButtonSelected,
                   ]}
-                  onPress={() => setSelectedPayment(item.id)}
+                  onPress={() => setSelectedTicket(item.id)}
                   activeOpacity={0.7}
-                  data-testid={`button-payment-${item.id}`}
+                  testID={`button-ticket-type-${item.id}`}
                 >
                   <View
                     style={[
-                      styles.paymentIcon,
-                      selectedPayment === item.id && { backgroundColor: item.color },
+                      styles.ticketTypeIcon,
+                      selectedTicket === item.id && styles.ticketTypeIconSelected,
                     ]}
                   >
                     <Ionicons
                       name={item.icon as any}
-                      size={24}
-                      color={
-                        selectedPayment === item.id
-                          ? colors.primaryForeground
-                          : item.color
-                      }
+                      size={28}
+                      color={selectedTicket === item.id ? CASHIER_ACCENT_FOREGROUND : CASHIER_ACCENT}
                     />
                   </View>
-                  <Text style={styles.paymentName}>{item.name}</Text>
-                  {selectedPayment === item.id && (
-                    <Ionicons name="checkmark-circle" size={24} color={item.color} />
-                  )}
+                  <View style={styles.ticketTypeContent}>
+                    <Text style={styles.ticketTypeName}>{item.name}</Text>
+                    {item.description && (
+                      <Text style={styles.ticketTypeDescription}>{item.description}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.ticketTypePrice} testID={`text-ticket-price-${item.id}`}>
+                    € {item.price.toFixed(2)}
+                  </Text>
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
-              numColumns={2}
-              columnWrapperStyle={styles.paymentGrid}
+              testID="list-ticket-types"
             />
           </View>
-        )}
 
-        {/* Summary Card */}
-        {selectedTicket && (
-          <View style={styles.section}>
-            <Card style={styles.summaryCard} variant="elevated">
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{selectedTicketData?.name}</Text>
-                <Text style={styles.summaryValue}>
-                  {quantity} × € {selectedTicketData?.price.toFixed(2)}
-                </Text>
-              </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryRow}>
-                <Text style={styles.totalLabel}>TOTALE</Text>
-                <Text style={styles.totalValue}>€ {totalPrice.toFixed(2)}</Text>
-              </View>
-            </Card>
-          </View>
-        )}
+          {selectedTicket && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>2. Quantità</Text>
+              <Card style={styles.quantityCard} testID="card-quantity">
+                <View style={styles.quantitySelector}>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1}
+                    testID="button-quantity-decrease"
+                  >
+                    <Ionicons
+                      name="remove"
+                      size={24}
+                      color={quantity <= 1 ? colors.mutedForeground : CASHIER_ACCENT}
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.quantityValue} testID="text-quantity">{quantity}</Text>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => handleQuantityChange(1)}
+                    disabled={quantity >= 20}
+                    testID="button-quantity-increase"
+                  >
+                    <Ionicons
+                      name="add"
+                      size={24}
+                      color={quantity >= 20 ? colors.mutedForeground : CASHIER_ACCENT}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.subtotalRow}>
+                  <Text style={styles.subtotalLabel}>Subtotale</Text>
+                  <Text style={styles.subtotalValue} testID="text-subtotal">€ {totalPrice.toFixed(2)}</Text>
+                </View>
+              </Card>
+            </View>
+          )}
+
+          {selectedTicket && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>3. Dati Cliente (Opzionale)</Text>
+              <Input
+                label="Nome"
+                placeholder="Nome cliente"
+                value={customerName}
+                onChangeText={setCustomerName}
+                containerStyle={styles.inputContainer}
+                testID="input-customer-name"
+              />
+              <Input
+                label="Email"
+                placeholder="Email cliente"
+                value={customerEmail}
+                onChangeText={setCustomerEmail}
+                keyboardType="email-address"
+                containerStyle={styles.inputContainer}
+                testID="input-customer-email"
+              />
+            </View>
+          )}
+
+          {selectedTicket && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>4. Metodo Pagamento</Text>
+              <FlatList
+                data={PAYMENT_METHODS}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.paymentMethodButton,
+                      selectedPayment === item.id && styles.paymentMethodButtonSelected,
+                    ]}
+                    onPress={() => setSelectedPayment(item.id)}
+                    activeOpacity={0.7}
+                    testID={`button-payment-${item.id}`}
+                  >
+                    <View
+                      style={[
+                        styles.paymentIcon,
+                        selectedPayment === item.id && { backgroundColor: item.color },
+                      ]}
+                    >
+                      <Ionicons
+                        name={item.icon as any}
+                        size={24}
+                        color={
+                          selectedPayment === item.id
+                            ? colors.primaryForeground
+                            : item.color
+                        }
+                      />
+                    </View>
+                    <Text style={styles.paymentName}>{item.name}</Text>
+                    {selectedPayment === item.id && (
+                      <Ionicons name="checkmark-circle" size={24} color={item.color} />
+                    )}
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                numColumns={2}
+                columnWrapperStyle={styles.paymentGrid}
+                testID="list-payment-methods"
+              />
+            </View>
+          )}
+
+          {selectedTicket && (
+            <View style={styles.section}>
+              <Card style={styles.summaryCard} variant="elevated" testID="card-summary">
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{selectedTicketData?.name}</Text>
+                  <Text style={styles.summaryValue}>
+                    {quantity} × € {selectedTicketData?.price.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.totalLabel}>TOTALE</Text>
+                  <Text style={styles.totalValue} testID="text-total">€ {totalPrice.toFixed(2)}</Text>
+                </View>
+              </Card>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Fixed Bottom Button */}
       {selectedTicket && (
-        <View style={[styles.fixedBottom, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View style={styles.fixedBottom}>
           <Button
             title={`Conferma • € ${totalPrice.toFixed(2)}`}
             variant="primary"
@@ -338,11 +347,11 @@ export function CashierTicketScreen() {
             loading={isProcessing}
             style={styles.confirmButton}
             textStyle={styles.confirmButtonText}
+            testID="button-confirm-purchase"
           />
         </View>
       )}
 
-      {/* Confirmation Modal */}
       <Modal
         visible={showConfirmation}
         transparent
@@ -350,12 +359,12 @@ export function CashierTicketScreen() {
         onRequestClose={() => setShowConfirmation(false)}
       >
         <View style={styles.modalOverlay}>
-          <Card style={styles.confirmationCard}>
+          <Card style={[styles.confirmationCard, isTablet && { maxWidth: CONTENT_MAX_WIDTH }]} testID="modal-confirmation">
             <View style={styles.confirmationHeader}>
               <Text style={styles.confirmationTitle}>Conferma Acquisto</Text>
               <TouchableOpacity
                 onPress={() => setShowConfirmation(false)}
-                data-testid="button-close-modal"
+                testID="button-close-modal"
               >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
@@ -364,14 +373,14 @@ export function CashierTicketScreen() {
             <View style={styles.confirmationContent}>
               <View style={styles.confirmationItem}>
                 <Text style={styles.confirmationItemLabel}>Biglietti</Text>
-                <Text style={styles.confirmationItemValue}>
+                <Text style={styles.confirmationItemValue} testID="text-confirmation-tickets">
                   {quantity} × {selectedTicketData?.name}
                 </Text>
               </View>
 
               <View style={styles.confirmationItem}>
                 <Text style={styles.confirmationItemLabel}>Prezzo Unitario</Text>
-                <Text style={styles.confirmationItemValue}>
+                <Text style={styles.confirmationItemValue} testID="text-confirmation-unit-price">
                   € {selectedTicketData?.price.toFixed(2)}
                 </Text>
               </View>
@@ -379,13 +388,15 @@ export function CashierTicketScreen() {
               {customerName && (
                 <View style={styles.confirmationItem}>
                   <Text style={styles.confirmationItemLabel}>Cliente</Text>
-                  <Text style={styles.confirmationItemValue}>{customerName}</Text>
+                  <Text style={styles.confirmationItemValue} testID="text-confirmation-customer">
+                    {customerName}
+                  </Text>
                 </View>
               )}
 
               <View style={styles.confirmationItem}>
                 <Text style={styles.confirmationItemLabel}>Metodo Pagamento</Text>
-                <Text style={styles.confirmationItemValue}>
+                <Text style={styles.confirmationItemValue} testID="text-confirmation-payment">
                   {selectedPaymentData?.name}
                 </Text>
               </View>
@@ -394,7 +405,7 @@ export function CashierTicketScreen() {
 
               <View style={styles.confirmationTotal}>
                 <Text style={styles.confirmationTotalLabel}>TOTALE</Text>
-                <Text style={styles.confirmationTotalValue}>
+                <Text style={styles.confirmationTotalValue} testID="text-confirmation-total">
                   € {totalPrice.toFixed(2)}
                 </Text>
               </View>
@@ -408,6 +419,7 @@ export function CashierTicketScreen() {
                 onPress={() => setShowConfirmation(false)}
                 disabled={isProcessing}
                 style={styles.cancelButton}
+                testID="button-cancel-purchase"
               />
               <Button
                 title={isProcessing ? 'Elaborazione...' : 'Conferma'}
@@ -416,12 +428,13 @@ export function CashierTicketScreen() {
                 onPress={handleConfirmPurchase}
                 loading={isProcessing}
                 style={styles.confirmActionButton}
+                testID="button-submit-purchase"
               />
             </View>
           </Card>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -431,6 +444,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentWrapper: {
     flex: 1,
   },
   section: {
@@ -606,6 +628,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -49,7 +50,9 @@ interface OrganizerDetail {
 
 export function AdminBillingOrganizerDetailScreen() {
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const organizerId = route.params?.organizerId;
   
   const [loading, setLoading] = useState(true);
@@ -134,77 +137,81 @@ export function AdminBillingOrganizerDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Organizzatore" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!organizer) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Organizzatore" showBack />
-        <View style={styles.emptyContainer}>
+        <View style={styles.emptyContainer} testID="empty-container">
           <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Organizzatore non trovato</Text>
+          <Text style={styles.emptyText} testID="text-not-found">Organizzatore non trovato</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Dettaglio Fatturazione" showBack />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
-        <Card variant="glass" style={styles.headerCard}>
+        <Card variant="glass" style={styles.headerCard} testID="card-organizer-header">
           <View style={styles.orgHeader}>
             <View>
-              <Text style={styles.orgName}>{organizer.name}</Text>
-              <Text style={styles.orgEmail}>{organizer.email}</Text>
+              <Text style={styles.orgName} testID="text-org-name">{organizer.name}</Text>
+              <Text style={styles.orgEmail} testID="text-org-email">{organizer.email}</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(organizer.status)}20` }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(organizer.status) }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(organizer.status) }]} testID="text-status">
                 {organizer.status === 'active' ? 'Attivo' : organizer.status}
               </Text>
             </View>
           </View>
 
-          <View style={styles.statsRow}>
+          <View style={[styles.statsRow, (isTablet || isLandscape) && styles.statsRowWide]}>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Piano</Text>
-              <Text style={styles.statValue}>{organizer.planName}</Text>
+              <Text style={styles.statValue} testID="text-plan">{organizer.planName}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Mensile</Text>
-              <Text style={[styles.statValue, { color: colors.teal }]}>{formatCurrency(organizer.planPrice)}</Text>
+              <Text style={[styles.statValue, { color: colors.teal }]} testID="text-monthly">{formatCurrency(organizer.planPrice)}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Totale</Text>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{formatCurrency(organizer.totalRevenue)}</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]} testID="text-total">{formatCurrency(organizer.totalRevenue)}</Text>
             </View>
           </View>
         </Card>
 
-        <View style={styles.section}>
+        <View style={[styles.section, (isTablet || isLandscape) && styles.sectionWide]}>
           <Text style={styles.sectionTitle}>Utilizzo</Text>
-          <Card variant="glass">
+          <Card variant="glass" testID="card-usage">
             {organizer.usage.map((item, index) => (
               <View key={item.name}>
                 <View style={styles.usageItem}>
                   <View style={styles.usageHeader}>
-                    <Text style={styles.usageLabel}>{item.name}</Text>
+                    <Text style={styles.usageLabel} testID={`text-usage-${index}`}>{item.name}</Text>
                     <Text style={styles.usageValue}>
                       {item.used} {item.limit !== -1 ? `/ ${item.limit}` : ''} {item.unit}
                     </Text>
@@ -226,38 +233,40 @@ export function AdminBillingOrganizerDetailScreen() {
           </Card>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, (isTablet || isLandscape) && styles.sectionWide]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Fatture Recenti</Text>
-            <TouchableOpacity data-testid="button-view-all-invoices">
+            <TouchableOpacity testID="button-view-all-invoices">
               <Text style={styles.viewAllText}>Vedi tutte</Text>
             </TouchableOpacity>
           </View>
-          {organizer.invoices.map((invoice) => (
-            <Card key={invoice.id} variant="glass" style={styles.invoiceCard}>
-              <View style={styles.invoiceRow}>
-                <View style={styles.invoiceInfo}>
-                  <Text style={styles.invoiceNumber}>{invoice.number}</Text>
-                  <Text style={styles.invoiceDate}>Scadenza: {formatDate(invoice.dueDate)}</Text>
-                </View>
-                <View style={styles.invoiceRight}>
-                  <Text style={styles.invoiceAmount}>{formatCurrency(invoice.amount)}</Text>
-                  <View style={[styles.invoiceStatus, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
-                    <Text style={[styles.invoiceStatusText, { color: getStatusColor(invoice.status) }]}>
-                      {invoice.status === 'paid' ? 'Pagata' : invoice.status === 'pending' ? 'In attesa' : 'Scaduta'}
-                    </Text>
+          <View style={(isTablet || isLandscape) ? styles.invoicesGrid : undefined}>
+            {organizer.invoices.map((invoice) => (
+              <Card key={invoice.id} variant="glass" style={[styles.invoiceCard, (isTablet || isLandscape) && styles.invoiceCardWide]} testID={`card-invoice-${invoice.id}`}>
+                <View style={styles.invoiceRow}>
+                  <View style={styles.invoiceInfo}>
+                    <Text style={styles.invoiceNumber} testID={`text-invoice-number-${invoice.id}`}>{invoice.number}</Text>
+                    <Text style={styles.invoiceDate}>Scadenza: {formatDate(invoice.dueDate)}</Text>
+                  </View>
+                  <View style={styles.invoiceRight}>
+                    <Text style={styles.invoiceAmount} testID={`text-invoice-amount-${invoice.id}`}>{formatCurrency(invoice.amount)}</Text>
+                    <View style={[styles.invoiceStatus, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
+                      <Text style={[styles.invoiceStatusText, { color: getStatusColor(invoice.status) }]}>
+                        {invoice.status === 'paid' ? 'Pagata' : invoice.status === 'pending' ? 'In attesa' : 'Scaduta'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.actionsSection}>
+        <View style={[styles.actionsSection, (isTablet || isLandscape) && styles.actionsSectionWide]}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => Alert.alert('Credito Aggiunto', 'Funzionalità in sviluppo')}
-            data-testid="button-add-credit"
+            testID="button-add-credit"
           >
             <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
             <Text style={styles.actionButtonText}>Aggiungi Credito</Text>
@@ -265,14 +274,14 @@ export function AdminBillingOrganizerDetailScreen() {
           <TouchableOpacity
             style={[styles.actionButton, styles.warningButton]}
             onPress={() => Alert.alert('Sospendi Account', 'Funzionalità in sviluppo')}
-            data-testid="button-suspend"
+            testID="button-suspend"
           >
             <Ionicons name="pause-circle-outline" size={20} color={colors.warning} />
             <Text style={[styles.actionButtonText, { color: colors.warning }]}>Sospendi Account</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -284,6 +293,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -341,6 +358,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,
   },
+  statsRowWide: {
+    justifyContent: 'space-around',
+  },
   statItem: {
     alignItems: 'center',
   },
@@ -356,6 +376,9 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: spacing.lg,
+  },
+  sectionWide: {
+    maxWidth: 800,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -404,9 +427,19 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.glass.border,
   },
+  invoicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   invoiceCard: {
     marginBottom: spacing.sm,
     padding: spacing.lg,
+  },
+  invoiceCardWide: {
+    flex: 1,
+    minWidth: '45%',
+    marginBottom: 0,
   },
   invoiceRow: {
     flexDirection: 'row',
@@ -448,7 +481,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
+  actionsSectionWide: {
+    flexDirection: 'row',
+    maxWidth: 600,
+  },
   actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

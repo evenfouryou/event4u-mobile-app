@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -37,11 +37,11 @@ interface RecentTransaction {
   category: string;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
-
 export function AccountingHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,24 +136,24 @@ export function AccountingHomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Contabilità" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Contabilità"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('Transactions')}
-            data-testid="button-view-transactions"
+            testID="button-view-transactions"
           >
             <Ionicons name="list-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -162,7 +162,10 @@ export function AccountingHomeScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -171,25 +174,26 @@ export function AccountingHomeScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-accounting-home"
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Panoramica Finanziaria</Text>
-          <View style={styles.statsGrid}>
-            <Card variant="glass" style={styles.statCard}>
+          <Text style={styles.sectionTitle} testID="text-overview-title">Panoramica Finanziaria</Text>
+          <View style={[styles.statsGrid, (isLandscape || isTablet) && styles.statsGridWide]}>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-revenue">
               <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
                 <Ionicons name="trending-up-outline" size={24} color={colors.primary} />
               </View>
               <Text style={styles.statValue}>{formatCurrency(stats.totalRevenue)}</Text>
               <Text style={styles.statLabel}>Ricavi Totali</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-expenses">
               <View style={[styles.statIcon, { backgroundColor: `${colors.destructive}20` }]}>
                 <Ionicons name="trending-down-outline" size={24} color={colors.destructive} />
               </View>
               <Text style={styles.statValue}>{formatCurrency(stats.totalExpenses)}</Text>
               <Text style={styles.statLabel}>Spese Totali</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-profit">
               <View style={[styles.statIcon, { backgroundColor: `${colors.teal}20` }]}>
                 <Ionicons name="wallet-outline" size={24} color={colors.teal} />
               </View>
@@ -198,7 +202,7 @@ export function AccountingHomeScreen() {
               </Text>
               <Text style={styles.statLabel}>Utile Netto</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={styles.statCard} testID="card-stat-invoices">
               <View style={[styles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
                 <Ionicons name="document-text-outline" size={24} color={colors.warning} />
               </View>
@@ -208,124 +212,138 @@ export function AccountingHomeScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ricavi (Ultimi 30 giorni)</Text>
-          <Card variant="glass" style={styles.chartCard}>
-            <View style={styles.chartContainer}>
-              {revenueData.map((point, index) => {
-                const barHeight = (point.amount / maxRevenue) * chartHeight;
-                return (
-                  <View key={index} style={styles.chartBarContainer}>
-                    <View
-                      style={[
-                        styles.chartBar,
-                        {
-                          height: barHeight,
-                          backgroundColor: colors.primary,
-                        },
-                      ]}
-                    />
-                  </View>
-                );
-              })}
+        <View style={[
+          (isLandscape || isTablet) && styles.twoColumnContainer,
+        ]}>
+          <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+            <Text style={styles.sectionTitle} testID="text-revenue-title">Ricavi (Ultimi 30 giorni)</Text>
+            <Card variant="glass" style={styles.chartCard} testID="card-revenue-chart">
+              <View style={styles.chartContainer}>
+                {revenueData.map((point, index) => {
+                  const barHeight = (point.amount / maxRevenue) * chartHeight;
+                  return (
+                    <View key={index} style={styles.chartBarContainer} testID={`bar-revenue-${index}`}>
+                      <View
+                        style={[
+                          styles.chartBar,
+                          {
+                            height: barHeight,
+                            backgroundColor: colors.primary,
+                          },
+                        ]}
+                      />
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={styles.chartLabels}>
+                <Text style={styles.chartLabel}>30 giorni fa</Text>
+                <Text style={styles.chartLabel}>Oggi</Text>
+              </View>
+            </Card>
+          </View>
+
+          <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+            <Text style={styles.sectionTitle} testID="text-actions-title">Azioni Rapide</Text>
+            <View style={styles.actionsGrid}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('Invoices')}
+                activeOpacity={0.8}
+                testID="button-new-invoice"
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="add-circle-outline" size={28} color={colors.primaryForeground} />
+                </View>
+                <Text style={styles.actionLabel}>Nuova Fattura</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('FinancialReports')}
+                activeOpacity={0.8}
+                testID="button-view-reports"
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.teal }]}>
+                  <Ionicons name="bar-chart-outline" size={28} color={colors.tealForeground} />
+                </View>
+                <Text style={styles.actionLabel}>Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('FinancialReports', { export: true })}
+                activeOpacity={0.8}
+                testID="button-export"
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
+                  <Ionicons name="download-outline" size={28} color={colors.accentForeground} />
+                </View>
+                <Text style={styles.actionLabel}>Esporta</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.chartLabels}>
-              <Text style={styles.chartLabel}>30 giorni fa</Text>
-              <Text style={styles.chartLabel}>Oggi</Text>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('Invoices')}
-              activeOpacity={0.8}
-              data-testid="button-new-invoice"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
-                <Ionicons name="add-circle-outline" size={28} color={colors.primaryForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Nuova Fattura</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('FinancialReports')}
-              activeOpacity={0.8}
-              data-testid="button-view-reports"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.teal }]}>
-                <Ionicons name="bar-chart-outline" size={28} color={colors.tealForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Report</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('FinancialReports', { export: true })}
-              activeOpacity={0.8}
-              data-testid="button-export"
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
-                <Ionicons name="download-outline" size={28} color={colors.accentForeground} />
-              </View>
-              <Text style={styles.actionLabel}>Esporta</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Transazioni Recenti</Text>
+            <Text style={styles.sectionTitle} testID="text-transactions-title">Transazioni Recenti</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Transactions')}
-              data-testid="button-view-all-transactions"
+              testID="button-view-all-transactions"
             >
               <Text style={styles.viewAllText}>Vedi tutte</Text>
             </TouchableOpacity>
           </View>
 
-          {recentTransactions.length > 0 ? (
-            recentTransactions.map((transaction) => (
-              <Card key={transaction.id} variant="glass" style={styles.transactionCard}>
-                <View style={styles.transactionRow}>
-                  <View style={[
-                    styles.transactionIcon,
-                    { backgroundColor: transaction.type === 'income' ? `${colors.primary}20` : `${colors.destructive}20` }
-                  ]}>
-                    <Ionicons
-                      name={transaction.type === 'income' ? 'arrow-down' : 'arrow-up'}
-                      size={20}
-                      color={transaction.type === 'income' ? colors.primary : colors.destructive}
-                    />
-                  </View>
-                  <View style={styles.transactionInfo}>
-                    <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                    <Text style={styles.transactionMeta}>
-                      {transaction.category} • {formatDate(transaction.date)}
+          <View style={(isLandscape || isTablet) ? styles.transactionsGrid : undefined}>
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((transaction) => (
+                <Card 
+                  key={transaction.id} 
+                  variant="glass" 
+                  style={[
+                    styles.transactionCard,
+                    (isLandscape || isTablet) && styles.transactionCardWide,
+                  ]}
+                  testID={`card-transaction-${transaction.id}`}
+                >
+                  <View style={styles.transactionRow}>
+                    <View style={[
+                      styles.transactionIcon,
+                      { backgroundColor: transaction.type === 'income' ? `${colors.primary}20` : `${colors.destructive}20` }
+                    ]}>
+                      <Ionicons
+                        name={transaction.type === 'income' ? 'arrow-down' : 'arrow-up'}
+                        size={20}
+                        color={transaction.type === 'income' ? colors.primary : colors.destructive}
+                      />
+                    </View>
+                    <View style={styles.transactionInfo}>
+                      <Text style={styles.transactionDescription}>{transaction.description}</Text>
+                      <Text style={styles.transactionMeta}>
+                        {transaction.category} • {formatDate(transaction.date)}
+                      </Text>
+                    </View>
+                    <Text style={[
+                      styles.transactionAmount,
+                      { color: transaction.type === 'income' ? colors.primary : colors.destructive }
+                    ]}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
                     </Text>
                   </View>
-                  <Text style={[
-                    styles.transactionAmount,
-                    { color: transaction.type === 'income' ? colors.primary : colors.destructive }
-                  ]}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
-                  </Text>
-                </View>
+                </Card>
+              ))
+            ) : (
+              <Card variant="glass" style={styles.emptyCard} testID="empty-state">
+                <Ionicons name="receipt-outline" size={40} color={colors.mutedForeground} />
+                <Text style={styles.emptyText}>Nessuna transazione recente</Text>
               </Card>
-            ))
-          ) : (
-            <Card variant="glass" style={styles.emptyCard}>
-              <Ionicons name="receipt-outline" size={40} color={colors.mutedForeground} />
-              <Text style={styles.emptyText}>Nessuna transazione recente</Text>
-            </Card>
-          )}
+            )}
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -336,6 +354,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -350,6 +374,14 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  halfSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -372,6 +404,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  statsGridWide: {
+    flexWrap: 'nowrap',
   },
   statCard: {
     flex: 1,
@@ -454,8 +489,17 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     textAlign: 'center',
   },
+  transactionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
   transactionCard: {
     marginBottom: spacing.sm,
+  },
+  transactionCardWide: {
+    width: '50%',
+    paddingHorizontal: spacing.xs,
   },
   transactionRow: {
     flexDirection: 'row',

@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -28,11 +29,15 @@ interface TicketType {
 
 export function SIAETicketTypesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadTicketTypes = async () => {
     try {
@@ -93,12 +98,18 @@ export function SIAETicketTypesScreen() {
     }).format(amount);
   };
 
-  const renderTicketType = ({ item }: { item: TicketType }) => (
+  const renderTicketType = ({ item, index }: { item: TicketType; index: number }) => (
     <TouchableOpacity
-      style={styles.typeCard}
+      style={[
+        styles.typeCard,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAETicketTypeDetail', { typeId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-type-${item.id}`}
+      testID={`card-type-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.typeRow}>
@@ -111,26 +122,26 @@ export function SIAETicketTypesScreen() {
           </View>
           <View style={styles.typeInfo}>
             <View style={styles.typeHeader}>
-              <Text style={styles.typeName}>{item.name}</Text>
+              <Text style={styles.typeName} testID={`text-type-name-${item.id}`}>{item.name}</Text>
               {!item.isActive && (
                 <View style={[styles.inactiveBadge]}>
                   <Text style={styles.inactiveText}>Inattivo</Text>
                 </View>
               )}
             </View>
-            <Text style={styles.typeCode}>Codice: {item.code}</Text>
+            <Text style={styles.typeCode} testID={`text-type-code-${item.id}`}>Codice: {item.code}</Text>
             <Text style={styles.typeDescription} numberOfLines={1}>{item.description}</Text>
             <View style={styles.typeFooter}>
               <View style={[styles.categoryBadge, { backgroundColor: `${getCategoryColor(item.category)}20` }]}>
-                <Text style={[styles.categoryText, { color: getCategoryColor(item.category) }]}>
+                <Text style={[styles.categoryText, { color: getCategoryColor(item.category) }]} testID={`text-category-${item.id}`}>
                   {getCategoryLabel(item.category)}
                 </Text>
               </View>
-              <Text style={styles.soldCount}>{item.ticketsSold} venduti</Text>
+              <Text style={styles.soldCount} testID={`text-sold-count-${item.id}`}>{item.ticketsSold} venduti</Text>
             </View>
           </View>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>{formatCurrency(item.price)}</Text>
+            <Text style={styles.price} testID={`text-price-${item.id}`}>{formatCurrency(item.price)}</Text>
           </View>
         </View>
       </Card>
@@ -139,24 +150,24 @@ export function SIAETicketTypesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Tipi Biglietto" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Tipi Biglietto"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAETicketTypeAdd')} data-testid="button-add-type">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAETicketTypeAdd')} testID="button-add-type">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -166,7 +177,13 @@ export function SIAETicketTypesScreen() {
         data={ticketTypes}
         renderItem={renderTicketType}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={[
+          styles.listContent,
+          (isTablet || isLandscape) && styles.listContentLandscape,
+        ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -178,8 +195,9 @@ export function SIAETicketTypesScreen() {
             <Text style={styles.emptySubtext}>Configura i tipi di biglietto per la vendita</Text>
           </View>
         }
+        testID="list-ticket-types"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -201,6 +219,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   typeCard: {
     marginBottom: spacing.md,
@@ -225,6 +250,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
+    flexWrap: 'wrap',
   },
   typeName: {
     color: colors.foreground,
@@ -256,6 +282,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    flexWrap: 'wrap',
   },
   categoryBadge: {
     paddingHorizontal: spacing.md,

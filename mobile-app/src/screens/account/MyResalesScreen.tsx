@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -25,8 +25,12 @@ interface ResaleListing {
 
 export function MyResalesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const { data: resalesData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['/api/public/account/resales'],
@@ -74,14 +78,24 @@ export function MyResalesScreen() {
     cancelled: 'Annullato',
   };
 
-  const renderListing = ({ item }: { item: ResaleListing }) => (
-    <Card style={styles.listingCard}>
+  const renderListing = ({ item, index }: { item: ResaleListing; index: number }) => (
+    <Card 
+      style={[
+        styles.listingCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        },
+      ]}
+      testID={`card-resale-${item.id}`}
+    >
       <View style={styles.listingHeader}>
         <View style={styles.listingInfo}>
-          <Text style={styles.eventTitle} numberOfLines={2}>{item.eventTitle}</Text>
-          <Text style={styles.ticketType}>{item.ticketType}</Text>
+          <Text style={styles.eventTitle} numberOfLines={2} testID={`text-event-title-${item.id}`}>{item.eventTitle}</Text>
+          <Text style={styles.ticketType} testID={`text-ticket-type-${item.id}`}>{item.ticketType}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors[item.status] + '20' }]}>
+        <View style={[styles.statusBadge, { backgroundColor: statusColors[item.status] + '20' }]} testID={`badge-status-${item.id}`}>
           <Text style={[styles.statusText, { color: statusColors[item.status] }]}>
             {statusLabels[item.status]}
           </Text>
@@ -91,19 +105,19 @@ export function MyResalesScreen() {
       <View style={styles.listingDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
-          <Text style={styles.detailText}>{item.eventDate}</Text>
+          <Text style={styles.detailText} testID={`text-event-date-${item.id}`}>{item.eventDate}</Text>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="eye-outline" size={16} color={colors.mutedForeground} />
-          <Text style={styles.detailText}>{item.views} visualizzazioni</Text>
+          <Text style={styles.detailText} testID={`text-views-${item.id}`}>{item.views} visualizzazioni</Text>
         </View>
       </View>
 
       <View style={styles.priceSection}>
         <View style={styles.priceInfo}>
           <Text style={styles.priceLabel}>Prezzo richiesto</Text>
-          <Text style={styles.priceValue}>€{item.price.toFixed(2)}</Text>
-          <Text style={styles.originalPrice}>
+          <Text style={styles.priceValue} testID={`text-price-${item.id}`}>€{item.price.toFixed(2)}</Text>
+          <Text style={styles.originalPrice} testID={`text-original-price-${item.id}`}>
             Originale: €{item.originalPrice.toFixed(2)}
           </Text>
         </View>
@@ -113,12 +127,14 @@ export function MyResalesScreen() {
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => navigation.navigate('ResaleListing', { ticketId: item.ticketId })}
+              testID={`button-edit-resale-${item.id}`}
             >
               <Ionicons name="create-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => handleCancelListing(item)}
+              testID={`button-cancel-resale-${item.id}`}
             >
               <Ionicons name="trash-outline" size={20} color={colors.destructive} />
             </TouchableOpacity>
@@ -127,7 +143,7 @@ export function MyResalesScreen() {
       </View>
 
       <View style={styles.listingFooter}>
-        <Text style={styles.createdAt}>
+        <Text style={styles.createdAt} testID={`text-created-at-${item.id}`}>
           Pubblicato il {item.createdAt}
         </Text>
       </View>
@@ -135,10 +151,10 @@ export function MyResalesScreen() {
   );
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
+    <View style={styles.emptyContainer} testID="container-empty-resales">
       <Ionicons name="pricetags-outline" size={64} color={colors.mutedForeground} />
-      <Text style={styles.emptyTitle}>Nessuna rivendita attiva</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={styles.emptyTitle} testID="text-empty-title">Nessuna rivendita attiva</Text>
+      <Text style={styles.emptySubtitle} testID="text-empty-subtitle">
         I tuoi biglietti in vendita appariranno qui
       </Text>
       <Button
@@ -146,6 +162,7 @@ export function MyResalesScreen() {
         variant="outline"
         onPress={() => navigation.navigate('MyTickets')}
         style={styles.emptyButton}
+        testID="button-go-to-tickets"
       />
     </View>
   );
@@ -154,22 +171,23 @@ export function MyResalesScreen() {
   const soldCount = resales?.filter(r => r.status === 'sold').length || 0;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']} testID="screen-my-resales">
       <Header 
         title="Le mie rivendite" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-my-resales"
       />
       
       {resales && resales.length > 0 && (
-        <View style={styles.statsContainer}>
+        <View style={styles.statsContainer} testID="container-stats">
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{activeCount}</Text>
+            <Text style={styles.statValue} testID="text-active-count">{activeCount}</Text>
             <Text style={styles.statLabel}>In vendita</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{soldCount}</Text>
+            <Text style={styles.statValue} testID="text-sold-count">{soldCount}</Text>
             <Text style={styles.statLabel}>Venduti</Text>
           </View>
         </View>
@@ -177,11 +195,12 @@ export function MyResalesScreen() {
 
       <FlatList
         data={resales}
+        key={numColumns}
+        numColumns={numColumns}
         keyExtractor={(item) => item.id}
         renderItem={renderListing}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + spacing.lg },
           (!resales || resales.length === 0) && styles.listEmpty,
         ]}
         ListEmptyComponent={renderEmpty}
@@ -192,8 +211,9 @@ export function MyResalesScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="list-resales"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -231,7 +251,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
-    gap: spacing.md,
   },
   listEmpty: {
     flex: 1,

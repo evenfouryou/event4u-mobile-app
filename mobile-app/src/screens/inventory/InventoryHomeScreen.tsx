@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,10 @@ import {
   Image,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -48,8 +48,9 @@ const CATEGORIES = [
 
 export default function InventoryHomeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -60,6 +61,9 @@ export default function InventoryHomeScreen() {
     todayConsumption: 0,
     inventoryValue: 0,
   });
+
+  const numColumns = isTablet || isLandscape ? 2 : 2;
+  const cardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const loadInventory = async () => {
     try {
@@ -113,8 +117,6 @@ export default function InventoryHomeScreen() {
     return { color: colors.teal, label: 'OK' };
   };
 
-  const cardWidth = (width - spacing.lg * 2 - spacing.md) / 2;
-
   const statsCards: StatCard[] = [
     {
       id: '1',
@@ -147,11 +149,11 @@ export default function InventoryHomeScreen() {
   ];
 
   const renderStatCard = ({ item }: { item: StatCard }) => (
-    <Card style={[styles.statCard, { width: cardWidth }]} variant="glass">
+    <Card style={[styles.statCard, { width: cardWidth }]} variant="glass" testID={`stat-card-${item.id}`}>
       <View style={[styles.statIcon, { backgroundColor: `${item.color}20` }]}>
         <Ionicons name={item.icon as any} size={20} color={item.color} />
       </View>
-      <Text style={styles.statValue}>{item.value}</Text>
+      <Text style={styles.statValue} testID={`stat-value-${item.id}`}>{item.value}</Text>
       <Text style={styles.statLabel}>{item.label}</Text>
     </Card>
   );
@@ -164,7 +166,7 @@ export default function InventoryHomeScreen() {
         selectedCategory === id && styles.categoryPillActive,
       ]}
       onPress={() => setSelectedCategory(id)}
-      data-testid={`pill-category-${id}`}
+      testID={`pill-category-${id}`}
     >
       <Ionicons
         name={icon as any}
@@ -191,26 +193,26 @@ export default function InventoryHomeScreen() {
         style={[styles.productCard, { width: cardWidth }]}
         onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
         activeOpacity={0.8}
-        data-testid={`card-product-${item.id}`}
+        testID={`card-product-${item.id}`}
       >
         <Card variant="glass">
           {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.productImage} />
+            <Image source={{ uri: item.image }} style={styles.productImage} testID={`image-product-${item.id}`} />
           ) : (
             <View style={styles.productImagePlaceholder}>
               <Ionicons name="cube-outline" size={32} color={colors.mutedForeground} />
             </View>
           )}
-          <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.productName} numberOfLines={1} testID={`text-product-name-${item.id}`}>{item.name}</Text>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryBadgeText}>{item.category}</Text>
           </View>
           <View style={styles.stockInfo}>
-            <Text style={styles.stockText}>
+            <Text style={styles.stockText} testID={`text-stock-${item.id}`}>
               {item.currentStock} {item.unit}
             </Text>
             <View style={[styles.stockStatusBadge, { backgroundColor: `${stockStatus.color}20` }]}>
-              <Text style={[styles.stockStatusText, { color: stockStatus.color }]}>
+              <Text style={[styles.stockStatusText, { color: stockStatus.color }]} testID={`text-status-${item.id}`}>
                 {stockStatus.label}
               </Text>
             </View>
@@ -227,7 +229,7 @@ export default function InventoryHomeScreen() {
             />
           </View>
           {item.todayConsumption > 0 && (
-            <Text style={styles.consumptionText}>
+            <Text style={styles.consumptionText} testID={`text-consumption-${item.id}`}>
               -{item.todayConsumption} oggi
             </Text>
           )}
@@ -238,24 +240,24 @@ export default function InventoryHomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Magazzino" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento inventario...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Magazzino"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('ProductList')}
-            data-testid="button-view-all"
+            testID="button-view-all"
           >
             <Ionicons name="list-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -263,53 +265,60 @@ export default function InventoryHomeScreen() {
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-inventory"
       >
-        <View style={styles.section}>
+        <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
           <Text style={styles.sectionTitle}>Panoramica</Text>
           <FlatList
             data={statsCards}
             renderItem={renderStatCard}
             keyExtractor={(item) => item.id}
-            numColumns={2}
+            numColumns={numColumns}
             columnWrapperStyle={styles.statsGrid}
             scrollEnabled={false}
+            testID="list-stats"
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
           <Text style={styles.sectionTitle}>Categorie</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
+            testID="scroll-categories"
           >
             {CATEGORIES.map(renderCategoryPill)}
           </ScrollView>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Prodotti</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('ProductList')}
-              data-testid="button-view-all-products"
+              testID="button-view-all-products"
             >
               <Text style={styles.viewAllText}>Vedi tutti</Text>
             </TouchableOpacity>
           </View>
           {filteredProducts.length > 0 ? (
             <FlatList
-              data={filteredProducts.slice(0, 6)}
+              data={filteredProducts.slice(0, isTablet || isLandscape ? 8 : 6)}
               renderItem={renderProductCard}
               keyExtractor={(item) => item.id}
-              numColumns={2}
+              numColumns={numColumns}
               columnWrapperStyle={styles.productsGrid}
               scrollEnabled={false}
+              testID="list-products"
             />
           ) : (
-            <Card style={styles.emptyCard} variant="glass">
+            <Card style={styles.emptyCard} variant="glass" testID="card-empty">
               <Ionicons name="cube-outline" size={32} color={colors.mutedForeground} />
               <Text style={styles.emptyText}>Nessun prodotto trovato</Text>
             </Card>
@@ -318,14 +327,14 @@ export default function InventoryHomeScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, isLandscape && styles.fabLandscape]}
         onPress={() => navigation.navigate('Consumption')}
         activeOpacity={0.8}
-        data-testid="button-add-consumption"
+        testID="button-add-consumption"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -336,6 +345,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 80,
   },
   loadingContainer: {
     flex: 1,
@@ -350,6 +365,9 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  sectionLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -524,5 +542,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabLandscape: {
+    bottom: 80,
   },
 });

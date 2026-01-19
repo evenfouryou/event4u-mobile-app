@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -29,7 +30,9 @@ interface BillingPlan {
 
 export function AdminBillingPlansScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,25 +122,25 @@ export function AdminBillingPlansScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Piani Abbonamento" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Piani Abbonamento"
         showBack
         rightAction={
           <TouchableOpacity
             onPress={() => Alert.alert('Nuovo Piano', 'Funzionalità in sviluppo')}
-            data-testid="button-add-plan"
+            testID="button-add-plan"
           >
             <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -146,88 +149,108 @@ export function AdminBillingPlansScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view-plans"
       >
-        <View style={styles.summaryRow}>
-          <Card variant="glass" style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{plans.length}</Text>
+        <View style={[
+          styles.summaryRow,
+          (isTablet || isLandscape) && styles.summaryRowLandscape
+        ]}>
+          <Card variant="glass" style={styles.summaryCard} testID="card-summary-plans">
+            <Text style={styles.summaryValue} testID="text-summary-plans-count">{plans.length}</Text>
             <Text style={styles.summaryLabel}>Piani Attivi</Text>
           </Card>
-          <Card variant="glass" style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>
+          <Card variant="glass" style={styles.summaryCard} testID="card-summary-subscribers">
+            <Text style={styles.summaryValue} testID="text-summary-subscribers-count">
               {plans.reduce((sum, p) => sum + p.subscriberCount, 0)}
             </Text>
             <Text style={styles.summaryLabel}>Abbonati Totali</Text>
           </Card>
         </View>
 
-        {plans.map((plan) => (
-          <Card key={plan.id} variant="glass" style={styles.planCard}>
-            <View style={styles.planHeader}>
-              <View style={styles.planTitleRow}>
-                <Text style={styles.planName}>{plan.name}</Text>
-                {plan.isPopular && (
-                  <View style={styles.popularBadge}>
-                    <Ionicons name="star" size={12} color={colors.primary} />
-                    <Text style={styles.popularText}>Popolare</Text>
-                  </View>
-                )}
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: plan.isActive ? `${colors.success}20` : `${colors.destructive}20` }]}>
-                <Text style={[styles.statusText, { color: plan.isActive ? colors.success : colors.destructive }]}>
-                  {plan.isActive ? 'Attivo' : 'Disabilitato'}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.planPrice}>{formatPrice(plan.price, plan.interval)}</Text>
-            
-            <View style={styles.subscribersRow}>
-              <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.subscribersText}>{plan.subscriberCount} abbonati</Text>
-            </View>
-
-            <View style={styles.featuresContainer}>
-              {plan.features.map((feature, index) => (
-                <View key={index} style={styles.featureRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.teal} />
-                  <Text style={styles.featureText}>{feature}</Text>
+        <View style={[
+          styles.plansContainer,
+          (isTablet || isLandscape) && styles.plansContainerLandscape
+        ]}>
+          {plans.map((plan) => (
+            <Card 
+              key={plan.id} 
+              variant="glass" 
+              style={[
+                styles.planCard,
+                (isTablet || isLandscape) && styles.planCardLandscape
+              ]}
+              testID={`card-plan-${plan.id}`}
+            >
+              <View style={styles.planHeader}>
+                <View style={styles.planTitleRow}>
+                  <Text style={styles.planName} testID={`text-plan-name-${plan.id}`}>{plan.name}</Text>
+                  {plan.isPopular && (
+                    <View style={styles.popularBadge}>
+                      <Ionicons name="star" size={12} color={colors.primary} />
+                      <Text style={styles.popularText}>Popolare</Text>
+                    </View>
+                  )}
                 </View>
-              ))}
-            </View>
+                <View style={[styles.statusBadge, { backgroundColor: plan.isActive ? `${colors.success}20` : `${colors.destructive}20` }]}>
+                  <Text style={[styles.statusText, { color: plan.isActive ? colors.success : colors.destructive }]} testID={`text-plan-status-${plan.id}`}>
+                    {plan.isActive ? 'Attivo' : 'Disabilitato'}
+                  </Text>
+                </View>
+              </View>
 
-            <View style={styles.planActions}>
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => Alert.alert('Modifica Piano', 'Funzionalità in sviluppo')}
-                data-testid={`button-edit-${plan.id}`}
-              >
-                <Ionicons name="create-outline" size={18} color={colors.primary} />
-                <Text style={styles.editButtonText}>Modifica</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleButton, !plan.isActive && styles.toggleButtonActive]}
-                onPress={() => togglePlanStatus(plan)}
-                data-testid={`button-toggle-${plan.id}`}
-              >
-                <Ionicons
-                  name={plan.isActive ? 'pause-outline' : 'play-outline'}
-                  size={18}
-                  color={plan.isActive ? colors.warning : colors.success}
-                />
-                <Text style={[styles.toggleButtonText, { color: plan.isActive ? colors.warning : colors.success }]}>
-                  {plan.isActive ? 'Disabilita' : 'Abilita'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        ))}
+              <Text style={styles.planPrice} testID={`text-plan-price-${plan.id}`}>{formatPrice(plan.price, plan.interval)}</Text>
+              
+              <View style={styles.subscribersRow}>
+                <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
+                <Text style={styles.subscribersText} testID={`text-plan-subscribers-${plan.id}`}>{plan.subscriberCount} abbonati</Text>
+              </View>
+
+              <View style={styles.featuresContainer}>
+                {plan.features.map((feature, index) => (
+                  <View key={index} style={styles.featureRow}>
+                    <Ionicons name="checkmark-circle" size={16} color={colors.teal} />
+                    <Text style={styles.featureText} testID={`text-plan-feature-${plan.id}-${index}`}>{feature}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.planActions}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => Alert.alert('Modifica Piano', 'Funzionalità in sviluppo')}
+                  testID={`button-edit-${plan.id}`}
+                >
+                  <Ionicons name="create-outline" size={18} color={colors.primary} />
+                  <Text style={styles.editButtonText}>Modifica</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleButton, !plan.isActive && styles.toggleButtonActive]}
+                  onPress={() => togglePlanStatus(plan)}
+                  testID={`button-toggle-${plan.id}`}
+                >
+                  <Ionicons
+                    name={plan.isActive ? 'pause-outline' : 'play-outline'}
+                    size={18}
+                    color={plan.isActive ? colors.warning : colors.success}
+                  />
+                  <Text style={[styles.toggleButtonText, { color: plan.isActive ? colors.warning : colors.success }]}>
+                    {plan.isActive ? 'Disabilita' : 'Abilita'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+          ))}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -239,6 +262,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -255,6 +284,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  summaryRowLandscape: {
+    maxWidth: 400,
+  },
   summaryCard: {
     flex: 1,
     alignItems: 'center',
@@ -269,9 +301,21 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
+  plansContainer: {
+    flex: 1,
+  },
+  plansContainerLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   planCard: {
     marginBottom: spacing.lg,
     padding: spacing.xl,
+  },
+  planCardLandscape: {
+    width: '48.5%',
+    marginBottom: 0,
   },
   planHeader: {
     flexDirection: 'row',

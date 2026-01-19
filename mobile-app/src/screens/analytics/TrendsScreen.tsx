@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -43,8 +43,9 @@ const TIME_PERIODS = [
 
 export default function TrendsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
@@ -135,7 +136,7 @@ export default function TrendsScreen() {
             selectedPeriod === period.id && styles.periodPillActive,
           ]}
           onPress={() => setSelectedPeriod(period.id)}
-          data-testid={`pill-period-${period.id}`}
+          testID={`pill-period-${period.id}`}
         >
           <Text
             style={[
@@ -151,8 +152,8 @@ export default function TrendsScreen() {
   );
 
   const renderSummaryCards = () => (
-    <View style={styles.summaryGrid}>
-      <Card variant="glass" style={styles.summaryCard}>
+    <View style={[styles.summaryGrid, (isLandscape || isTablet) && styles.summaryGridWide]}>
+      <Card variant="glass" style={styles.summaryCard} testID="card-summary-revenue">
         <View style={[styles.summaryIcon, { backgroundColor: `${colors.primary}20` }]}>
           <Ionicons name="cash-outline" size={20} color={colors.primary} />
         </View>
@@ -176,7 +177,7 @@ export default function TrendsScreen() {
         </View>
       </Card>
 
-      <Card variant="glass" style={styles.summaryCard}>
+      <Card variant="glass" style={styles.summaryCard} testID="card-summary-attendance">
         <View style={[styles.summaryIcon, { backgroundColor: `${colors.teal}20` }]}>
           <Ionicons name="people-outline" size={20} color={colors.teal} />
         </View>
@@ -200,7 +201,7 @@ export default function TrendsScreen() {
         </View>
       </Card>
 
-      <Card variant="glass" style={styles.summaryCard}>
+      <Card variant="glass" style={styles.summaryCard} testID="card-summary-consumption">
         <View style={[styles.summaryIcon, { backgroundColor: `${colors.warning}20` }]}>
           <Ionicons name="wine-outline" size={20} color={colors.warning} />
         </View>
@@ -227,9 +228,9 @@ export default function TrendsScreen() {
   );
 
   const renderRevenueChart = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Trend Fatturato</Text>
-      <Card variant="glass">
+    <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+      <Text style={styles.sectionTitle} testID="text-revenue-title">Trend Fatturato</Text>
+      <Card variant="glass" testID="card-revenue-chart">
         <View style={styles.chartLegend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
@@ -243,7 +244,7 @@ export default function TrendsScreen() {
         <View style={styles.chartContainer}>
           <View style={styles.chartBars}>
             {revenueData.map((point, index) => (
-              <View key={index} style={styles.chartBarGroup}>
+              <View key={index} style={styles.chartBarGroup} testID={`bar-revenue-${index}`}>
                 <View style={styles.chartBarPair}>
                   <View
                     style={[
@@ -277,11 +278,11 @@ export default function TrendsScreen() {
   );
 
   const renderAttendanceChart = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Presenze per Evento</Text>
-      <Card variant="glass">
+    <View style={[styles.section, (isLandscape || isTablet) && styles.halfSection]}>
+      <Text style={styles.sectionTitle} testID="text-attendance-title">Presenze per Evento</Text>
+      <Card variant="glass" testID="card-attendance-chart">
         {attendanceData.map((event, index) => (
-          <View key={index} style={styles.attendanceItem}>
+          <View key={index} style={styles.attendanceItem} testID={`item-attendance-${index}`}>
             <View style={styles.attendanceHeader}>
               <Text style={styles.eventName} numberOfLines={1}>{event.eventName}</Text>
               <Text style={styles.attendanceCount}>
@@ -313,10 +314,10 @@ export default function TrendsScreen() {
 
   const renderConsumptionChart = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Consumi per Categoria</Text>
-      <Card variant="glass">
+      <Text style={styles.sectionTitle} testID="text-consumption-title">Consumi per Categoria</Text>
+      <Card variant="glass" testID="card-consumption-chart">
         {consumptionData.map((item, index) => (
-          <View key={index} style={styles.consumptionItem}>
+          <View key={index} style={styles.consumptionItem} testID={`item-consumption-${index}`}>
             <View style={styles.consumptionHeader}>
               <Text style={styles.categoryName}>{item.category}</Text>
               <View style={[
@@ -374,35 +375,43 @@ export default function TrendsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Trend Analisi" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento trend...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento trend...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Trend Analisi" showBack onBack={() => navigation.goBack()} />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLandscape || isTablet) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-trends"
       >
         <View style={styles.section}>
           {renderPeriodSelector()}
         </View>
 
         {renderSummaryCards()}
-        {renderRevenueChart()}
-        {renderAttendanceChart()}
+
+        <View style={(isLandscape || isTablet) ? styles.twoColumnContainer : undefined}>
+          {renderRevenueChart()}
+          {renderAttendanceChart()}
+        </View>
+
         {renderConsumptionChart()}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -413,6 +422,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -427,6 +442,14 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  halfSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -465,6 +488,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  summaryGridWide: {
+    paddingHorizontal: spacing.md,
   },
   summaryCard: {
     flex: 1,

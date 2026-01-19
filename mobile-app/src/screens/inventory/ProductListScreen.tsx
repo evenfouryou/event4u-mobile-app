@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   Image,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -46,13 +47,17 @@ const STOCK_FILTERS = [
 
 export default function ProductListScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStockFilter, setSelectedStockFilter] = useState('all');
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const loadProducts = async () => {
     try {
@@ -116,31 +121,31 @@ export default function ProductListScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.productCard}
+        style={[styles.productCard, numColumns === 2 && styles.productCardGrid]}
         onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
         activeOpacity={0.8}
-        data-testid={`card-product-${item.id}`}
+        testID={`card-product-${item.id}`}
       >
         <Card variant="glass">
           <View style={styles.productRow}>
             {item.image ? (
-              <Image source={{ uri: item.image }} style={styles.productImage} />
+              <Image source={{ uri: item.image }} style={styles.productImage} testID={`image-product-${item.id}`} />
             ) : (
               <View style={styles.productImagePlaceholder}>
                 <Ionicons name="cube-outline" size={24} color={colors.mutedForeground} />
               </View>
             )}
             <View style={styles.productInfo}>
-              <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.productName} numberOfLines={1} testID={`text-product-name-${item.id}`}>{item.name}</Text>
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryBadgeText}>{item.category}</Text>
               </View>
               <View style={styles.stockRow}>
-                <Text style={styles.stockText}>
+                <Text style={styles.stockText} testID={`text-stock-${item.id}`}>
                   {item.currentStock} {item.unit}
                 </Text>
                 <View style={[styles.stockStatusBadge, { backgroundColor: `${stockStatus.color}20` }]}>
-                  <Text style={[styles.stockStatusText, { color: stockStatus.color }]}>
+                  <Text style={[styles.stockStatusText, { color: stockStatus.color }]} testID={`text-status-${item.id}`}>
                     {stockStatus.label}
                   </Text>
                 </View>
@@ -166,21 +171,21 @@ export default function ProductListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Prodotti" showBack />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento prodotti...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Prodotti" showBack />
       
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
         <View style={styles.searchInputContainer}>
           <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
           <TextInput
@@ -189,21 +194,22 @@ export default function ProductListScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} data-testid="button-clear-search">
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      <View style={styles.filtersContainer}>
+      <View style={[styles.filtersContainer, isLandscape && styles.filtersContainerLandscape]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
+          testID="scroll-category-filters"
         >
           {CATEGORIES.map(cat => (
             <TouchableOpacity
@@ -213,7 +219,7 @@ export default function ProductListScreen() {
                 selectedCategory === cat.id && styles.filterPillActive,
               ]}
               onPress={() => setSelectedCategory(cat.id)}
-              data-testid={`filter-category-${cat.id}`}
+              testID={`filter-category-${cat.id}`}
             >
               <Text
                 style={[
@@ -230,6 +236,7 @@ export default function ProductListScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
+          testID="scroll-stock-filters"
         >
           {STOCK_FILTERS.map(filter => (
             <TouchableOpacity
@@ -240,7 +247,7 @@ export default function ProductListScreen() {
                 { borderColor: filter.id !== 'all' ? filter.color : colors.borderSubtle },
               ]}
               onPress={() => setSelectedStockFilter(filter.id)}
-              data-testid={`filter-stock-${filter.id}`}
+              testID={`filter-stock-${filter.id}`}
             >
               {filter.id !== 'all' && (
                 <View style={[styles.filterDot, { backgroundColor: filter.color }]} />
@@ -262,19 +269,23 @@ export default function ProductListScreen() {
         data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id}
+        numColumns={numColumns}
+        key={numColumns}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + 20 },
+          isLandscape && styles.listContentLandscape,
         ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
+        testID="list-products"
         ListEmptyComponent={
-          <Card style={styles.emptyCard} variant="glass">
+          <Card style={styles.emptyCard} variant="glass" testID="card-empty">
             <Ionicons name="cube-outline" size={32} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>Nessun prodotto trovato</Text>
           </Card>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -297,6 +308,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  searchContainerLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -317,6 +331,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  filtersContainerLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   filterRow: {
     gap: spacing.sm,
@@ -352,10 +369,22 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: 100,
+    gap: spacing.md,
+  },
+  listContentLandscape: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 80,
+  },
+  columnWrapper: {
     gap: spacing.md,
   },
   productCard: {
     marginBottom: spacing.sm,
+  },
+  productCardGrid: {
+    flex: 1,
+    marginBottom: 0,
   },
   productRow: {
     flexDirection: 'row',

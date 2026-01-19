@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -35,7 +36,9 @@ interface C2ReportData {
 
 export function SIAEReportC2Screen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -185,181 +188,206 @@ export function SIAEReportC2Screen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Report C2 - Mensile" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Report C2 - Mensile" showBack onBack={() => navigation.goBack()} />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="report-c2-scroll"
       >
-        <View style={styles.monthSelector}>
-          <TouchableOpacity
-            onPress={() => changeMonth(-1)}
-            style={styles.monthButton}
-            data-testid="button-prev-month"
-          >
-            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
-          </TouchableOpacity>
-          <View style={styles.monthDisplay}>
-            <Text style={styles.monthText}>{monthNames[selectedMonth]} {selectedYear}</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => changeMonth(1)}
-            style={[styles.monthButton, isCurrentOrFutureMonth() && styles.monthButtonDisabled]}
-            disabled={isCurrentOrFutureMonth()}
-            data-testid="button-next-month"
-          >
-            <Ionicons 
-              name="chevron-forward" 
-              size={24} 
-              color={isCurrentOrFutureMonth() ? colors.mutedForeground : colors.foreground} 
-            />
-          </TouchableOpacity>
-        </View>
-
-        <Card variant="glass" style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <View style={[styles.infoIcon, { backgroundColor: `${colors.teal}20` }]}>
-              <Ionicons name="calendar-outline" size={24} color={colors.teal} />
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentWide
+        ]}>
+          <View style={styles.monthSelector}>
+            <TouchableOpacity
+              onPress={() => changeMonth(-1)}
+              style={styles.monthButton}
+              testID="button-prev-month"
+            >
+              <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+            <View style={styles.monthDisplay}>
+              <Text style={styles.monthText}>{monthNames[selectedMonth]} {selectedYear}</Text>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Report C2 - RPM</Text>
-              <Text style={styles.infoDescription}>
-                Report Periodo Mensile - riepilogo mensile eventi e vendite
-              </Text>
-            </View>
+            <TouchableOpacity
+              onPress={() => changeMonth(1)}
+              style={[styles.monthButton, isCurrentOrFutureMonth() && styles.monthButtonDisabled]}
+              disabled={isCurrentOrFutureMonth()}
+              testID="button-next-month"
+            >
+              <Ionicons 
+                name="chevron-forward" 
+                size={24} 
+                color={isCurrentOrFutureMonth() ? colors.mutedForeground : colors.foreground} 
+              />
+            </TouchableOpacity>
           </View>
-        </Card>
 
-        {reportData ? (
-          <>
-            <Card variant="glass" style={styles.statusCard}>
-              <View style={styles.statusHeader}>
-                <Text style={styles.statusTitle}>Stato Report</Text>
-                <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(reportData.status)}20` }]}>
-                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(reportData.status) }]} />
-                  <Text style={[styles.statusText, { color: getStatusColor(reportData.status) }]}>
-                    {getStatusLabel(reportData.status)}
-                  </Text>
+          <Card variant="glass" style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <View style={[styles.infoIcon, { backgroundColor: `${colors.teal}20` }]}>
+                <Ionicons name="calendar-outline" size={24} color={colors.teal} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoTitle}>Report C2 - RPM</Text>
+                <Text style={styles.infoDescription}>
+                  Report Periodo Mensile - riepilogo mensile eventi e vendite
+                </Text>
+              </View>
+            </View>
+          </Card>
+
+          {reportData ? (
+            <View style={[
+              styles.reportContent,
+              (isTablet || isLandscape) && styles.reportContentWide
+            ]}>
+              <View style={[
+                styles.reportColumn,
+                (isTablet || isLandscape) && styles.reportColumnHalf
+              ]}>
+                <Card variant="glass" style={styles.statusCard}>
+                  <View style={styles.statusHeader}>
+                    <Text style={styles.statusTitle}>Stato Report</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(reportData.status)}20` }]}>
+                      <View style={[styles.statusDot, { backgroundColor: getStatusColor(reportData.status) }]} />
+                      <Text style={[styles.statusText, { color: getStatusColor(reportData.status) }]}>
+                        {getStatusLabel(reportData.status)}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {reportData.generatedAt && (
+                    <Text style={styles.statusTime}>
+                      Generato: {new Date(reportData.generatedAt).toLocaleString('it-IT')}
+                    </Text>
+                  )}
+                  {reportData.transmittedAt && (
+                    <Text style={styles.statusTime}>
+                      Trasmesso: {new Date(reportData.transmittedAt).toLocaleString('it-IT')}
+                    </Text>
+                  )}
+                </Card>
+
+                <View style={[
+                  styles.statsGrid,
+                  (isTablet || isLandscape) && styles.statsGridWide
+                ]}>
+                  <Card variant="glass" style={styles.statCard}>
+                    <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
+                      <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+                    </View>
+                    <Text style={styles.statValue}>{reportData.totalEvents}</Text>
+                    <Text style={styles.statLabel}>Eventi</Text>
+                  </Card>
+                  <Card variant="glass" style={styles.statCard}>
+                    <View style={[styles.statIcon, { backgroundColor: `${colors.teal}20` }]}>
+                      <Ionicons name="ticket-outline" size={24} color={colors.teal} />
+                    </View>
+                    <Text style={styles.statValue}>{reportData.totalTickets}</Text>
+                    <Text style={styles.statLabel}>Biglietti</Text>
+                  </Card>
+                </View>
+
+                <Card variant="glass" style={styles.revenueCard}>
+                  <Text style={styles.revenueLabel}>Incasso Totale Mensile</Text>
+                  <Text style={styles.revenueValue}>{formatCurrency(reportData.totalRevenue)}</Text>
+                </Card>
+              </View>
+
+              <View style={[
+                styles.reportColumn,
+                (isTablet || isLandscape) && styles.reportColumnHalf
+              ]}>
+                {reportData.eventsSummary.length > 0 && (
+                  <Card variant="glass" style={styles.eventsCard}>
+                    <Text style={styles.eventsTitle}>Dettaglio Eventi</Text>
+                    
+                    {reportData.eventsSummary.map((event, index) => (
+                      <View key={index} style={styles.eventRow}>
+                        <View style={styles.eventDate}>
+                          <Text style={styles.eventDateText}>{formatDate(event.date)}</Text>
+                        </View>
+                        <View style={styles.eventInfo}>
+                          <Text style={styles.eventName} numberOfLines={1}>{event.eventName}</Text>
+                          <Text style={styles.eventTickets}>{event.tickets} biglietti</Text>
+                        </View>
+                        <Text style={styles.eventRevenue}>{formatCurrency(event.revenue)}</Text>
+                      </View>
+                    ))}
+                  </Card>
+                )}
+
+                <View style={styles.actionsSection}>
+                  {reportData.status === 'pending' && (
+                    <Button
+                      onPress={handleGenerate}
+                      disabled={generating}
+                      style={styles.generateButton}
+                      testID="button-generate"
+                    >
+                      {generating ? (
+                        <ActivityIndicator size="small" color={colors.primaryForeground} />
+                      ) : (
+                        <>
+                          <Ionicons name="document-outline" size={20} color={colors.primaryForeground} />
+                          <Text style={styles.buttonText}>Genera Report</Text>
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  {reportData.status === 'generated' && (
+                    <Button
+                      onPress={handleTransmit}
+                      disabled={transmitting}
+                      style={styles.transmitButton}
+                      testID="button-transmit"
+                    >
+                      {transmitting ? (
+                        <ActivityIndicator size="small" color={colors.successForeground} />
+                      ) : (
+                        <>
+                          <Ionicons name="send-outline" size={20} color={colors.successForeground} />
+                          <Text style={[styles.buttonText, { color: colors.successForeground }]}>
+                            Trasmetti a SIAE
+                          </Text>
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </View>
               </View>
-              
-              {reportData.generatedAt && (
-                <Text style={styles.statusTime}>
-                  Generato: {new Date(reportData.generatedAt).toLocaleString('it-IT')}
-                </Text>
-              )}
-              {reportData.transmittedAt && (
-                <Text style={styles.statusTime}>
-                  Trasmesso: {new Date(reportData.transmittedAt).toLocaleString('it-IT')}
-                </Text>
-              )}
-            </Card>
-
-            <View style={styles.statsGrid}>
-              <Card variant="glass" style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
-                  <Ionicons name="calendar-outline" size={24} color={colors.primary} />
-                </View>
-                <Text style={styles.statValue}>{reportData.totalEvents}</Text>
-                <Text style={styles.statLabel}>Eventi</Text>
-              </Card>
-              <Card variant="glass" style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: `${colors.teal}20` }]}>
-                  <Ionicons name="ticket-outline" size={24} color={colors.teal} />
-                </View>
-                <Text style={styles.statValue}>{reportData.totalTickets}</Text>
-                <Text style={styles.statLabel}>Biglietti</Text>
-              </Card>
             </View>
-
-            <Card variant="glass" style={styles.revenueCard}>
-              <Text style={styles.revenueLabel}>Incasso Totale Mensile</Text>
-              <Text style={styles.revenueValue}>{formatCurrency(reportData.totalRevenue)}</Text>
-            </Card>
-
-            {reportData.eventsSummary.length > 0 && (
-              <Card variant="glass" style={styles.eventsCard}>
-                <Text style={styles.eventsTitle}>Dettaglio Eventi</Text>
-                
-                {reportData.eventsSummary.map((event, index) => (
-                  <View key={index} style={styles.eventRow}>
-                    <View style={styles.eventDate}>
-                      <Text style={styles.eventDateText}>{formatDate(event.date)}</Text>
-                    </View>
-                    <View style={styles.eventInfo}>
-                      <Text style={styles.eventName} numberOfLines={1}>{event.eventName}</Text>
-                      <Text style={styles.eventTickets}>{event.tickets} biglietti</Text>
-                    </View>
-                    <Text style={styles.eventRevenue}>{formatCurrency(event.revenue)}</Text>
-                  </View>
-                ))}
-              </Card>
-            )}
-
-            <View style={styles.actionsSection}>
-              {reportData.status === 'pending' && (
-                <Button
-                  onPress={handleGenerate}
-                  disabled={generating}
-                  style={styles.generateButton}
-                  data-testid="button-generate"
-                >
-                  {generating ? (
-                    <ActivityIndicator size="small" color={colors.primaryForeground} />
-                  ) : (
-                    <>
-                      <Ionicons name="document-outline" size={20} color={colors.primaryForeground} />
-                      <Text style={styles.buttonText}>Genera Report</Text>
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              {reportData.status === 'generated' && (
-                <Button
-                  onPress={handleTransmit}
-                  disabled={transmitting}
-                  style={styles.transmitButton}
-                  data-testid="button-transmit"
-                >
-                  {transmitting ? (
-                    <ActivityIndicator size="small" color={colors.successForeground} />
-                  ) : (
-                    <>
-                      <Ionicons name="send-outline" size={20} color={colors.successForeground} />
-                      <Text style={[styles.buttonText, { color: colors.successForeground }]}>
-                        Trasmetti a SIAE
-                      </Text>
-                    </>
-                  )}
-                </Button>
-              )}
+          ) : (
+            <View style={styles.noDataContainer}>
+              <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />
+              <Text style={styles.noDataText}>Nessun dato disponibile</Text>
+              <Text style={styles.noDataSubtext}>
+                Non ci sono eventi o vendite per questo mese
+              </Text>
             </View>
-          </>
-        ) : (
-          <View style={styles.noDataContainer}>
-            <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />
-            <Text style={styles.noDataText}>Nessun dato disponibile</Text>
-            <Text style={styles.noDataSubtext}>
-              Non ci sono eventi o vendite per questo mese
-            </Text>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -380,7 +408,21 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.xl,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   monthSelector: {
     flexDirection: 'row',
@@ -437,6 +479,18 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
+  reportContent: {
+    gap: spacing.lg,
+  },
+  reportContentWide: {
+    flexDirection: 'row',
+  },
+  reportColumn: {
+    flex: 1,
+  },
+  reportColumnHalf: {
+    flex: 1,
+  },
   statusCard: {
     marginBottom: spacing.lg,
   },
@@ -476,6 +530,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  statsGridWide: {
+    flexDirection: 'row',
   },
   statCard: {
     flex: 1,

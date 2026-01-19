@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -33,7 +34,9 @@ type RouteParams = {
 export function SIAEReportsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'SIAEReports'>>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const defaultType = route.params?.defaultType || 'RCA';
   
   const [selectedType, setSelectedType] = useState<ReportType>(defaultType);
@@ -177,10 +180,14 @@ export function SIAEReportsScreen() {
     return (
       <TouchableOpacity
         key={type.type}
-        style={[styles.typeCard, isSelected && styles.typeCardSelected]}
+        style={[
+          styles.typeCard,
+          isSelected && styles.typeCardSelected,
+          (isTablet || isLandscape) && styles.typeCardLandscape,
+        ]}
         onPress={() => setSelectedType(type.type)}
         activeOpacity={0.8}
-        data-testid={`select-type-${type.type}`}
+        testID={`select-type-${type.type}`}
       >
         <View style={[
           styles.typeIcon,
@@ -209,7 +216,7 @@ export function SIAEReportsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Genera Report SIAE"
         showBack
@@ -218,90 +225,116 @@ export function SIAEReportsScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-reports"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tipo Report</Text>
-          {reportTypes.map(renderReportTypeCard)}
-        </View>
-
-        {selectedType === 'RCA' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Evento</Text>
-            <TouchableOpacity
-              style={styles.eventSelector}
-              onPress={() => setShowEventPicker(true)}
-              activeOpacity={0.8}
-              data-testid="button-select-event"
-            >
-              <Card variant="glass">
-                <View style={styles.eventSelectorContent}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                  <Text style={styles.eventSelectorText}>
-                    {selectedEvent ? selectedEvent.name : 'Seleziona evento'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {(selectedType === 'RMG' || selectedType === 'RPM') && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Periodo</Text>
-            <Card variant="glass">
-              <View style={styles.dateRow}>
-                <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>Da</Text>
-                  <TouchableOpacity
-                    style={styles.dateButton}
-                    onPress={() => {
-                      const newDate = new Date(dateFrom);
-                      newDate.setMonth(newDate.getMonth() - 1);
-                      setDateFrom(newDate);
-                    }}
-                    data-testid="button-date-from"
-                  >
-                    <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                    <Text style={styles.dateValue}>{formatDate(dateFrom)}</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>A</Text>
-                  <TouchableOpacity
-                    style={styles.dateButton}
-                    onPress={() => {
-                      setDateTo(new Date());
-                    }}
-                    data-testid="button-date-to"
-                  >
-                    <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                    <Text style={styles.dateValue}>{formatDate(dateTo)}</Text>
-                  </TouchableOpacity>
-                </View>
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentLandscape,
+        ]}>
+          <View style={[
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.leftColumnLandscape,
+          ]}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Tipo Report</Text>
+              <View style={[
+                styles.typeCardsContainer,
+                (isTablet || isLandscape) && styles.typeCardsContainerLandscape,
+              ]}>
+                {reportTypes.map(renderReportTypeCard)}
               </View>
-            </Card>
+            </View>
           </View>
-        )}
 
-        <View style={[styles.section, styles.actionsSection]}>
-          <Button
-            title={validating ? 'Validazione...' : 'Anteprima'}
-            onPress={handleValidate}
-            variant="secondary"
-            loading={validating}
-            disabled={validating || (selectedType === 'RCA' && !selectedEvent)}
-          />
-          <Button
-            title={submitting ? 'Trasmissione...' : 'Trasmetti a SIAE'}
-            onPress={handleSubmit}
-            variant="primary"
-            loading={submitting}
-            disabled={submitting || (selectedType === 'RCA' && !selectedEvent)}
-            icon={<Ionicons name="send-outline" size={20} color={colors.primaryForeground} />}
-          />
+          <View style={[
+            styles.rightColumn,
+            (isTablet || isLandscape) && styles.rightColumnLandscape,
+          ]}>
+            {selectedType === 'RCA' && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Evento</Text>
+                <TouchableOpacity
+                  style={styles.eventSelector}
+                  onPress={() => setShowEventPicker(true)}
+                  activeOpacity={0.8}
+                  testID="button-select-event"
+                >
+                  <Card variant="glass">
+                    <View style={styles.eventSelectorContent}>
+                      <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                      <Text style={styles.eventSelectorText}>
+                        {selectedEvent ? selectedEvent.name : 'Seleziona evento'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {(selectedType === 'RMG' || selectedType === 'RPM') && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Periodo</Text>
+                <Card variant="glass">
+                  <View style={styles.dateRow}>
+                    <View style={styles.dateField}>
+                      <Text style={styles.dateLabel}>Da</Text>
+                      <TouchableOpacity
+                        style={styles.dateButton}
+                        onPress={() => {
+                          const newDate = new Date(dateFrom);
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setDateFrom(newDate);
+                        }}
+                        testID="button-date-from"
+                      >
+                        <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                        <Text style={styles.dateValue}>{formatDate(dateFrom)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.dateField}>
+                      <Text style={styles.dateLabel}>A</Text>
+                      <TouchableOpacity
+                        style={styles.dateButton}
+                        onPress={() => {
+                          setDateTo(new Date());
+                        }}
+                        testID="button-date-to"
+                      >
+                        <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                        <Text style={styles.dateValue}>{formatDate(dateTo)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Card>
+              </View>
+            )}
+
+            <View style={[styles.section, styles.actionsSection]}>
+              <Button
+                title={validating ? 'Validazione...' : 'Anteprima'}
+                onPress={handleValidate}
+                variant="secondary"
+                loading={validating}
+                disabled={validating || (selectedType === 'RCA' && !selectedEvent)}
+                testID="button-preview"
+              />
+              <Button
+                title={submitting ? 'Trasmissione...' : 'Trasmetti a SIAE'}
+                onPress={handleSubmit}
+                variant="primary"
+                loading={submitting}
+                disabled={submitting || (selectedType === 'RCA' && !selectedEvent)}
+                icon={<Ionicons name="send-outline" size={20} color={colors.primaryForeground} />}
+                testID="button-submit"
+              />
+            </View>
+          </View>
         </View>
       </ScrollView>
 
@@ -312,12 +345,15 @@ export function SIAEReportsScreen() {
         onRequestClose={() => setShowEventPicker(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            (isTablet || isLandscape) && styles.modalContentLandscape,
+          ]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Seleziona Evento</Text>
               <TouchableOpacity
                 onPress={() => setShowEventPicker(false)}
-                data-testid="button-close-event-picker"
+                testID="button-close-event-picker"
               >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
@@ -328,25 +364,31 @@ export function SIAEReportsScreen() {
               </View>
             ) : (
               <ScrollView style={styles.eventList}>
-                {events.map((event) => (
-                  <TouchableOpacity
-                    key={event.id}
-                    style={[
-                      styles.eventItem,
-                      selectedEvent?.id === event.id && styles.eventItemSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedEvent(event);
-                      setShowEventPicker(false);
-                    }}
-                    data-testid={`event-item-${event.id}`}
-                  >
-                    <Text style={styles.eventName}>{event.name}</Text>
-                    <Text style={styles.eventDate}>
-                      {new Date(event.date).toLocaleDateString('it-IT')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={[
+                  styles.eventsGrid,
+                  (isTablet || isLandscape) && styles.eventsGridLandscape,
+                ]}>
+                  {events.map((event) => (
+                    <TouchableOpacity
+                      key={event.id}
+                      style={[
+                        styles.eventItem,
+                        selectedEvent?.id === event.id && styles.eventItemSelected,
+                        (isTablet || isLandscape) && styles.eventItemLandscape,
+                      ]}
+                      onPress={() => {
+                        setSelectedEvent(event);
+                        setShowEventPicker(false);
+                      }}
+                      testID={`event-item-${event.id}`}
+                    >
+                      <Text style={styles.eventName}>{event.name}</Text>
+                      <Text style={styles.eventDate}>
+                        {new Date(event.date).toLocaleDateString('it-IT')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </ScrollView>
             )}
           </View>
@@ -360,12 +402,16 @@ export function SIAEReportsScreen() {
         onRequestClose={() => setShowPreview(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, styles.previewModal]}>
+          <View style={[
+            styles.modalContent,
+            styles.previewModal,
+            (isTablet || isLandscape) && styles.modalContentLandscape,
+          ]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Anteprima Report</Text>
               <TouchableOpacity
                 onPress={() => setShowPreview(false)}
-                data-testid="button-close-preview"
+                testID="button-close-preview"
               >
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
@@ -375,12 +421,12 @@ export function SIAEReportsScreen() {
                 <>
                   <View style={styles.previewSection}>
                     <Text style={styles.previewLabel}>Tipo Report</Text>
-                    <Text style={styles.previewValue}>{selectedType}</Text>
+                    <Text style={styles.previewValue} testID="preview-type">{selectedType}</Text>
                   </View>
                   {selectedEvent && (
                     <View style={styles.previewSection}>
                       <Text style={styles.previewLabel}>Evento</Text>
-                      <Text style={styles.previewValue}>{selectedEvent.name}</Text>
+                      <Text style={styles.previewValue} testID="preview-event">{selectedEvent.name}</Text>
                     </View>
                   )}
                   <View style={styles.previewSection}>
@@ -397,7 +443,7 @@ export function SIAEReportsScreen() {
                       <Text style={[
                         styles.validationText,
                         { color: previewData.valid ? colors.success : colors.destructive }
-                      ]}>
+                      ]} testID="preview-validation-status">
                         {previewData.valid ? 'Valido' : 'Non valido'}
                       </Text>
                     </View>
@@ -405,7 +451,7 @@ export function SIAEReportsScreen() {
                   {previewData.summary && (
                     <View style={styles.previewSection}>
                       <Text style={styles.previewLabel}>Riepilogo</Text>
-                      <Text style={styles.previewValue}>
+                      <Text style={styles.previewValue} testID="preview-summary">
                         {JSON.stringify(previewData.summary, null, 2)}
                       </Text>
                     </View>
@@ -414,7 +460,7 @@ export function SIAEReportsScreen() {
                     <View style={styles.previewSection}>
                       <Text style={[styles.previewLabel, { color: colors.destructive }]}>Errori</Text>
                       {previewData.errors.map((error: string, index: number) => (
-                        <Text key={index} style={styles.errorItem}>{error}</Text>
+                        <Text key={index} style={styles.errorItem} testID={`preview-error-${index}`}>{error}</Text>
                       ))}
                     </View>
                   )}
@@ -427,6 +473,7 @@ export function SIAEReportsScreen() {
                 onPress={() => setShowPreview(false)}
                 variant="secondary"
                 style={{ flex: 1 }}
+                testID="button-cancel-preview"
               />
               <Button
                 title="Trasmetti"
@@ -436,12 +483,13 @@ export function SIAEReportsScreen() {
                 disabled={submitting || !previewData?.valid}
                 style={{ flex: 1 }}
                 icon={<Ionicons name="send-outline" size={20} color={colors.primaryForeground} />}
+                testID="button-transmit-preview"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -453,6 +501,32 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentLandscape: {
+    flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnLandscape: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnLandscape: {
+    flex: 1,
+    paddingLeft: spacing.md,
+  },
   section: {
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
@@ -462,6 +536,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     marginBottom: spacing.md,
+  },
+  typeCardsContainer: {
+    gap: spacing.md,
+  },
+  typeCardsContainerLandscape: {
+    gap: spacing.sm,
   },
   typeCard: {
     flexDirection: 'row',
@@ -473,6 +553,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.md,
     gap: spacing.md,
+  },
+  typeCardLandscape: {
+    padding: spacing.md,
   },
   typeCardSelected: {
     borderColor: colors.primary,
@@ -575,6 +658,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius['2xl'],
     maxHeight: '70%',
   },
+  modalContentLandscape: {
+    maxHeight: '85%',
+  },
   previewModal: {
     maxHeight: '80%',
   },
@@ -598,6 +684,14 @@ const styles = StyleSheet.create({
   eventList: {
     padding: spacing.lg,
   },
+  eventsGrid: {
+    gap: spacing.md,
+  },
+  eventsGridLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
   eventItem: {
     padding: spacing.lg,
     borderRadius: borderRadius.lg,
@@ -605,6 +699,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  eventItemLandscape: {
+    width: '48%',
   },
   eventItemSelected: {
     borderColor: colors.primary,

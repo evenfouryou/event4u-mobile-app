@@ -8,10 +8,11 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -30,7 +31,9 @@ interface Company {
 export function AdminGestoreCompaniesScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const gestoreId = route.params?.gestoreId;
   const gestoreName = route.params?.gestoreName || 'Gestore';
   
@@ -101,18 +104,18 @@ export function AdminGestoreCompaniesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={`Aziende - ${gestoreName}`} showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title={gestoreId ? `Aziende - ${gestoreName}` : 'Tutte le Aziende'} showBack />
       
       <View style={styles.searchContainer}>
@@ -124,10 +127,10 @@ export function AdminGestoreCompaniesScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-companies"
+            testID="input-search-companies"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -136,65 +139,72 @@ export function AdminGestoreCompaniesScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         {filteredCompanies.length > 0 ? (
-          filteredCompanies.map((company) => (
-            <TouchableOpacity
-              key={company.id}
-              onPress={() => navigation.navigate('CompanyDetail', { companyId: company.id })}
-              activeOpacity={0.8}
-              data-testid={`card-company-${company.id}`}
-            >
-              <Card variant="glass" style={styles.companyCard}>
-                <View style={styles.companyHeader}>
-                  <View style={styles.companyIcon}>
-                    <Ionicons name="business-outline" size={24} color={colors.primary} />
+          <View style={(isTablet || isLandscape) ? styles.companiesGrid : undefined}>
+            {filteredCompanies.map((company) => (
+              <TouchableOpacity
+                key={company.id}
+                onPress={() => navigation.navigate('CompanyDetail', { companyId: company.id })}
+                activeOpacity={0.8}
+                testID={`card-company-${company.id}`}
+                style={(isTablet || isLandscape) ? styles.companyCardWrapper : undefined}
+              >
+                <Card variant="glass" style={styles.companyCard}>
+                  <View style={styles.companyHeader}>
+                    <View style={styles.companyIcon}>
+                      <Ionicons name="business-outline" size={24} color={colors.primary} />
+                    </View>
+                    <View style={styles.companyInfo}>
+                      <Text style={styles.companyName} testID={`text-company-name-${company.id}`}>{company.name}</Text>
+                      <Text style={styles.companyVat}>P.IVA: {company.vatNumber}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(company.status)}20` }]}>
+                      <Text style={[styles.statusText, { color: getStatusColor(company.status) }]} testID={`text-status-${company.id}`}>
+                        {getStatusLabel(company.status)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.companyInfo}>
-                    <Text style={styles.companyName}>{company.name}</Text>
-                    <Text style={styles.companyVat}>P.IVA: {company.vatNumber}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(company.status)}20` }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(company.status) }]}>
-                      {getStatusLabel(company.status)}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
-                    <Text style={styles.statValue}>{company.eventsCount}</Text>
-                    <Text style={styles.statLabel}>Eventi</Text>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statItem}>
+                      <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
+                      <Text style={styles.statValue} testID={`text-events-${company.id}`}>{company.eventsCount}</Text>
+                      <Text style={styles.statLabel}>Eventi</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Ionicons name="cash-outline" size={16} color={colors.mutedForeground} />
+                      <Text style={[styles.statValue, { color: colors.teal }]} testID={`text-revenue-${company.id}`}>{formatCurrency(company.revenue)}</Text>
+                      <Text style={styles.statLabel}>Ricavi</Text>
+                    </View>
                   </View>
-                  <View style={styles.statItem}>
-                    <Ionicons name="cash-outline" size={16} color={colors.mutedForeground} />
-                    <Text style={[styles.statValue, { color: colors.teal }]}>{formatCurrency(company.revenue)}</Text>
-                    <Text style={styles.statLabel}>Ricavi</Text>
-                  </View>
-                </View>
 
-                <View style={styles.companyFooter}>
-                  <Ionicons name="mail-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.companyEmail}>{company.email}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))
+                  <View style={styles.companyFooter}>
+                    <Ionicons name="mail-outline" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.companyEmail} testID={`text-email-${company.id}`}>{company.email}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="business-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessuna azienda trovata</Text>
+            <Text style={styles.emptyText} testID="text-empty">Nessuna azienda trovata</Text>
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -206,6 +216,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -236,6 +254,15 @@ const styles = StyleSheet.create({
     height: 48,
     color: colors.foreground,
     fontSize: fontSize.base,
+  },
+  companiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  companyCardWrapper: {
+    flex: 1,
+    minWidth: '45%',
   },
   companyCard: {
     marginBottom: spacing.md,

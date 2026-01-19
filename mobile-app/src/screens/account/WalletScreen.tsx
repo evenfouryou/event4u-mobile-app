@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -26,7 +26,9 @@ interface Transaction {
 
 export function WalletScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery({
     queryKey: ['/api/public/account/wallet'],
@@ -59,7 +61,7 @@ export function WalletScreen() {
   };
 
   const renderTransaction = ({ item }: { item: Transaction }) => (
-    <View style={styles.transactionItem}>
+    <View style={styles.transactionItem} testID={`transaction-item-${item.id}`}>
       <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(item.type, item.status) + '20' }]}>
         <Ionicons 
           name={getTransactionIcon(item.type, item.status)} 
@@ -68,18 +70,28 @@ export function WalletScreen() {
         />
       </View>
       <View style={styles.transactionContent}>
-        <Text style={styles.transactionDescription}>{item.description}</Text>
-        <Text style={styles.transactionDate}>{item.date}</Text>
+        <Text style={styles.transactionDescription} testID={`text-transaction-description-${item.id}`}>
+          {item.description}
+        </Text>
+        <Text style={styles.transactionDate} testID={`text-transaction-date-${item.id}`}>
+          {item.date}
+        </Text>
       </View>
       <View style={styles.transactionAmount}>
-        <Text style={[
-          styles.transactionValue,
-          { color: item.type === 'credit' ? colors.success : colors.foreground }
-        ]}>
+        <Text 
+          style={[
+            styles.transactionValue,
+            { color: item.type === 'credit' ? colors.success : colors.foreground }
+          ]}
+          testID={`text-transaction-amount-${item.id}`}
+        >
           {item.type === 'credit' ? '+' : '-'}€{Math.abs(item.amount).toFixed(2)}
         </Text>
         {item.status !== 'completed' && (
-          <Text style={[styles.transactionStatus, { color: getTransactionColor(item.type, item.status) }]}>
+          <Text 
+            style={[styles.transactionStatus, { color: getTransactionColor(item.type, item.status) }]}
+            testID={`text-transaction-status-${item.id}`}
+          >
             {item.status === 'pending' ? 'In attesa' : 'Fallito'}
           </Text>
         )}
@@ -88,24 +100,29 @@ export function WalletScreen() {
   );
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
+    <View style={styles.emptyContainer} testID="container-empty-transactions">
       <Ionicons name="receipt-outline" size={64} color={colors.mutedForeground} />
-      <Text style={styles.emptyTitle}>Nessun movimento</Text>
-      <Text style={styles.emptySubtitle}>Le tue transazioni appariranno qui</Text>
+      <Text style={styles.emptyTitle} testID="text-empty-title">Nessun movimento</Text>
+      <Text style={styles.emptySubtitle} testID="text-empty-subtitle">Le tue transazioni appariranno qui</Text>
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Wallet" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-wallet"
       />
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          styles.content,
+          isTablet && styles.contentTablet,
+          isLandscape && styles.contentLandscape,
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -113,73 +130,81 @@ export function WalletScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-view-wallet"
       >
-        <Card style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Saldo disponibile</Text>
-          <Text style={styles.balanceValue}>
-            €{(wallet?.balance || 0).toFixed(2)}
-          </Text>
-          
-          {(wallet?.pendingBalance ?? 0) > 0 && (
-            <View style={styles.pendingRow}>
-              <Ionicons name="time-outline" size={16} color={colors.warning} />
-              <Text style={styles.pendingText}>
-                €{wallet?.pendingBalance.toFixed(2)} in attesa
-              </Text>
+        <View style={[
+          styles.contentWrapper,
+          isTablet && { maxWidth: 600, alignSelf: 'center', width: '100%' },
+        ]}>
+          <Card style={styles.balanceCard} testID="card-balance">
+            <Text style={styles.balanceLabel} testID="text-balance-label">Saldo disponibile</Text>
+            <Text style={styles.balanceValue} testID="text-balance-value">
+              €{(wallet?.balance || 0).toFixed(2)}
+            </Text>
+            
+            {(wallet?.pendingBalance ?? 0) > 0 && (
+              <View style={styles.pendingRow} testID="container-pending-balance">
+                <Ionicons name="time-outline" size={16} color={colors.warning} />
+                <Text style={styles.pendingText} testID="text-pending-balance">
+                  €{wallet?.pendingBalance.toFixed(2)} in attesa
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.balanceActions}>
+              <Button
+                title="Ricarica"
+                size="sm"
+                onPress={() => {}}
+                icon={<Ionicons name="add-outline" size={18} color={colors.primaryForeground} />}
+                style={styles.actionButton}
+                testID="button-recharge"
+              />
+              <Button
+                title="Preleva"
+                variant="outline"
+                size="sm"
+                onPress={() => {}}
+                icon={<Ionicons name="arrow-up-outline" size={18} color={colors.foreground} />}
+                style={styles.actionButton}
+                testID="button-withdraw"
+              />
             </View>
-          )}
+          </Card>
 
-          <View style={styles.balanceActions}>
-            <Button
-              title="Ricarica"
-              size="sm"
-              onPress={() => {}}
-              icon={<Ionicons name="add-outline" size={18} color={colors.primaryForeground} />}
-              style={styles.actionButton}
-            />
-            <Button
-              title="Preleva"
-              variant="outline"
-              size="sm"
-              onPress={() => {}}
-              icon={<Ionicons name="arrow-up-outline" size={18} color={colors.foreground} />}
-              style={styles.actionButton}
-            />
-          </View>
-        </Card>
-
-        <Card style={styles.transactionsCard}>
-          <View style={styles.transactionsHeader}>
-            <Text style={styles.sectionTitle}>Movimenti</Text>
-          </View>
-
-          {transactions && transactions.length > 0 ? (
-            <View>
-              {transactions.map((transaction) => (
-                <React.Fragment key={transaction.id}>
-                  {renderTransaction({ item: transaction })}
-                </React.Fragment>
-              ))}
+          <Card style={styles.transactionsCard} testID="card-transactions">
+            <View style={styles.transactionsHeader}>
+              <Text style={styles.sectionTitle} testID="text-transactions-title">Movimenti</Text>
             </View>
-          ) : (
-            renderEmpty()
-          )}
-        </Card>
 
-        <Card style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Come funziona il wallet?</Text>
-              <Text style={styles.infoText}>
-                Il saldo wallet viene accreditato automaticamente quando vendi un biglietto. 
-                Puoi utilizzarlo per acquistare nuovi biglietti o prelevarlo sul tuo conto bancario.
-              </Text>
+            {transactions && transactions.length > 0 ? (
+              <View testID="list-transactions">
+                {transactions.map((transaction) => (
+                  <React.Fragment key={transaction.id}>
+                    {renderTransaction({ item: transaction })}
+                  </React.Fragment>
+                ))}
+              </View>
+            ) : (
+              renderEmpty()
+            )}
+          </Card>
+
+          <Card style={styles.infoCard} testID="card-info">
+            <View style={styles.infoRow}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoTitle} testID="text-info-title">Come funziona il wallet?</Text>
+                <Text style={styles.infoText} testID="text-info-description">
+                  Il saldo wallet viene accreditato automaticamente quando vendi un biglietto. 
+                  Puoi utilizzarlo per acquistare nuovi biglietti o prelevarlo sul tuo conto bancario.
+                </Text>
+              </View>
             </View>
-          </View>
-        </Card>
+          </Card>
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -193,6 +218,16 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  contentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentLandscape: {
+    paddingHorizontal: spacing.lg,
+  },
+  contentWrapper: {
     gap: spacing.md,
   },
   balanceCard: {

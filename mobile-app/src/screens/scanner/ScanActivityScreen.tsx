@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Modal } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Modal, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header, Card } from '../../components';
 
 interface ScanRecord {
@@ -48,7 +48,12 @@ const RESULT_FILTERS = [
 
 export function ScanActivityScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
+  const contentMaxWidth = isTablet ? 1200 : undefined;
 
   const [resultFilter, setResultFilter] = useState('all');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -151,14 +156,21 @@ export function ScanActivityScreen() {
     setShowFilterModal(false);
   }, []);
 
-  const renderScanItem = useCallback(({ item }: { item: ScanRecord }) => (
-    <Card style={styles.scanCard}>
+  const renderScanItem = useCallback(({ item, index }: { item: ScanRecord; index: number }) => (
+    <Card style={[
+      styles.scanCard,
+      numColumns === 2 && {
+        flex: 1,
+        marginLeft: index % 2 === 1 ? spacing.sm : 0,
+        marginRight: index % 2 === 0 ? spacing.sm : 0,
+      },
+    ]} testID={`card-scan-${item.id}`}>
       <View style={styles.scanHeader}>
         <View style={[styles.resultIndicator, { backgroundColor: getResultColor(item.result) }]}>
           <Ionicons name={getResultIcon(item.result) as any} size={20} color={colors.foreground} />
         </View>
         <View style={styles.scanMainInfo}>
-          <Text style={styles.ticketId}>{item.ticketCode}</Text>
+          <Text style={styles.ticketId} testID={`text-ticket-code-${item.id}`}>{item.ticketCode}</Text>
           <Text style={styles.holderName}>{item.holderName}</Text>
         </View>
         <View style={styles.timeInfo}>
@@ -184,204 +196,210 @@ export function ScanActivityScreen() {
         </View>
       </View>
     </Card>
-  ), []);
+  ), [numColumns]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header
-        title="Attività Scansioni"
-        showBack
-        onBack={() => navigation.goBack()}
-        rightAction={
-          <TouchableOpacity
-            style={[styles.filterButton, activeFiltersCount > 0 && styles.filterButtonActive]}
-            onPress={() => setShowFilterModal(true)}
-            data-testid="button-filters"
-          >
-            <Ionicons name="filter" size={20} color={activeFiltersCount > 0 ? colors.emeraldForeground : colors.foreground} />
-            {activeFiltersCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        }
-      />
-
-      <View style={styles.statsContainer}>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{scanStats.totalScans}</Text>
-          <Text style={styles.statLabel}>Scansioni</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={[styles.statValue, { color: colors.teal }]}>{scanStats.successRate}%</Text>
-          <Text style={styles.statLabel}>Successo</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{scanStats.avgScanSpeed}s</Text>
-          <Text style={styles.statLabel}>Media</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{scanStats.peakHour}</Text>
-          <Text style={styles.statLabel}>Picco</Text>
-        </Card>
-      </View>
-
-      <View style={styles.filtersContainer}>
-        <FlatList
-          data={RESULT_FILTERS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersList}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.contentWrapper, contentMaxWidth && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+        <Header
+          title="Attività Scansioni"
+          showBack
+          onBack={() => navigation.goBack()}
+          rightAction={
             <TouchableOpacity
-              style={[
-                styles.filterChip,
-                resultFilter === item.id && styles.filterChipActive,
-              ]}
-              onPress={() => setResultFilter(item.id)}
-              data-testid={`button-result-filter-${item.id}`}
+              style={[styles.filterButton, activeFiltersCount > 0 && styles.filterButtonActive]}
+              onPress={() => setShowFilterModal(true)}
+              testID="button-filters"
             >
-              <Ionicons
-                name={item.icon as any}
-                size={16}
-                color={resultFilter === item.id ? colors.emeraldForeground : colors.foreground}
-              />
-              <Text
-                style={[
-                  styles.filterChipText,
-                  resultFilter === item.id && styles.filterChipTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
+              <Ionicons name="filter" size={20} color={activeFiltersCount > 0 ? colors.emeraldForeground : colors.foreground} />
+              {activeFiltersCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
-          )}
+          }
         />
-      </View>
 
-      <FlatList
-        data={filteredScans}
-        renderItem={renderScanItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: insets.bottom + spacing.lg },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            tintColor={colors.emerald}
-          />
-        }
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.loadingContainer}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <View key={i} style={styles.skeletonCard} />
-              ))}
-            </View>
-          ) : (
-            <Card style={styles.emptyCard}>
-              <Ionicons name="scan-outline" size={48} color={colors.mutedForeground} />
-              <Text style={styles.emptyTitle}>Nessuna scansione</Text>
-              <Text style={styles.emptyText}>
-                Le scansioni effettuate appariranno qui
-              </Text>
-            </Card>
-          )
-        }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
+        <View style={[styles.statsContainer, isLandscape && styles.statsContainerLandscape]}>
+          <Card style={styles.statCard}>
+            <Text style={styles.statValue} testID="text-total-scans">{scanStats.totalScans}</Text>
+            <Text style={styles.statLabel}>Scansioni</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={[styles.statValue, { color: colors.teal }]} testID="text-success-rate">{scanStats.successRate}%</Text>
+            <Text style={styles.statLabel}>Successo</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={styles.statValue} testID="text-avg-speed">{scanStats.avgScanSpeed}s</Text>
+            <Text style={styles.statLabel}>Media</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={styles.statValue} testID="text-peak-hour">{scanStats.peakHour}</Text>
+            <Text style={styles.statLabel}>Picco</Text>
+          </Card>
+        </View>
 
-      <Modal
-        visible={showFilterModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtri Avanzati</Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)} data-testid="button-close-modal">
-                <Ionicons name="close" size={24} color={colors.foreground} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Evento</Text>
-              <FlatList
-                data={[{ id: null, title: 'Tutti gli eventi' }, ...(events || [])]}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id || 'all'}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.filterOption,
-                      selectedEventId === item.id && styles.filterOptionActive,
-                    ]}
-                    onPress={() => setSelectedEventId(item.id)}
-                    data-testid={`filter-event-${item.id || 'all'}`}
-                  >
-                    <Text style={[
-                      styles.filterOptionText,
-                      selectedEventId === item.id && styles.filterOptionTextActive,
-                    ]}>
-                      {item.title}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Operatore</Text>
-              <FlatList
-                data={[{ id: null, name: 'Tutti gli operatori' }, ...(operators || [])]}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id || 'all'}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.filterOption,
-                      selectedOperatorId === item.id && styles.filterOptionActive,
-                    ]}
-                    onPress={() => setSelectedOperatorId(item.id)}
-                    data-testid={`filter-operator-${item.id || 'all'}`}
-                  >
-                    <Text style={[
-                      styles.filterOptionText,
-                      selectedOperatorId === item.id && styles.filterOptionTextActive,
-                    ]}>
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.clearButton} onPress={clearFilters} data-testid="button-clear-filters">
-                <Text style={styles.clearButtonText}>Cancella Filtri</Text>
-              </TouchableOpacity>
+        <View style={styles.filtersContainer}>
+          <FlatList
+            data={RESULT_FILTERS}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersList}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.applyButton}
-                onPress={() => setShowFilterModal(false)}
-                data-testid="button-apply-filters"
+                style={[
+                  styles.filterChip,
+                  resultFilter === item.id && styles.filterChipActive,
+                ]}
+                onPress={() => setResultFilter(item.id)}
+                testID={`button-filter-${item.id}`}
               >
-                <Text style={styles.applyButtonText}>Applica</Text>
+                <Ionicons
+                  name={item.icon as any}
+                  size={16}
+                  color={resultFilter === item.id ? colors.emeraldForeground : colors.foreground}
+                />
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    resultFilter === item.id && styles.filterChipTextActive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
               </TouchableOpacity>
+            )}
+            testID="list-result-filters"
+          />
+        </View>
+
+        <FlatList
+          key={numColumns}
+          data={filteredScans}
+          renderItem={renderScanItem}
+          keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.emerald}
+              testID="refresh-control"
+            />
+          }
+          ListEmptyComponent={
+            isLoading ? (
+              <View style={styles.loadingContainer}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <View key={i} style={styles.skeletonCard} />
+                ))}
+              </View>
+            ) : (
+              <Card style={styles.emptyCard}>
+                <Ionicons name="scan-outline" size={48} color={colors.mutedForeground} />
+                <Text style={styles.emptyTitle}>Nessuna scansione</Text>
+                <Text style={styles.emptyText}>
+                  Le scansioni effettuate appariranno qui
+                </Text>
+              </Card>
+            )
+          }
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          testID="list-scans"
+        />
+
+        <Modal
+          visible={showFilterModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowFilterModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, (isTablet || isLandscape) && styles.modalContentWide]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filtri Avanzati</Text>
+                <TouchableOpacity onPress={() => setShowFilterModal(false)} testID="button-close-modal">
+                  <Ionicons name="close" size={24} color={colors.foreground} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Evento</Text>
+                <FlatList
+                  data={[{ id: null, title: 'Tutti gli eventi' }, ...(events || [])]}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item.id || 'all'}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.filterOption,
+                        selectedEventId === item.id && styles.filterOptionActive,
+                      ]}
+                      onPress={() => setSelectedEventId(item.id)}
+                      testID={`button-event-filter-${item.id || 'all'}`}
+                    >
+                      <Text style={[
+                        styles.filterOptionText,
+                        selectedEventId === item.id && styles.filterOptionTextActive,
+                      ]}>
+                        {item.title}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  testID="list-event-filters"
+                />
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Operatore</Text>
+                <FlatList
+                  data={[{ id: null, name: 'Tutti gli operatori' }, ...(operators || [])]}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item.id || 'all'}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.filterOption,
+                        selectedOperatorId === item.id && styles.filterOptionActive,
+                      ]}
+                      onPress={() => setSelectedOperatorId(item.id)}
+                      testID={`button-operator-filter-${item.id || 'all'}`}
+                    >
+                      <Text style={[
+                        styles.filterOptionText,
+                        selectedOperatorId === item.id && styles.filterOptionTextActive,
+                      ]}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  testID="list-operator-filters"
+                />
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.clearButton} onPress={clearFilters} testID="button-clear-filters">
+                  <Text style={styles.clearButtonText}>Cancella Filtri</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.applyButton}
+                  onPress={() => setShowFilterModal(false)}
+                  testID="button-apply-filters"
+                >
+                  <Text style={styles.applyButtonText}>Applica</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -389,6 +407,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   filterButton: {
     width: 40,
@@ -425,6 +446,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.sm,
+  },
+  statsContainerLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   statCard: {
     flex: 1,
@@ -478,6 +502,7 @@ const styles = StyleSheet.create({
   },
   scanCard: {
     padding: spacing.md,
+    marginBottom: spacing.md,
   },
   scanHeader: {
     flexDirection: 'row',
@@ -575,6 +600,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  modalContentWide: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+    borderRadius: borderRadius['2xl'],
+    marginBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',

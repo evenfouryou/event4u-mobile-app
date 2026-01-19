@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -40,7 +41,9 @@ type RouteParams = {
 export function SIAETransmissionDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'SIAETransmissionDetail'>>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { transmissionId } = route.params;
   
   const [loading, setLoading] = useState(true);
@@ -161,23 +164,23 @@ export function SIAETransmissionDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header
           title="Dettaglio Trasmissione"
           showBack
           onBack={() => navigation.goBack()}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!transmission) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header
           title="Dettaglio Trasmissione"
           showBack
@@ -190,14 +193,15 @@ export function SIAETransmissionDetailScreen() {
             title="Torna indietro"
             onPress={() => navigation.goBack()}
             variant="primary"
+            testID="button-go-back"
           />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Dettaglio Trasmissione"
         showBack
@@ -206,158 +210,178 @@ export function SIAETransmissionDetailScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-detail"
       >
-        <View style={styles.statusSection}>
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentLandscape,
+        ]}>
           <View style={[
-            styles.statusBanner,
-            { backgroundColor: `${getStatusColor(transmission.status)}15` }
+            styles.leftColumn,
+            (isTablet || isLandscape) && styles.leftColumnLandscape,
           ]}>
-            <Ionicons
-              name={getStatusIcon(transmission.status) as any}
-              size={32}
-              color={getStatusColor(transmission.status)}
-            />
-            <View style={styles.statusInfo}>
-              <Text style={[styles.statusLabel, { color: getStatusColor(transmission.status) }]}>
-                {getStatusLabel(transmission.status)}
-              </Text>
-              <Text style={styles.statusSubtext}>
-                ID: #{transmission.id}
-              </Text>
-            </View>
-            <View style={[styles.typeBadge, { backgroundColor: `${colors.primary}20` }]}>
-              <Text style={[styles.typeText, { color: colors.primary }]}>
-                {transmission.type}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informazioni</Text>
-          <Card variant="glass">
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Evento</Text>
-              <Text style={styles.infoValue}>{transmission.eventName}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Creato il</Text>
-              <Text style={styles.infoValue}>{formatDate(transmission.createdAt)}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            
-            {transmission.sentAt && (
-              <>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Inviato il</Text>
-                  <Text style={styles.infoValue}>{formatDate(transmission.sentAt)}</Text>
-                </View>
-                <View style={styles.infoDivider} />
-              </>
-            )}
-            
-            {transmission.completedAt && (
-              <>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Completato il</Text>
-                  <Text style={styles.infoValue}>{formatDate(transmission.completedAt)}</Text>
-                </View>
-                <View style={styles.infoDivider} />
-              </>
-            )}
-            
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Tentativi</Text>
-              <Text style={styles.infoValue}>{transmission.attempts || 1}</Text>
-            </View>
-            
-            {transmission.fileName && (
-              <>
-                <View style={styles.infoDivider} />
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>File</Text>
-                  <Text style={styles.infoValueSmall} numberOfLines={1}>
-                    {transmission.fileName}
+            <View style={styles.statusSection}>
+              <View style={[
+                styles.statusBanner,
+                { backgroundColor: `${getStatusColor(transmission.status)}15` }
+              ]}>
+                <Ionicons
+                  name={getStatusIcon(transmission.status) as any}
+                  size={32}
+                  color={getStatusColor(transmission.status)}
+                />
+                <View style={styles.statusInfo}>
+                  <Text style={[styles.statusLabel, { color: getStatusColor(transmission.status) }]} testID="text-status">
+                    {getStatusLabel(transmission.status)}
+                  </Text>
+                  <Text style={styles.statusSubtext} testID="text-transmission-id">
+                    ID: #{transmission.id}
                   </Text>
                 </View>
-              </>
-            )}
-            
-            {transmission.responseCode && (
-              <>
-                <View style={styles.infoDivider} />
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Codice Risposta</Text>
-                  <Text style={styles.infoValue}>{transmission.responseCode}</Text>
+                <View style={[styles.typeBadge, { backgroundColor: `${colors.primary}20` }]}>
+                  <Text style={[styles.typeText, { color: colors.primary }]} testID="text-type">
+                    {transmission.type}
+                  </Text>
                 </View>
-              </>
-            )}
-          </Card>
-        </View>
-
-        {transmission.status === 'error' && transmission.errorMessage && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Dettagli Errore</Text>
-            <Card variant="glass" style={styles.errorCard}>
-              <View style={styles.errorHeader}>
-                <Ionicons name="warning-outline" size={20} color={colors.destructive} />
-                <Text style={styles.errorTitle}>Messaggio di Errore</Text>
               </View>
-              <Text style={styles.errorMessage}>{transmission.errorMessage}</Text>
-            </Card>
-          </View>
-        )}
+            </View>
 
-        {transmission.xmlContent && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.xmlHeader}
-              onPress={() => setXmlExpanded(!xmlExpanded)}
-              activeOpacity={0.8}
-              data-testid="button-toggle-xml"
-            >
-              <Text style={styles.sectionTitle}>Contenuto XML</Text>
-              <Ionicons
-                name={xmlExpanded ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.mutedForeground}
-              />
-            </TouchableOpacity>
-            
-            {xmlExpanded && (
-              <Card variant="glass" style={styles.xmlCard}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={true}
-                  style={styles.xmlScrollView}
-                >
-                  <Text style={styles.xmlContent} selectable>
-                    {transmission.xmlContent}
-                  </Text>
-                </ScrollView>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Informazioni</Text>
+              <Card variant="glass">
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Evento</Text>
+                  <Text style={styles.infoValue} testID="text-event-name">{transmission.eventName}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+                
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Creato il</Text>
+                  <Text style={styles.infoValue} testID="text-created-at">{formatDate(transmission.createdAt)}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+                
+                {transmission.sentAt && (
+                  <>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Inviato il</Text>
+                      <Text style={styles.infoValue} testID="text-sent-at">{formatDate(transmission.sentAt)}</Text>
+                    </View>
+                    <View style={styles.infoDivider} />
+                  </>
+                )}
+                
+                {transmission.completedAt && (
+                  <>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Completato il</Text>
+                      <Text style={styles.infoValue} testID="text-completed-at">{formatDate(transmission.completedAt)}</Text>
+                    </View>
+                    <View style={styles.infoDivider} />
+                  </>
+                )}
+                
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Tentativi</Text>
+                  <Text style={styles.infoValue} testID="text-attempts">{transmission.attempts || 1}</Text>
+                </View>
+                
+                {transmission.fileName && (
+                  <>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>File</Text>
+                      <Text style={styles.infoValueSmall} numberOfLines={1} testID="text-filename">
+                        {transmission.fileName}
+                      </Text>
+                    </View>
+                  </>
+                )}
+                
+                {transmission.responseCode && (
+                  <>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Codice Risposta</Text>
+                      <Text style={styles.infoValue} testID="text-response-code">{transmission.responseCode}</Text>
+                    </View>
+                  </>
+                )}
               </Card>
+            </View>
+          </View>
+
+          <View style={[
+            styles.rightColumn,
+            (isTablet || isLandscape) && styles.rightColumnLandscape,
+          ]}>
+            {transmission.status === 'error' && transmission.errorMessage && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Dettagli Errore</Text>
+                <Card variant="glass" style={styles.errorCard}>
+                  <View style={styles.errorHeader}>
+                    <Ionicons name="warning-outline" size={20} color={colors.destructive} />
+                    <Text style={styles.errorTitle}>Messaggio di Errore</Text>
+                  </View>
+                  <Text style={styles.errorMessage} testID="text-error-message">{transmission.errorMessage}</Text>
+                </Card>
+              </View>
+            )}
+
+            {transmission.xmlContent && (
+              <View style={styles.section}>
+                <TouchableOpacity
+                  style={styles.xmlHeader}
+                  onPress={() => setXmlExpanded(!xmlExpanded)}
+                  activeOpacity={0.8}
+                  testID="button-toggle-xml"
+                >
+                  <Text style={styles.sectionTitle}>Contenuto XML</Text>
+                  <Ionicons
+                    name={xmlExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                </TouchableOpacity>
+                
+                {xmlExpanded && (
+                  <Card variant="glass" style={styles.xmlCard}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={true}
+                      style={styles.xmlScrollView}
+                    >
+                      <Text style={styles.xmlContent} selectable testID="text-xml-content">
+                        {transmission.xmlContent}
+                      </Text>
+                    </ScrollView>
+                  </Card>
+                )}
+              </View>
+            )}
+
+            {transmission.status === 'error' && (
+              <View style={[styles.section, styles.actionsSection]}>
+                <Button
+                  title={resending ? 'Reinvio in corso...' : 'Ritrasmetti'}
+                  onPress={handleResend}
+                  variant="primary"
+                  loading={resending}
+                  disabled={resending}
+                  icon={<Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />}
+                  testID="button-resend"
+                />
+              </View>
             )}
           </View>
-        )}
-
-        {transmission.status === 'error' && (
-          <View style={[styles.section, styles.actionsSection]}>
-            <Button
-              title={resending ? 'Reinvio in corso...' : 'Ritrasmetti'}
-              onPress={handleResend}
-              variant="primary"
-              loading={resending}
-              disabled={resending}
-              icon={<Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />}
-            />
-          </View>
-        )}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -368,6 +392,32 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentLandscape: {
+    flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  leftColumnLandscape: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  rightColumnLandscape: {
+    flex: 1,
+    paddingLeft: spacing.md,
   },
   loadingContainer: {
     flex: 1,

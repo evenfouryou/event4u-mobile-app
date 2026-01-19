@@ -6,20 +6,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
 
 const CASHIER_ACCENT = colors.cashier;
 const CASHIER_ACCENT_FOREGROUND = colors.cashierForeground;
-
-const { width } = Dimensions.get('window');
+const TABLET_BREAKPOINT = 768;
+const CONTENT_MAX_WIDTH = 800;
 
 interface DashboardStats {
   totalRevenue: number;
@@ -60,7 +60,10 @@ type TimePeriod = 'today' | 'week' | 'month';
 
 export function CashierDashboardScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= TABLET_BREAKPOINT;
+  
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -171,13 +174,21 @@ export function CashierDashboardScreen() {
 
   const cashPercentage = stats ? (stats.cashRevenue / (stats.cashRevenue + stats.cardRevenue)) * 100 : 50;
 
+  const numColumns = isLandscape || isTablet ? 4 : 2;
+  const statCardWidth = isTablet
+    ? (Math.min(width, CONTENT_MAX_WIDTH) - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns
+    : (width - spacing.lg * 2 - spacing.md) / 2 - 1;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Dashboard Vendite"
         showBack
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('CashierReports')} data-testid="button-reports">
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('CashierReports')} 
+            testID="button-reports"
+          >
             <Ionicons name="document-text-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -185,146 +196,168 @@ export function CashierDashboardScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.scrollContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={CASHIER_ACCENT} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={CASHIER_ACCENT} 
+            testID="refresh-control"
+          />
         }
+        testID="scroll-view"
       >
-        <View style={styles.periodSelector}>
-          {periodOptions.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[styles.periodButton, timePeriod === option.value && styles.periodButtonActive]}
-              onPress={() => setTimePeriod(option.value)}
-              data-testid={`period-${option.value}`}
-            >
-              <Text
-                style={[styles.periodButtonText, timePeriod === option.value && styles.periodButtonTextActive]}
+        <View style={[styles.contentWrapper, isTablet && { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', width: '100%' }]}>
+          <View style={styles.periodSelector}>
+            {periodOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[styles.periodButton, timePeriod === option.value && styles.periodButtonActive]}
+                onPress={() => setTimePeriod(option.value)}
+                testID={`button-period-${option.value}`}
               >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Card variant="elevated" style={styles.revenueCard}>
-          <Text style={styles.revenueLabel}>Ricavi {periodOptions.find((p) => p.value === timePeriod)?.label}</Text>
-          <Text style={styles.revenueAmount}>{formatCurrency(getRevenueForPeriod())}</Text>
-          <View style={styles.revenueBreakdown}>
-            <View style={styles.breakdownItem}>
-              <View style={[styles.breakdownDot, { backgroundColor: colors.success }]} />
-              <Text style={styles.breakdownLabel}>Contanti</Text>
-              <Text style={styles.breakdownValue}>{formatCurrency(stats?.cashRevenue || 0)}</Text>
-            </View>
-            <View style={styles.breakdownItem}>
-              <View style={[styles.breakdownDot, { backgroundColor: colors.accent }]} />
-              <Text style={styles.breakdownLabel}>Carta</Text>
-              <Text style={styles.breakdownValue}>{formatCurrency(stats?.cardRevenue || 0)}</Text>
-            </View>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressCash, { width: `${cashPercentage}%` }]} />
-            <View style={[styles.progressCard, { width: `${100 - cashPercentage}%` }]} />
-          </View>
-        </Card>
-
-        <View style={styles.statsGrid}>
-          <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="ticket" size={24} color={CASHIER_ACCENT} />
-            <Text style={styles.statValue}>{stats?.ticketsSold || 0}</Text>
-            <Text style={styles.statLabel}>Biglietti</Text>
-          </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="swap-horizontal" size={24} color={colors.cashierLight} />
-            <Text style={styles.statValue}>{stats?.transactionsCount || 0}</Text>
-            <Text style={styles.statLabel}>Transazioni</Text>
-          </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="calculator" size={24} color={colors.cashierDark} />
-            <Text style={styles.statValue}>{formatCurrency(stats?.averageTransaction || 0)}</Text>
-            <Text style={styles.statLabel}>Media</Text>
-          </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="return-down-back" size={24} color={colors.destructive} />
-            <Text style={[styles.statValue, { color: colors.destructive }]}>
-              {formatCurrency(stats?.refundsTotal || 0)}
-            </Text>
-            <Text style={styles.statLabel}>Rimborsi</Text>
-          </Card>
-        </View>
-
-        {revenueByEvent.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ricavi per Evento</Text>
-            <Card variant="glass" style={styles.eventsCard}>
-              {revenueByEvent.map((event, index) => (
-                <View
-                  key={event.eventId}
-                  style={[styles.eventRow, index < revenueByEvent.length - 1 && styles.eventRowBorder]}
+                <Text
+                  style={[styles.periodButtonText, timePeriod === option.value && styles.periodButtonTextActive]}
                 >
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventName}>{event.eventName}</Text>
-                    <Text style={styles.eventTickets}>{event.ticketsSold} biglietti</Text>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Card variant="elevated" style={styles.revenueCard} testID="card-revenue">
+            <Text style={styles.revenueLabel}>Ricavi {periodOptions.find((p) => p.value === timePeriod)?.label}</Text>
+            <Text style={styles.revenueAmount} testID="text-revenue-amount">{formatCurrency(getRevenueForPeriod())}</Text>
+            <View style={styles.revenueBreakdown}>
+              <View style={styles.breakdownItem}>
+                <View style={[styles.breakdownDot, { backgroundColor: colors.success }]} />
+                <Text style={styles.breakdownLabel}>Contanti</Text>
+                <Text style={styles.breakdownValue} testID="text-cash-revenue">{formatCurrency(stats?.cashRevenue || 0)}</Text>
+              </View>
+              <View style={styles.breakdownItem}>
+                <View style={[styles.breakdownDot, { backgroundColor: colors.accent }]} />
+                <Text style={styles.breakdownLabel}>Carta</Text>
+                <Text style={styles.breakdownValue} testID="text-card-revenue">{formatCurrency(stats?.cardRevenue || 0)}</Text>
+              </View>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressCash, { width: `${cashPercentage}%` }]} />
+              <View style={[styles.progressCard, { width: `${100 - cashPercentage}%` }]} />
+            </View>
+          </Card>
+
+          <View style={styles.statsGrid}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-tickets">
+              <Ionicons name="ticket" size={24} color={CASHIER_ACCENT} />
+              <Text style={styles.statValue} testID="text-tickets-sold">{stats?.ticketsSold || 0}</Text>
+              <Text style={styles.statLabel}>Biglietti</Text>
+            </Card>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-transactions">
+              <Ionicons name="swap-horizontal" size={24} color={colors.cashierLight} />
+              <Text style={styles.statValue} testID="text-transactions-count">{stats?.transactionsCount || 0}</Text>
+              <Text style={styles.statLabel}>Transazioni</Text>
+            </Card>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-average">
+              <Ionicons name="calculator" size={24} color={colors.cashierDark} />
+              <Text style={styles.statValue} testID="text-average-transaction">{formatCurrency(stats?.averageTransaction || 0)}</Text>
+              <Text style={styles.statLabel}>Media</Text>
+            </Card>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="card-stat-refunds">
+              <Ionicons name="return-down-back" size={24} color={colors.destructive} />
+              <Text style={[styles.statValue, { color: colors.destructive }]} testID="text-refunds-total">
+                {formatCurrency(stats?.refundsTotal || 0)}
+              </Text>
+              <Text style={styles.statLabel}>Rimborsi</Text>
+            </Card>
+          </View>
+
+          {revenueByEvent.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ricavi per Evento</Text>
+              <Card variant="glass" style={styles.eventsCard} testID="card-revenue-by-event">
+                {revenueByEvent.map((event, index) => (
+                  <View
+                    key={event.eventId}
+                    style={[styles.eventRow, index < revenueByEvent.length - 1 && styles.eventRowBorder]}
+                    testID={`row-event-${event.eventId}`}
+                  >
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventName}>{event.eventName}</Text>
+                      <Text style={styles.eventTickets}>{event.ticketsSold} biglietti</Text>
+                    </View>
+                    <Text style={styles.eventRevenue} testID={`text-event-revenue-${event.eventId}`}>
+                      {formatCurrency(event.revenue)}
+                    </Text>
                   </View>
-                  <Text style={styles.eventRevenue}>{formatCurrency(event.revenue)}</Text>
+                ))}
+              </Card>
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Ultime Transazioni</Text>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('CashierTransactions')}
+                testID="button-view-all-transactions"
+              >
+                <Text style={styles.seeAllText}>Vedi tutte</Text>
+              </TouchableOpacity>
+            </View>
+            <Card variant="glass" style={styles.transactionsCard} testID="card-recent-transactions">
+              {recentTransactions.map((transaction, index) => (
+                <View
+                  key={transaction.id}
+                  style={[
+                    styles.transactionRow,
+                    index < recentTransactions.length - 1 && styles.transactionRowBorder,
+                  ]}
+                  testID={`row-transaction-${transaction.id}`}
+                >
+                  <View style={styles.transactionIcon}>
+                    <Ionicons
+                      name={transaction.paymentMethod === 'cash' ? 'cash' : 'card'}
+                      size={20}
+                      color={transaction.paymentMethod === 'cash' ? colors.success : colors.accent}
+                    />
+                  </View>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionDescription}>{transaction.description}</Text>
+                    <Text style={styles.transactionMeta}>
+                      {transaction.cashierName} • {formatTime(transaction.timestamp)}
+                    </Text>
+                  </View>
+                  <Text style={styles.transactionAmount} testID={`text-transaction-amount-${transaction.id}`}>
+                    {formatCurrency(transaction.amount)}
+                  </Text>
                 </View>
               ))}
             </Card>
           </View>
-        )}
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Ultime Transazioni</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('CashierTransactions')}>
-              <Text style={styles.seeAllText}>Vedi tutte</Text>
-            </TouchableOpacity>
+          <View style={[styles.quickActions, isLandscape && styles.quickActionsLandscape]}>
+            <Button
+              title="Nuova Vendita"
+              variant="primary"
+              icon={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
+              onPress={() => navigation.navigate('CassaBiglietti')}
+              testID="button-new-sale"
+            />
+            <Button
+              title="Esporta Report"
+              variant="outline"
+              icon={<Ionicons name="download-outline" size={20} color={colors.foreground} />}
+              onPress={() => {}}
+              testID="button-export-report"
+            />
           </View>
-          <Card variant="glass" style={styles.transactionsCard}>
-            {recentTransactions.map((transaction, index) => (
-              <View
-                key={transaction.id}
-                style={[
-                  styles.transactionRow,
-                  index < recentTransactions.length - 1 && styles.transactionRowBorder,
-                ]}
-              >
-                <View style={styles.transactionIcon}>
-                  <Ionicons
-                    name={transaction.paymentMethod === 'cash' ? 'cash' : 'card'}
-                    size={20}
-                    color={transaction.paymentMethod === 'cash' ? colors.success : colors.accent}
-                  />
-                </View>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                  <Text style={styles.transactionMeta}>
-                    {transaction.cashierName} • {formatTime(transaction.timestamp)}
-                  </Text>
-                </View>
-                <Text style={styles.transactionAmount}>{formatCurrency(transaction.amount)}</Text>
-              </View>
-            ))}
-          </Card>
-        </View>
-
-        <View style={styles.quickActions}>
-          <Button
-            title="Nuova Vendita"
-            variant="primary"
-            icon={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
-            onPress={() => navigation.navigate('CassaBiglietti')}
-          />
-          <Button
-            title="Esporta Report"
-            variant="outline"
-            icon={<Ionicons name="download-outline" size={20} color={colors.foreground} />}
-            onPress={() => {}}
-          />
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -335,7 +368,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
+    paddingBottom: 100,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   periodSelector: {
     flexDirection: 'row',
@@ -422,7 +464,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   statCard: {
-    width: (width - spacing.lg * 2 - spacing.md) / 2 - 1,
     padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.sm,
@@ -526,5 +567,8 @@ const styles = StyleSheet.create({
   quickActions: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  quickActionsLandscape: {
+    justifyContent: 'center',
   },
 });

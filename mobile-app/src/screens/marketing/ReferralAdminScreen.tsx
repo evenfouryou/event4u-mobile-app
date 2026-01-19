@@ -9,12 +9,13 @@ import {
   RefreshControl,
   Switch,
   FlatList,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface ReferralSettings {
@@ -60,10 +61,15 @@ interface TopReferrer {
 
 export default function ReferralAdminScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'referrals' | 'leaderboard'>('overview');
+
+  const numColumns = isTablet || isLandscape ? 4 : 2;
+  const statCardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const { data: settings, refetch: refetchSettings } = useQuery<ReferralSettings>({
     queryKey: ['/api/marketing/referral/settings'],
@@ -148,24 +154,24 @@ export default function ReferralAdminScreen() {
     const statusConfig = getStatusConfig(item.status);
 
     return (
-      <Card variant="glass" style={styles.referralCard}>
+      <Card variant="glass" style={styles.referralCard} testID={`card-referral-${item.id}`}>
         <View style={styles.referralHeader}>
           <View style={styles.referralParty}>
-            <View style={styles.referralAvatar}>
+            <View style={styles.referralAvatar} testID={`avatar-referrer-${item.id}`}>
               <Text style={styles.avatarText}>{item.referrerName.charAt(0)}</Text>
             </View>
             <View>
-              <Text style={styles.referralName}>{item.referrerName}</Text>
+              <Text style={styles.referralName} testID={`text-referrer-${item.id}`}>{item.referrerName}</Text>
               <Text style={styles.referralLabel}>Referrer</Text>
             </View>
           </View>
           <Ionicons name="arrow-forward" size={20} color={colors.mutedForeground} />
           <View style={styles.referralParty}>
             <View>
-              <Text style={styles.referralName}>{item.refereeName}</Text>
+              <Text style={styles.referralName} testID={`text-referee-${item.id}`}>{item.refereeName}</Text>
               <Text style={styles.referralLabel}>Invitato</Text>
             </View>
-            <View style={[styles.referralAvatar, { backgroundColor: `${colors.teal}20` }]}>
+            <View style={[styles.referralAvatar, { backgroundColor: `${colors.teal}20` }]} testID={`avatar-referee-${item.id}`}>
               <Text style={[styles.avatarText, { color: colors.teal }]}>{item.refereeName.charAt(0)}</Text>
             </View>
           </View>
@@ -174,15 +180,15 @@ export default function ReferralAdminScreen() {
         <View style={styles.referralMeta}>
           <View style={styles.metaItem}>
             <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-            <Text style={styles.metaText}>{item.createdAt}</Text>
+            <Text style={styles.metaText} testID={`text-date-${item.id}`}>{item.createdAt}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]}>
+          <View style={[styles.statusBadge, { backgroundColor: `${statusConfig.color}20` }]} testID={`badge-status-${item.id}`}>
             <Text style={[styles.statusText, { color: statusConfig.color }]}>
               {statusConfig.label}
             </Text>
           </View>
           {item.status === 'completed' && (
-            <View style={styles.rewardBadge}>
+            <View style={styles.rewardBadge} testID={`badge-reward-${item.id}`}>
               <Ionicons name="gift" size={12} color={colors.primary} />
               <Text style={styles.rewardText}>€{item.rewardAmount}</Text>
             </View>
@@ -193,39 +199,39 @@ export default function ReferralAdminScreen() {
   };
 
   const renderTopReferrer = ({ item, index }: { item: TopReferrer; index: number }) => (
-    <Card variant="glass" style={styles.leaderCard}>
+    <Card variant="glass" style={[styles.leaderCard, isTablet && styles.leaderCardTablet]} testID={`card-leader-${item.id}`}>
       <View style={styles.leaderRank}>
         <Text style={[
           styles.rankNumber,
           index < 3 && { color: index === 0 ? colors.primary : index === 1 ? '#C0C0C0' : '#CD7F32' }
-        ]}>
+        ]} testID={`text-rank-${item.id}`}>
           #{index + 1}
         </Text>
       </View>
-      <View style={styles.leaderAvatar}>
+      <View style={styles.leaderAvatar} testID={`avatar-leader-${item.id}`}>
         <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
       </View>
       <View style={styles.leaderInfo}>
-        <Text style={styles.leaderName}>{item.name}</Text>
-        <Text style={styles.leaderEmail}>{item.email}</Text>
+        <Text style={styles.leaderName} testID={`text-name-${item.id}`}>{item.name}</Text>
+        <Text style={styles.leaderEmail} testID={`text-email-${item.id}`}>{item.email}</Text>
       </View>
       <View style={styles.leaderStats}>
-        <Text style={styles.leaderStatValue}>{item.referralCount}</Text>
+        <Text style={styles.leaderStatValue} testID={`text-count-${item.id}`}>{item.referralCount}</Text>
         <Text style={styles.leaderStatLabel}>Referral</Text>
       </View>
       <View style={styles.leaderStats}>
-        <Text style={[styles.leaderStatValue, { color: colors.teal }]}>{item.successRate}%</Text>
+        <Text style={[styles.leaderStatValue, { color: colors.teal }]} testID={`text-rate-${item.id}`}>{item.successRate}%</Text>
         <Text style={styles.leaderStatLabel}>Successo</Text>
       </View>
       <View style={styles.leaderStats}>
-        <Text style={[styles.leaderStatValue, { color: colors.primary }]}>€{item.totalRewardsEarned}</Text>
+        <Text style={[styles.leaderStatValue, { color: colors.primary }]} testID={`text-earned-${item.id}`}>€{item.totalRewardsEarned}</Text>
         <Text style={styles.leaderStatLabel}>Guadagnato</Text>
       </View>
     </Card>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Programma Referral"
         showBack
@@ -233,7 +239,7 @@ export default function ReferralAdminScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('ReferralSettings')}
-            data-testid="button-settings"
+            testID="button-settings"
           >
             <Ionicons name="settings-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -250,7 +256,7 @@ export default function ReferralAdminScreen() {
             key={tab.id}
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
             onPress={() => setActiveTab(tab.id as any)}
-            data-testid={`tab-${tab.id}`}
+            testID={`tab-${tab.id}`}
           >
             <Ionicons
               name={tab.icon as any}
@@ -266,50 +272,52 @@ export default function ReferralAdminScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         {activeTab === 'overview' && (
           <>
             <View style={styles.section}>
-              <Card variant="glass" style={styles.statusCard}>
+              <Card variant="glass" style={styles.statusCard} testID="card-status">
                 <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Programma Referral</Text>
+                  <Text style={styles.statusLabel} testID="text-program-label">Programma Referral</Text>
                   <Switch
                     value={mockSettings.enabled}
                     onValueChange={(value) => updateSettingsMutation.mutate({ enabled: value })}
                     trackColor={{ false: colors.surface, true: `${colors.teal}50` }}
                     thumbColor={mockSettings.enabled ? colors.teal : colors.mutedForeground}
+                    testID="switch-program-enabled"
                   />
                 </View>
 
-                <View style={styles.rewardsPreview}>
-                  <View style={styles.rewardPreviewItem}>
+                <View style={[styles.rewardsPreview, isLandscape && styles.rewardsPreviewLandscape]}>
+                  <View style={styles.rewardPreviewItem} testID="preview-referrer">
                     <Ionicons name="person" size={20} color={colors.primary} />
                     <Text style={styles.rewardPreviewLabel}>Referrer</Text>
-                    <Text style={styles.rewardPreviewValue}>€{mockSettings.referrerReward}</Text>
+                    <Text style={styles.rewardPreviewValue} testID="text-referrer-reward">€{mockSettings.referrerReward}</Text>
                   </View>
                   <Ionicons name="add" size={20} color={colors.mutedForeground} />
-                  <View style={styles.rewardPreviewItem}>
+                  <View style={styles.rewardPreviewItem} testID="preview-referee">
                     <Ionicons name="person-add" size={20} color={colors.teal} />
                     <Text style={styles.rewardPreviewLabel}>Invitato</Text>
-                    <Text style={styles.rewardPreviewValue}>€{mockSettings.refereeReward}</Text>
+                    <Text style={styles.rewardPreviewValue} testID="text-referee-reward">€{mockSettings.refereeReward}</Text>
                   </View>
                 </View>
 
-                <View style={styles.conditionsRow}>
-                  <View style={styles.conditionItem}>
+                <View style={[styles.conditionsRow, isLandscape && styles.conditionsRowLandscape]}>
+                  <View style={styles.conditionItem} testID="condition-min-purchase">
                     <Ionicons name="cart-outline" size={16} color={colors.mutedForeground} />
                     <Text style={styles.conditionText}>Min. €{mockSettings.minPurchase}</Text>
                   </View>
-                  <View style={styles.conditionItem}>
+                  <View style={styles.conditionItem} testID="condition-expiration">
                     <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
                     <Text style={styles.conditionText}>{mockSettings.expirationDays} giorni</Text>
                   </View>
-                  <View style={styles.conditionItem}>
+                  <View style={styles.conditionItem} testID="condition-max-referrals">
                     <Ionicons name="infinite-outline" size={16} color={colors.mutedForeground} />
                     <Text style={styles.conditionText}>Max {mockSettings.maxReferrals}</Text>
                   </View>
@@ -318,43 +326,49 @@ export default function ReferralAdminScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Statistiche</Text>
+              <Text style={styles.sectionTitle} testID="text-stats-title">Statistiche</Text>
               <View style={styles.statsGrid}>
-                <Card variant="glass" style={styles.statCard}>
+                <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-total">
                   <Ionicons name="people" size={24} color={colors.primary} />
-                  <Text style={styles.statValue}>{mockStats.totalReferrals}</Text>
+                  <Text style={styles.statValue} testID="text-total-referrals">{mockStats.totalReferrals}</Text>
                   <Text style={styles.statLabel}>Totale Referral</Text>
                 </Card>
-                <Card variant="glass" style={styles.statCard}>
+                <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-successful">
                   <Ionicons name="checkmark-circle" size={24} color={colors.teal} />
-                  <Text style={[styles.statValue, { color: colors.teal }]}>{mockStats.successfulReferrals}</Text>
+                  <Text style={[styles.statValue, { color: colors.teal }]} testID="text-successful">{mockStats.successfulReferrals}</Text>
                   <Text style={styles.statLabel}>Completati</Text>
                 </Card>
-                <Card variant="glass" style={styles.statCard}>
+                <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-pending">
                   <Ionicons name="time" size={24} color={colors.warning} />
-                  <Text style={[styles.statValue, { color: colors.warning }]}>{mockStats.pendingReferrals}</Text>
+                  <Text style={[styles.statValue, { color: colors.warning }]} testID="text-pending">{mockStats.pendingReferrals}</Text>
                   <Text style={styles.statLabel}>In Attesa</Text>
                 </Card>
-                <Card variant="glass" style={styles.statCard}>
+                <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-rewards">
                   <Ionicons name="gift" size={24} color={colors.primary} />
-                  <Text style={styles.statValue}>€{mockStats.totalRewardsIssued}</Text>
+                  <Text style={styles.statValue} testID="text-rewards">€{mockStats.totalRewardsIssued}</Text>
                   <Text style={styles.statLabel}>Premi Erogati</Text>
                 </Card>
               </View>
             </View>
 
             <View style={styles.section}>
-              <Card variant="glass" style={styles.topReferrerCard}>
-                <View style={styles.topReferrerIcon}>
-                  <Ionicons name="trophy" size={28} color={colors.primary} />
-                </View>
-                <View style={styles.topReferrerInfo}>
-                  <Text style={styles.topReferrerLabel}>Top Referrer del Mese</Text>
-                  <Text style={styles.topReferrerName}>{mockStats.topReferrer.name}</Text>
-                  <Text style={styles.topReferrerCount}>{mockStats.topReferrer.count} referral completati</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-              </Card>
+              <TouchableOpacity
+                onPress={() => setActiveTab('leaderboard')}
+                activeOpacity={0.8}
+                testID="button-view-top-referrer"
+              >
+                <Card variant="glass" style={styles.topReferrerCard} testID="card-top-referrer">
+                  <View style={styles.topReferrerIcon}>
+                    <Ionicons name="trophy" size={28} color={colors.primary} />
+                  </View>
+                  <View style={styles.topReferrerInfo}>
+                    <Text style={styles.topReferrerLabel}>Top Referrer del Mese</Text>
+                    <Text style={styles.topReferrerName} testID="text-top-referrer-name">{mockStats.topReferrer.name}</Text>
+                    <Text style={styles.topReferrerCount} testID="text-top-referrer-count">{mockStats.topReferrer.count} referral completati</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                </Card>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -362,18 +376,22 @@ export default function ReferralAdminScreen() {
         {activeTab === 'referrals' && (
           <View style={styles.section}>
             <FlatList
+              key={`referrals-${isTablet ? 2 : 1}`}
               data={mockReferrals}
               renderItem={renderReferralCard}
               keyExtractor={(item) => item.id}
+              numColumns={isTablet ? 2 : 1}
               scrollEnabled={false}
+              columnWrapperStyle={isTablet ? styles.referralGridRow : undefined}
               ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
               ListEmptyComponent={
-                <Card style={styles.emptyCard} variant="glass">
+                <Card style={styles.emptyCard} variant="glass" testID="empty-referrals">
                   <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
                   <Text style={styles.emptyTitle}>Nessun referral</Text>
                   <Text style={styles.emptyText}>I referral appariranno qui</Text>
                 </Card>
               }
+              testID="list-referrals"
             />
           </View>
         )}
@@ -386,11 +404,12 @@ export default function ReferralAdminScreen() {
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+              testID="list-leaderboard"
             />
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -432,6 +451,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
@@ -466,6 +488,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
   },
+  rewardsPreviewLandscape: {
+    gap: spacing.xl * 2,
+  },
   rewardPreviewItem: {
     alignItems: 'center',
     gap: spacing.xs,
@@ -483,6 +508,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
+  conditionsRowLandscape: {
+    justifyContent: 'center',
+    gap: spacing.xl * 2,
+  },
   conditionItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -498,7 +527,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   statCard: {
-    width: '48%',
     alignItems: 'center',
     paddingVertical: spacing.lg,
     gap: spacing.sm,
@@ -544,7 +572,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.sm,
   },
+  referralGridRow: {
+    gap: spacing.md,
+  },
   referralCard: {
+    flex: 1,
     paddingVertical: spacing.lg,
   },
   referralHeader: {
@@ -622,6 +654,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.lg,
     gap: spacing.sm,
+  },
+  leaderCardTablet: {
+    paddingHorizontal: spacing.lg,
   },
   leaderRank: {
     width: 32,

@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -38,7 +39,9 @@ interface CartItem {
 
 export function SIAEBoxOfficeScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -153,109 +156,135 @@ export function SIAEBoxOfficeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Biglietteria" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Biglietteria" showBack onBack={() => navigation.goBack()} />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 200 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="box-office-scroll"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seleziona Evento</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventsScroll}>
-            <View style={styles.eventsRow}>
-              {events.map(event => (
-                <TouchableOpacity
-                  key={event.id}
-                  style={[
-                    styles.eventChip,
-                    selectedEvent?.id === event.id && styles.eventChipActive
-                  ]}
-                  onPress={() => setSelectedEvent(event)}
-                  activeOpacity={0.8}
-                  data-testid={`chip-event-${event.id}`}
-                >
-                  <Text style={[
-                    styles.eventChipText,
-                    selectedEvent?.id === event.id && styles.eventChipTextActive
-                  ]}>
-                    {event.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-
-        {selectedEvent && (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipi Biglietto</Text>
-              <View style={styles.typesGrid}>
-                {ticketTypes.map(type => (
+        <View style={[
+          styles.mainContent,
+          (isTablet || isLandscape) && styles.mainContentWide
+        ]}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Seleziona Evento</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventsScroll}>
+              <View style={styles.eventsRow}>
+                {events.map(event => (
                   <TouchableOpacity
-                    key={type.id}
-                    style={styles.typeCard}
-                    onPress={() => addToCart(type)}
+                    key={event.id}
+                    style={[
+                      styles.eventChip,
+                      selectedEvent?.id === event.id && styles.eventChipActive
+                    ]}
+                    onPress={() => setSelectedEvent(event)}
                     activeOpacity={0.8}
-                    data-testid={`button-type-${type.id}`}
+                    testID={`chip-event-${event.id}`}
                   >
-                    <Card variant="glass">
-                      <Text style={styles.typeName}>{type.name}</Text>
-                      <Text style={styles.typePrice}>{formatCurrency(type.price)}</Text>
-                      <Text style={styles.typeAvailable}>{type.available} disponibili</Text>
-                    </Card>
+                    <Text style={[
+                      styles.eventChipText,
+                      selectedEvent?.id === event.id && styles.eventChipTextActive
+                    ]}>
+                      {event.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
+            </ScrollView>
+          </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Dati Cliente</Text>
-              <Card variant="glass">
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Nome e Cognome</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={customerName}
-                    onChangeText={setCustomerName}
-                    placeholder="Mario Rossi"
-                    placeholderTextColor={colors.mutedForeground}
-                    data-testid="input-customer-name"
-                  />
+          {selectedEvent && (
+            <>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Tipi Biglietto</Text>
+                <View style={[
+                  styles.typesGrid,
+                  (isTablet || isLandscape) && styles.typesGridWide
+                ]}>
+                  {ticketTypes.map(type => (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={[
+                        styles.typeCard,
+                        (isTablet || isLandscape) && styles.typeCardWide
+                      ]}
+                      onPress={() => addToCart(type)}
+                      activeOpacity={0.8}
+                      testID={`button-type-${type.id}`}
+                    >
+                      <Card variant="glass">
+                        <Text style={styles.typeName}>{type.name}</Text>
+                        <Text style={styles.typePrice}>{formatCurrency(type.price)}</Text>
+                        <Text style={styles.typeAvailable}>{type.available} disponibili</Text>
+                      </Card>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Codice Fiscale</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={customerFiscalCode}
-                    onChangeText={(text) => setCustomerFiscalCode(text.toUpperCase())}
-                    placeholder="RSSMRA80A01H501Z"
-                    placeholderTextColor={colors.mutedForeground}
-                    autoCapitalize="characters"
-                    data-testid="input-fiscal-code"
-                  />
-                </View>
-              </Card>
-            </View>
-          </>
-        )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Dati Cliente</Text>
+                <Card variant="glass">
+                  <View style={[
+                    styles.inputRow,
+                    (isTablet || isLandscape) && styles.inputRowWide
+                  ]}>
+                    <View style={[
+                      styles.inputGroup,
+                      (isTablet || isLandscape) && styles.inputGroupHalf
+                    ]}>
+                      <Text style={styles.inputLabel}>Nome e Cognome</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={customerName}
+                        onChangeText={setCustomerName}
+                        placeholder="Mario Rossi"
+                        placeholderTextColor={colors.mutedForeground}
+                        testID="input-customer-name"
+                      />
+                    </View>
+                    <View style={[
+                      styles.inputGroup,
+                      (isTablet || isLandscape) && styles.inputGroupHalf
+                    ]}>
+                      <Text style={styles.inputLabel}>Codice Fiscale</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={customerFiscalCode}
+                        onChangeText={(text) => setCustomerFiscalCode(text.toUpperCase())}
+                        placeholder="RSSMRA80A01H501Z"
+                        placeholderTextColor={colors.mutedForeground}
+                        autoCapitalize="characters"
+                        testID="input-fiscal-code"
+                      />
+                    </View>
+                  </View>
+                </Card>
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {cart.length > 0 && (
-        <View style={[styles.cartContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
+        <View style={styles.cartContainer}>
           <Card variant="glass" style={styles.cartCard}>
             <View style={styles.cartItems}>
               {cart.map(item => (
@@ -270,7 +299,7 @@ export function SIAEBoxOfficeScreen() {
                     <TouchableOpacity
                       onPress={() => removeFromCart(item.typeId)}
                       style={styles.cartButton}
-                      data-testid={`button-remove-${item.typeId}`}
+                      testID={`button-remove-${item.typeId}`}
                     >
                       <Ionicons name="remove" size={20} color={colors.foreground} />
                     </TouchableOpacity>
@@ -278,7 +307,7 @@ export function SIAEBoxOfficeScreen() {
                     <TouchableOpacity
                       onPress={() => addToCart(ticketTypes.find(t => t.id === item.typeId)!)}
                       style={styles.cartButton}
-                      data-testid={`button-add-${item.typeId}`}
+                      testID={`button-add-${item.typeId}`}
                     >
                       <Ionicons name="add" size={20} color={colors.foreground} />
                     </TouchableOpacity>
@@ -296,7 +325,7 @@ export function SIAEBoxOfficeScreen() {
               onPress={handleCheckout}
               disabled={processing}
               style={styles.checkoutButton}
-              data-testid="button-checkout"
+              testID="button-checkout"
             >
               <Ionicons name="card-outline" size={20} color={colors.primaryForeground} />
               <Text style={styles.checkoutText}>
@@ -306,7 +335,7 @@ export function SIAEBoxOfficeScreen() {
           </Card>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -327,7 +356,21 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: 220,
+  },
+  scrollContentWide: {
+    paddingHorizontal: spacing.xl,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   section: {
     marginTop: spacing.xl,
@@ -371,8 +414,18 @@ const styles = StyleSheet.create({
   typesGrid: {
     gap: spacing.md,
   },
+  typesGridWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   typeCard: {
     flex: 1,
+  },
+  typeCardWide: {
+    flex: 0,
+    width: '48%',
+    marginRight: '2%',
+    marginBottom: spacing.md,
   },
   typeName: {
     color: colors.foreground,
@@ -390,8 +443,18 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
+  inputRow: {
+    gap: spacing.md,
+  },
+  inputRowWide: {
+    flexDirection: 'row',
+  },
   inputGroup: {
     marginBottom: spacing.md,
+  },
+  inputGroupHalf: {
+    flex: 1,
+    marginBottom: 0,
   },
   inputLabel: {
     color: colors.foreground,
@@ -419,6 +482,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   cartCard: {
     padding: spacing.lg,

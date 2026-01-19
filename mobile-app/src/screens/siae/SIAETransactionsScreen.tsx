@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -34,12 +35,16 @@ interface Transaction {
 
 export function SIAETransactionsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filterType, setFilterType] = useState<FilterType>('all');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadTransactions = async () => {
     try {
@@ -125,15 +130,13 @@ export function SIAETransactionsScreen() {
     }).format(amount);
   };
 
-  const typeFilters: FilterType[] = ['all', 'sale', 'refund', 'void'];
-
   const renderFilterPill = (value: FilterType, label: string, isActive: boolean) => (
     <TouchableOpacity
       key={value}
       style={[styles.filterPill, isActive && styles.filterPillActive]}
       onPress={() => setFilterType(value)}
       activeOpacity={0.8}
-      data-testid={`filter-${value}`}
+      testID={`filter-${value}`}
     >
       <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
         {label}
@@ -141,12 +144,19 @@ export function SIAETransactionsScreen() {
     </TouchableOpacity>
   );
 
-  const renderTransaction = ({ item }: { item: Transaction }) => (
+  const renderTransaction = ({ item, index }: { item: Transaction; index: number }) => (
     <TouchableOpacity
-      style={styles.transactionCard}
+      style={[
+        styles.transactionCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        }
+      ]}
       onPress={() => navigation.navigate('SIAETransactionDetail', { transactionId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-transaction-${item.id}`}
+      testID={`card-transaction-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.transactionRow}>
@@ -195,18 +205,18 @@ export function SIAETransactionsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Transazioni Fiscali" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Transazioni Fiscali" showBack onBack={() => navigation.goBack()} />
       
       <View style={styles.filtersSection}>
@@ -219,13 +229,20 @@ export function SIAETransactionsScreen() {
       </View>
       
       <FlatList
+        key={numColumns}
         data={filteredTransactions}
         renderItem={renderTransaction}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+            testID="refresh-control"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -234,8 +251,9 @@ export function SIAETransactionsScreen() {
             <Text style={styles.emptySubtext}>Le transazioni fiscali appariranno qui</Text>
           </View>
         }
+        testID="transactions-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -287,6 +305,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   transactionCard: {
     marginBottom: spacing.md,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -49,7 +50,9 @@ type RouteParams = {
 export default function ProductDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'ProductDetail'>>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { productId } = route.params;
 
   const [loading, setLoading] = useState(true);
@@ -104,13 +107,13 @@ export default function ProductDetailScreen() {
 
   if (loading || !product) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Prodotto" showBack />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -130,150 +133,158 @@ export default function ProductDetailScreen() {
   const maxChartValue = Math.max(...stockHistory.map(h => h.value));
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Dettaglio Prodotto"
         showBack
         rightAction={
-          <TouchableOpacity data-testid="button-edit-product">
+          <TouchableOpacity testID="button-edit-product">
             <Ionicons name="create-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-product-detail"
       >
-        <View style={styles.imageContainer}>
-          {product.image ? (
-            <Image source={{ uri: product.image }} style={styles.productImage} />
-          ) : (
-            <View style={styles.productImagePlaceholder}>
-              <Ionicons name="cube-outline" size={64} color={colors.mutedForeground} />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.titleRow}>
-            <Text style={styles.productName}>{product.name}</Text>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{product.category}</Text>
-            </View>
+        <View style={[styles.mainContent, (isTablet || isLandscape) && styles.mainContentWide]}>
+          <View style={styles.imageContainer}>
+            {product.image ? (
+              <Image source={{ uri: product.image }} style={styles.productImage} testID="image-product" />
+            ) : (
+              <View style={styles.productImagePlaceholder}>
+                <Ionicons name="cube-outline" size={64} color={colors.mutedForeground} />
+              </View>
+            )}
           </View>
-          {product.description && (
-            <Text style={styles.description}>{product.description}</Text>
-          )}
-          <Text style={styles.price}>€{product.price.toFixed(2)} / {product.unit}</Text>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Livello Stock</Text>
-          <Card variant="glass">
-            <View style={styles.stockHeader}>
-              <View>
-                <Text style={styles.stockValue}>
-                  {product.currentStock} {product.unit}
-                </Text>
-                <Text style={styles.stockRange}>
-                  Min: {product.minStock} • Max: {product.maxStock}
-                </Text>
-              </View>
-              <View style={[styles.stockStatusBadge, { backgroundColor: `${stockStatus.color}20` }]}>
-                <View style={[styles.stockDot, { backgroundColor: stockStatus.color }]} />
-                <Text style={[styles.stockStatusText, { color: stockStatus.color }]}>
-                  {stockStatus.label}
-                </Text>
+          <View style={styles.section}>
+            <View style={styles.titleRow}>
+              <Text style={styles.productName} testID="text-product-name">{product.name}</Text>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{product.category}</Text>
               </View>
             </View>
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBackground}>
-                <View
-                  style={[
-                    styles.progressBar,
-                    {
-                      width: `${stockPercentage}%`,
-                      backgroundColor: stockStatus.color,
-                    },
-                  ]}
-                />
-              </View>
-              <View style={styles.progressLabels}>
-                <Text style={styles.progressLabel}>0</Text>
-                <Text style={styles.progressLabel}>{product.maxStock}</Text>
-              </View>
-            </View>
-          </Card>
-        </View>
+            {product.description && (
+              <Text style={styles.description} testID="text-description">{product.description}</Text>
+            )}
+            <Text style={styles.price} testID="text-price">€{product.price.toFixed(2)} / {product.unit}</Text>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Storico Ultimi 7 Giorni</Text>
-          <Card variant="glass">
-            <View style={styles.chartContainer}>
-              <View style={styles.chartBars}>
-                {stockHistory.map((day, index) => (
-                  <View key={index} style={styles.chartBarWrapper}>
-                    <View
-                      style={[
-                        styles.chartBar,
-                        {
-                          height: (day.value / maxChartValue) * 80,
-                          backgroundColor: index === stockHistory.length - 1 ? colors.primary : colors.muted,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.chartLabel}>{day.date}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Registro Consumo</Text>
-          {consumptionLogs.length > 0 ? (
-            consumptionLogs.map((log) => (
-              <Card key={log.id} variant="glass" style={styles.logCard}>
-                <View style={styles.logRow}>
-                  <View style={styles.logIcon}>
-                    <Ionicons name="remove-circle-outline" size={20} color={colors.warning} />
-                  </View>
-                  <View style={styles.logInfo}>
-                    <Text style={styles.logQuantity}>-{log.quantity} {product.unit}</Text>
-                    <Text style={styles.logMeta}>
-                      {log.event} • {log.station}
-                    </Text>
-                  </View>
-                  <Text style={styles.logDate}>{log.date}</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Livello Stock</Text>
+            <Card variant="glass" testID="card-stock-level">
+              <View style={styles.stockHeader}>
+                <View>
+                  <Text style={styles.stockValue} testID="text-stock-value">
+                    {product.currentStock} {product.unit}
+                  </Text>
+                  <Text style={styles.stockRange}>
+                    Min: {product.minStock} • Max: {product.maxStock}
+                  </Text>
                 </View>
-              </Card>
-            ))
-          ) : (
-            <Card style={styles.emptyCard} variant="glass">
-              <Ionicons name="receipt-outline" size={32} color={colors.mutedForeground} />
-              <Text style={styles.emptyText}>Nessun consumo registrato</Text>
+                <View style={[styles.stockStatusBadge, { backgroundColor: `${stockStatus.color}20` }]}>
+                  <View style={[styles.stockDot, { backgroundColor: stockStatus.color }]} />
+                  <Text style={[styles.stockStatusText, { color: stockStatus.color }]} testID="text-stock-status">
+                    {stockStatus.label}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      {
+                        width: `${stockPercentage}%`,
+                        backgroundColor: stockStatus.color,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.progressLabels}>
+                  <Text style={styles.progressLabel}>0</Text>
+                  <Text style={styles.progressLabel}>{product.maxStock}</Text>
+                </View>
+              </View>
             </Card>
-          )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Storico Ultimi 7 Giorni</Text>
+            <Card variant="glass" testID="card-stock-history">
+              <View style={styles.chartContainer}>
+                <View style={styles.chartBars}>
+                  {stockHistory.map((day, index) => (
+                    <TouchableOpacity key={index} style={styles.chartBarWrapper} testID={`chart-bar-${index}`}>
+                      <View
+                        style={[
+                          styles.chartBar,
+                          {
+                            height: (day.value / maxChartValue) * 80,
+                            backgroundColor: index === stockHistory.length - 1 ? colors.primary : colors.muted,
+                          },
+                        ]}
+                      />
+                      <Text style={styles.chartLabel}>{day.date}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </Card>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Registro Consumo</Text>
+            {consumptionLogs.length > 0 ? (
+              consumptionLogs.map((log) => (
+                <Card key={log.id} variant="glass" style={styles.logCard} testID={`card-log-${log.id}`}>
+                  <View style={styles.logRow}>
+                    <View style={styles.logIcon}>
+                      <Ionicons name="remove-circle-outline" size={20} color={colors.warning} />
+                    </View>
+                    <View style={styles.logInfo}>
+                      <Text style={styles.logQuantity} testID={`text-log-quantity-${log.id}`}>-{log.quantity} {product.unit}</Text>
+                      <Text style={styles.logMeta}>
+                        {log.event} • {log.station}
+                      </Text>
+                    </View>
+                    <Text style={styles.logDate}>{log.date}</Text>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <Card style={styles.emptyCard} variant="glass" testID="card-empty-logs">
+                <Ionicons name="receipt-outline" size={32} color={colors.mutedForeground} />
+                <Text style={styles.emptyText}>Nessun consumo registrato</Text>
+              </Card>
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomActions, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={[styles.bottomActions, isLandscape && styles.bottomActionsLandscape]}>
         <Button
           title="Rimuovi Stock"
           variant="outline"
           onPress={() => navigation.navigate('StockAdjustment', { productId, type: 'remove' })}
           style={styles.actionButton}
+          testID="button-remove-stock"
         />
         <Button
           title="Aggiungi Stock"
           variant="primary"
           onPress={() => navigation.navigate('StockAdjustment', { productId, type: 'add' })}
           style={styles.actionButton}
+          testID="button-add-stock"
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -284,6 +295,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 80,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentWide: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -484,9 +509,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,
+  },
+  bottomActionsLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   actionButton: {
     flex: 1,

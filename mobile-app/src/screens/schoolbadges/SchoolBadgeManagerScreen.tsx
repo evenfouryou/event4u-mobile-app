@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface BadgeTemplate {
   id: string;
@@ -23,7 +24,10 @@ interface BadgeTemplate {
 
 export function SchoolBadgeManagerScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [templates, setTemplates] = useState<BadgeTemplate[]>([
@@ -50,13 +54,64 @@ export function SchoolBadgeManagerScreen() {
     navigation.navigate('SchoolBadgeTemplateDetail', { templateId: template.id });
   };
 
+  const numColumns = isTablet || isLandscape ? 2 : 1;
+
+  const renderTemplateCard = (template: BadgeTemplate, index: number) => (
+    <TouchableOpacity
+      key={template.id}
+      style={[
+        styles.templateCard,
+        (isTablet || isLandscape) && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.md : 0,
+          maxWidth: '48%',
+        },
+      ]}
+      onPress={() => handleTemplatePress(template)}
+      activeOpacity={0.8}
+      testID={`template-card-${template.id}`}
+    >
+      <View style={styles.templateIcon}>
+        <Ionicons name="document-text" size={28} color={colors.primary} />
+      </View>
+      <View style={styles.templateContent}>
+        <Text style={styles.templateName}>{template.name}</Text>
+        <Text style={styles.templateSchool}>{template.schoolName}</Text>
+        <View style={styles.templateMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons name="people-outline" size={14} color={colors.teal} />
+            <Text style={styles.metaText}>{template.activeCount} attivi</Text>
+          </View>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={24} color={colors.mutedForeground} />
+    </TouchableOpacity>
+  );
+
+  const renderTemplateRows = () => {
+    if (!isTablet && !isLandscape) {
+      return filteredTemplates.map((template) => renderTemplateCard(template, 0));
+    }
+
+    const rows = [];
+    for (let i = 0; i < filteredTemplates.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.templateRow}>
+          {renderTemplateCard(filteredTemplates[i], 0)}
+          {filteredTemplates[i + 1] && renderTemplateCard(filteredTemplates[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -64,14 +119,14 @@ export function SchoolBadgeManagerScreen() {
         <TouchableOpacity
           onPress={handleCreateTemplate}
           style={styles.addButton}
-          data-testid="button-create-template"
+          testID="button-create-template"
         >
           <Ionicons name="add" size={24} color={colors.primaryForeground} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+      <View style={[styles.searchContainer, isLandscape && styles.searchContainerLandscape]}>
+        <View style={[styles.searchBar, isTablet && styles.searchBarTablet]}>
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
@@ -79,20 +134,20 @@ export function SchoolBadgeManagerScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
         </View>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
+      <View style={[styles.statsRow, isLandscape && styles.statsRowLandscape]}>
+        <View style={[styles.statCard, isTablet && styles.statCardTablet]}>
           <View style={[styles.statIcon, { backgroundColor: 'rgba(255, 215, 0, 0.15)' }]}>
             <Ionicons name="id-card" size={24} color={colors.primary} />
           </View>
           <Text style={styles.statValue}>{templates.length}</Text>
           <Text style={styles.statLabel}>Template</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, isTablet && styles.statCardTablet]}>
           <View style={[styles.statIcon, { backgroundColor: 'rgba(0, 206, 209, 0.15)' }]}>
             <Ionicons name="people" size={24} color={colors.teal} />
           </View>
@@ -103,7 +158,10 @@ export function SchoolBadgeManagerScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -115,30 +173,7 @@ export function SchoolBadgeManagerScreen() {
       >
         <Text style={styles.sectionTitle}>Template Disponibili</Text>
         
-        {filteredTemplates.map((template) => (
-          <TouchableOpacity
-            key={template.id}
-            style={styles.templateCard}
-            onPress={() => handleTemplatePress(template)}
-            activeOpacity={0.8}
-            data-testid={`template-card-${template.id}`}
-          >
-            <View style={styles.templateIcon}>
-              <Ionicons name="document-text" size={28} color={colors.primary} />
-            </View>
-            <View style={styles.templateContent}>
-              <Text style={styles.templateName}>{template.name}</Text>
-              <Text style={styles.templateSchool}>{template.schoolName}</Text>
-              <View style={styles.templateMeta}>
-                <View style={styles.metaItem}>
-                  <Ionicons name="people-outline" size={14} color={colors.teal} />
-                  <Text style={styles.metaText}>{template.activeCount} attivi</Text>
-                </View>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        ))}
+        {renderTemplateRows()}
 
         {filteredTemplates.length === 0 && (
           <View style={styles.emptyState}>
@@ -147,7 +182,7 @@ export function SchoolBadgeManagerScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -162,6 +197,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -190,6 +228,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
+  searchContainerLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,6 +240,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderWidth: 1,
     borderColor: colors.glass.border,
+  },
+  searchBarTablet: {
+    maxWidth: 500,
   },
   searchInput: {
     flex: 1,
@@ -212,6 +256,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  statsRowLandscape: {
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+  },
   statCard: {
     flex: 1,
     backgroundColor: colors.card,
@@ -220,6 +268,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+  },
+  statCardTablet: {
+    maxWidth: 200,
   },
   statIcon: {
     width: 48,
@@ -246,10 +297,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
   },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   sectionTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.foreground,
+    marginBottom: spacing.md,
+  },
+  templateRow: {
+    flexDirection: 'row',
     marginBottom: spacing.md,
   },
   templateCard: {

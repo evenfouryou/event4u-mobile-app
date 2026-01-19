@@ -11,10 +11,11 @@ import {
   Image,
   Modal,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button } from '../../components';
 import { api } from '../../lib/api';
@@ -43,7 +44,9 @@ interface CompanyForm {
 
 export function CompaniesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -186,18 +189,18 @@ export function CompaniesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Aziende" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Aziende" showBack />
       
       <View style={styles.searchContainer}>
@@ -209,10 +212,10 @@ export function CompaniesScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search-companies"
+            testID="input-search-companies"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} data-testid="button-clear-search">
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -221,7 +224,10 @@ export function CompaniesScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentLandscape
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -230,71 +236,80 @@ export function CompaniesScreen() {
             tintColor={colors.primary}
           />
         }
+        testID="scroll-view-companies"
       >
         {filteredCompanies.length > 0 ? (
-          filteredCompanies.map((company) => (
-            <TouchableOpacity
-              key={company.id}
-              style={styles.companyCard}
-              onPress={() => openModal(company)}
-              activeOpacity={0.8}
-              data-testid={`card-company-${company.id}`}
-            >
-              <Card variant="glass">
-                <View style={styles.companyRow}>
-                  {renderLogo(company)}
-                  <View style={styles.companyInfo}>
-                    <View style={styles.companyHeader}>
-                      <Text style={styles.companyName}>{company.name}</Text>
-                      <View style={[
-                        styles.statusBadge,
-                        { backgroundColor: company.status === 'active' ? `${colors.success}20` : `${colors.destructive}20` }
-                      ]}>
+          <View style={[
+            styles.listContainer,
+            (isTablet || isLandscape) && styles.listContainerLandscape
+          ]}>
+            {filteredCompanies.map((company) => (
+              <TouchableOpacity
+                key={company.id}
+                style={[
+                  styles.companyCard,
+                  (isTablet || isLandscape) && styles.companyCardLandscape
+                ]}
+                onPress={() => openModal(company)}
+                activeOpacity={0.8}
+                testID={`card-company-${company.id}`}
+              >
+                <Card variant="glass">
+                  <View style={styles.companyRow}>
+                    {renderLogo(company)}
+                    <View style={styles.companyInfo}>
+                      <View style={styles.companyHeader}>
+                        <Text style={styles.companyName} testID={`text-company-name-${company.id}`}>{company.name}</Text>
                         <View style={[
-                          styles.statusDot,
-                          { backgroundColor: company.status === 'active' ? colors.success : colors.destructive }
-                        ]} />
-                        <Text style={[
-                          styles.statusText,
-                          { color: company.status === 'active' ? colors.success : colors.destructive }
+                          styles.statusBadge,
+                          { backgroundColor: company.status === 'active' ? `${colors.success}20` : `${colors.destructive}20` }
                         ]}>
-                          {company.status === 'active' ? 'Attiva' : 'Inattiva'}
-                        </Text>
+                          <View style={[
+                            styles.statusDot,
+                            { backgroundColor: company.status === 'active' ? colors.success : colors.destructive }
+                          ]} />
+                          <Text style={[
+                            styles.statusText,
+                            { color: company.status === 'active' ? colors.success : colors.destructive }
+                          ]} testID={`text-company-status-${company.id}`}>
+                            {company.status === 'active' ? 'Attiva' : 'Inattiva'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.statsRow}>
+                        <View style={styles.stat}>
+                          <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
+                          <Text style={styles.statText} testID={`text-company-gestori-${company.id}`}>{company.gestoreCount} gestori</Text>
+                        </View>
+                        <View style={styles.stat}>
+                          <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                          <Text style={styles.statText} testID={`text-company-events-${company.id}`}>{company.eventCount} eventi</Text>
+                        </View>
                       </View>
                     </View>
-                    <View style={styles.statsRow}>
-                      <View style={styles.stat}>
-                        <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
-                        <Text style={styles.statText}>{company.gestoreCount} gestori</Text>
-                      </View>
-                      <View style={styles.stat}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                        <Text style={styles.statText}>{company.eventCount} eventi</Text>
-                      </View>
-                    </View>
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={() => handleDelete(company)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      testID={`button-delete-company-${company.id}`}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => handleDelete(company)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    data-testid={`button-delete-company-${company.id}`}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={colors.destructive} />
-                  </TouchableOpacity>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty-state">
             <Ionicons name="business-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>
+            <Text style={styles.emptyText} testID="text-empty-message">
               {searchQuery ? 'Nessuna azienda trovata' : 'Nessuna azienda registrata'}
             </Text>
             <TouchableOpacity
               style={styles.emptyButton}
               onPress={() => openModal()}
-              data-testid="button-add-first-company"
+              testID="button-add-first-company"
             >
               <Ionicons name="add" size={20} color={colors.primaryForeground} />
               <Text style={styles.emptyButtonText}>Aggiungi Azienda</Text>
@@ -304,10 +319,10 @@ export function CompaniesScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        style={[styles.fab, { bottom: 90 }]}
         onPress={() => openModal()}
         activeOpacity={0.8}
-        data-testid="button-fab-add-company"
+        testID="button-fab-add-company"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
@@ -319,12 +334,12 @@ export function CompaniesScreen() {
         onRequestClose={() => setShowModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={styles.modalTitle} testID="text-modal-title">
                 {editingCompany ? 'Modifica Azienda' : 'Nuova Azienda'}
               </Text>
-              <TouchableOpacity onPress={() => setShowModal(false)} data-testid="button-close-modal">
+              <TouchableOpacity onPress={() => setShowModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -338,7 +353,7 @@ export function CompaniesScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={form.name}
                   onChangeText={(text) => setForm({ ...form, name: text })}
-                  data-testid="input-company-name"
+                  testID="input-company-name"
                 />
               </View>
 
@@ -352,7 +367,7 @@ export function CompaniesScreen() {
                   onChangeText={(text) => setForm({ ...form, email: text })}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  data-testid="input-company-email"
+                  testID="input-company-email"
                 />
               </View>
 
@@ -365,7 +380,7 @@ export function CompaniesScreen() {
                   value={form.phone}
                   onChangeText={(text) => setForm({ ...form, phone: text })}
                   keyboardType="phone-pad"
-                  data-testid="input-company-phone"
+                  testID="input-company-phone"
                 />
               </View>
 
@@ -377,7 +392,7 @@ export function CompaniesScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={form.address}
                   onChangeText={(text) => setForm({ ...form, address: text })}
-                  data-testid="input-company-address"
+                  testID="input-company-address"
                 />
               </View>
 
@@ -390,7 +405,7 @@ export function CompaniesScreen() {
                   value={form.vatNumber}
                   onChangeText={(text) => setForm({ ...form, vatNumber: text })}
                   autoCapitalize="characters"
-                  data-testid="input-company-vat"
+                  testID="input-company-vat"
                 />
               </View>
             </ScrollView>
@@ -401,13 +416,13 @@ export function CompaniesScreen() {
                 onPress={handleSave}
                 variant="primary"
                 disabled={saving}
-                data-testid="button-save-company"
+                testID="button-save-company"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -419,6 +434,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -450,8 +471,20 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.base,
   },
+  listContainer: {
+    flex: 1,
+  },
+  listContainerLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   companyCard: {
     marginBottom: spacing.md,
+  },
+  companyCardLandscape: {
+    width: '48.5%',
+    marginBottom: 0,
   },
   companyRow: {
     flexDirection: 'row',
@@ -572,6 +605,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     maxHeight: '90%',
+    paddingBottom: spacing.lg,
   },
   modalHeader: {
     flexDirection: 'row',

@@ -9,12 +9,13 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button, Input } from '../../components';
 import { api } from '../../lib/api';
 
@@ -37,7 +38,9 @@ type FilterStatus = 'all' | 'active' | 'inactive' | 'suspended';
 
 export function PRManagementScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +48,8 @@ export function PRManagementScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPR, setNewPR] = useState({ name: '', email: '', phone: '', commissionRate: '5' });
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: prs = [], refetch } = useQuery<PR[]>({
     queryKey: ['/api/organizer/prs'],
@@ -184,12 +189,12 @@ export function PRManagementScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Gestione PR"
         showBack
         rightAction={
-          <TouchableOpacity onPress={() => setShowAddModal(true)} data-testid="button-add-pr">
+          <TouchableOpacity onPress={() => setShowAddModal(true)} testID="button-add-pr">
             <Ionicons name="add-circle" size={28} color={colors.purple} />
           </TouchableOpacity>
         }
@@ -197,26 +202,27 @@ export function PRManagementScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
+        testID="scroll-pr-management"
       >
-        <View style={styles.statsGrid}>
-          <Card variant="glass" style={styles.statCard}>
+        <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-total-prs">
             <Text style={styles.statValue}>{totalStats.totalPRs}</Text>
             <Text style={styles.statLabel}>PR Totali</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-active-prs">
             <Text style={[styles.statValue, { color: colors.success }]}>{totalStats.activePRs}</Text>
             <Text style={styles.statLabel}>Attivi</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-total-guests">
             <Text style={[styles.statValue, { color: colors.purpleLight }]}>{totalStats.totalGuests}</Text>
             <Text style={styles.statLabel}>Ospiti Totali</Text>
           </Card>
-          <Card variant="glass" style={styles.statCard}>
+          <Card variant="glass" style={styles.statCard} testID="card-stat-commissions">
             <Text style={[styles.statValue, { color: colors.purple }]}>
               € {totalStats.totalEarnings.toFixed(0)}
             </Text>
@@ -233,10 +239,10 @@ export function PRManagementScreen() {
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              data-testid="input-search-pr"
+              testID="input-search-pr"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
                 <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
@@ -248,13 +254,14 @@ export function PRManagementScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.filtersContainer}
           contentContainerStyle={styles.filtersContent}
+          testID="scroll-filters"
         >
           {filterOptions.map((option) => (
             <TouchableOpacity
               key={option.value}
               style={[styles.filterPill, filterStatus === option.value && styles.filterPillActive]}
               onPress={() => setFilterStatus(option.value)}
-              data-testid={`filter-${option.value}`}
+              testID={`filter-${option.value}`}
             >
               <Text
                 style={[
@@ -269,7 +276,7 @@ export function PRManagementScreen() {
         </ScrollView>
 
         {filteredPRs.length === 0 ? (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyTitle}>Nessun PR trovato</Text>
             <Text style={styles.emptySubtitle}>
@@ -277,13 +284,18 @@ export function PRManagementScreen() {
             </Text>
           </Card>
         ) : (
-          <View style={styles.prList}>
-            {filteredPRs.map((pr) => (
+          <View style={[styles.prList, numColumns === 2 && styles.prListGrid]}>
+            {filteredPRs.map((pr, index) => (
               <TouchableOpacity
                 key={pr.id}
                 onPress={() => handlePRPress(pr)}
                 activeOpacity={0.8}
-                data-testid={`pr-item-${pr.id}`}
+                style={[
+                  numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+                  numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+                  numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+                ]}
+                testID={`button-pr-${pr.id}`}
               >
                 <Card variant="glass" style={styles.prCard}>
                   <View style={styles.prHeader}>
@@ -344,7 +356,7 @@ export function PRManagementScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Aggiungi PR</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity onPress={() => setShowAddModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -358,7 +370,7 @@ export function PRManagementScreen() {
                   placeholderTextColor={colors.mutedForeground}
                   value={newPR.name}
                   onChangeText={(text) => setNewPR({ ...newPR, name: text })}
-                  data-testid="input-pr-name"
+                  testID="input-pr-name"
                 />
               </View>
               <View style={styles.formField}>
@@ -371,7 +383,7 @@ export function PRManagementScreen() {
                   onChangeText={(text) => setNewPR({ ...newPR, email: text })}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  data-testid="input-pr-email"
+                  testID="input-pr-email"
                 />
               </View>
               <View style={styles.formField}>
@@ -383,7 +395,7 @@ export function PRManagementScreen() {
                   value={newPR.phone}
                   onChangeText={(text) => setNewPR({ ...newPR, phone: text })}
                   keyboardType="phone-pad"
-                  data-testid="input-pr-phone"
+                  testID="input-pr-phone"
                 />
               </View>
               <View style={styles.formField}>
@@ -395,24 +407,25 @@ export function PRManagementScreen() {
                   value={newPR.commissionRate}
                   onChangeText={(text) => setNewPR({ ...newPR, commissionRate: text })}
                   keyboardType="numeric"
-                  data-testid="input-pr-commission"
+                  testID="input-pr-commission"
                 />
               </View>
             </View>
 
             <View style={styles.modalActions}>
-              <Button title="Annulla" variant="outline" onPress={() => setShowAddModal(false)} />
+              <Button title="Annulla" variant="outline" onPress={() => setShowAddModal(false)} testID="button-cancel-add" />
               <Button
                 title="Aggiungi"
                 variant="primary"
                 onPress={handleAddPR}
                 loading={addPRMutation.isPending}
+                testID="button-confirm-add"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -425,11 +438,17 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
+  contentContainer: {
+    paddingBottom: spacing.xl,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  statsGridTablet: {
+    justifyContent: 'space-between',
   },
   statCard: {
     width: '48%',
@@ -496,8 +515,13 @@ const styles = StyleSheet.create({
   prList: {
     gap: spacing.md,
   },
+  prListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   prCard: {
     padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   prHeader: {
     flexDirection: 'row',

@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize } from '../../theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -36,9 +36,10 @@ const filterOptions: { key: LocationFilter; label: string; icon: string }[] = [
 
 export function LocationsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const [activeFilter, setActiveFilter] = useState<LocationFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,7 +87,7 @@ export function LocationsScreen() {
     <TouchableOpacity
       style={[styles.filterPill, activeFilter === item.key && styles.filterPillActive]}
       onPress={() => setActiveFilter(item.key)}
-      data-testid={`filter-${item.key}`}
+      testID={`filter-${item.key}`}
     >
       <Ionicons
         name={item.icon as any}
@@ -103,7 +104,8 @@ export function LocationsScreen() {
     <TouchableOpacity
       onPress={() => navigation.navigate('LocationDetail', { locationId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-location-${item.id}`}
+      testID={`card-location-${item.id}`}
+      style={(isTablet || isLandscape) ? styles.cardWrapper : undefined}
     >
       <Card style={styles.locationCard} variant="elevated">
         <View style={styles.locationHeader}>
@@ -136,7 +138,7 @@ export function LocationsScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Location"
         showBack
@@ -145,7 +147,7 @@ export function LocationsScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CreateLocation')}
-            data-testid="button-add-location"
+            testID="button-add-location"
           >
             <Ionicons name="add" size={24} color={colors.primaryForeground} />
           </TouchableOpacity>
@@ -161,10 +163,10 @@ export function LocationsScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
           {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -181,18 +183,18 @@ export function LocationsScreen() {
       />
 
       {loading ? (
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="loading-indicator">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       ) : error ? (
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="error-state">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
-          <Button title="Riprova" onPress={loadLocations} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadLocations} style={styles.retryButton} testID="button-retry" />
         </View>
       ) : filteredLocations.length === 0 ? (
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="empty-state">
           <Ionicons name="location-outline" size={48} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>Nessuna location trovata</Text>
         </View>
@@ -203,11 +205,13 @@ export function LocationsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          numColumns={isLandscape ? 2 : 1}
-          key={isLandscape ? 'landscape' : 'portrait'}
+          numColumns={numColumns}
+          key={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          testID="locations-list"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.glass.background,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: 1,
@@ -246,7 +250,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: 20,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -263,11 +267,17 @@ const styles = StyleSheet.create({
   },
   filterPillTextActive: {
     color: colors.primaryForeground,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
+  },
+  columnWrapper: {
+    gap: spacing.md,
+  },
+  cardWrapper: {
+    flex: 1,
   },
   locationCard: {
     marginBottom: spacing.md,
@@ -280,7 +290,7 @@ const styles = StyleSheet.create({
   locationIcon: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     backgroundColor: `${colors.primary}20`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -291,7 +301,7 @@ const styles = StyleSheet.create({
   },
   locationName: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
     marginBottom: spacing.xxs,
   },
@@ -306,11 +316,11 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
   },
   statusText: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   locationStats: {
     flexDirection: 'row',
@@ -357,7 +367,7 @@ const styles = StyleSheet.create({
   addButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',

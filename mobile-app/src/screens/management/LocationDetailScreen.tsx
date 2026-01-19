@@ -9,10 +9,10 @@ import {
   Linking,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize } from '../../theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -44,8 +44,9 @@ interface EventSummary {
 export function LocationDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const locationId = route.params?.locationId;
 
   const [location, setLocation] = useState<LocationDetail | null>(null);
@@ -119,31 +120,31 @@ export function LocationDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Location" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="loading-indicator">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !location) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Location" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.centerContainer}>
+        <View style={styles.centerContainer} testID="error-state">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error || 'Location non trovata'}</Text>
-          <Button title="Riprova" onPress={loadLocationDetail} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadLocationDetail} style={styles.retryButton} testID="button-retry" />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title={location.name}
         showBack
@@ -152,120 +153,129 @@ export function LocationDetailScreen() {
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditLocation', { locationId })}
-            data-testid="button-edit-location"
+            testID="button-edit-location"
           >
             <Ionicons name="pencil" size={20} color={colors.primary} />
           </TouchableOpacity>
         }
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.heroCard} variant="elevated">
-          <View style={styles.heroHeader}>
-            <View style={styles.heroIcon}>
-              <Ionicons name="location" size={32} color={colors.primary} />
-            </View>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>{location.name}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: location.isActive ? `${colors.success}20` : `${colors.mutedForeground}20` }]}>
-                <Text style={[styles.statusText, { color: location.isActive ? colors.success : colors.mutedForeground }]}>
-                  {location.isActive ? 'Attivo' : 'Inattivo'}
-                </Text>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={(isTablet || isLandscape) ? styles.contentResponsive : undefined}
+        testID="scroll-view-location-detail"
+      >
+        <View style={(isTablet || isLandscape) ? styles.columnLeft : undefined}>
+          <Card style={styles.heroCard} variant="elevated" testID="hero-card">
+            <View style={styles.heroHeader}>
+              <View style={styles.heroIcon}>
+                <Ionicons name="location" size={32} color={colors.primary} />
               </View>
-            </View>
-          </View>
-          <View style={styles.capacityRow}>
-            <Ionicons name="people" size={20} color={colors.teal} />
-            <Text style={styles.capacityText}>Capacità: {location.capacity} persone</Text>
-          </View>
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <Text style={styles.sectionTitle}>Indirizzo</Text>
-          <TouchableOpacity style={styles.addressRow} onPress={openMap} data-testid="button-open-map">
-            <View style={styles.addressIcon}>
-              <Ionicons name="map" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.addressInfo}>
-              <Text style={styles.addressText}>{location.address}</Text>
-              <Text style={styles.addressSubtext}>
-                {location.postalCode} {location.city} ({location.province})
-              </Text>
-              <Text style={styles.addressSubtext}>{location.country}</Text>
-            </View>
-            <Ionicons name="open-outline" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <Text style={styles.sectionTitle}>Contatti</Text>
-          {location.phone && (
-            <TouchableOpacity style={styles.contactRow} onPress={callPhone} data-testid="button-call">
-              <View style={styles.contactIcon}>
-                <Ionicons name="call" size={18} color={colors.success} />
-              </View>
-              <Text style={styles.contactText}>{location.phone}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          )}
-          {location.email && (
-            <TouchableOpacity style={styles.contactRow} onPress={sendEmail} data-testid="button-email">
-              <View style={styles.contactIcon}>
-                <Ionicons name="mail" size={18} color={colors.teal} />
-              </View>
-              <Text style={styles.contactText}>{location.email}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          )}
-          {location.website && (
-            <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(location.website)} data-testid="button-website">
-              <View style={styles.contactIcon}>
-                <Ionicons name="globe" size={18} color={colors.primary} />
-              </View>
-              <Text style={styles.contactText}>{location.website}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          )}
-          {!location.phone && !location.email && !location.website && (
-            <Text style={styles.emptyText}>Nessun contatto disponibile</Text>
-          )}
-        </Card>
-
-        <Card style={styles.section} variant="elevated">
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Eventi in questa location</Text>
-            <Text style={styles.eventCount}>{events.length}</Text>
-          </View>
-          {events.length === 0 ? (
-            <Text style={styles.emptyText}>Nessun evento associato</Text>
-          ) : (
-            events.slice(0, 5).map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.eventRow}
-                onPress={() => navigation.navigate('EventHub', { eventId: event.id })}
-                data-testid={`card-event-${event.id}`}
-              >
-                <View style={styles.eventInfo}>
-                  <Text style={styles.eventName}>{event.name}</Text>
-                  <Text style={styles.eventDate}>{event.date}</Text>
+              <View style={styles.heroInfo}>
+                <Text style={styles.heroName}>{location.name}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: location.isActive ? `${colors.success}20` : `${colors.mutedForeground}20` }]}>
+                  <Text style={[styles.statusText, { color: location.isActive ? colors.success : colors.mutedForeground }]}>
+                    {location.isActive ? 'Attivo' : 'Inattivo'}
+                  </Text>
                 </View>
+              </View>
+            </View>
+            <View style={styles.capacityRow}>
+              <Ionicons name="people" size={20} color={colors.teal} />
+              <Text style={styles.capacityText}>Capacità: {location.capacity} persone</Text>
+            </View>
+          </Card>
+
+          <Card style={styles.section} variant="elevated" testID="address-card">
+            <Text style={styles.sectionTitle}>Indirizzo</Text>
+            <TouchableOpacity style={styles.addressRow} onPress={openMap} testID="button-open-map">
+              <View style={styles.addressIcon}>
+                <Ionicons name="map" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.addressInfo}>
+                <Text style={styles.addressText}>{location.address}</Text>
+                <Text style={styles.addressSubtext}>
+                  {location.postalCode} {location.city} ({location.province})
+                </Text>
+                <Text style={styles.addressSubtext}>{location.country}</Text>
+              </View>
+              <Ionicons name="open-outline" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </Card>
+
+          <Card style={styles.section} variant="elevated" testID="contacts-card">
+            <Text style={styles.sectionTitle}>Contatti</Text>
+            {location.phone && (
+              <TouchableOpacity style={styles.contactRow} onPress={callPhone} testID="button-call">
+                <View style={styles.contactIcon}>
+                  <Ionicons name="call" size={18} color={colors.success} />
+                </View>
+                <Text style={styles.contactText}>{location.phone}</Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
-            ))
-          )}
-        </Card>
-
-        {location.notes && (
-          <Card style={styles.section} variant="elevated">
-            <Text style={styles.sectionTitle}>Note</Text>
-            <Text style={styles.notesText}>{location.notes}</Text>
+            )}
+            {location.email && (
+              <TouchableOpacity style={styles.contactRow} onPress={sendEmail} testID="button-email">
+                <View style={styles.contactIcon}>
+                  <Ionicons name="mail" size={18} color={colors.teal} />
+                </View>
+                <Text style={styles.contactText}>{location.email}</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            )}
+            {location.website && (
+              <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(location.website)} testID="button-website">
+                <View style={styles.contactIcon}>
+                  <Ionicons name="globe" size={18} color={colors.primary} />
+                </View>
+                <Text style={styles.contactText}>{location.website}</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            )}
+            {!location.phone && !location.email && !location.website && (
+              <Text style={styles.emptyText}>Nessun contatto disponibile</Text>
+            )}
           </Card>
-        )}
+        </View>
+
+        <View style={(isTablet || isLandscape) ? styles.columnRight : undefined}>
+          <Card style={styles.section} variant="elevated" testID="events-card">
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Eventi in questa location</Text>
+              <Text style={styles.eventCount}>{events.length}</Text>
+            </View>
+            {events.length === 0 ? (
+              <Text style={styles.emptyText}>Nessun evento associato</Text>
+            ) : (
+              events.slice(0, 5).map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.eventRow}
+                  onPress={() => navigation.navigate('EventHub', { eventId: event.id })}
+                  testID={`card-event-${event.id}`}
+                >
+                  <View style={styles.eventInfo}>
+                    <Text style={styles.eventName}>{event.name}</Text>
+                    <Text style={styles.eventDate}>{event.date}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              ))
+            )}
+          </Card>
+
+          {location.notes && (
+            <Card style={styles.section} variant="elevated" testID="notes-card">
+              <Text style={styles.sectionTitle}>Note</Text>
+              <Text style={styles.notesText}>{location.notes}</Text>
+            </Card>
+          )}
+        </View>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -277,6 +287,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  contentResponsive: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  columnLeft: {
+    flex: 1,
+    minWidth: 300,
+  },
+  columnRight: {
+    flex: 1,
+    minWidth: 300,
   },
   centerContainer: {
     flex: 1,
@@ -301,7 +324,7 @@ const styles = StyleSheet.create({
   editButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.glass.background,
     justifyContent: 'center',
     alignItems: 'center',
@@ -318,7 +341,7 @@ const styles = StyleSheet.create({
   heroIcon: {
     width: 64,
     height: 64,
-    borderRadius: 16,
+    borderRadius: borderRadius.xl,
     backgroundColor: `${colors.primary}20`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -329,7 +352,7 @@ const styles = StyleSheet.create({
   },
   heroName: {
     fontSize: fontSize['2xl'],
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.foreground,
     marginBottom: spacing.xs,
   },
@@ -337,11 +360,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
   },
   statusText: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
   capacityRow: {
     flexDirection: 'row',
@@ -367,13 +390,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.foreground,
     marginBottom: spacing.md,
   },
   eventCount: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
   addressRow: {
@@ -383,7 +406,7 @@ const styles = StyleSheet.create({
   addressIcon: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
     backgroundColor: `${colors.primary}20`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -410,7 +433,7 @@ const styles = StyleSheet.create({
   contactIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -433,7 +456,7 @@ const styles = StyleSheet.create({
   },
   eventName: {
     fontSize: fontSize.base,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.foreground,
   },
   eventDate: {

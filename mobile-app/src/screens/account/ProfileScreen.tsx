@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -26,7 +26,9 @@ interface PasswordData {
 
 export function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const { user, checkAuth } = useAuthStore();
 
@@ -93,12 +95,15 @@ export function ProfileScreen() {
     ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email[0].toUpperCase()
     : '?';
 
+  const formMaxWidth = isTablet || isLandscape ? 500 : undefined;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Profilo" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-profile"
       />
       
       <KeyboardAvoidingView 
@@ -107,129 +112,150 @@ export function ProfileScreen() {
       >
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+          contentContainerStyle={[
+            styles.content,
+            (isTablet || isLandscape) && styles.contentCentered
+          ]}
           keyboardShouldPersistTaps="handled"
+          testID="scrollview-profile"
         >
-          <View style={styles.avatarSection}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-            <TouchableOpacity style={styles.avatarButton}>
-              <Ionicons name="camera-outline" size={20} color={colors.primary} />
-              <Text style={styles.avatarButtonText}>Cambia foto</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Card style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Informazioni personali</Text>
-            
-            <Input
-              label="Nome"
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="Inserisci il tuo nome"
-              autoCapitalize="words"
-            />
-            
-            <Input
-              label="Cognome"
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Inserisci il tuo cognome"
-              autoCapitalize="words"
-            />
-            
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Inserisci la tua email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <Button
-              title="Salva modifiche"
-              onPress={handleUpdateProfile}
-              loading={updateProfileMutation.isPending}
-            />
-          </Card>
-
-          <Card style={styles.formCard}>
-            <TouchableOpacity 
-              style={styles.passwordHeader}
-              onPress={() => setShowPasswordSection(!showPasswordSection)}
-            >
-              <View style={styles.passwordHeaderContent}>
-                <Ionicons name="lock-closed-outline" size={20} color={colors.foreground} />
-                <Text style={styles.sectionTitle}>Cambia password</Text>
+          <View style={[styles.innerContent, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%' } : undefined]}>
+            <View style={styles.avatarSection}>
+              <View style={styles.avatar} testID="avatar-profile">
+                <Text style={styles.avatarText}>{initials}</Text>
               </View>
-              <Ionicons 
-                name={showPasswordSection ? 'chevron-up' : 'chevron-down'} 
-                size={20} 
-                color={colors.mutedForeground} 
-              />
-            </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.avatarButton}
+                testID="button-change-photo"
+              >
+                <Ionicons name="camera-outline" size={20} color={colors.primary} />
+                <Text style={styles.avatarButtonText}>Cambia foto</Text>
+              </TouchableOpacity>
+            </View>
 
-            {showPasswordSection && (
-              <View style={styles.passwordForm}>
+            <View style={(isTablet || isLandscape) ? styles.formRow : undefined}>
+              <Card style={[styles.formCard, (isTablet || isLandscape) && styles.formCardHalf]} testID="card-personal-info">
+                <Text style={styles.sectionTitle}>Informazioni personali</Text>
+                
                 <Input
-                  label="Password attuale"
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  placeholder="Inserisci la password attuale"
-                  secureTextEntry
+                  label="Nome"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Inserisci il tuo nome"
+                  autoCapitalize="words"
+                  testID="input-first-name"
                 />
                 
                 <Input
-                  label="Nuova password"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder="Inserisci la nuova password"
-                  secureTextEntry
+                  label="Cognome"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Inserisci il tuo cognome"
+                  autoCapitalize="words"
+                  testID="input-last-name"
                 />
                 
                 <Input
-                  label="Conferma password"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Conferma la nuova password"
-                  secureTextEntry
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Inserisci la tua email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  testID="input-email"
                 />
 
                 <Button
-                  title="Aggiorna password"
-                  onPress={handleUpdatePassword}
-                  loading={updatePasswordMutation.isPending}
-                  variant="secondary"
+                  title="Salva modifiche"
+                  onPress={handleUpdateProfile}
+                  loading={updateProfileMutation.isPending}
+                  testID="button-save-profile"
                 />
-              </View>
-            )}
-          </Card>
+              </Card>
 
-          <Card style={styles.dangerCard}>
-            <Text style={styles.dangerTitle}>Zona pericolosa</Text>
-            <Text style={styles.dangerText}>
-              Eliminando il tuo account perderai tutti i dati associati, inclusi i biglietti acquistati.
-            </Text>
-            <Button
-              title="Elimina account"
-              variant="destructive"
-              onPress={() => {
-                Alert.alert(
-                  'Elimina account',
-                  'Sei sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.',
-                  [
-                    { text: 'Annulla', style: 'cancel' },
-                    { text: 'Elimina', style: 'destructive', onPress: () => {} },
-                  ]
-                );
-              }}
-            />
-          </Card>
+              <Card style={[styles.formCard, (isTablet || isLandscape) && styles.formCardHalf]} testID="card-password">
+                <TouchableOpacity 
+                  style={styles.passwordHeader}
+                  onPress={() => setShowPasswordSection(!showPasswordSection)}
+                  testID="button-toggle-password"
+                >
+                  <View style={styles.passwordHeaderContent}>
+                    <Ionicons name="lock-closed-outline" size={20} color={colors.foreground} />
+                    <Text style={styles.sectionTitle}>Cambia password</Text>
+                  </View>
+                  <Ionicons 
+                    name={showPasswordSection ? 'chevron-up' : 'chevron-down'} 
+                    size={20} 
+                    color={colors.mutedForeground} 
+                  />
+                </TouchableOpacity>
+
+                {showPasswordSection && (
+                  <View style={styles.passwordForm}>
+                    <Input
+                      label="Password attuale"
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      placeholder="Inserisci la password attuale"
+                      secureTextEntry
+                      testID="input-current-password"
+                    />
+                    
+                    <Input
+                      label="Nuova password"
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      placeholder="Inserisci la nuova password"
+                      secureTextEntry
+                      testID="input-new-password"
+                    />
+                    
+                    <Input
+                      label="Conferma password"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Conferma la nuova password"
+                      secureTextEntry
+                      testID="input-confirm-password"
+                    />
+
+                    <Button
+                      title="Aggiorna password"
+                      onPress={handleUpdatePassword}
+                      loading={updatePasswordMutation.isPending}
+                      variant="secondary"
+                      testID="button-update-password"
+                    />
+                  </View>
+                )}
+              </Card>
+            </View>
+
+            <Card style={styles.dangerCard} testID="card-danger-zone">
+              <Text style={styles.dangerTitle}>Zona pericolosa</Text>
+              <Text style={styles.dangerText}>
+                Eliminando il tuo account perderai tutti i dati associati, inclusi i biglietti acquistati.
+              </Text>
+              <Button
+                title="Elimina account"
+                variant="destructive"
+                onPress={() => {
+                  Alert.alert(
+                    'Elimina account',
+                    'Sei sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.',
+                    [
+                      { text: 'Annulla', style: 'cancel' },
+                      { text: 'Elimina', style: 'destructive', onPress: () => {} },
+                    ]
+                  );
+                }}
+                testID="button-delete-account"
+              />
+            </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -246,6 +272,18 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.md,
+  },
+  contentCentered: {
+    alignItems: 'center',
+  },
+  innerContent: {
+    gap: spacing.md,
+    width: '100%',
+  },
+  formRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   avatarSection: {
@@ -279,6 +317,10 @@ const styles = StyleSheet.create({
   },
   formCard: {
     padding: spacing.lg,
+  },
+  formCardHalf: {
+    flex: 1,
+    minWidth: 280,
   },
   sectionTitle: {
     color: colors.foreground,

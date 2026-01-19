@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -32,12 +33,16 @@ interface AuditLog {
 
 export function SIAEAuditLogsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [filterLevel, setFilterLevel] = useState<LogLevel>('all');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadLogs = async () => {
     try {
@@ -104,15 +109,13 @@ export function SIAEAuditLogsScreen() {
     });
   };
 
-  const levelFilters: LogLevel[] = ['all', 'info', 'warning', 'error'];
-
   const renderFilterPill = (value: LogLevel, label: string, isActive: boolean) => (
     <TouchableOpacity
       key={value}
       style={[styles.filterPill, isActive && styles.filterPillActive]}
       onPress={() => setFilterLevel(value)}
       activeOpacity={0.8}
-      data-testid={`filter-${value}`}
+      testID={`filter-${value}`}
     >
       <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
         {label}
@@ -120,12 +123,19 @@ export function SIAEAuditLogsScreen() {
     </TouchableOpacity>
   );
 
-  const renderLog = ({ item }: { item: AuditLog }) => (
+  const renderLog = ({ item, index }: { item: AuditLog; index: number }) => (
     <TouchableOpacity
-      style={styles.logCard}
+      style={[
+        styles.logCard,
+        numColumns === 2 && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.sm : 0,
+          marginRight: index % 2 === 0 ? spacing.sm : 0,
+        }
+      ]}
       onPress={() => navigation.navigate('SIAEAuditLogDetail', { logId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-log-${item.id}`}
+      testID={`card-log-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.logRow}>
@@ -171,18 +181,18 @@ export function SIAEAuditLogsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Log Operazioni" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Log Operazioni" showBack onBack={() => navigation.goBack()} />
       
       <View style={styles.filtersSection}>
@@ -195,13 +205,20 @@ export function SIAEAuditLogsScreen() {
       </View>
       
       <FlatList
+        key={numColumns}
         data={filteredLogs}
         renderItem={renderLog}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+            testID="refresh-control"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -210,8 +227,9 @@ export function SIAEAuditLogsScreen() {
             <Text style={styles.emptySubtext}>Le operazioni verranno registrate qui</Text>
           </View>
         }
+        testID="audit-logs-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -263,6 +281,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   logCard: {
     marginBottom: spacing.md,

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface Event {
@@ -35,9 +35,13 @@ const filterOptions = [
 
 export function PREventsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -64,10 +68,16 @@ export function PREventsScreen() {
     }
   };
 
-  const renderEvent = ({ item }: { item: Event }) => (
+  const renderEvent = ({ item, index }: { item: Event; index: number }) => (
     <TouchableOpacity 
       activeOpacity={0.7}
       onPress={() => navigation.navigate('PRGuestLists', { eventId: item.id, eventName: item.name })}
+      style={[
+        numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+        numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+        numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+      ]}
+      testID={`button-event-${item.id}`}
     >
       <Card style={styles.eventCard}>
         <View style={styles.eventHeader}>
@@ -116,6 +126,7 @@ export function PREventsScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => navigation.navigate('PRGuestLists', { eventId: item.id, eventName: item.name })}
+            testID={`button-guest-list-${item.id}`}
           >
             <Ionicons name="list" size={16} color={colors.purple} />
             <Text style={styles.actionText}>Lista Ospiti</Text>
@@ -123,6 +134,7 @@ export function PREventsScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => navigation.navigate('PRTables', { eventId: item.id, eventName: item.name })}
+            testID={`button-tables-${item.id}`}
           >
             <Ionicons name="grid" size={16} color={colors.purple} />
             <Text style={styles.actionText}>Tavoli</Text>
@@ -133,7 +145,7 @@ export function PREventsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="I Miei Eventi" 
         showBack 
@@ -154,6 +166,7 @@ export function PREventsScreen() {
                 selectedFilter === item.key && styles.filterPillActive
               ]}
               onPress={() => setSelectedFilter(item.key)}
+              testID={`filter-${item.key}`}
             >
               <Text style={[
                 styles.filterText,
@@ -163,14 +176,18 @@ export function PREventsScreen() {
               </Text>
             </TouchableOpacity>
           )}
+          testID="filter-list"
         />
       </View>
 
       <FlatList
+        key={numColumns}
         data={filteredEvents}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderEvent}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing.lg }]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -185,8 +202,9 @@ export function PREventsScreen() {
             <Text style={styles.emptySubtitle}>Non hai eventi con questo filtro</Text>
           </View>
         }
+        testID="events-list"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -227,6 +245,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+    gap: spacing.md,
+  },
+  columnWrapper: {
     gap: spacing.md,
   },
   eventCard: {

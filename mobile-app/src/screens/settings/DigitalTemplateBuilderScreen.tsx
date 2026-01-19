@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface DigitalTemplate {
   id: string;
@@ -24,7 +25,10 @@ interface DigitalTemplate {
 
 export function DigitalTemplateBuilderScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [activeTab, setActiveTab] = useState<'templates' | 'create'>('templates');
   const [templateName, setTemplateName] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<DigitalTemplate['style']>('modern');
@@ -93,13 +97,84 @@ export function DigitalTemplateBuilderScreen() {
     Alert.alert('Anteprima', `Anteprima del template "${template.name}" in sviluppo`);
   };
 
+  const renderTemplateCard = (template: DigitalTemplate, index: number) => (
+    <View
+      key={template.id}
+      style={[
+        styles.templateCard,
+        (isTablet || isLandscape) && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.md : 0,
+        },
+      ]}
+    >
+      <View style={styles.previewContainer}>
+        <View style={[styles.previewBadge, { backgroundColor: template.primaryColor }]}>
+          <Ionicons name="ticket" size={24} color="#000" />
+        </View>
+      </View>
+      
+      <View style={styles.templateInfo}>
+        <Text style={styles.templateName}>{template.name}</Text>
+        <View style={styles.templateMeta}>
+          <View style={styles.metaBadge}>
+            <Text style={styles.metaBadgeText}>
+              {template.style === 'modern' ? 'Moderno' :
+               template.style === 'classic' ? 'Classico' : 'Minimale'}
+            </Text>
+          </View>
+          {template.hasAnimation && (
+            <View style={[styles.metaBadge, styles.animationBadge]}>
+              <Ionicons name="sparkles" size={12} color={colors.teal} />
+              <Text style={[styles.metaBadgeText, { color: colors.teal }]}>Animato</Text>
+            </View>
+          )}
+        </View>
+      </View>
+      
+      <View style={styles.templateActions}>
+        <TouchableOpacity
+          style={styles.actionIcon}
+          onPress={() => handlePreview(template)}
+          testID={`button-preview-${template.id}`}
+        >
+          <Ionicons name="eye-outline" size={20} color={colors.teal} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionIcon}
+          onPress={() => handleDeleteTemplate(template.id)}
+          testID={`button-delete-${template.id}`}
+        >
+          <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderTemplateRows = () => {
+    if (!isTablet && !isLandscape) {
+      return templates.map((template, index) => renderTemplateCard(template, index));
+    }
+
+    const rows = [];
+    for (let i = 0; i < templates.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.templateRow}>
+          {renderTemplateCard(templates[i], 0)}
+          {templates[i + 1] && renderTemplateCard(templates[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -107,11 +182,11 @@ export function DigitalTemplateBuilderScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, isTablet && styles.tabBarTablet]}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'templates' && styles.tabActive]}
           onPress={() => setActiveTab('templates')}
-          data-testid="tab-templates"
+          testID="tab-templates"
         >
           <Text style={[styles.tabText, activeTab === 'templates' && styles.tabTextActive]}>
             Template
@@ -120,7 +195,7 @@ export function DigitalTemplateBuilderScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'create' && styles.tabActive]}
           onPress={() => setActiveTab('create')}
-          data-testid="tab-create"
+          testID="tab-create"
         >
           <Text style={[styles.tabText, activeTab === 'create' && styles.tabTextActive]}>
             Crea Nuovo
@@ -130,12 +205,15 @@ export function DigitalTemplateBuilderScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {activeTab === 'templates' ? (
           <>
-            <View style={styles.infoCard}>
+            <View style={[styles.infoCard, isTablet && styles.infoCardTablet]}>
               <Ionicons name="phone-portrait-outline" size={24} color={colors.teal} />
               <Text style={styles.infoText}>
                 I template digitali vengono mostrati sui dispositivi dei partecipanti come biglietti elettronici
@@ -149,60 +227,17 @@ export function DigitalTemplateBuilderScreen() {
                 <TouchableOpacity
                   style={styles.createButton}
                   onPress={() => setActiveTab('create')}
-                  data-testid="button-create-first"
+                  testID="button-create-first"
                 >
                   <Text style={styles.createButtonText}>Crea template</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              templates.map(template => (
-                <View key={template.id} style={styles.templateCard}>
-                  <View style={styles.previewContainer}>
-                    <View style={[styles.previewBadge, { backgroundColor: template.primaryColor }]}>
-                      <Ionicons name="ticket" size={24} color="#000" />
-                    </View>
-                  </View>
-                  
-                  <View style={styles.templateInfo}>
-                    <Text style={styles.templateName}>{template.name}</Text>
-                    <View style={styles.templateMeta}>
-                      <View style={styles.metaBadge}>
-                        <Text style={styles.metaBadgeText}>
-                          {template.style === 'modern' ? 'Moderno' :
-                           template.style === 'classic' ? 'Classico' : 'Minimale'}
-                        </Text>
-                      </View>
-                      {template.hasAnimation && (
-                        <View style={[styles.metaBadge, styles.animationBadge]}>
-                          <Ionicons name="sparkles" size={12} color={colors.teal} />
-                          <Text style={[styles.metaBadgeText, { color: colors.teal }]}>Animato</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                  
-                  <View style={styles.templateActions}>
-                    <TouchableOpacity
-                      style={styles.actionIcon}
-                      onPress={() => handlePreview(template)}
-                      data-testid={`button-preview-${template.id}`}
-                    >
-                      <Ionicons name="eye-outline" size={20} color={colors.teal} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.actionIcon}
-                      onPress={() => handleDeleteTemplate(template.id)}
-                      data-testid={`button-delete-${template.id}`}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={colors.destructive} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
+              renderTemplateRows()
             )}
           </>
         ) : (
-          <>
+          <View style={isTablet ? styles.createFormTablet : undefined}>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Nome Template</Text>
               <TextInput
@@ -211,7 +246,7 @@ export function DigitalTemplateBuilderScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 value={templateName}
                 onChangeText={setTemplateName}
-                data-testid="input-template-name"
+                testID="input-template-name"
               />
             </View>
 
@@ -226,7 +261,7 @@ export function DigitalTemplateBuilderScreen() {
                       selectedStyle === style.value && styles.styleCardActive
                     ]}
                     onPress={() => setSelectedStyle(style.value as DigitalTemplate['style'])}
-                    data-testid={`style-${style.value}`}
+                    testID={`style-${style.value}`}
                   >
                     <Ionicons
                       name={style.icon}
@@ -256,7 +291,7 @@ export function DigitalTemplateBuilderScreen() {
                       selectedColor === color.value && styles.colorOptionActive
                     ]}
                     onPress={() => setSelectedColor(color.value)}
-                    data-testid={`color-${color.label.toLowerCase()}`}
+                    testID={`color-${color.label.toLowerCase()}`}
                   >
                     {selectedColor === color.value && (
                       <Ionicons name="checkmark" size={20} color="#000" />
@@ -270,7 +305,7 @@ export function DigitalTemplateBuilderScreen() {
               <TouchableOpacity
                 style={styles.optionRow}
                 onPress={() => setHasAnimation(!hasAnimation)}
-                data-testid="toggle-animation"
+                testID="toggle-animation"
               >
                 <View style={styles.optionInfo}>
                   <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
@@ -291,15 +326,15 @@ export function DigitalTemplateBuilderScreen() {
               style={styles.primaryButton}
               onPress={handleCreateTemplate}
               activeOpacity={0.8}
-              data-testid="button-create-template"
+              testID="button-create-template"
             >
               <Ionicons name="add-circle" size={24} color={colors.primaryForeground} />
               <Text style={styles.primaryButtonText}>Crea Template Digitale</Text>
             </TouchableOpacity>
-          </>
+          </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -314,6 +349,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -336,6 +374,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     gap: spacing.md,
+  },
+  tabBarTablet: {
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   tab: {
     flex: 1,
@@ -363,6 +405,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   infoCard: {
     flexDirection: 'row',
@@ -372,6 +418,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  infoCardTablet: {
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   infoText: {
     flex: 1,
@@ -399,6 +449,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.primaryForeground,
+  },
+  templateRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
   },
   templateCard: {
     flexDirection: 'row',
@@ -431,6 +485,7 @@ const styles = StyleSheet.create({
   },
   templateMeta: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   metaBadge: {
@@ -460,6 +515,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  createFormTablet: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   section: {
     marginBottom: spacing.xl,
@@ -510,6 +570,7 @@ const styles = StyleSheet.create({
   },
   colorGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   colorOption: {

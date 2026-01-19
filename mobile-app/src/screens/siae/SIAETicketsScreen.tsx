@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -30,7 +31,9 @@ interface Ticket {
 export function SIAETicketsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const eventId = route.params?.eventId;
   
@@ -38,6 +41,8 @@ export function SIAETicketsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [eventName, setEventName] = useState('');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadTickets = async () => {
     try {
@@ -115,34 +120,40 @@ export function SIAETicketsScreen() {
     }).format(amount);
   };
 
-  const renderTicket = ({ item }: { item: Ticket }) => (
+  const renderTicket = ({ item, index }: { item: Ticket; index: number }) => (
     <TouchableOpacity
-      style={styles.ticketCard}
+      style={[
+        styles.ticketCard,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAETicketDetail', { ticketId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-ticket-${item.id}`}
+      testID={`card-ticket-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.ticketRow}>
           <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
           <View style={styles.ticketInfo}>
             <View style={styles.ticketHeader}>
-              <Text style={styles.ticketNumber}>{item.ticketNumber}</Text>
+              <Text style={styles.ticketNumber} testID={`text-ticket-number-${item.id}`}>{item.ticketNumber}</Text>
               <View style={[styles.typeBadge, { backgroundColor: `${colors.primary}20` }]}>
                 <Text style={styles.typeText}>{item.ticketType}</Text>
               </View>
             </View>
             
-            <Text style={styles.holderName}>{item.holderName}</Text>
-            <Text style={styles.fiscalCode}>{item.holderFiscalCode}</Text>
+            <Text style={styles.holderName} testID={`text-holder-name-${item.id}`}>{item.holderName}</Text>
+            <Text style={styles.fiscalCode} testID={`text-fiscal-code-${item.id}`}>{item.holderFiscalCode}</Text>
             
             <View style={styles.ticketFooter}>
               <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]} testID={`text-status-${item.id}`}>
                   {getStatusLabel(item.status)}
                 </Text>
               </View>
-              <Text style={styles.price}>{formatCurrency(item.price)}</Text>
+              <Text style={styles.price} testID={`text-price-${item.id}`}>{formatCurrency(item.price)}</Text>
             </View>
             
             <Text style={styles.purchaseDate}>Acquistato: {formatDate(item.purchasedAt)}</Text>
@@ -158,22 +169,22 @@ export function SIAETicketsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header 
           title={eventName || 'Lista Biglietti'} 
           showBack 
           onBack={() => navigation.goBack()} 
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title={eventName || 'Lista Biglietti'}
         showBack
@@ -182,7 +193,7 @@ export function SIAETicketsScreen() {
           eventId ? (
             <TouchableOpacity 
               onPress={() => navigation.navigate('SIAETicketAdd', { eventId })} 
-              data-testid="button-add-ticket"
+              testID="button-add-ticket"
             >
               <Ionicons name="add-outline" size={24} color={colors.foreground} />
             </TouchableOpacity>
@@ -194,7 +205,13 @@ export function SIAETicketsScreen() {
         data={tickets}
         renderItem={renderTicket}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={[
+          styles.listContent,
+          (isTablet || isLandscape) && styles.listContentLandscape,
+        ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -206,8 +223,9 @@ export function SIAETicketsScreen() {
             <Text style={styles.emptySubtext}>I biglietti venduti appariranno qui</Text>
           </View>
         }
+        testID="list-tickets"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -229,6 +247,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   ticketCard: {
     marginBottom: spacing.md,
@@ -252,6 +277,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   ticketNumber: {
     color: colors.foreground,

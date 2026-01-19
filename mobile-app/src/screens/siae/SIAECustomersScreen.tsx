@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -28,12 +29,16 @@ interface Customer {
 
 export function SIAECustomersScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const numColumns = (isTablet || isLandscape) ? 2 : 1;
 
   const loadCustomers = async () => {
     try {
@@ -67,12 +72,18 @@ export function SIAECustomersScreen() {
     );
   });
 
-  const renderCustomer = ({ item }: { item: Customer }) => (
+  const renderCustomer = ({ item, index }: { item: Customer; index: number }) => (
     <TouchableOpacity
-      style={styles.customerCard}
+      style={[
+        styles.customerCard,
+        numColumns === 2 && {
+          width: '48%',
+          marginRight: index % 2 === 0 ? '4%' : 0,
+        },
+      ]}
       onPress={() => navigation.navigate('SIAECustomerDetail', { customerId: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-customer-${item.id}`}
+      testID={`card-customer-${item.id}`}
     >
       <Card variant="glass">
         <View style={styles.customerRow}>
@@ -82,11 +93,11 @@ export function SIAECustomersScreen() {
             </Text>
           </View>
           <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>{item.firstName} {item.lastName}</Text>
+            <Text style={styles.customerName} testID={`text-customer-name-${item.id}`}>{item.firstName} {item.lastName}</Text>
             <View style={styles.customerDetails}>
               <View style={styles.detailItem}>
                 <Ionicons name="document-text-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.detailText}>{item.fiscalCode}</Text>
+                <Text style={styles.detailText} testID={`text-fiscal-code-${item.id}`}>{item.fiscalCode}</Text>
               </View>
               {item.email && (
                 <View style={styles.detailItem}>
@@ -98,7 +109,7 @@ export function SIAECustomersScreen() {
           </View>
           <View style={styles.ticketsBadge}>
             <Ionicons name="ticket-outline" size={16} color={colors.primary} />
-            <Text style={styles.ticketsCount}>{item.ticketsCount}</Text>
+            <Text style={styles.ticketsCount} testID={`text-tickets-count-${item.id}`}>{item.ticketsCount}</Text>
           </View>
         </View>
       </Card>
@@ -107,24 +118,24 @@ export function SIAECustomersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Anagrafica Clienti" showBack onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Anagrafica Clienti"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity onPress={() => navigation.navigate('SIAECustomerAdd')} data-testid="button-add-customer">
+          <TouchableOpacity onPress={() => navigation.navigate('SIAECustomerAdd')} testID="button-add-customer">
             <Ionicons name="add-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
         }
@@ -139,10 +150,10 @@ export function SIAECustomersScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -153,7 +164,13 @@ export function SIAECustomersScreen() {
         data={filteredCustomers}
         renderItem={renderCustomer}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={[
+          styles.listContent,
+          (isTablet || isLandscape) && styles.listContentLandscape,
+        ]}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -169,8 +186,9 @@ export function SIAECustomersScreen() {
             </Text>
           </View>
         }
+        testID="list-customers"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -211,6 +229,13 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: 100,
+  },
+  listContentLandscape: {
+    paddingBottom: 40,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
   },
   customerCard: {
     marginBottom: spacing.md,

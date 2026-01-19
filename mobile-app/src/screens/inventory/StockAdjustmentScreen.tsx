@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -48,7 +49,9 @@ type RouteParams = {
 export default function StockAdjustmentScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'StockAdjustment'>>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -137,207 +140,213 @@ export default function StockAdjustmentScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Modifica Stock" showBack />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Modifica Stock" showBack />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view-stock-adjustment"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Prodotto</Text>
-          <TouchableOpacity
-            style={styles.productSelector}
-            onPress={() => setShowProductPicker(!showProductPicker)}
-            data-testid="button-select-product"
-          >
-            <View style={styles.productSelectorContent}>
-              <Ionicons name="cube-outline" size={20} color={colors.mutedForeground} />
-              <Text style={selectedProduct ? styles.productSelectedText : styles.productPlaceholder}>
-                {selectedProduct ? selectedProduct.name : 'Seleziona prodotto...'}
-              </Text>
-            </View>
-            <Ionicons
-              name={showProductPicker ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.mutedForeground}
-            />
-          </TouchableOpacity>
-          {showProductPicker && (
-            <Card variant="glass" style={styles.productList}>
-              <ScrollView style={styles.productListScroll} nestedScrollEnabled>
-                {products.map(product => (
-                  <TouchableOpacity
-                    key={product.id}
-                    style={[
-                      styles.productItem,
-                      selectedProduct?.id === product.id && styles.productItemSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedProduct(product);
-                      setShowProductPicker(false);
-                    }}
-                    data-testid={`select-product-${product.id}`}
-                  >
-                    <Text style={styles.productItemName}>{product.name}</Text>
-                    <Text style={styles.productItemStock}>
-                      {product.currentStock} {product.unit}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Card>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tipo Modifica</Text>
-          <View style={styles.typeGrid}>
-            {ADJUSTMENT_TYPES.map(type => (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.typeCard,
-                  adjustmentType === type.id && { borderColor: type.color, backgroundColor: `${type.color}10` },
-                ]}
-                onPress={() => setAdjustmentType(type.id as AdjustmentType)}
-                data-testid={`type-${type.id}`}
-              >
-                <Ionicons
-                  name={type.icon as any}
-                  size={24}
-                  color={adjustmentType === type.id ? type.color : colors.mutedForeground}
-                />
-                <Text
-                  style={[
-                    styles.typeLabel,
-                    adjustmentType === type.id && { color: type.color },
-                  ]}
-                >
-                  {type.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quantità</Text>
-          <Card variant="glass">
-            <View style={styles.quantityContainer}>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(-10)}
-                data-testid="button-quantity-minus-10"
-              >
-                <Text style={styles.quantityButtonText}>-10</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(-1)}
-                data-testid="button-quantity-minus-1"
-              >
-                <Ionicons name="remove" size={24} color={colors.foreground} />
-              </TouchableOpacity>
-              <View style={styles.quantityInputContainer}>
-                <TextInput
-                  style={styles.quantityInput}
-                  value={quantity.toString()}
-                  onChangeText={(text) => setQuantity(parseInt(text) || 0)}
-                  keyboardType="number-pad"
-                  data-testid="input-quantity"
-                />
-                {selectedProduct && (
-                  <Text style={styles.quantityUnit}>{selectedProduct.unit}</Text>
-                )}
-              </View>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(1)}
-                data-testid="button-quantity-plus-1"
-              >
-                <Ionicons name="add" size={24} color={colors.foreground} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(10)}
-                data-testid="button-quantity-plus-10"
-              >
-                <Text style={styles.quantityButtonText}>+10</Text>
-              </TouchableOpacity>
-            </View>
-            {selectedProduct && (
-              <View style={styles.stockPreview}>
-                <Text style={styles.stockPreviewLabel}>
-                  Stock attuale: {selectedProduct.currentStock} {selectedProduct.unit}
-                </Text>
-                <Text style={styles.stockPreviewArrow}>→</Text>
-                <Text style={styles.stockPreviewNew}>
-                  Nuovo: {getNewStockValue()} {selectedProduct.unit}
+        <View style={[styles.mainContent, (isTablet || isLandscape) && styles.mainContentWide]}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prodotto</Text>
+            <TouchableOpacity
+              style={styles.productSelector}
+              onPress={() => setShowProductPicker(!showProductPicker)}
+              testID="button-select-product"
+            >
+              <View style={styles.productSelectorContent}>
+                <Ionicons name="cube-outline" size={20} color={colors.mutedForeground} />
+                <Text style={selectedProduct ? styles.productSelectedText : styles.productPlaceholder}>
+                  {selectedProduct ? selectedProduct.name : 'Seleziona prodotto...'}
                 </Text>
               </View>
+              <Ionicons
+                name={showProductPicker ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.mutedForeground}
+              />
+            </TouchableOpacity>
+            {showProductPicker && (
+              <Card variant="glass" style={styles.productList}>
+                <ScrollView style={styles.productListScroll} nestedScrollEnabled testID="scroll-product-picker">
+                  {products.map(product => (
+                    <TouchableOpacity
+                      key={product.id}
+                      style={[
+                        styles.productItem,
+                        selectedProduct?.id === product.id && styles.productItemSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedProduct(product);
+                        setShowProductPicker(false);
+                      }}
+                      testID={`select-product-${product.id}`}
+                    >
+                      <Text style={styles.productItemName}>{product.name}</Text>
+                      <Text style={styles.productItemStock}>
+                        {product.currentStock} {product.unit}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </Card>
             )}
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Motivazione</Text>
-          <View style={styles.reasonGrid}>
-            {ADJUSTMENT_REASONS.map(r => (
-              <TouchableOpacity
-                key={r.id}
-                style={[
-                  styles.reasonPill,
-                  reason === r.id && styles.reasonPillActive,
-                ]}
-                onPress={() => setReason(r.id as AdjustmentReason)}
-                data-testid={`reason-${r.id}`}
-              >
-                <Ionicons
-                  name={r.icon as any}
-                  size={16}
-                  color={reason === r.id ? colors.primaryForeground : colors.foreground}
-                />
-                <Text
-                  style={[
-                    styles.reasonPillText,
-                    reason === r.id && styles.reasonPillTextActive,
-                  ]}
-                >
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Note (opzionale)</Text>
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Aggiungi note..."
-            placeholderTextColor={colors.mutedForeground}
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={3}
-            data-testid="input-notes"
-          />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Tipo Modifica</Text>
+            <View style={[styles.typeGrid, (isTablet || isLandscape) && styles.typeGridWide]}>
+              {ADJUSTMENT_TYPES.map(type => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.typeCard,
+                    adjustmentType === type.id && { borderColor: type.color, backgroundColor: `${type.color}10` },
+                  ]}
+                  onPress={() => setAdjustmentType(type.id as AdjustmentType)}
+                  testID={`type-${type.id}`}
+                >
+                  <Ionicons
+                    name={type.icon as any}
+                    size={24}
+                    color={adjustmentType === type.id ? type.color : colors.mutedForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.typeLabel,
+                      adjustmentType === type.id && { color: type.color },
+                    ]}
+                  >
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quantità</Text>
+            <Card variant="glass" testID="card-quantity">
+              <View style={styles.quantityContainer}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleQuantityChange(-10)}
+                  testID="button-quantity-minus-10"
+                >
+                  <Text style={styles.quantityButtonText}>-10</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleQuantityChange(-1)}
+                  testID="button-quantity-minus-1"
+                >
+                  <Ionicons name="remove" size={24} color={colors.foreground} />
+                </TouchableOpacity>
+                <View style={styles.quantityInputContainer}>
+                  <TextInput
+                    style={styles.quantityInput}
+                    value={quantity.toString()}
+                    onChangeText={(text) => setQuantity(parseInt(text) || 0)}
+                    keyboardType="number-pad"
+                    testID="input-quantity"
+                  />
+                  {selectedProduct && (
+                    <Text style={styles.quantityUnit}>{selectedProduct.unit}</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleQuantityChange(1)}
+                  testID="button-quantity-plus-1"
+                >
+                  <Ionicons name="add" size={24} color={colors.foreground} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => handleQuantityChange(10)}
+                  testID="button-quantity-plus-10"
+                >
+                  <Text style={styles.quantityButtonText}>+10</Text>
+                </TouchableOpacity>
+              </View>
+              {selectedProduct && (
+                <View style={styles.stockPreview}>
+                  <Text style={styles.stockPreviewLabel} testID="text-current-stock">
+                    Stock attuale: {selectedProduct.currentStock} {selectedProduct.unit}
+                  </Text>
+                  <Text style={styles.stockPreviewArrow}>→</Text>
+                  <Text style={styles.stockPreviewNew} testID="text-new-stock">
+                    Nuovo: {getNewStockValue()} {selectedProduct.unit}
+                  </Text>
+                </View>
+              )}
+            </Card>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Motivazione</Text>
+            <View style={styles.reasonGrid}>
+              {ADJUSTMENT_REASONS.map(r => (
+                <TouchableOpacity
+                  key={r.id}
+                  style={[
+                    styles.reasonPill,
+                    reason === r.id && styles.reasonPillActive,
+                  ]}
+                  onPress={() => setReason(r.id as AdjustmentReason)}
+                  testID={`reason-${r.id}`}
+                >
+                  <Ionicons
+                    name={r.icon as any}
+                    size={16}
+                    color={reason === r.id ? colors.primaryForeground : colors.foreground}
+                  />
+                  <Text
+                    style={[
+                      styles.reasonPillText,
+                      reason === r.id && styles.reasonPillTextActive,
+                    ]}
+                  >
+                    {r.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Note (opzionale)</Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Aggiungi note..."
+              placeholderTextColor={colors.mutedForeground}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={3}
+              testID="input-notes"
+            />
+          </View>
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomActions, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={[styles.bottomActions, isLandscape && styles.bottomActionsLandscape]}>
         <Button
           title="Conferma Modifica"
           variant="primary"
@@ -345,9 +354,10 @@ export default function StockAdjustmentScreen() {
           loading={submitting}
           disabled={!selectedProduct || quantity <= 0}
           style={styles.submitButton}
+          testID="button-submit"
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -358,6 +368,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 80,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentWide: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -433,6 +457,9 @@ const styles = StyleSheet.create({
   typeGrid: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  typeGridWide: {
+    maxWidth: 400,
   },
   typeCard: {
     flex: 1,
@@ -548,9 +575,13 @@ const styles = StyleSheet.create({
   bottomActions: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,
+  },
+  bottomActionsLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   submitButton: {
     width: '100%',

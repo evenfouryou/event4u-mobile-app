@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -36,9 +37,13 @@ type FilterStatus = 'all' | 'upcoming' | 'active' | 'completed';
 
 export function PRMyEventsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('upcoming');
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   const { data: events = [], refetch } = useQuery<PREvent[]>({
     queryKey: ['/api/pr/my-events'],
@@ -161,29 +166,31 @@ export function PRMyEventsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="I Miei Eventi" showBack />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />
         }
+        testID="scroll-my-events"
       >
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filtersContainer}
           contentContainerStyle={styles.filtersContent}
+          testID="scroll-filters"
         >
           {filterOptions.map((option) => (
             <TouchableOpacity
               key={option.value}
               style={[styles.filterPill, filterStatus === option.value && styles.filterPillActive]}
               onPress={() => setFilterStatus(option.value)}
-              data-testid={`filter-${option.value}`}
+              testID={`filter-${option.value}`}
             >
               <Text
                 style={[
@@ -213,7 +220,7 @@ export function PRMyEventsScreen() {
         </ScrollView>
 
         {filteredEvents.length === 0 ? (
-          <Card variant="glass" style={styles.emptyCard}>
+          <Card variant="glass" style={styles.emptyCard} testID="card-empty">
             <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyTitle}>Nessun evento trovato</Text>
             <Text style={styles.emptySubtitle}>
@@ -221,13 +228,18 @@ export function PRMyEventsScreen() {
             </Text>
           </Card>
         ) : (
-          <View style={styles.eventsList}>
-            {filteredEvents.map((event) => (
+          <View style={[styles.eventsList, numColumns === 2 && styles.eventsListGrid]}>
+            {filteredEvents.map((event, index) => (
               <TouchableOpacity
                 key={event.id}
                 onPress={() => handleEventPress(event)}
                 activeOpacity={0.8}
-                data-testid={`event-item-${event.id}`}
+                style={[
+                  numColumns === 2 && { width: '50%', paddingHorizontal: spacing.xs },
+                  numColumns === 2 && index % 2 === 0 && { paddingLeft: 0 },
+                  numColumns === 2 && index % 2 === 1 && { paddingRight: 0 },
+                ]}
+                testID={`button-event-${event.id}`}
               >
                 <Card variant="glass" style={styles.eventCard}>
                   <View style={styles.eventImageContainer}>
@@ -292,7 +304,7 @@ export function PRMyEventsScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -304,6 +316,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  contentContainer: {
+    paddingBottom: spacing.xl,
   },
   filtersContainer: {
     marginBottom: spacing.lg,
@@ -356,9 +371,14 @@ const styles = StyleSheet.create({
   eventsList: {
     gap: spacing.lg,
   },
+  eventsListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   eventCard: {
     padding: 0,
     overflow: 'hidden',
+    marginBottom: spacing.md,
   },
   eventImageContainer: {
     height: 140,

@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface ImportHistory {
   id: string;
@@ -24,7 +25,10 @@ interface ImportHistory {
 
 export function ImportScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+  
   const [isImporting, setIsImporting] = useState(false);
   const [importHistory, setImportHistory] = useState<ImportHistory[]>([
     {
@@ -133,13 +137,118 @@ export function ImportScreen() {
     }
   };
 
+  const renderImportTypeCard = (type: typeof importTypes[0], index: number) => (
+    <View
+      key={type.id}
+      style={[
+        styles.importTypeCard,
+        (isTablet || isLandscape) && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.md : 0,
+        },
+      ]}
+    >
+      <View style={[styles.typeIcon, { backgroundColor: `${type.color}20` }]}>
+        <Ionicons name={type.icon} size={24} color={type.color} />
+      </View>
+      <View style={styles.typeInfo}>
+        <Text style={styles.typeTitle}>{type.title}</Text>
+        <Text style={styles.typeDescription}>{type.description}</Text>
+      </View>
+      <View style={styles.typeActions}>
+        <TouchableOpacity
+          style={styles.templateButton}
+          onPress={() => handleDownloadTemplate(type.id)}
+          testID={`button-template-${type.id}`}
+        >
+          <Ionicons name="download-outline" size={16} color={colors.foreground} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.importButton}
+          onPress={() => handleSelectFile(type.id)}
+          disabled={isImporting}
+          testID={`button-import-${type.id}`}
+        >
+          <Ionicons name="cloud-upload-outline" size={18} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderImportTypeRows = () => {
+    if (!isTablet && !isLandscape) {
+      return importTypes.map((type, index) => renderImportTypeCard(type, index));
+    }
+
+    const rows = [];
+    for (let i = 0; i < importTypes.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.importTypeRow}>
+          {renderImportTypeCard(importTypes[i], 0)}
+          {importTypes[i + 1] && renderImportTypeCard(importTypes[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
+  const renderHistoryCard = (item: ImportHistory, index: number) => (
+    <View
+      key={item.id}
+      style={[
+        styles.historyCard,
+        (isTablet || isLandscape) && {
+          flex: 1,
+          marginLeft: index % 2 === 1 ? spacing.md : 0,
+        },
+      ]}
+    >
+      <View style={styles.historyIcon}>
+        <Ionicons
+          name={item.type === 'csv' ? 'document-text-outline' : 'grid-outline'}
+          size={20}
+          color={colors.mutedForeground}
+        />
+      </View>
+      <View style={styles.historyInfo}>
+        <Text style={styles.historyFilename} numberOfLines={1}>{item.filename}</Text>
+        <Text style={styles.historyMeta}>
+          {item.recordsImported} record • {formatDate(item.importedAt)}
+        </Text>
+      </View>
+      <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
+        <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+        <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+          {getStatusText(item.status)}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderHistoryRows = () => {
+    if (!isTablet && !isLandscape) {
+      return importHistory.map((item, index) => renderHistoryCard(item, index));
+    }
+
+    const rows = [];
+    for (let i = 0; i < importHistory.length; i += 2) {
+      rows.push(
+        <View key={i} style={styles.historyRow}>
+          {renderHistoryCard(importHistory[i], 0)}
+          {importHistory[i + 1] && renderHistoryCard(importHistory[i + 1], 1)}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -149,7 +258,10 @@ export function ImportScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {isImporting && (
@@ -159,7 +271,7 @@ export function ImportScreen() {
           </View>
         )}
 
-        <View style={styles.infoCard}>
+        <View style={[styles.infoCard, isTablet && styles.infoCardTablet]}>
           <Ionicons name="information-circle" size={24} color={colors.teal} />
           <Text style={styles.infoText}>
             Importa dati da file CSV o Excel. Scarica prima il template per assicurarti che il formato sia corretto.
@@ -168,34 +280,7 @@ export function ImportScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tipo di Importazione</Text>
-          {importTypes.map(type => (
-            <View key={type.id} style={styles.importTypeCard}>
-              <View style={[styles.typeIcon, { backgroundColor: `${type.color}20` }]}>
-                <Ionicons name={type.icon} size={24} color={type.color} />
-              </View>
-              <View style={styles.typeInfo}>
-                <Text style={styles.typeTitle}>{type.title}</Text>
-                <Text style={styles.typeDescription}>{type.description}</Text>
-              </View>
-              <View style={styles.typeActions}>
-                <TouchableOpacity
-                  style={styles.templateButton}
-                  onPress={() => handleDownloadTemplate(type.id)}
-                  data-testid={`button-template-${type.id}`}
-                >
-                  <Ionicons name="download-outline" size={16} color={colors.foreground} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.importButton}
-                  onPress={() => handleSelectFile(type.id)}
-                  disabled={isImporting}
-                  data-testid={`button-import-${type.id}`}
-                >
-                  <Ionicons name="cloud-upload-outline" size={18} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
+          {renderImportTypeRows()}
         </View>
 
         <View style={styles.section}>
@@ -206,29 +291,7 @@ export function ImportScreen() {
               <Text style={styles.emptyText}>Nessuna importazione recente</Text>
             </View>
           ) : (
-            importHistory.map(item => (
-              <View key={item.id} style={styles.historyCard}>
-                <View style={styles.historyIcon}>
-                  <Ionicons
-                    name={item.type === 'csv' ? 'document-text-outline' : 'grid-outline'}
-                    size={20}
-                    color={colors.mutedForeground}
-                  />
-                </View>
-                <View style={styles.historyInfo}>
-                  <Text style={styles.historyFilename} numberOfLines={1}>{item.filename}</Text>
-                  <Text style={styles.historyMeta}>
-                    {item.recordsImported} record • {formatDate(item.importedAt)}
-                  </Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
-                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-                  <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                    {getStatusText(item.status)}
-                  </Text>
-                </View>
-              </View>
-            ))
+            renderHistoryRows()
           )}
         </View>
 
@@ -247,7 +310,7 @@ export function ImportScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -262,6 +325,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -284,6 +350,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   importingOverlay: {
     alignItems: 'center',
@@ -304,6 +374,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
+  infoCardTablet: {
+    maxWidth: 600,
+  },
   infoText: {
     flex: 1,
     fontSize: fontSize.sm,
@@ -321,6 +394,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: spacing.md,
     marginLeft: spacing.sm,
+  },
+  importTypeRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
   },
   importTypeCard: {
     flexDirection: 'row',
@@ -385,6 +462,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.mutedForeground,
     marginTop: spacing.md,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
   },
   historyCard: {
     flexDirection: 'row',

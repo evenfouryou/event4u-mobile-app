@@ -3,16 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   FlatList,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -36,7 +36,9 @@ interface StockMovement {
 export function EventDirectStockScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const eventId = route.params?.eventId;
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,6 +48,8 @@ export function EventDirectStockScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [movements, setMovements] = useState<Map<string, StockMovement>>(new Map());
   const [eventName, setEventName] = useState('');
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   useEffect(() => {
     loadEventStock();
@@ -150,75 +154,77 @@ export function EventDirectStockScreen() {
     const stockColor = getStockColor(projectedStock, item.minStock);
 
     return (
-      <Card style={styles.productCard} variant="elevated" data-testid={`product-${item.id}`}>
-        <View style={styles.productHeader}>
-          <View style={styles.productInfo}>
-            <Text style={styles.productName}>{item.name}</Text>
-            <Text style={styles.productCategory}>{item.category}</Text>
-          </View>
-          <View style={styles.stockInfo}>
-            <Text style={styles.stockLabel}>Magazzino</Text>
-            <Text style={styles.stockValue}>{item.currentStock}</Text>
-          </View>
-        </View>
-
-        <View style={styles.stockControls}>
-          <View style={styles.eventStockContainer}>
-            <Text style={styles.eventStockLabel}>Stock Evento</Text>
-            <Text style={[styles.eventStockValue, { color: stockColor }]}>
-              {projectedStock}
-              {movementQty !== 0 && (
-                <Text style={{ color: movementQty > 0 ? colors.success : colors.destructive }}>
-                  {' '}({movementQty > 0 ? '+' : ''}{movementQty})
-                </Text>
-              )}
-            </Text>
+      <View style={numColumns > 1 ? styles.columnItem : undefined}>
+        <Card style={styles.productCard} variant="elevated" testID={`card-product-${item.id}`}>
+          <View style={styles.productHeader}>
+            <View style={styles.productInfo}>
+              <Text style={styles.productName}>{item.name}</Text>
+              <Text style={styles.productCategory}>{item.category}</Text>
+            </View>
+            <View style={styles.stockInfo}>
+              <Text style={styles.stockLabel}>Magazzino</Text>
+              <Text style={styles.stockValue}>{item.currentStock}</Text>
+            </View>
           </View>
 
-          <View style={styles.controlButtons}>
-            <TouchableOpacity
-              style={[styles.controlButton, styles.removeButton]}
-              onPress={() => updateMovement(item.id, -1)}
-              disabled={projectedStock <= 0}
-              data-testid={`button-remove-${item.id}`}
-            >
-              <Ionicons name="remove" size={24} color={colors.foreground} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.controlButton, styles.addButton]}
-              onPress={() => updateMovement(item.id, 1)}
-              disabled={item.currentStock - (movementQty > 0 ? movementQty : 0) <= 0}
-              data-testid={`button-add-${item.id}`}
-            >
-              <Ionicons name="add" size={24} color={colors.foreground} />
-            </TouchableOpacity>
-          </View>
-        </View>
+          <View style={styles.stockControls}>
+            <View style={styles.eventStockContainer}>
+              <Text style={styles.eventStockLabel}>Stock Evento</Text>
+              <Text style={[styles.eventStockValue, { color: stockColor }]}>
+                {projectedStock}
+                {movementQty !== 0 && (
+                  <Text style={{ color: movementQty > 0 ? colors.success : colors.destructive }}>
+                    {' '}({movementQty > 0 ? '+' : ''}{movementQty})
+                  </Text>
+                )}
+              </Text>
+            </View>
 
-        {item.minStock > 0 && projectedStock <= item.minStock && (
-          <View style={styles.warningBanner}>
-            <Ionicons name="warning" size={14} color={colors.warning} />
-            <Text style={styles.warningText}>Stock minimo: {item.minStock}</Text>
+            <View style={styles.controlButtons}>
+              <TouchableOpacity
+                style={[styles.controlButton, styles.removeButton]}
+                onPress={() => updateMovement(item.id, -1)}
+                disabled={projectedStock <= 0}
+                testID={`button-remove-${item.id}`}
+              >
+                <Ionicons name="remove" size={24} color={colors.foreground} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.controlButton, styles.addButton]}
+                onPress={() => updateMovement(item.id, 1)}
+                disabled={item.currentStock - (movementQty > 0 ? movementQty : 0) <= 0}
+                testID={`button-add-${item.id}`}
+              >
+                <Ionicons name="add" size={24} color={colors.foreground} />
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-      </Card>
+
+          {item.minStock > 0 && projectedStock <= item.minStock && (
+            <View style={styles.warningBanner}>
+              <Ionicons name="warning" size={14} color={colors.warning} />
+              <Text style={styles.warningText}>Stock minimo: {item.minStock}</Text>
+            </View>
+          )}
+        </Card>
+      </View>
     );
   };
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Stock Evento" showBack onBack={() => navigation.goBack()} />
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Stock Evento"
         subtitle={eventName}
@@ -235,8 +241,13 @@ export function EventDirectStockScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -271,22 +282,27 @@ export function EventDirectStockScreen() {
           data={filteredProducts}
           renderItem={renderProduct}
           keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          key={numColumns}
           contentContainerStyle={styles.listContent}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
+          testID="list-products"
         />
       )}
 
       {hasChanges && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View style={styles.footer}>
           <Button
             title={saving ? 'Salvataggio...' : 'Salva Modifiche'}
             onPress={handleSave}
             disabled={saving}
             style={styles.saveButton}
+            testID="button-save"
           />
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -346,6 +362,12 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['4xl'],
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  columnItem: {
+    flex: 0.48,
   },
   productCard: {
     marginBottom: spacing.md,
@@ -463,12 +485,8 @@ const styles = StyleSheet.create({
     color: colors.destructive,
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.glass.background,
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,

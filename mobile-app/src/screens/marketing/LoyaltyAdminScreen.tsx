@@ -10,12 +10,13 @@ import {
   Switch,
   Modal,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Button, Header } from '../../components';
 
 interface LoyaltySettings {
@@ -56,11 +57,16 @@ interface LoyaltyStats {
 
 export default function LoyaltyAdminScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [editingRule, setEditingRule] = useState<PointsRule | null>(null);
+
+  const numColumns = isTablet || isLandscape ? 4 : 2;
+  const statCardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const [newRule, setNewRule] = useState({
     name: '',
@@ -154,7 +160,7 @@ export default function LoyaltyAdminScreen() {
       key={tier.id}
       onPress={() => navigation.navigate('EditTier', { tierId: tier.id })}
       activeOpacity={0.8}
-      data-testid={`card-tier-${tier.id}`}
+      testID={`card-tier-${tier.id}`}
     >
       <Card variant="glass" style={styles.tierCard}>
         <View style={styles.tierHeader}>
@@ -162,13 +168,13 @@ export default function LoyaltyAdminScreen() {
             <Ionicons name="ribbon" size={20} color={colors.background} />
           </View>
           <View style={styles.tierInfo}>
-            <Text style={styles.tierName}>{tier.name}</Text>
+            <Text style={styles.tierName} testID={`text-tier-name-${tier.id}`}>{tier.name}</Text>
             <Text style={styles.tierRequirement}>
               {tier.minPoints === 0 ? 'Livello base' : `${tier.minPoints.toLocaleString()}+ punti`}
             </Text>
           </View>
           <View style={styles.tierMeta}>
-            <Text style={styles.tierMultiplier}>{tier.multiplier}x</Text>
+            <Text style={styles.tierMultiplier} testID={`text-multiplier-${tier.id}`}>{tier.multiplier}x</Text>
             <Text style={styles.tierMembers}>{tier.membersCount} membri</Text>
           </View>
         </View>
@@ -185,7 +191,7 @@ export default function LoyaltyAdminScreen() {
   );
 
   const renderRuleCard = (rule: PointsRule) => (
-    <Card key={rule.id} variant="glass" style={styles.ruleCard}>
+    <Card key={rule.id} variant="glass" style={styles.ruleCard} testID={`card-rule-${rule.id}`}>
       <View style={styles.ruleHeader}>
         <View style={[
           styles.ruleTypeIcon,
@@ -198,14 +204,14 @@ export default function LoyaltyAdminScreen() {
           />
         </View>
         <View style={styles.ruleInfo}>
-          <Text style={styles.ruleName}>{rule.name}</Text>
+          <Text style={styles.ruleName} testID={`text-rule-name-${rule.id}`}>{rule.name}</Text>
           <Text style={styles.ruleDescription}>{rule.description}</Text>
           {rule.conditions && (
             <Text style={styles.ruleConditions}>{rule.conditions}</Text>
           )}
         </View>
         <View style={styles.ruleRight}>
-          <Text style={[styles.rulePoints, { color: rule.type === 'earn' ? colors.teal : colors.primary }]}>
+          <Text style={[styles.rulePoints, { color: rule.type === 'earn' ? colors.teal : colors.primary }]} testID={`text-points-${rule.id}`}>
             {rule.type === 'earn' ? '+' : '-'}{rule.points}
           </Text>
           <Switch
@@ -213,6 +219,7 @@ export default function LoyaltyAdminScreen() {
             onValueChange={(value) => toggleRuleMutation.mutate({ ruleId: rule.id, enabled: value })}
             trackColor={{ false: colors.surface, true: `${colors.teal}50` }}
             thumbColor={rule.enabled ? colors.teal : colors.mutedForeground}
+            testID={`switch-rule-${rule.id}`}
           />
         </View>
       </View>
@@ -220,7 +227,7 @@ export default function LoyaltyAdminScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Programma Fedeltà"
         showBack
@@ -228,7 +235,7 @@ export default function LoyaltyAdminScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('LoyaltySettings')}
-            data-testid="button-settings"
+            testID="button-settings"
           >
             <Ionicons name="settings-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -237,14 +244,15 @@ export default function LoyaltyAdminScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
         <View style={styles.section}>
-          <Card variant="glass" style={styles.statusCard}>
+          <Card variant="glass" style={styles.statusCard} testID="card-status">
             <View style={styles.statusRow}>
               <Text style={styles.statusLabel}>Programma Fedeltà</Text>
               <Switch
@@ -252,43 +260,44 @@ export default function LoyaltyAdminScreen() {
                 onValueChange={(value) => updateSettingsMutation.mutate({ enabled: value })}
                 trackColor={{ false: colors.surface, true: `${colors.teal}50` }}
                 thumbColor={mockSettings.enabled ? colors.teal : colors.mutedForeground}
+                testID="switch-program-enabled"
               />
             </View>
-            <View style={styles.quickSettings}>
+            <View style={[styles.quickSettings, isLandscape && styles.quickSettingsLandscape]}>
               <View style={styles.quickSettingItem}>
                 <Text style={styles.quickSettingLabel}>Punti/€</Text>
-                <Text style={styles.quickSettingValue}>{mockSettings.pointsPerEuro}</Text>
+                <Text style={styles.quickSettingValue} testID="text-points-per-euro">{mockSettings.pointsPerEuro}</Text>
               </View>
               <View style={styles.quickSettingItem}>
                 <Text style={styles.quickSettingLabel}>Min. Riscatto</Text>
-                <Text style={styles.quickSettingValue}>{mockSettings.minRedemption}</Text>
+                <Text style={styles.quickSettingValue} testID="text-min-redemption">{mockSettings.minRedemption}</Text>
               </View>
               <View style={styles.quickSettingItem}>
                 <Text style={styles.quickSettingLabel}>Scadenza</Text>
-                <Text style={styles.quickSettingValue}>{mockSettings.pointsExpireDays}g</Text>
+                <Text style={styles.quickSettingValue} testID="text-expiration">{mockSettings.pointsExpireDays}g</Text>
               </View>
             </View>
           </Card>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistiche</Text>
+          <Text style={styles.sectionTitle} testID="text-stats-title">Statistiche</Text>
           <View style={styles.statsGrid}>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-total-members">
               <Text style={styles.statValue}>{mockStats.totalMembers}</Text>
               <Text style={styles.statLabel}>Membri Totali</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-active-members">
               <Text style={[styles.statValue, { color: colors.teal }]}>{mockStats.activeMembers}</Text>
               <Text style={styles.statLabel}>Attivi (30g)</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-points-issued">
               <Text style={[styles.statValue, { color: colors.primary }]}>
                 {mockStats.pointsIssued.toLocaleString()}
               </Text>
               <Text style={styles.statLabel}>Punti Emessi</Text>
             </Card>
-            <Card variant="glass" style={styles.statCard}>
+            <Card variant="glass" style={[styles.statCard, { width: statCardWidth }]} testID="stat-points-redeemed">
               <Text style={styles.statValue}>{mockStats.pointsRedeemed.toLocaleString()}</Text>
               <Text style={styles.statLabel}>Punti Riscattati</Text>
             </Card>
@@ -297,34 +306,36 @@ export default function LoyaltyAdminScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Livelli</Text>
+            <Text style={styles.sectionTitle} testID="text-tiers-title">Livelli</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AddTier')}
-              data-testid="button-add-tier"
+              testID="button-add-tier"
             >
               <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
-          {mockTiers.map(renderTierCard)}
+          <View style={[styles.tiersContainer, isTablet && styles.tiersContainerTablet]}>
+            {mockTiers.map(renderTierCard)}
+          </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Regole Punti</Text>
+            <Text style={styles.sectionTitle} testID="text-rules-title">Regole Punti</Text>
             <TouchableOpacity
               onPress={() => setShowRuleModal(true)}
-              data-testid="button-add-rule"
+              testID="button-add-rule"
             >
               <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.ruleTypeFilter}>
-            <View style={styles.ruleTypeItem}>
+            <View style={styles.ruleTypeItem} testID="legend-earn">
               <View style={[styles.ruleTypeDot, { backgroundColor: colors.teal }]} />
               <Text style={styles.ruleTypeLabel}>Guadagna</Text>
             </View>
-            <View style={styles.ruleTypeItem}>
+            <View style={styles.ruleTypeItem} testID="legend-spend">
               <View style={[styles.ruleTypeDot, { backgroundColor: colors.primary }]} />
               <Text style={styles.ruleTypeLabel}>Riscatta</Text>
             </View>
@@ -341,10 +352,10 @@ export default function LoyaltyAdminScreen() {
         onRequestClose={() => setShowRuleModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nuova Regola</Text>
-              <TouchableOpacity onPress={() => setShowRuleModal(false)} data-testid="button-close-modal">
+              <Text style={styles.modalTitle} testID="text-modal-title">Nuova Regola</Text>
+              <TouchableOpacity onPress={() => setShowRuleModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -356,7 +367,7 @@ export default function LoyaltyAdminScreen() {
                   newRule.type === 'earn' && styles.ruleTypeSelectorItemActive,
                 ]}
                 onPress={() => setNewRule({ ...newRule, type: 'earn' })}
-                data-testid="type-earn"
+                testID="type-earn"
               >
                 <Ionicons
                   name="add-circle"
@@ -376,7 +387,7 @@ export default function LoyaltyAdminScreen() {
                   newRule.type === 'spend' && styles.ruleTypeSelectorItemActiveSpend,
                 ]}
                 onPress={() => setNewRule({ ...newRule, type: 'spend' })}
-                data-testid="type-spend"
+                testID="type-spend"
               >
                 <Ionicons
                   name="remove-circle"
@@ -400,7 +411,7 @@ export default function LoyaltyAdminScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 value={newRule.name}
                 onChangeText={(text) => setNewRule({ ...newRule, name: text })}
-                data-testid="input-rule-name"
+                testID="input-rule-name"
               />
             </View>
 
@@ -414,7 +425,7 @@ export default function LoyaltyAdminScreen() {
                 numberOfLines={3}
                 value={newRule.description}
                 onChangeText={(text) => setNewRule({ ...newRule, description: text })}
-                data-testid="input-rule-description"
+                testID="input-rule-description"
               />
             </View>
 
@@ -427,7 +438,7 @@ export default function LoyaltyAdminScreen() {
                 keyboardType="number-pad"
                 value={newRule.points.toString()}
                 onChangeText={(text) => setNewRule({ ...newRule, points: parseInt(text) || 0 })}
-                data-testid="input-points"
+                testID="input-points"
               />
             </View>
 
@@ -438,14 +449,14 @@ export default function LoyaltyAdminScreen() {
                 setNewRule({ name: '', description: '', type: 'earn', points: 0 });
               }}
               disabled={!newRule.name || !newRule.points}
-              data-testid="button-create-rule"
+              testID="button-create-rule"
             >
               <Text style={styles.buttonText}>Crea Regola</Text>
             </Button>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -456,6 +467,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   section: {
     marginBottom: spacing.lg,
@@ -494,6 +508,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
+  quickSettingsLandscape: {
+    justifyContent: 'center',
+    gap: spacing.xl * 2,
+  },
   quickSettingItem: {
     alignItems: 'center',
   },
@@ -513,7 +531,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   statCard: {
-    width: '48%',
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
@@ -527,6 +544,13 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
     textAlign: 'center',
+  },
+  tiersContainer: {
+    gap: spacing.md,
+  },
+  tiersContainerTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   tierCard: {
     marginBottom: spacing.md,
@@ -651,6 +675,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -678,10 +703,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
     backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.border,
   },
   ruleTypeSelectorItemActive: {
     borderColor: colors.teal,
@@ -708,9 +733,9 @@ const styles = StyleSheet.create({
   formInput: {
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     color: colors.foreground,
     fontSize: fontSize.base,

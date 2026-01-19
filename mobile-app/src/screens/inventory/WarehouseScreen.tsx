@@ -9,11 +9,11 @@ import {
   FlatList,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 
 interface StockItem {
@@ -51,9 +51,13 @@ const CATEGORIES: Category[] = [
 
 export default function WarehouseScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [refreshing, setRefreshing] = useState(false);
+
+  const numColumns = isTablet || isLandscape ? 2 : 2;
+  const cardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const { data: stats, refetch: refetchStats } = useQuery<WarehouseStats>({
     queryKey: ['/api/warehouse/stats'],
@@ -68,8 +72,6 @@ export default function WarehouseScreen() {
     await Promise.all([refetchStats(), refetchItems()]);
     setRefreshing(false);
   }, [refetchStats, refetchItems]);
-
-  const cardWidth = (width - spacing.lg * 2 - spacing.md) / 2;
 
   const warehouseStats = stats || {
     totalItems: 119,
@@ -96,9 +98,10 @@ export default function WarehouseScreen() {
     label: string,
     value: string | number,
     icon: string,
-    color: string
+    color: string,
+    testId: string
   ) => (
-    <Card style={[styles.statCard, { width: cardWidth }]} variant="glass">
+    <Card style={[styles.statCard, { width: cardWidth }]} variant="glass" testID={testId}>
       <View style={[styles.statIcon, { backgroundColor: `${color}20` }]}>
         <Ionicons name={icon as any} size={20} color={color} />
       </View>
@@ -112,7 +115,7 @@ export default function WarehouseScreen() {
       style={[styles.categoryCard, { width: cardWidth }]}
       onPress={() => navigation.navigate('ProductList', { category: item.id })}
       activeOpacity={0.8}
-      data-testid={`card-category-${item.id}`}
+      testID={`card-category-${item.id}`}
     >
       <Card variant="glass" style={styles.categoryCardInner}>
         <View style={[styles.categoryIcon, { backgroundColor: `${item.color}20` }]}>
@@ -133,19 +136,19 @@ export default function WarehouseScreen() {
         style={styles.lowStockItem}
         onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
         activeOpacity={0.8}
-        data-testid={`card-lowstock-${item.id}`}
+        testID={`card-lowstock-${item.id}`}
       >
         <Card variant="glass" style={styles.lowStockCard}>
           <View style={styles.lowStockHeader}>
             <View style={styles.lowStockInfo}>
-              <Text style={styles.lowStockName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.lowStockName} numberOfLines={1} testID={`text-lowstock-name-${item.id}`}>{item.name}</Text>
               <Text style={styles.lowStockLocation}>
                 <Ionicons name="location-outline" size={12} color={colors.mutedForeground} />
                 {' '}{item.location}
               </Text>
             </View>
             <View style={[styles.stockBadge, { backgroundColor: `${stockColor}20` }]}>
-              <Text style={[styles.stockBadgeText, { color: stockColor }]}>
+              <Text style={[styles.stockBadgeText, { color: stockColor }]} testID={`text-lowstock-qty-${item.id}`}>
                 {item.currentStock} {item.unit}
               </Text>
             </View>
@@ -162,13 +165,13 @@ export default function WarehouseScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Magazzino"
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('StockAdjustment')}
-            data-testid="button-adjust-stock"
+            testID="button-adjust-stock"
           >
             <Ionicons name="swap-horizontal-outline" size={24} color={colors.foreground} />
           </TouchableOpacity>
@@ -177,40 +180,45 @@ export default function WarehouseScreen() {
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view-warehouse"
       >
-        <View style={styles.section}>
+        <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
           <Text style={styles.sectionTitle}>Panoramica</Text>
           <View style={styles.statsGrid}>
-            {renderStatCard('Prodotti Totali', warehouseStats.totalItems, 'cube', colors.primary)}
-            {renderStatCard('Stock Basso', warehouseStats.lowStockCount, 'alert-circle', colors.warning)}
-            {renderStatCard('Esauriti', warehouseStats.outOfStockCount, 'close-circle', colors.destructive)}
-            {renderStatCard('Valore', `€${warehouseStats.totalValue.toLocaleString()}`, 'cash', colors.teal)}
+            {renderStatCard('Prodotti Totali', warehouseStats.totalItems, 'cube', colors.primary, 'stat-total-items')}
+            {renderStatCard('Stock Basso', warehouseStats.lowStockCount, 'alert-circle', colors.warning, 'stat-low-stock')}
+            {renderStatCard('Esauriti', warehouseStats.outOfStockCount, 'close-circle', colors.destructive, 'stat-out-of-stock')}
+            {renderStatCard('Valore', `€${warehouseStats.totalValue.toLocaleString()}`, 'cash', colors.teal, 'stat-value')}
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
           <Text style={styles.sectionTitle}>Categorie</Text>
           <FlatList
             data={CATEGORIES}
             renderItem={renderCategoryCard}
             keyExtractor={(item) => item.id}
-            numColumns={2}
+            numColumns={numColumns}
             columnWrapperStyle={styles.categoriesGrid}
             scrollEnabled={false}
+            testID="list-categories"
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, isLandscape && styles.sectionLandscape]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Stock Critico</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('ProductList', { filter: 'low-stock' })}
-              data-testid="button-view-all-lowstock"
+              testID="button-view-all-lowstock"
             >
               <Text style={styles.viewAllText}>Vedi tutti</Text>
             </TouchableOpacity>
@@ -222,21 +230,22 @@ export default function WarehouseScreen() {
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+              testID="list-low-stock"
             />
           ) : (
-            <Card style={styles.emptyCard} variant="glass">
+            <Card style={styles.emptyCard} variant="glass" testID="card-empty">
               <Ionicons name="checkmark-circle-outline" size={32} color={colors.teal} />
               <Text style={styles.emptyText}>Nessun prodotto in stock critico</Text>
             </Card>
           )}
         </View>
 
-        <View style={styles.actionsSection}>
+        <View style={[styles.actionsSection, isLandscape && styles.actionsSectionLandscape]}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('ReturnToWarehouse')}
             activeOpacity={0.8}
-            data-testid="button-returns"
+            testID="button-returns"
           >
             <Card variant="glass" style={styles.actionCard}>
               <View style={[styles.actionIcon, { backgroundColor: `${colors.teal}20` }]}>
@@ -254,7 +263,7 @@ export default function WarehouseScreen() {
             style={styles.actionButton}
             onPress={() => navigation.navigate('Suppliers')}
             activeOpacity={0.8}
-            data-testid="button-suppliers"
+            testID="button-suppliers"
           >
             <Card variant="glass" style={styles.actionCard}>
               <View style={[styles.actionIcon, { backgroundColor: `${colors.primary}20` }]}>
@@ -272,7 +281,7 @@ export default function WarehouseScreen() {
             style={styles.actionButton}
             onPress={() => navigation.navigate('PurchaseOrders')}
             activeOpacity={0.8}
-            data-testid="button-orders"
+            testID="button-orders"
           >
             <Card variant="glass" style={styles.actionCard}>
               <View style={[styles.actionIcon, { backgroundColor: `${colors.warning}20` }]}>
@@ -289,14 +298,14 @@ export default function WarehouseScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, isLandscape && styles.fabLandscape]}
         onPress={() => navigation.navigate('Consumption')}
         activeOpacity={0.8}
-        data-testid="button-add-consumption"
+        testID="button-add-consumption"
       >
         <Ionicons name="add" size={28} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -308,9 +317,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentLandscape: {
+    paddingBottom: 80,
+  },
   section: {
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
+  },
+  sectionLandscape: {
+    paddingHorizontal: spacing.xl,
   },
   sectionTitle: {
     color: colors.foreground,
@@ -450,6 +468,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  actionsSectionLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
   actionButton: {
     marginBottom: spacing.xs,
   },
@@ -494,5 +515,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabLandscape: {
+    bottom: 80,
   },
 });

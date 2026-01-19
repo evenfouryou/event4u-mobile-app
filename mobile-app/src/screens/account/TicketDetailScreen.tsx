@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -43,8 +43,10 @@ type RouteParams = {
 export function TicketDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'TicketDetail'>>();
-  const insets = useSafeAreaInsets();
   const { ticketId } = route.params;
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ['/api/public/account/tickets', ticketId],
@@ -65,157 +67,178 @@ export function TicketDetailScreen() {
 
   if (isLoading || !ticket) {
     return (
-      <View style={styles.container}>
-        <Header title="Dettaglio biglietto" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Caricamento...</Text>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <Header 
+          title="Dettaglio biglietto" 
+          showBack 
+          onBack={() => navigation.goBack()} 
+          testID="header-ticket-detail"
+        />
+        <View style={styles.loadingContainer} testID="loading-container">
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Dettaglio biglietto" 
         showBack 
-        onBack={() => navigation.goBack()} 
+        onBack={() => navigation.goBack()}
+        testID="header-ticket-detail"
       />
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          styles.content,
+          isTablet && styles.contentTablet,
+          isLandscape && styles.contentLandscape,
+        ]}
+        testID="scroll-view-ticket-detail"
       >
-        <Card style={styles.qrCard}>
-          <View style={styles.qrHeader}>
-            <View style={[styles.statusBadge, { backgroundColor: statusColors[ticket.status] + '20' }]}>
-              <View style={[styles.statusDot, { backgroundColor: statusColors[ticket.status] }]} />
-              <Text style={[styles.statusText, { color: statusColors[ticket.status] }]}>
-                {statusLabels[ticket.status]}
+        <View style={[
+          styles.contentWrapper,
+          isTablet && { maxWidth: 600, alignSelf: 'center', width: '100%' },
+        ]}>
+          <Card style={styles.qrCard} testID="card-qr-code">
+            <View style={styles.qrHeader}>
+              <View 
+                style={[styles.statusBadge, { backgroundColor: statusColors[ticket.status] + '20' }]}
+                testID={`badge-status-${ticket.status}`}
+              >
+                <View style={[styles.statusDot, { backgroundColor: statusColors[ticket.status] }]} />
+                <Text style={[styles.statusText, { color: statusColors[ticket.status] }]}>
+                  {statusLabels[ticket.status]}
+                </Text>
+              </View>
+            </View>
+            
+            {ticket.status === 'valid' ? (
+              <View style={styles.qrContainer} testID="container-qr-valid">
+                <QRCode
+                  value={ticket.ticketCode}
+                  size={200}
+                  backgroundColor="white"
+                  color="black"
+                />
+                <Text style={styles.ticketCode} testID="text-ticket-code">{ticket.ticketCode}</Text>
+              </View>
+            ) : (
+              <View style={styles.qrDisabled} testID="container-qr-disabled">
+                <Ionicons 
+                  name={ticket.status === 'used' ? 'checkmark-circle' : 'close-circle'} 
+                  size={80} 
+                  color={statusColors[ticket.status]} 
+                />
+                <Text style={styles.qrDisabledText} testID="text-qr-disabled">
+                  {ticket.status === 'used' ? 'Biglietto già utilizzato' : 'Biglietto annullato'}
+                </Text>
+              </View>
+            )}
+          </Card>
+
+          <Card style={styles.eventCard} testID="card-event-info">
+            <Text style={styles.eventTitle} testID="text-event-title">{ticket.eventTitle}</Text>
+            <Text style={styles.ticketType} testID="text-ticket-type">{ticket.ticketType}</Text>
+            
+            <View style={styles.divider} />
+            
+            <View style={styles.detailRow} testID="row-event-date">
+              <Ionicons name="calendar-outline" size={20} color={colors.mutedForeground} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Data</Text>
+                <Text style={styles.detailValue} testID="text-event-date">{ticket.eventDate}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.detailRow} testID="row-event-time">
+              <Ionicons name="time-outline" size={20} color={colors.mutedForeground} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Orario</Text>
+                <Text style={styles.detailValue} testID="text-event-time">{ticket.eventTime}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.detailRow} testID="row-event-location">
+              <Ionicons name="location-outline" size={20} color={colors.mutedForeground} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Luogo</Text>
+                <Text style={styles.detailValue} testID="text-event-location">{ticket.eventLocation}</Text>
+                <Text style={styles.detailSubvalue} testID="text-event-address">{ticket.eventAddress}</Text>
+              </View>
+            </View>
+          </Card>
+
+          <Card style={styles.infoCard} testID="card-ticket-info">
+            <Text style={styles.sectionTitle}>Informazioni biglietto</Text>
+            
+            <View style={styles.infoRow} testID="row-holder">
+              <Text style={styles.infoLabel}>Intestatario</Text>
+              <Text style={styles.infoValue} testID="text-holder-name">
+                {ticket.isFromNameChange ? 'Dati riservati' : ticket.holderName}
               </Text>
             </View>
-          </View>
-          
-          {ticket.status === 'valid' ? (
-            <View style={styles.qrContainer}>
-              <QRCode
-                value={ticket.ticketCode}
-                size={200}
-                backgroundColor="white"
-                color="black"
-              />
-              <Text style={styles.ticketCode}>{ticket.ticketCode}</Text>
-            </View>
-          ) : (
-            <View style={styles.qrDisabled}>
-              <Ionicons 
-                name={ticket.status === 'used' ? 'checkmark-circle' : 'close-circle'} 
-                size={80} 
-                color={statusColors[ticket.status]} 
-              />
-              <Text style={styles.qrDisabledText}>
-                {ticket.status === 'used' ? 'Biglietto già utilizzato' : 'Biglietto annullato'}
-              </Text>
-            </View>
-          )}
-        </Card>
-
-        <Card style={styles.eventCard}>
-          <Text style={styles.eventTitle}>{ticket.eventTitle}</Text>
-          <Text style={styles.ticketType}>{ticket.ticketType}</Text>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={20} color={colors.mutedForeground} />
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Data</Text>
-              <Text style={styles.detailValue}>{ticket.eventDate}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <Ionicons name="time-outline" size={20} color={colors.mutedForeground} />
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Orario</Text>
-              <Text style={styles.detailValue}>{ticket.eventTime}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <Ionicons name="location-outline" size={20} color={colors.mutedForeground} />
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Luogo</Text>
-              <Text style={styles.detailValue}>{ticket.eventLocation}</Text>
-              <Text style={styles.detailSubvalue}>{ticket.eventAddress}</Text>
-            </View>
-          </View>
-        </Card>
-
-        <Card style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Informazioni biglietto</Text>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Intestatario</Text>
-            <Text style={styles.infoValue}>
-              {ticket.isFromNameChange ? 'Dati riservati' : ticket.holderName}
-            </Text>
-          </View>
-          
-          {ticket.sectorName && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Settore</Text>
-              <Text style={styles.infoValue}>{ticket.sectorName}</Text>
-            </View>
-          )}
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Data acquisto</Text>
-            <Text style={styles.infoValue}>{ticket.purchaseDate}</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Prezzo</Text>
-            <Text style={styles.infoValue}>€{ticket.price.toFixed(2)}</Text>
-          </View>
-          
-          {ticket.fiscalSealCode && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Contrassegno SIAE</Text>
-              <Text style={styles.infoValue}>{ticket.fiscalSealCode}</Text>
-            </View>
-          )}
-          
-          {ticket.progressiveNumber && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Numero progressivo</Text>
-              <Text style={styles.infoValue}>{ticket.progressiveNumber}</Text>
-            </View>
-          )}
-        </Card>
-
-        {ticket.status === 'valid' && !ticket.isFromNameChange && (
-          <View style={styles.actions}>
-            {ticket.canNameChange && (
-              <Button
-                title="Cambia nominativo"
-                variant="outline"
-                onPress={() => navigation.navigate('NameChange', { ticketId: ticket.id })}
-                icon={<Ionicons name="swap-horizontal-outline" size={20} color={colors.foreground} />}
-              />
+            
+            {ticket.sectorName && (
+              <View style={styles.infoRow} testID="row-sector">
+                <Text style={styles.infoLabel}>Settore</Text>
+                <Text style={styles.infoValue} testID="text-sector-name">{ticket.sectorName}</Text>
+              </View>
             )}
-            {ticket.canResale && (
-              <Button
-                title="Metti in vendita"
-                variant="primary"
-                onPress={() => navigation.navigate('ResaleListing', { ticketId: ticket.id })}
-                icon={<Ionicons name="pricetag-outline" size={20} color={colors.primaryForeground} />}
-              />
+            
+            <View style={styles.infoRow} testID="row-purchase-date">
+              <Text style={styles.infoLabel}>Data acquisto</Text>
+              <Text style={styles.infoValue} testID="text-purchase-date">{ticket.purchaseDate}</Text>
+            </View>
+            
+            <View style={styles.infoRow} testID="row-price">
+              <Text style={styles.infoLabel}>Prezzo</Text>
+              <Text style={styles.infoValue} testID="text-price">€{ticket.price.toFixed(2)}</Text>
+            </View>
+            
+            {ticket.fiscalSealCode && (
+              <View style={styles.infoRow} testID="row-fiscal-seal">
+                <Text style={styles.infoLabel}>Contrassegno SIAE</Text>
+                <Text style={styles.infoValue} testID="text-fiscal-seal">{ticket.fiscalSealCode}</Text>
+              </View>
             )}
-          </View>
-        )}
+            
+            {ticket.progressiveNumber && (
+              <View style={styles.infoRow} testID="row-progressive-number">
+                <Text style={styles.infoLabel}>Numero progressivo</Text>
+                <Text style={styles.infoValue} testID="text-progressive-number">{ticket.progressiveNumber}</Text>
+              </View>
+            )}
+          </Card>
+
+          {ticket.status === 'valid' && !ticket.isFromNameChange && (
+            <View style={styles.actions} testID="container-actions">
+              {ticket.canNameChange && (
+                <Button
+                  title="Cambia nominativo"
+                  variant="outline"
+                  onPress={() => navigation.navigate('NameChange', { ticketId: ticket.id })}
+                  icon={<Ionicons name="swap-horizontal-outline" size={20} color={colors.foreground} />}
+                  testID="button-name-change"
+                />
+              )}
+              {ticket.canResale && (
+                <Button
+                  title="Metti in vendita"
+                  variant="primary"
+                  onPress={() => navigation.navigate('ResaleListing', { ticketId: ticket.id })}
+                  icon={<Ionicons name="pricetag-outline" size={20} color={colors.primaryForeground} />}
+                  testID="button-resale"
+                />
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -238,6 +261,16 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  contentTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  contentLandscape: {
+    paddingHorizontal: spacing.lg,
+  },
+  contentWrapper: {
     gap: spacing.md,
   },
   qrCard: {

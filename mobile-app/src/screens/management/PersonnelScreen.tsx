@@ -8,11 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   useWindowDimensions,
-  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -50,15 +49,17 @@ const roleColors: Record<string, string> = {
 
 export function PersonnelScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [activeFilter, setActiveFilter] = useState<PersonnelFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const numColumns = isTablet || isLandscape ? 2 : 1;
 
   useEffect(() => {
     loadPersonnel();
@@ -113,7 +114,7 @@ export function PersonnelScreen() {
     <TouchableOpacity
       style={[styles.filterPill, activeFilter === item.key && styles.filterPillActive]}
       onPress={() => setActiveFilter(item.key)}
-      data-testid={`filter-${item.key}`}
+      testID={`filter-${item.key}`}
     >
       <Text style={[styles.filterPillText, activeFilter === item.key && styles.filterPillTextActive]}>
         {item.label}
@@ -126,60 +127,61 @@ export function PersonnelScreen() {
     const initials = `${item.firstName.charAt(0)}${item.lastName.charAt(0)}`.toUpperCase();
 
     return (
-      <TouchableOpacity
-        onPress={() => navigation.navigate('PersonnelDetail', { personnelId: item.id })}
-        activeOpacity={0.8}
-        data-testid={`card-personnel-${item.id}`}
-        style={isLandscape ? { flex: 0.5, paddingHorizontal: spacing.xs } : undefined}
-      >
-        <Card style={styles.personCard} variant="elevated">
-          <View style={styles.personHeader}>
-            <View style={[styles.avatar, { borderColor: roleColor }]}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-            <View style={styles.personInfo}>
-              <Text style={styles.personName}>{item.firstName} {item.lastName}</Text>
-              <View style={[styles.roleBadge, { backgroundColor: `${roleColor}20` }]}>
-                <Text style={[styles.roleText, { color: roleColor }]}>{getRoleLabel(item.role)}</Text>
+      <View style={numColumns > 1 ? styles.columnItem : undefined}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('PersonnelDetail', { personnelId: item.id })}
+          activeOpacity={0.8}
+          testID={`card-personnel-${item.id}`}
+        >
+          <Card style={styles.personCard} variant="elevated">
+            <View style={styles.personHeader}>
+              <View style={[styles.avatar, { borderColor: roleColor }]}>
+                <Text style={styles.avatarText}>{initials}</Text>
               </View>
+              <View style={styles.personInfo}>
+                <Text style={styles.personName}>{item.firstName} {item.lastName}</Text>
+                <View style={[styles.roleBadge, { backgroundColor: `${roleColor}20` }]}>
+                  <Text style={[styles.roleText, { color: roleColor }]}>{getRoleLabel(item.role)}</Text>
+                </View>
+              </View>
+              <View style={[styles.statusDot, { backgroundColor: item.status === 'active' ? colors.success : colors.mutedForeground }]} />
             </View>
-            <View style={[styles.statusDot, { backgroundColor: item.status === 'active' ? colors.success : colors.mutedForeground }]} />
-          </View>
 
-          <View style={styles.personDetails}>
-            {item.phone && (
-              <View style={styles.detailRow}>
-                <Ionicons name="call-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.detailText}>{item.phone}</Text>
-              </View>
-            )}
-            {item.email && (
-              <View style={styles.detailRow}>
-                <Ionicons name="mail-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.personStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{item.eventsWorked}</Text>
-              <Text style={styles.statLabel}>Eventi</Text>
+            <View style={styles.personDetails}>
+              {item.phone && (
+                <View style={styles.detailRow}>
+                  <Ionicons name="call-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.detailText}>{item.phone}</Text>
+                </View>
+              )}
+              {item.email && (
+                <View style={styles.detailRow}>
+                  <Ionicons name="mail-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+                </View>
+              )}
             </View>
-            {item.rating > 0 && (
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color={colors.primary} />
-                <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+
+            <View style={styles.personStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{item.eventsWorked}</Text>
+                <Text style={styles.statLabel}>Eventi</Text>
               </View>
-            )}
-          </View>
-        </Card>
-      </TouchableOpacity>
+              {item.rating > 0 && (
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={14} color={colors.primary} />
+                  <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
+          </Card>
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Personale"
         showBack
@@ -188,7 +190,7 @@ export function PersonnelScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CreatePersonnel')}
-            data-testid="button-add-personnel"
+            testID="button-add-personnel"
           >
             <Ionicons name="person-add" size={20} color={colors.primaryForeground} />
           </TouchableOpacity>
@@ -204,10 +206,10 @@ export function PersonnelScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            data-testid="input-search"
+            testID="input-search"
           />
           {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -221,18 +223,19 @@ export function PersonnelScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterContainer}
+        testID="list-filters"
       />
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
-          <Button title="Riprova" onPress={loadPersonnel} style={styles.retryButton} />
+          <Button title="Riprova" onPress={loadPersonnel} style={styles.retryButton} testID="button-retry" />
         </View>
       ) : filteredPersonnel.length === 0 ? (
         <View style={styles.centerContainer}>
@@ -244,13 +247,15 @@ export function PersonnelScreen() {
           data={filteredPersonnel}
           renderItem={renderPersonCard}
           keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          key={numColumns}
           contentContainerStyle={styles.listContent}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
-          numColumns={isLandscape ? 2 : 1}
-          key={isLandscape ? 'landscape' : 'portrait'}
+          testID="list-personnel"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -308,6 +313,12 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  columnItem: {
+    flex: 0.48,
   },
   personCard: {
     marginBottom: spacing.md,

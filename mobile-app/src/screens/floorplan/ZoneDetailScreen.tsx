@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -56,8 +57,13 @@ const STATUS_COLORS = {
 export function ZoneDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { zoneId, zoneName } = route.params || {};
+
+  const numColumns = isTablet || isLandscape ? 4 : 2;
+  const statCardWidth = (width - spacing.lg * 2 - spacing.md * (numColumns - 1)) / numColumns;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +149,7 @@ export function ZoneDetailScreen() {
   };
 
   const renderSeat = ({ item }: { item: Seat }) => (
-    <View style={styles.seatItem}>
+    <View style={styles.seatItem} testID={`seat-${item.id}`}>
       <View style={[styles.seatIndicator, { backgroundColor: STATUS_COLORS[item.status] }]} />
       <View style={styles.seatInfo}>
         <Text style={styles.seatNumber}>Fila {item.row} - Posto {item.number}</Text>
@@ -162,7 +168,7 @@ export function ZoneDetailScreen() {
   );
 
   const renderHistoryItem = ({ item }: { item: ZoneHistory }) => (
-    <View style={styles.historyItem}>
+    <View style={styles.historyItem} testID={`history-${item.id}`}>
       <View style={styles.historyIconContainer}>
         <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
       </View>
@@ -179,36 +185,36 @@ export function ZoneDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={zoneName || 'Dettaglio Zona'} showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="loading-text">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !zone) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title={zoneName || 'Dettaglio Zona'} showBack onBack={() => navigation.goBack()} />
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID="error-container">
           <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
-          <Text style={styles.errorText}>{error || 'Zona non trovata'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadZoneData} data-testid="button-retry">
+          <Text style={styles.errorText} testID="error-text">{error || 'Zona non trovata'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadZoneData} testID="button-retry">
             <Ionicons name="refresh-outline" size={20} color={colors.primaryForeground} />
             <Text style={styles.retryButtonText}>Riprova</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   const occupancyPercentage = zone.capacity > 0 ? (zone.currentOccupancy / zone.capacity) * 100 : 0;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title={zone.name}
         showBack
@@ -216,7 +222,7 @@ export function ZoneDetailScreen() {
         rightAction={
           <TouchableOpacity
             onPress={() => navigation.navigate('FloorPlanEditor', { zoneId: zone.id })}
-            data-testid="button-edit-zone"
+            testID="button-edit-zone"
           >
             <Ionicons name="create-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -225,11 +231,12 @@ export function ZoneDetailScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        testID="scroll-view"
       >
         <View style={styles.section}>
-          <Card variant="glass">
+          <Card variant="glass" testID="card-zone-header">
             <View style={styles.zoneHeader}>
               <View style={[styles.zoneTypeIcon, { backgroundColor: `${STATUS_COLORS[zone.status]}20` }]}>
                 <Ionicons
@@ -239,10 +246,10 @@ export function ZoneDetailScreen() {
                 />
               </View>
               <View style={styles.zoneHeaderInfo}>
-                <Text style={styles.zoneName}>{zone.name}</Text>
-                <Text style={styles.zoneType}>{getZoneTypeLabel(zone.type)}</Text>
+                <Text style={styles.zoneName} testID="text-zone-name">{zone.name}</Text>
+                <Text style={styles.zoneType} testID="text-zone-type">{getZoneTypeLabel(zone.type)}</Text>
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS[zone.status]}20` }]}>
+              <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS[zone.status]}20` }]} testID="badge-status">
                 <Text style={[styles.statusText, { color: STATUS_COLORS[zone.status] }]}>
                   {getStatusLabel(zone.status)}
                 </Text>
@@ -250,38 +257,38 @@ export function ZoneDetailScreen() {
             </View>
 
             {zone.description && (
-              <Text style={styles.zoneDescription}>{zone.description}</Text>
+              <Text style={styles.zoneDescription} testID="text-description">{zone.description}</Text>
             )}
           </Card>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistiche</Text>
-          <View style={styles.statsGrid}>
-            <Card style={styles.statCard}>
+          <Text style={styles.sectionTitle} testID="text-stats-title">Statistiche</Text>
+          <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
+            <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-capacity">
               <Text style={styles.statValue}>{zone.capacity}</Text>
               <Text style={styles.statLabel}>Capacità Totale</Text>
             </Card>
-            <Card style={styles.statCard}>
+            <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-occupancy">
               <Text style={styles.statValue}>{zone.currentOccupancy}</Text>
               <Text style={styles.statLabel}>Occupazione</Text>
             </Card>
-            <Card style={styles.statCard}>
+            <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-available">
               <Text style={styles.statValue}>{zone.capacity - zone.currentOccupancy}</Text>
               <Text style={styles.statLabel}>Disponibili</Text>
             </Card>
             {zone.priceAmount && (
-              <Card style={styles.statCard}>
+              <Card style={[styles.statCard, { width: statCardWidth }]} testID="stat-price">
                 <Text style={styles.statValue}>€{zone.priceAmount}</Text>
                 <Text style={styles.statLabel}>{zone.priceTier || 'Prezzo'}</Text>
               </Card>
             )}
           </View>
 
-          <Card style={styles.progressCard}>
+          <Card style={styles.progressCard} testID="card-progress">
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>Occupazione</Text>
-              <Text style={styles.progressValue}>{occupancyPercentage.toFixed(0)}%</Text>
+              <Text style={styles.progressValue} testID="text-progress">{occupancyPercentage.toFixed(0)}%</Text>
             </View>
             <View style={styles.progressBar}>
               <View
@@ -298,11 +305,11 @@ export function ZoneDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.tabsContainer}>
+          <View style={[styles.tabsContainer, isLandscape && styles.tabsContainerLandscape]}>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'info' && styles.tabActive]}
               onPress={() => setActiveTab('info')}
-              data-testid="tab-info"
+              testID="tab-info"
             >
               <Text style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}>Info</Text>
             </TouchableOpacity>
@@ -310,7 +317,7 @@ export function ZoneDetailScreen() {
               <TouchableOpacity
                 style={[styles.tab, activeTab === 'seats' && styles.tabActive]}
                 onPress={() => setActiveTab('seats')}
-                data-testid="tab-seats"
+                testID="tab-seats"
               >
                 <Text style={[styles.tabText, activeTab === 'seats' && styles.tabTextActive]}>Posti ({zone.seats.length})</Text>
               </TouchableOpacity>
@@ -318,14 +325,14 @@ export function ZoneDetailScreen() {
             <TouchableOpacity
               style={[styles.tab, activeTab === 'history' && styles.tabActive]}
               onPress={() => setActiveTab('history')}
-              data-testid="tab-history"
+              testID="tab-history"
             >
               <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>Storico</Text>
             </TouchableOpacity>
           </View>
 
           {activeTab === 'info' && (
-            <Card>
+            <Card testID="card-info">
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Tipo</Text>
                 <Text style={styles.infoValue}>{getZoneTypeLabel(zone.type)}</Text>
@@ -374,17 +381,17 @@ export function ZoneDetailScreen() {
           )}
 
           {activeTab === 'seats' && zone.seats && (
-            <Card>
+            <Card testID="card-seats">
               <View style={styles.seatsLegend}>
-                <View style={styles.legendItem}>
+                <View style={styles.legendItem} testID="seats-legend-available">
                   <View style={[styles.legendDot, { backgroundColor: colors.teal }]} />
                   <Text style={styles.legendText}>Disponibile</Text>
                 </View>
-                <View style={styles.legendItem}>
+                <View style={styles.legendItem} testID="seats-legend-reserved">
                   <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
                   <Text style={styles.legendText}>Prenotato</Text>
                 </View>
-                <View style={styles.legendItem}>
+                <View style={styles.legendItem} testID="seats-legend-sold">
                   <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
                   <Text style={styles.legendText}>Venduto</Text>
                 </View>
@@ -400,7 +407,7 @@ export function ZoneDetailScreen() {
           )}
 
           {activeTab === 'history' && zone.history && (
-            <Card>
+            <Card testID="card-history">
               <FlatList
                 data={zone.history}
                 renderItem={renderHistoryItem}
@@ -413,12 +420,12 @@ export function ZoneDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
-          <View style={styles.actionsGrid}>
+          <Text style={styles.sectionTitle} testID="text-actions-title">Azioni Rapide</Text>
+          <View style={[styles.actionsGrid, isLandscape && styles.actionsGridLandscape]}>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigation.navigate('FloorPlanEditor', { zoneId: zone.id })}
-              data-testid="button-action-edit"
+              testID="button-action-edit"
             >
               <View style={[styles.actionIcon, { backgroundColor: `${colors.primary}20` }]}>
                 <Ionicons name="create-outline" size={24} color={colors.primary} />
@@ -427,8 +434,8 @@ export function ZoneDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => {}}
-              data-testid="button-action-history"
+              onPress={() => setActiveTab('history')}
+              testID="button-action-history"
             >
               <View style={[styles.actionIcon, { backgroundColor: `${colors.teal}20` }]}>
                 <Ionicons name="time-outline" size={24} color={colors.teal} />
@@ -438,7 +445,7 @@ export function ZoneDetailScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -449,6 +456,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,
@@ -542,9 +552,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
+  statsGridTablet: {
+    justifyContent: 'flex-start',
+  },
   statCard: {
-    flex: 1,
-    minWidth: '45%',
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
@@ -557,6 +568,7 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
     marginTop: spacing.xs,
+    textAlign: 'center',
   },
   progressCard: {
     padding: spacing.lg,
@@ -590,6 +602,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  tabsContainerLandscape: {
+    justifyContent: 'flex-start',
   },
   tab: {
     flex: 1,
@@ -719,8 +734,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   historyDetails: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
+    color: colors.foreground,
+    fontSize: fontSize.sm,
     marginTop: spacing.xs,
   },
   historyDivider: {
@@ -731,8 +746,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
+  actionsGridLandscape: {
+    justifyContent: 'flex-start',
+  },
   actionButton: {
     flex: 1,
+    maxWidth: 200,
     alignItems: 'center',
     gap: spacing.sm,
     padding: spacing.lg,

@@ -1,9 +1,18 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  Alert,
+  useWindowDimensions,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 
 interface SettingItem {
   id: string;
@@ -18,7 +27,9 @@ interface SettingItem {
 
 export function SettingsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
@@ -173,7 +184,7 @@ export function SettingsScreen() {
       }}
       disabled={item.type === 'toggle'}
       activeOpacity={item.type === 'toggle' ? 1 : 0.7}
-      data-testid={`setting-${item.id}`}
+      testID={`setting-${item.id}`}
     >
       <View style={[styles.settingIcon, { backgroundColor: 'rgba(255, 215, 0, 0.1)' }]}>
         <Ionicons name={item.icon} size={22} color={colors.primary} />
@@ -188,6 +199,7 @@ export function SettingsScreen() {
           onValueChange={(value) => handleToggle(item.id, value)}
           trackColor={{ false: colors.muted, true: colors.primary }}
           thumbColor={colors.foreground}
+          testID={`switch-${item.id}`}
         />
       ) : (
         <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
@@ -195,13 +207,22 @@ export function SettingsScreen() {
     </TouchableOpacity>
   );
 
+  const renderSection = (title: string, items: SettingItem[]) => (
+    <View style={[styles.section, (isTablet || isLandscape) && styles.sectionWide]}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionCard}>
+        {items.map(renderSettingItem)}
+      </View>
+    </View>
+  );
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          data-testid="button-back"
+          testID="button-back"
         >
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -211,50 +232,38 @@ export function SettingsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing['2xl'] }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLandscape && styles.scrollContentLandscape,
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Generale</Text>
-          <View style={styles.sectionCard}>
-            {generalSettings.map(renderSettingItem)}
+        <View style={(isTablet || isLandscape) ? styles.sectionsGrid : undefined}>
+          <View style={(isTablet || isLandscape) ? styles.sectionColumn : undefined}>
+            {renderSection('Generale', generalSettings)}
+            {renderSection('Sicurezza', securitySettings)}
+          </View>
+          <View style={(isTablet || isLandscape) ? styles.sectionColumn : undefined}>
+            {renderSection('Strumenti', toolsSettings)}
+            {renderSection('Dati', dataSettings)}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sicurezza</Text>
-          <View style={styles.sectionCard}>
-            {securitySettings.map(renderSettingItem)}
-          </View>
+        <View style={[styles.footerSection, isTablet && styles.footerSectionTablet]}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+            testID="button-logout"
+          >
+            <Ionicons name="log-out-outline" size={22} color={colors.destructive} />
+            <Text style={styles.logoutText}>Esci</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.versionText}>Versione 1.0.0</Text>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Strumenti</Text>
-          <View style={styles.sectionCard}>
-            {toolsSettings.map(renderSettingItem)}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dati</Text>
-          <View style={styles.sectionCard}>
-            {dataSettings.map(renderSettingItem)}
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-          data-testid="button-logout"
-        >
-          <Ionicons name="log-out-outline" size={22} color={colors.destructive} />
-          <Text style={styles.logoutText}>Esci</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.versionText}>Versione 1.0.0</Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -269,6 +278,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  headerLandscape: {
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
@@ -291,9 +303,23 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  scrollContentLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
+  sectionsGrid: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  sectionColumn: {
+    flex: 1,
   },
   section: {
     marginBottom: spacing.xl,
+  },
+  sectionWide: {
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: fontSize.sm,
@@ -338,6 +364,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.mutedForeground,
     marginTop: spacing.xs,
+  },
+  footerSection: {
+    marginTop: spacing.md,
+  },
+  footerSectionTablet: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   logoutButton: {
     flexDirection: 'row',

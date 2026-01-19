@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '../../theme';
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -61,9 +61,9 @@ const reportTypes: { key: ReportType; label: string; icon: string }[] = [
 
 export function ReportsScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [activePeriod, setActivePeriod] = useState<ReportPeriod>('month');
   const [activeReport, setActiveReport] = useState<ReportType>('overview');
@@ -126,9 +126,10 @@ export function ReportsScreen() {
     value: string,
     change: number,
     icon: string,
-    color: string
+    color: string,
+    testIdSuffix: string
   ) => (
-    <Card style={[styles.statCard, isLandscape && styles.statCardLandscape]} variant="elevated">
+    <Card style={[styles.statCard, (isTablet || isLandscape) && styles.statCardWide]} variant="elevated" testID={`card-stat-${testIdSuffix}`}>
       <View style={[styles.statIcon, { backgroundColor: `${color}20` }]}>
         <Ionicons name={icon as any} size={20} color={color} />
       </View>
@@ -148,7 +149,7 @@ export function ReportsScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header
         title="Report"
         showBack
@@ -157,7 +158,7 @@ export function ReportsScreen() {
           <TouchableOpacity
             style={styles.exportButton}
             onPress={() => navigation.navigate('ExportReport', { period: activePeriod })}
-            data-testid="button-export"
+            testID="button-export"
           >
             <Ionicons name="download-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
@@ -175,7 +176,7 @@ export function ReportsScreen() {
               key={option.key}
               style={[styles.periodPill, activePeriod === option.key && styles.periodPillActive]}
               onPress={() => setActivePeriod(option.key)}
-              data-testid={`period-${option.key}`}
+              testID={`period-${option.key}`}
             >
               <Text style={[styles.periodText, activePeriod === option.key && styles.periodTextActive]}>
                 {option.label}
@@ -194,7 +195,7 @@ export function ReportsScreen() {
               key={type.key}
               style={[styles.reportTypePill, activeReport === type.key && styles.reportTypePillActive]}
               onPress={() => setActiveReport(type.key)}
-              data-testid={`report-${type.key}`}
+              testID={`report-${type.key}`}
             >
               <Ionicons
                 name={type.icon as any}
@@ -210,53 +211,57 @@ export function ReportsScreen() {
 
         {loading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
             <Text style={styles.loadingText}>Caricamento report...</Text>
           </View>
         ) : error ? (
           <View style={styles.centerContainer}>
             <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
             <Text style={styles.errorText}>{error}</Text>
-            <Button title="Riprova" onPress={loadReports} style={styles.retryButton} />
+            <Button title="Riprova" onPress={loadReports} style={styles.retryButton} testID="button-retry" />
           </View>
         ) : summary ? (
           <>
-            <View style={[styles.statsGrid, isLandscape && styles.statsGridLandscape]}>
+            <View style={[styles.statsGrid, (isTablet || isLandscape) && styles.statsGridWide]}>
               {renderStatCard(
                 'Incasso',
                 formatCurrency(summary.totalRevenue),
                 summary.revenueChange,
                 'cash',
-                colors.primary
+                colors.primary,
+                'revenue'
               )}
               {renderStatCard(
                 'Eventi',
                 summary.totalEvents.toString(),
                 summary.eventsChange,
                 'calendar',
-                colors.teal
+                colors.teal,
+                'events'
               )}
               {renderStatCard(
                 'Biglietti',
                 summary.ticketsSold.toString(),
                 summary.ticketsChange,
                 'ticket',
-                colors.success
+                colors.success,
+                'tickets'
               )}
               {renderStatCard(
                 'Presenze Medie',
                 summary.averageAttendance.toFixed(0),
                 summary.attendanceChange,
                 'people',
-                colors.warning
+                colors.warning,
+                'attendance'
               )}
             </View>
 
             {topEvents.length > 0 && (
-              <Card style={styles.section} variant="elevated">
+              <Card style={styles.section} variant="elevated" testID="card-top-events">
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Top Eventi</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('AllEvents')} data-testid="link-all-events">
+                  <TouchableOpacity onPress={() => navigation.navigate('AllEvents')} testID="link-all-events">
                     <Text style={styles.seeAllLink}>Vedi tutti</Text>
                   </TouchableOpacity>
                 </View>
@@ -265,7 +270,7 @@ export function ReportsScreen() {
                     key={event.id}
                     style={styles.eventRow}
                     onPress={() => navigation.navigate('NightFile', { eventId: event.id })}
-                    data-testid={`event-${event.id}`}
+                    testID={`row-event-${event.id}`}
                   >
                     <View style={styles.eventRank}>
                       <Text style={styles.rankText}>{index + 1}</Text>
@@ -284,12 +289,12 @@ export function ReportsScreen() {
             )}
 
             {topProducts.length > 0 && (
-              <Card style={styles.section} variant="elevated">
+              <Card style={styles.section} variant="elevated" testID="card-top-products">
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Top Prodotti</Text>
                 </View>
-                {topProducts.map((product, index) => (
-                  <View key={product.id} style={styles.productRow}>
+                {topProducts.map((product) => (
+                  <View key={product.id} style={styles.productRow} testID={`row-product-${product.id}`}>
                     <View style={styles.productRank}>
                       <Ionicons name="wine" size={14} color={colors.primary} />
                     </View>
@@ -307,7 +312,7 @@ export function ReportsScreen() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -380,7 +385,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
-  statsGridLandscape: {
+  statsGridWide: {
     flexWrap: 'nowrap',
   },
   statCard: {
@@ -388,7 +393,7 @@ const styles = StyleSheet.create({
     minWidth: '45%',
     alignItems: 'flex-start',
   },
-  statCardLandscape: {
+  statCardWide: {
     minWidth: 'auto',
   },
   statIcon: {

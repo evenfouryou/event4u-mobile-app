@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header, Button, Input } from '../../components';
 
 interface Transaction {
@@ -42,7 +42,9 @@ const mockPayoutRequests: PayoutRequest[] = [
 
 export function PRWalletScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const [refreshing, setRefreshing] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
@@ -101,7 +103,7 @@ export function PRWalletScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header 
         title="Il Mio Wallet" 
         showBack 
@@ -110,7 +112,7 @@ export function PRWalletScreen() {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[styles.content, isLandscape && styles.contentLandscape]}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -118,46 +120,73 @@ export function PRWalletScreen() {
             tintColor={colors.purple}
           />
         }
+        testID="scroll-wallet"
       >
-        <Card style={styles.balanceCard}>
-          <View style={styles.balanceMain}>
-            <Text style={styles.balanceLabel}>Saldo Disponibile</Text>
-            <Text style={styles.balanceAmount}>€ {availableBalance.toFixed(2)}</Text>
-          </View>
-          
-          <View style={styles.balanceSecondary}>
-            <View style={styles.balanceSecondaryItem}>
-              <View style={styles.balanceIconContainer}>
-                <Ionicons name="time-outline" size={20} color={colors.warning} />
+        <View style={[styles.topSection, isLandscape && styles.topSectionLandscape]}>
+          <Card style={[styles.balanceCard, isLandscape && styles.balanceCardLandscape]} testID="card-balance">
+            <View style={styles.balanceMain}>
+              <Text style={styles.balanceLabel}>Saldo Disponibile</Text>
+              <Text style={styles.balanceAmount}>€ {availableBalance.toFixed(2)}</Text>
+            </View>
+            
+            <View style={styles.balanceSecondary}>
+              <View style={styles.balanceSecondaryItem}>
+                <View style={styles.balanceIconContainer}>
+                  <Ionicons name="time-outline" size={20} color={colors.warning} />
+                </View>
+                <View>
+                  <Text style={styles.balanceSecondaryLabel}>In Attesa</Text>
+                  <Text style={styles.balanceSecondaryValue}>€ {pendingBalance.toFixed(2)}</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.balanceSecondaryLabel}>In Attesa</Text>
-                <Text style={styles.balanceSecondaryValue}>€ {pendingBalance.toFixed(2)}</Text>
+              <View style={styles.balanceSecondaryItem}>
+                <View style={styles.balanceIconContainer}>
+                  <Ionicons name="trending-up" size={20} color={colors.success} />
+                </View>
+                <View>
+                  <Text style={styles.balanceSecondaryLabel}>Totale Guadagni</Text>
+                  <Text style={styles.balanceSecondaryValue}>€ {totalEarnings.toFixed(2)}</Text>
+                </View>
               </View>
             </View>
-            <View style={styles.balanceSecondaryItem}>
-              <View style={styles.balanceIconContainer}>
-                <Ionicons name="trending-up" size={20} color={colors.success} />
-              </View>
-              <View>
-                <Text style={styles.balanceSecondaryLabel}>Totale Guadagni</Text>
-                <Text style={styles.balanceSecondaryValue}>€ {totalEarnings.toFixed(2)}</Text>
-              </View>
-            </View>
-          </View>
 
-          <Button
-            title="Richiedi Pagamento"
-            variant="primary"
-            onPress={() => setShowPayoutModal(true)}
-            icon={<Ionicons name="wallet-outline" size={18} color={colors.primaryForeground} />}
-          />
-        </Card>
+            <Button
+              title="Richiedi Pagamento"
+              variant="primary"
+              onPress={() => setShowPayoutModal(true)}
+              icon={<Ionicons name="wallet-outline" size={18} color={colors.primaryForeground} />}
+              testID="button-request-payout"
+            />
+          </Card>
+
+          {isLandscape && (
+            <Card style={styles.infoCardLandscape} testID="card-info-landscape">
+              <View style={styles.infoHeader}>
+                <Ionicons name="information-circle" size={20} color={colors.purple} />
+                <Text style={styles.infoTitle}>Come funziona</Text>
+              </View>
+              <Text style={styles.infoText}>
+                Le commissioni vengono accreditate dopo che l'evento è terminato e verificato.
+              </Text>
+              <View style={styles.infoStats}>
+                <View style={styles.infoStatItem}>
+                  <Text style={styles.infoStatLabel}>Commissione ospite</Text>
+                  <Text style={styles.infoStatValue}>€5.00</Text>
+                </View>
+                <View style={styles.infoStatItem}>
+                  <Text style={styles.infoStatLabel}>Commissione tavolo</Text>
+                  <Text style={styles.infoStatValue}>10%</Text>
+                </View>
+              </View>
+            </Card>
+          )}
+        </View>
 
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'transactions' && styles.tabActive]}
             onPress={() => setActiveTab('transactions')}
+            testID="tab-transactions"
           >
             <Text style={[styles.tabText, activeTab === 'transactions' && styles.tabTextActive]}>
               Movimenti
@@ -166,6 +195,7 @@ export function PRWalletScreen() {
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'payouts' && styles.tabActive]}
             onPress={() => setActiveTab('payouts')}
+            testID="tab-payouts"
           >
             <Text style={[styles.tabText, activeTab === 'payouts' && styles.tabTextActive]}>
               Richieste Pagamento
@@ -174,10 +204,10 @@ export function PRWalletScreen() {
         </View>
 
         {activeTab === 'transactions' ? (
-          <Card style={styles.transactionsCard}>
+          <Card style={styles.transactionsCard} testID="card-transactions">
             {mockTransactions.map((transaction, index) => (
               <React.Fragment key={transaction.id}>
-                <View style={styles.transactionItem}>
+                <View style={styles.transactionItem} testID={`transaction-${transaction.id}`}>
                   <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(transaction.type) + '20' }]}>
                     <Ionicons 
                       name={getTransactionIcon(transaction.type)} 
@@ -211,10 +241,10 @@ export function PRWalletScreen() {
             ))}
           </Card>
         ) : (
-          <Card style={styles.transactionsCard}>
+          <Card style={styles.transactionsCard} testID="card-payouts">
             {mockPayoutRequests.map((request, index) => (
               <React.Fragment key={request.id}>
-                <View style={styles.payoutItem}>
+                <View style={styles.payoutItem} testID={`payout-${request.id}`}>
                   <View style={styles.payoutInfo}>
                     <Text style={styles.payoutAmount}>{request.amount}</Text>
                     <Text style={styles.payoutMethod}>{request.method}</Text>
@@ -246,26 +276,28 @@ export function PRWalletScreen() {
           </Card>
         )}
 
-        <Card style={styles.infoCard}>
-          <View style={styles.infoHeader}>
-            <Ionicons name="information-circle" size={20} color={colors.purple} />
-            <Text style={styles.infoTitle}>Come funziona</Text>
-          </View>
-          <Text style={styles.infoText}>
-            Le commissioni vengono accreditate dopo che l'evento è terminato e verificato. 
-            Puoi richiedere un pagamento quando il tuo saldo disponibile supera €50.
-          </Text>
-          <View style={styles.infoStats}>
-            <View style={styles.infoStatItem}>
-              <Text style={styles.infoStatLabel}>Commissione ospite</Text>
-              <Text style={styles.infoStatValue}>€5.00</Text>
+        {!isLandscape && (
+          <Card style={styles.infoCard} testID="card-info">
+            <View style={styles.infoHeader}>
+              <Ionicons name="information-circle" size={20} color={colors.purple} />
+              <Text style={styles.infoTitle}>Come funziona</Text>
             </View>
-            <View style={styles.infoStatItem}>
-              <Text style={styles.infoStatLabel}>Commissione tavolo</Text>
-              <Text style={styles.infoStatValue}>10%</Text>
+            <Text style={styles.infoText}>
+              Le commissioni vengono accreditate dopo che l'evento è terminato e verificato. 
+              Puoi richiedere un pagamento quando il tuo saldo disponibile supera €50.
+            </Text>
+            <View style={styles.infoStats}>
+              <View style={styles.infoStatItem}>
+                <Text style={styles.infoStatLabel}>Commissione ospite</Text>
+                <Text style={styles.infoStatValue}>€5.00</Text>
+              </View>
+              <View style={styles.infoStatItem}>
+                <Text style={styles.infoStatLabel}>Commissione tavolo</Text>
+                <Text style={styles.infoStatValue}>10%</Text>
+              </View>
             </View>
-          </View>
-        </Card>
+          </Card>
+        )}
       </ScrollView>
 
       <Modal
@@ -275,10 +307,10 @@ export function PRWalletScreen() {
         onRequestClose={() => setShowPayoutModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Richiedi Pagamento</Text>
-              <TouchableOpacity onPress={() => setShowPayoutModal(false)}>
+              <TouchableOpacity onPress={() => setShowPayoutModal(false)} testID="button-close-modal">
                 <Ionicons name="close" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
@@ -295,6 +327,7 @@ export function PRWalletScreen() {
               onChangeText={setPayoutAmount}
               keyboardType="decimal-pad"
               leftIcon={<Text style={styles.currencySymbol}>€</Text>}
+              testID="input-payout-amount"
             />
 
             <View style={styles.quickAmounts}>
@@ -303,6 +336,7 @@ export function PRWalletScreen() {
                   key={amount}
                   style={styles.quickAmountButton}
                   onPress={() => setPayoutAmount(amount.toString())}
+                  testID={`button-amount-${amount === availableBalance ? 'all' : amount}`}
                 >
                   <Text style={styles.quickAmountText}>
                     {amount === availableBalance ? 'Tutto' : `€${amount}`}
@@ -329,18 +363,20 @@ export function PRWalletScreen() {
                 variant="outline"
                 onPress={() => setShowPayoutModal(false)}
                 style={{ flex: 1 }}
+                testID="button-cancel-payout"
               />
               <Button
                 title="Richiedi"
                 variant="primary"
                 onPress={handleRequestPayout}
                 style={{ flex: 1 }}
+                testID="button-confirm-payout"
               />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -356,8 +392,23 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
   },
+  contentLandscape: {
+    paddingHorizontal: spacing.xl,
+  },
+  topSection: {},
+  topSectionLandscape: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
   balanceCard: {
     padding: spacing.lg,
+  },
+  balanceCardLandscape: {
+    flex: 1,
+  },
+  infoCardLandscape: {
+    flex: 1,
+    padding: spacing.md,
   },
   balanceMain: {
     alignItems: 'center',
@@ -570,6 +621,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',

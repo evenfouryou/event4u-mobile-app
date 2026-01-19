@@ -9,10 +9,11 @@ import {
   RefreshControl,
   Alert,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Card, Header } from '../../components';
 import { api } from '../../lib/api';
@@ -39,7 +40,9 @@ interface EventDetail {
 
 export function AdminEventDetailScreen() {
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const eventId = route.params?.eventId;
   
   const [loading, setLoading] = useState(true);
@@ -147,157 +150,167 @@ export function AdminEventDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Evento" showBack />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <ActivityIndicator size="large" color={colors.primary} testID="loading-indicator" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!event) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <Header title="Dettaglio Evento" showBack />
-        <View style={styles.emptyContainer}>
+        <View style={styles.emptyContainer} testID="empty-container">
           <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Evento non trovato</Text>
+          <Text style={styles.emptyText} testID="text-not-found">Evento non trovato</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Header title="Admin: Evento" showBack />
       
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isTablet || isLandscape) && styles.scrollContentWide,
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        testID="scroll-view"
       >
-        {event.imageUrl ? (
-          <Image source={{ uri: event.imageUrl }} style={styles.heroImage} />
-        ) : (
-          <View style={[styles.heroImage, styles.heroPlaceholder]}>
-            <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
-          </View>
-        )}
-
-        <View style={styles.headerSection}>
-          <Text style={styles.eventName}>{event.name}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(event.status)}20` }]}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(event.status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(event.status) }]}>
-              {getStatusLabel(event.status)}
-            </Text>
-          </View>
-        </View>
-
-        <Card variant="glass" style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={20} color={colors.primary} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Data e Ora</Text>
-              <Text style={styles.infoValue}>{formatDate(event.date)}</Text>
-            </View>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={20} color={colors.primary} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{event.venueName}</Text>
-              <Text style={styles.infoSubvalue}>{event.venueAddress}</Text>
-            </View>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Ionicons name="business-outline" size={20} color={colors.primary} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Organizzatore</Text>
-              <Text style={styles.infoValue}>{event.organizerName}</Text>
-              <Text style={styles.infoSubvalue}>{event.organizerEmail}</Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={styles.statsRow}>
-          <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="ticket-outline" size={24} color={colors.primary} />
-            <Text style={styles.statValue}>{event.ticketsSold} / {event.totalCapacity}</Text>
-            <Text style={styles.statLabel}>Biglietti</Text>
-          </Card>
-          <Card variant="glass" style={styles.statCard}>
-            <Ionicons name="cash-outline" size={24} color={colors.teal} />
-            <Text style={[styles.statValue, { color: colors.teal }]}>{formatCurrency(event.revenue)}</Text>
-            <Text style={styles.statLabel}>Ricavi</Text>
-          </Card>
-        </View>
-
-        {event.siaeEnabled && (
-          <Card variant="glass" style={styles.siaeCard}>
-            <View style={styles.siaeHeader}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.accent} />
-              <Text style={styles.siaeTitle}>Integrazione SIAE</Text>
-            </View>
-            <View style={styles.siaeStatus}>
-              <Text style={styles.siaeLabel}>Stato Report:</Text>
-              <Text style={[styles.siaeValue, { color: event.siaeReportStatus === 'approved' ? colors.success : colors.warning }]}>
-                {event.siaeReportStatus === 'pending' ? 'In Attesa' : event.siaeReportStatus === 'submitted' ? 'Inviato' : 'Approvato'}
-              </Text>
-            </View>
-          </Card>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Azioni Admin</Text>
-          <View style={styles.actionsGrid}>
-            {event.status !== 'published' && (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: `${colors.success}20`, borderColor: colors.success }]}
-                onPress={() => handleStatusChange('published')}
-                data-testid="button-publish"
-              >
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
-                <Text style={[styles.actionButtonText, { color: colors.success }]}>Pubblica</Text>
-              </TouchableOpacity>
+        <View style={(isTablet || isLandscape) ? styles.layoutRow : undefined}>
+          <View style={(isTablet || isLandscape) ? styles.leftColumn : undefined}>
+            {event.imageUrl ? (
+              <Image source={{ uri: event.imageUrl }} style={[styles.heroImage, (isTablet || isLandscape) && styles.heroImageWide]} testID="image-hero" />
+            ) : (
+              <View style={[styles.heroImage, styles.heroPlaceholder, (isTablet || isLandscape) && styles.heroImageWide]} testID="placeholder-hero">
+                <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
+              </View>
             )}
-            {event.status !== 'cancelled' && (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: `${colors.destructive}20`, borderColor: colors.destructive }]}
-                onPress={() => handleStatusChange('cancelled')}
-                data-testid="button-cancel"
-              >
-                <Ionicons name="close-circle-outline" size={20} color={colors.destructive} />
-                <Text style={[styles.actionButtonText, { color: colors.destructive }]}>Annulla</Text>
-              </TouchableOpacity>
+
+            <View style={styles.headerSection}>
+              <Text style={styles.eventName} testID="text-event-name">{event.name}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(event.status)}20` }]}>
+                <View style={[styles.statusDot, { backgroundColor: getStatusColor(event.status) }]} />
+                <Text style={[styles.statusText, { color: getStatusColor(event.status) }]} testID="text-status">
+                  {getStatusLabel(event.status)}
+                </Text>
+              </View>
+            </View>
+
+            <Card variant="glass" style={styles.infoCard} testID="card-info">
+              <View style={styles.infoRow}>
+                <Ionicons name="time-outline" size={20} color={colors.primary} />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Data e Ora</Text>
+                  <Text style={styles.infoValue} testID="text-date">{formatDate(event.date)}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Ionicons name="location-outline" size={20} color={colors.primary} />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Location</Text>
+                  <Text style={styles.infoValue} testID="text-venue">{event.venueName}</Text>
+                  <Text style={styles.infoSubvalue}>{event.venueAddress}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Ionicons name="business-outline" size={20} color={colors.primary} />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Organizzatore</Text>
+                  <Text style={styles.infoValue} testID="text-organizer">{event.organizerName}</Text>
+                  <Text style={styles.infoSubvalue}>{event.organizerEmail}</Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+
+          <View style={(isTablet || isLandscape) ? styles.rightColumn : undefined}>
+            <View style={[styles.statsRow, (isTablet || isLandscape) && styles.statsRowVertical]}>
+              <Card variant="glass" style={styles.statCard} testID="card-tickets">
+                <Ionicons name="ticket-outline" size={24} color={colors.primary} />
+                <Text style={styles.statValue} testID="text-tickets">{event.ticketsSold} / {event.totalCapacity}</Text>
+                <Text style={styles.statLabel}>Biglietti</Text>
+              </Card>
+              <Card variant="glass" style={styles.statCard} testID="card-revenue">
+                <Ionicons name="cash-outline" size={24} color={colors.teal} />
+                <Text style={[styles.statValue, { color: colors.teal }]} testID="text-revenue">{formatCurrency(event.revenue)}</Text>
+                <Text style={styles.statLabel}>Ricavi</Text>
+              </Card>
+            </View>
+
+            {event.siaeEnabled && (
+              <Card variant="glass" style={styles.siaeCard} testID="card-siae">
+                <View style={styles.siaeHeader}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color={colors.accent} />
+                  <Text style={styles.siaeTitle}>Integrazione SIAE</Text>
+                </View>
+                <View style={styles.siaeStatus}>
+                  <Text style={styles.siaeLabel}>Stato Report:</Text>
+                  <Text style={[styles.siaeValue, { color: event.siaeReportStatus === 'approved' ? colors.success : colors.warning }]} testID="text-siae-status">
+                    {event.siaeReportStatus === 'pending' ? 'In Attesa' : event.siaeReportStatus === 'submitted' ? 'Inviato' : 'Approvato'}
+                  </Text>
+                </View>
+              </Card>
             )}
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: `${colors.warning}20`, borderColor: colors.warning }]}
-              onPress={() => Alert.alert('Modifica', 'Funzionalità in sviluppo')}
-              data-testid="button-edit"
-            >
-              <Ionicons name="create-outline" size={20} color={colors.warning} />
-              <Text style={[styles.actionButtonText, { color: colors.warning }]}>Modifica</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: `${colors.primary}20`, borderColor: colors.primary }]}
-              onPress={() => Alert.alert('Rimborso', 'Funzionalità in sviluppo')}
-              data-testid="button-refund"
-            >
-              <Ionicons name="refresh-outline" size={20} color={colors.primary} />
-              <Text style={[styles.actionButtonText, { color: colors.primary }]}>Rimborsi</Text>
-            </TouchableOpacity>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Azioni Admin</Text>
+              <View style={[styles.actionsGrid, (isTablet || isLandscape) && styles.actionsGridVertical]}>
+                {event.status !== 'published' && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: `${colors.success}20`, borderColor: colors.success }]}
+                    onPress={() => handleStatusChange('published')}
+                    testID="button-publish"
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
+                    <Text style={[styles.actionButtonText, { color: colors.success }]}>Pubblica</Text>
+                  </TouchableOpacity>
+                )}
+                {event.status !== 'cancelled' && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: `${colors.destructive}20`, borderColor: colors.destructive }]}
+                    onPress={() => handleStatusChange('cancelled')}
+                    testID="button-cancel"
+                  >
+                    <Ionicons name="close-circle-outline" size={20} color={colors.destructive} />
+                    <Text style={[styles.actionButtonText, { color: colors.destructive }]}>Annulla</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: `${colors.warning}20`, borderColor: colors.warning }]}
+                  onPress={() => Alert.alert('Modifica', 'Funzionalità in sviluppo')}
+                  testID="button-edit"
+                >
+                  <Ionicons name="create-outline" size={20} color={colors.warning} />
+                  <Text style={[styles.actionButtonText, { color: colors.warning }]}>Modifica</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: `${colors.primary}20`, borderColor: colors.primary }]}
+                  onPress={() => Alert.alert('Rimborso', 'Funzionalità in sviluppo')}
+                  testID="button-refund"
+                >
+                  <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+                  <Text style={[styles.actionButtonText, { color: colors.primary }]}>Rimborsi</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -307,6 +320,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  scrollContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: spacing.lg,
+  },
+  layoutRow: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  rightColumn: {
     flex: 1,
   },
   loadingContainer: {
@@ -332,6 +364,11 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: 200,
+  },
+  heroImageWide: {
+    height: 250,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
   },
   heroPlaceholder: {
     backgroundColor: colors.muted,
@@ -408,6 +445,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
+  statsRowVertical: {
+    flexDirection: 'column',
+    paddingHorizontal: 0,
+  },
   statCard: {
     flex: 1,
     alignItems: 'center',
@@ -465,6 +506,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  actionsGridVertical: {
+    flexDirection: 'column',
   },
   actionButton: {
     flex: 1,
