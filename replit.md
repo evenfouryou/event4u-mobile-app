@@ -23,6 +23,14 @@ The core data model links Companies to Users, Locations, Events, Products, and P
 ### SIAE Ticketing Module
 A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations. It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types. The system includes robust auto-correction and pre-transmission validation for SIAE XML, including DTD validation and system code checks, to prevent common errors and ensure consistent system codes. This validation also prevents RPM reports from being sent for future months or including future events. System code resolution actively reads the EFFF file from the Smart Card for S/MIME signed transmissions to ensure correctness.
 
+### International Operating Mode
+The system supports international ticket sales with SIAE exemption through a flexible operating mode system:
+-   **Operating Modes**: Gestori can choose between `italy_only` (default), `international_only`, or `hybrid` mode during registration or via admin settings.
+-   **Registration Choice**: During gestore registration, users select their operating territory (Solo Italia, Solo Estero, Italia + Estero).
+-   **Per-Event Override**: In hybrid mode, individual events can be marked as `isInternational` to bypass SIAE requirements.
+-   **SIAE Auto-Skip**: The scheduler and routes automatically skip report generation (RMG, RPM, RCA) for international events and international_only companies.
+-   **Admin Control**: Super Admin can modify a gestore's operating mode via the Admin Gestori page.
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 
