@@ -548,19 +548,7 @@ async function sendDailyReports() {
         }
         
         // RMG = Riepilogo Giornaliero: genera nome file PRIMA di generateXMLContent per coerenza
-        // DEBUG 2026-01-19: Log parametri generazione nome file RMG scheduler
-        log(`[DEBUG-0600] ====== SCHEDULER RMG GENERAZIONE NOME FILE ======`);
-        log(`[DEBUG-0600] Input: yesterday=${yesterday?.toISOString?.() || yesterday}, progressivo=${progressivo}, systemCode=${systemCode}`);
-        
         let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
-        
-        log(`[DEBUG-0600] fileName GENERATO: ${fileName}`);
-        const schedulerFileNameParts = fileName.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
-        log(`[DEBUG-0600] fileName PARTI: ${schedulerFileNameParts.length} parti -> [${schedulerFileNameParts.join(', ')}]`);
-        if (schedulerFileNameParts.length !== 4) {
-          log(`[DEBUG-0600] ERRORE CRITICO: Nome file ha ${schedulerFileNameParts.length} parti invece di 4!`);
-        }
-        log(`[DEBUG-0600] ================================================`);
         
         // FIX 2026-01-19: Validazione formato nome file SIAE prima dell'invio
         const fileNameValidation = validateSiaeFileName(fileName);

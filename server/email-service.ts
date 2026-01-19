@@ -477,26 +477,11 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const useRawXmlForSmime = signWithSmime;
   const effectiveSignatureFormat = useRawXmlForSmime ? null : (isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null));
   
-  // DEBUG 2026-01-19: Log parametri PRIMA della generazione nome file
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] ====== GENERAZIONE NOME FILE EMAIL ======`);
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] Input: reportType=${reportType}, periodDate=${periodDate?.toISOString?.() || periodDate}, sequenceNumber=${sequenceNumber}, systemCode=${systemCode}`);
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] effectiveSignatureFormat=${effectiveSignatureFormat}`);
-  
   const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
-  
-  // DEBUG 2026-01-19: Verifica formato nome file generato
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] fileName GENERATO: ${fileName}`);
-  const fileNameParts = fileName.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] fileName PARTI: ${fileNameParts.length} parti -> [${fileNameParts.join(', ')}]`);
-  if (fileNameParts.length !== 4) {
-    console.error(`[EMAIL-SERVICE] [DEBUG-0600] ERRORE CRITICO: Nome file ha ${fileNameParts.length} parti invece di 4! Questo causa errore SIAE 0600!`);
-  }
   
   // Subject conforme a RFC-2822 SIAE (Sezione 1.5.3)
   // FIX 2026-01-16: Subject DEVE essere uguale al nome file senza estensione (errore 0603)
   const emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] emailSubject GENERATO: ${emailSubject}`);
-  console.log(`[EMAIL-SERVICE] [DEBUG-0600] ==========================================`);
   
   // Validazione coerenza subject/filename per prevenire errore SIAE 0603
   const fileNameBase = fileName.replace(/\.xsi(\.p7m)?$/, '');
