@@ -8143,6 +8143,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GitHub: Update Mobile App repository
+  app.post('/api/github/update-mobile-app', async (req: any, res) => {
+    try {
+      const { updateMobileAppRepo } = await import('./github-push-mobile');
+      const result = await updateMobileAppRepo();
+      
+      if (result.success) {
+        res.json({ success: true, repoUrl: result.repoUrl, filesUploaded: result.filesUploaded });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error('GitHub mobile app update error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // ===== BRIDGE RELAY API =====
   
   // Get or generate a bridge token for the current user's company
