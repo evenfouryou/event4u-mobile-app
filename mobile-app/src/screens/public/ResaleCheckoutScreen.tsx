@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Alert, useWindowDimensions } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Button, Card, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -31,7 +31,9 @@ interface ResaleDetail {
 export function ResaleCheckoutScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { resaleId } = route.params;
 
   const [selectedQuantity, setSelectedQuantity] = useState(1);
@@ -98,79 +100,105 @@ export function ResaleCheckoutScreen() {
     );
   };
 
+  const contentMaxWidth = isTablet ? 600 : undefined;
+
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header title="Acquista Biglietto" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <Header 
+          title="Acquista Biglietto" 
+          showBack 
+          onBack={() => navigation.goBack()} 
+          testID="header-resale-checkout"
+        />
+        <View style={styles.loadingContainer} testID="container-loading">
           <View style={styles.skeletonCard} />
           <View style={styles.skeletonCard} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!resale) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom', 'left', 'right']}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
-        <Text style={styles.errorText}>Biglietto non trovato</Text>
-        <Button title="Torna indietro" onPress={() => navigation.goBack()} />
-      </View>
+        <Text style={styles.errorText} testID="text-error-not-found">Biglietto non trovato</Text>
+        <Button 
+          title="Torna indietro" 
+          onPress={() => navigation.goBack()} 
+          testID="button-go-back"
+        />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Header title="Acquista Biglietto" showBack onBack={() => navigation.goBack()} />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <Header 
+        title="Acquista Biglietto" 
+        showBack 
+        onBack={() => navigation.goBack()} 
+        testID="header-resale-checkout"
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 140 },
+          isTablet && styles.tabletScrollContent,
+        ]}
+        testID="scrollview-resale-checkout"
       >
-        <View style={styles.content}>
-          <Card style={styles.eventCard}>
+        <View style={[
+          styles.content,
+          isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+          isLandscape && styles.landscapeContent,
+        ]}>
+          <Card style={styles.eventCard} testID="card-event-info">
             <Image
               source={{ uri: resale.eventImageUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' }}
               style={styles.eventImage}
+              testID="image-event"
             />
             <View style={styles.eventInfo}>
-              <Text style={styles.eventTitle}>{resale.eventTitle}</Text>
+              <Text style={styles.eventTitle} testID="text-event-title">{resale.eventTitle}</Text>
               <View style={styles.infoRow}>
                 <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.infoText}>{resale.eventDate} • {resale.eventTime}</Text>
+                <Text style={styles.infoText} testID="text-event-datetime">{resale.eventDate} • {resale.eventTime}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.infoText}>{resale.eventLocation}</Text>
+                <Text style={styles.infoText} testID="text-event-location">{resale.eventLocation}</Text>
               </View>
             </View>
           </Card>
 
-          <Card style={styles.ticketCard}>
+          <Card style={styles.ticketCard} testID="card-ticket-info">
             <View style={styles.ticketHeader}>
               <View>
-                <Text style={styles.ticketType}>{resale.ticketType}</Text>
+                <Text style={styles.ticketType} testID="text-ticket-type">{resale.ticketType}</Text>
                 {resale.isVerified && (
-                  <View style={styles.verifiedBadge}>
+                  <View style={styles.verifiedBadge} testID="badge-verified">
                     <Ionicons name="shield-checkmark" size={14} color={colors.success} />
                     <Text style={styles.verifiedText}>Verificato</Text>
                   </View>
                 )}
               </View>
               <View style={styles.priceInfo}>
-                <Text style={styles.resalePrice}>€{resale.resalePrice.toFixed(2)}</Text>
-                <Text style={styles.originalPrice}>
+                <Text style={styles.resalePrice} testID="text-resale-price">€{resale.resalePrice.toFixed(2)}</Text>
+                <Text style={styles.originalPrice} testID="text-original-price">
                   Orig. €{resale.originalPrice.toFixed(2)}
                 </Text>
               </View>
             </View>
 
             {resale.description && (
-              <Text style={styles.ticketDescription}>{resale.description}</Text>
+              <Text style={styles.ticketDescription} testID="text-ticket-description">{resale.description}</Text>
             )}
 
-            <View style={styles.transferInfo}>
+            <View style={styles.transferInfo} testID="container-transfer-info">
               <Ionicons
                 name={resale.transferMethod === 'digital' ? 'phone-portrait-outline' : 'mail-outline'}
                 size={16}
@@ -190,7 +218,7 @@ export function ResaleCheckoutScreen() {
                   style={styles.quantityButton}
                   onPress={() => handleQuantityChange(-1)}
                   disabled={selectedQuantity <= 1}
-                  data-testid="button-decrease-quantity"
+                  testID="button-decrease-quantity"
                 >
                   <Ionicons
                     name="remove"
@@ -198,12 +226,12 @@ export function ResaleCheckoutScreen() {
                     color={selectedQuantity > 1 ? colors.foreground : colors.mutedForeground}
                   />
                 </TouchableOpacity>
-                <Text style={styles.quantityText}>{selectedQuantity}</Text>
+                <Text style={styles.quantityText} testID="text-quantity">{selectedQuantity}</Text>
                 <TouchableOpacity
                   style={styles.quantityButton}
                   onPress={() => handleQuantityChange(1)}
                   disabled={selectedQuantity >= resale.quantity}
-                  data-testid="button-increase-quantity"
+                  testID="button-increase-quantity"
                 >
                   <Ionicons
                     name="add"
@@ -212,29 +240,29 @@ export function ResaleCheckoutScreen() {
                   />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.availableText}>{resale.quantity} disponibili</Text>
+              <Text style={styles.availableText} testID="text-available-quantity">{resale.quantity} disponibili</Text>
             </View>
           </Card>
 
-          <Card style={styles.sellerCard}>
+          <Card style={styles.sellerCard} testID="card-seller-info">
             <Text style={styles.sectionTitle}>Venditore</Text>
             <View style={styles.sellerInfo}>
               <View style={styles.sellerAvatar}>
                 <Ionicons name="person" size={24} color={colors.mutedForeground} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sellerName}>{resale.sellerName}</Text>
+                <Text style={styles.sellerName} testID="text-seller-name">{resale.sellerName}</Text>
                 {resale.sellerRating && (
                   <View style={styles.sellerRating}>
                     <Ionicons name="star" size={14} color={colors.warning} />
-                    <Text style={styles.ratingText}>{resale.sellerRating.toFixed(1)}</Text>
+                    <Text style={styles.ratingText} testID="text-seller-rating">{resale.sellerRating.toFixed(1)}</Text>
                   </View>
                 )}
               </View>
             </View>
           </Card>
 
-          <Card style={styles.guaranteeCard}>
+          <Card style={styles.guaranteeCard} testID="card-guarantee">
             <View style={styles.guaranteeRow}>
               <Ionicons name="shield-checkmark" size={24} color={colors.success} />
               <View style={{ flex: 1 }}>
@@ -248,28 +276,32 @@ export function ResaleCheckoutScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[
+        styles.bottomBar,
+        isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+      ]} testID="container-bottom-bar">
         <View style={styles.summaryContainer}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Biglietti ({selectedQuantity}x)</Text>
-            <Text style={styles.summaryValue}>€{getTotalPrice().toFixed(2)}</Text>
+            <Text style={styles.summaryValue} testID="text-subtotal">€{getTotalPrice().toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Commissione servizio</Text>
-            <Text style={styles.summaryValue}>€{getServiceFee().toFixed(2)}</Text>
+            <Text style={styles.summaryValue} testID="text-service-fee">€{getServiceFee().toFixed(2)}</Text>
           </View>
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Totale</Text>
-            <Text style={styles.totalValue}>€{getGrandTotal().toFixed(2)}</Text>
+            <Text style={styles.totalValue} testID="text-grand-total">€{getGrandTotal().toFixed(2)}</Text>
           </View>
         </View>
         <Button
           title="Procedi all'acquisto"
           onPress={handlePurchase}
           loading={purchaseMutation.isPending}
+          testID="button-proceed-purchase"
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -283,9 +315,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  tabletScrollContent: {
+    paddingHorizontal: spacing.xl,
+  },
   content: {
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  landscapeContent: {
+    paddingHorizontal: spacing.xl,
   },
   loadingContainer: {
     padding: spacing.lg,

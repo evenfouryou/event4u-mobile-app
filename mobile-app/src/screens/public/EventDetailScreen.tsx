@@ -1,14 +1,12 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Button, Card } from '../../components';
 import { api } from '../../lib/api';
-
-const { width, height } = Dimensions.get('window');
 
 interface TicketType {
   id: string;
@@ -38,7 +36,9 @@ interface Event {
 export function EventDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { eventId } = route.params;
 
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
@@ -91,168 +91,369 @@ export function EventDetailScreen() {
     }
   };
 
+  const imageHeight = isLandscape || isTablet ? height * 0.9 : height * 0.4;
+  const imageWidth = isLandscape || isTablet ? width * 0.4 : width;
+
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.skeletonImage} />
-        <View style={styles.skeletonContent}>
-          <View style={styles.skeletonTitle} />
-          <View style={styles.skeletonText} />
-          <View style={styles.skeletonText} />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={styles.container} testID="screen-event-detail-loading">
+          {(isLandscape || isTablet) ? (
+            <View style={styles.landscapeContainer}>
+              <View style={[styles.skeletonImage, { width: imageWidth, height: '100%' }]} />
+              <View style={styles.landscapeContent}>
+                <View style={styles.skeletonContent}>
+                  <View style={styles.skeletonTitle} />
+                  <View style={styles.skeletonText} />
+                  <View style={styles.skeletonText} />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={[styles.skeletonImage, { height: imageHeight }]} />
+              <View style={styles.skeletonContent}>
+                <View style={styles.skeletonTitle} />
+                <View style={styles.skeletonText} />
+                <View style={styles.skeletonText} />
+              </View>
+            </>
+          )}
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!event) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
-        <Text style={styles.errorText}>Evento non trovato</Text>
-        <Button title="Torna indietro" onPress={() => navigation.goBack()} />
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[styles.container, styles.centered]} testID="screen-event-detail-error">
+          <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.errorText} testID="text-error-message">Evento non trovato</Text>
+          <Button 
+            title="Torna indietro" 
+            onPress={() => navigation.goBack()} 
+            testID="button-go-back"
+          />
+        </View>
+      </SafeAreaView>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+  const renderImageSection = () => (
+    <View style={[
+      styles.imageContainer,
+      (isLandscape || isTablet) ? { width: imageWidth, height: '100%' } : { height: imageHeight }
+    ]}>
+      <Image
+        source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800' }}
+        style={styles.heroImage}
+        testID="image-event-hero"
+      />
+      <View style={styles.imageOverlay} />
+      <TouchableOpacity
+        style={[styles.backButton, { top: spacing.lg }]}
+        onPress={() => navigation.goBack()}
+        testID="button-back"
+        accessibilityLabel="Torna indietro"
+        accessibilityRole="button"
       >
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800' }}
-            style={styles.heroImage}
-          />
-          <View style={styles.imageOverlay} />
-          <TouchableOpacity
-            style={[styles.backButton, { top: insets.top + spacing.sm }]}
-            onPress={() => navigation.goBack()}
-            data-testid="button-back"
+        <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.shareButton, { top: spacing.lg }]}
+        testID="button-share"
+        accessibilityLabel="Condividi evento"
+        accessibilityRole="button"
+      >
+        <Ionicons name="share-outline" size={24} color={colors.foreground} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderDetailsContent = () => (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[
+        styles.scrollContent,
+        (isLandscape || isTablet) && styles.scrollContentLandscape,
+      ]}
+      testID="scrollview-event-details"
+    >
+      <View style={[
+        styles.content,
+        (isLandscape || isTablet) && styles.contentLandscape,
+      ]}>
+        <Text style={[
+          styles.title,
+          isTablet && styles.titleTablet,
+        ]} testID="text-event-title">{event.title}</Text>
+
+        <View style={styles.infoSection}>
+          <View style={styles.infoRow} testID="row-event-datetime">
+            <View style={styles.infoIcon}>
+              <Ionicons name="calendar" size={20} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.infoLabel}>Data e Ora</Text>
+              <Text style={styles.infoValue} testID="text-event-datetime">
+                {event.date} • {event.time}
+                {event.endTime && ` - ${event.endTime}`}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.infoRow} 
+            onPress={handleVenuePress}
+            testID="button-venue"
+            accessibilityLabel={`Vai al luogo: ${event.venueName || event.location}`}
+            accessibilityRole="button"
           >
-            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+            <View style={styles.infoIcon}>
+              <Ionicons name="location" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoLabel}>Luogo</Text>
+              <Text style={styles.infoValue} testID="text-event-venue">{event.venueName || event.location}</Text>
+              <Text style={styles.infoAddress} testID="text-event-address">{event.address}</Text>
+            </View>
+            {event.venueId && (
+              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+            )}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.shareButton, { top: insets.top + spacing.sm }]}
-            data-testid="button-share"
-          >
-            <Ionicons name="share-outline" size={24} color={colors.foreground} />
-          </TouchableOpacity>
+
+          <View style={styles.infoRow} testID="row-event-organizer">
+            <View style={styles.infoIcon}>
+              <Ionicons name="person" size={20} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.infoLabel}>Organizzatore</Text>
+              <Text style={styles.infoValue} testID="text-event-organizer">{event.organizer}</Text>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.title}>{event.title}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Descrizione</Text>
+          <Text style={styles.description} testID="text-event-description">{event.description}</Text>
+        </View>
 
-          <View style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <View style={styles.infoIcon}>
-                <Ionicons name="calendar" size={20} color={colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Data e Ora</Text>
-                <Text style={styles.infoValue}>
-                  {event.date} • {event.time}
-                  {event.endTime && ` - ${event.endTime}`}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Biglietti</Text>
+          {(event.ticketTypes || []).map((ticket) => (
+            <Card key={ticket.id} style={styles.ticketCard} testID={`card-ticket-${ticket.id}`}>
+              <View style={styles.ticketInfo}>
+                <Text style={styles.ticketName} testID={`text-ticket-name-${ticket.id}`}>{ticket.name}</Text>
+                {ticket.description && (
+                  <Text style={styles.ticketDescription} testID={`text-ticket-desc-${ticket.id}`}>{ticket.description}</Text>
+                )}
+                <Text style={styles.ticketPrice} testID={`text-ticket-price-${ticket.id}`}>€{ticket.price.toFixed(2)}</Text>
+                <Text style={styles.ticketAvailable} testID={`text-ticket-available-${ticket.id}`}>
+                  {ticket.available > 0 ? `${ticket.available} disponibili` : 'Esaurito'}
                 </Text>
               </View>
-            </View>
-
-            <TouchableOpacity style={styles.infoRow} onPress={handleVenuePress}>
-              <View style={styles.infoIcon}>
-                <Ionicons name="location" size={20} color={colors.primary} />
+              <View style={styles.quantityControls}>
+                <TouchableOpacity
+                  style={[
+                    styles.quantityButton,
+                    !selectedTickets[ticket.id] && styles.quantityButtonDisabled,
+                  ]}
+                  onPress={() => handleTicketQuantityChange(ticket.id, -1)}
+                  disabled={!selectedTickets[ticket.id]}
+                  testID={`button-decrease-${ticket.id}`}
+                  accessibilityLabel={`Riduci quantità per ${ticket.name}`}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="remove"
+                    size={20}
+                    color={selectedTickets[ticket.id] ? colors.foreground : colors.mutedForeground}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.quantityText} testID={`text-quantity-${ticket.id}`}>
+                  {selectedTickets[ticket.id] || 0}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.quantityButton,
+                    ticket.available === 0 && styles.quantityButtonDisabled,
+                  ]}
+                  onPress={() => handleTicketQuantityChange(ticket.id, 1)}
+                  disabled={ticket.available === 0}
+                  testID={`button-increase-${ticket.id}`}
+                  accessibilityLabel={`Aumenta quantità per ${ticket.name}`}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="add"
+                    size={20}
+                    color={ticket.available > 0 ? colors.foreground : colors.mutedForeground}
+                  />
+                </TouchableOpacity>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel}>Luogo</Text>
-                <Text style={styles.infoValue}>{event.venueName || event.location}</Text>
-                <Text style={styles.infoAddress}>{event.address}</Text>
-              </View>
-              {event.venueId && (
-                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoIcon}>
-                <Ionicons name="person" size={20} color={colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Organizzatore</Text>
-                <Text style={styles.infoValue}>{event.organizer}</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Descrizione</Text>
-            <Text style={styles.description}>{event.description}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Biglietti</Text>
-            {(event.ticketTypes || []).map((ticket) => (
-              <Card key={ticket.id} style={styles.ticketCard}>
-                <View style={styles.ticketInfo}>
-                  <Text style={styles.ticketName}>{ticket.name}</Text>
-                  {ticket.description && (
-                    <Text style={styles.ticketDescription}>{ticket.description}</Text>
-                  )}
-                  <Text style={styles.ticketPrice}>€{ticket.price.toFixed(2)}</Text>
-                  <Text style={styles.ticketAvailable}>
-                    {ticket.available > 0 ? `${ticket.available} disponibili` : 'Esaurito'}
-                  </Text>
-                </View>
-                <View style={styles.quantityControls}>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() => handleTicketQuantityChange(ticket.id, -1)}
-                    disabled={!selectedTickets[ticket.id]}
-                    data-testid={`button-decrease-${ticket.id}`}
-                  >
-                    <Ionicons
-                      name="remove"
-                      size={20}
-                      color={selectedTickets[ticket.id] ? colors.foreground : colors.mutedForeground}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.quantityText}>{selectedTickets[ticket.id] || 0}</Text>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() => handleTicketQuantityChange(ticket.id, 1)}
-                    disabled={ticket.available === 0}
-                    data-testid={`button-increase-${ticket.id}`}
-                  >
-                    <Ionicons
-                      name="add"
-                      size={20}
-                      color={ticket.available > 0 ? colors.foreground : colors.mutedForeground}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </Card>
-            ))}
-          </View>
+            </Card>
+          ))}
         </View>
-      </ScrollView>
-
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceLabel}>Totale</Text>
-          <Text style={styles.priceValue}>€{getTotalPrice().toFixed(2)}</Text>
-          <Text style={styles.ticketCount}>{getTotalTickets()} biglietti</Text>
-        </View>
-        <Button
-          title="Aggiungi al Carrello"
-          onPress={handleAddToCart}
-          disabled={getTotalTickets() === 0}
-          style={styles.addToCartButton}
-        />
       </View>
-    </View>
+    </ScrollView>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={styles.container} testID="screen-event-detail">
+        {(isLandscape || isTablet) ? (
+          <View style={styles.landscapeContainer}>
+            {renderImageSection()}
+            <View style={styles.landscapeContent}>
+              {renderDetailsContent()}
+            </View>
+          </View>
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 120 }}
+            testID="scrollview-event-main"
+          >
+            {renderImageSection()}
+            <View style={styles.content}>
+              <Text style={styles.title} testID="text-event-title-portrait">{event.title}</Text>
+
+              <View style={styles.infoSection}>
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Ionicons name="calendar" size={20} color={colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.infoLabel}>Data e Ora</Text>
+                    <Text style={styles.infoValue}>
+                      {event.date} • {event.time}
+                      {event.endTime && ` - ${event.endTime}`}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.infoRow} 
+                  onPress={handleVenuePress}
+                  testID="button-venue-portrait"
+                  accessibilityLabel={`Vai al luogo: ${event.venueName || event.location}`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.infoIcon}>
+                    <Ionicons name="location" size={20} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.infoLabel}>Luogo</Text>
+                    <Text style={styles.infoValue}>{event.venueName || event.location}</Text>
+                    <Text style={styles.infoAddress}>{event.address}</Text>
+                  </View>
+                  {event.venueId && (
+                    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Ionicons name="person" size={20} color={colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.infoLabel}>Organizzatore</Text>
+                    <Text style={styles.infoValue}>{event.organizer}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Descrizione</Text>
+                <Text style={styles.description}>{event.description}</Text>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Biglietti</Text>
+                {(event.ticketTypes || []).map((ticket) => (
+                  <Card key={ticket.id} style={styles.ticketCard} testID={`card-ticket-portrait-${ticket.id}`}>
+                    <View style={styles.ticketInfo}>
+                      <Text style={styles.ticketName}>{ticket.name}</Text>
+                      {ticket.description && (
+                        <Text style={styles.ticketDescription}>{ticket.description}</Text>
+                      )}
+                      <Text style={styles.ticketPrice}>€{ticket.price.toFixed(2)}</Text>
+                      <Text style={styles.ticketAvailable}>
+                        {ticket.available > 0 ? `${ticket.available} disponibili` : 'Esaurito'}
+                      </Text>
+                    </View>
+                    <View style={styles.quantityControls}>
+                      <TouchableOpacity
+                        style={[
+                          styles.quantityButton,
+                          !selectedTickets[ticket.id] && styles.quantityButtonDisabled,
+                        ]}
+                        onPress={() => handleTicketQuantityChange(ticket.id, -1)}
+                        disabled={!selectedTickets[ticket.id]}
+                        testID={`button-decrease-portrait-${ticket.id}`}
+                        accessibilityLabel={`Riduci quantità per ${ticket.name}`}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons
+                          name="remove"
+                          size={20}
+                          color={selectedTickets[ticket.id] ? colors.foreground : colors.mutedForeground}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.quantityText}>{selectedTickets[ticket.id] || 0}</Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.quantityButton,
+                          ticket.available === 0 && styles.quantityButtonDisabled,
+                        ]}
+                        onPress={() => handleTicketQuantityChange(ticket.id, 1)}
+                        disabled={ticket.available === 0}
+                        testID={`button-increase-portrait-${ticket.id}`}
+                        accessibilityLabel={`Aumenta quantità per ${ticket.name}`}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons
+                          name="add"
+                          size={20}
+                          color={ticket.available > 0 ? colors.foreground : colors.mutedForeground}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        )}
+
+        <View style={[
+          styles.bottomBar,
+          (isLandscape || isTablet) && styles.bottomBarLandscape,
+        ]} testID="container-bottom-bar">
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceLabel}>Totale</Text>
+            <Text style={styles.priceValue} testID="text-total-price">€{getTotalPrice().toFixed(2)}</Text>
+            <Text style={styles.ticketCount} testID="text-ticket-count">{getTotalTickets()} biglietti</Text>
+          </View>
+          <Button
+            title="Aggiungi al Carrello"
+            onPress={handleAddToCart}
+            disabled={getTotalTickets() === 0}
+            style={styles.addToCartButton}
+            testID="button-add-to-cart"
+          />
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -262,9 +463,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  landscapeContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  landscapeContent: {
+    flex: 1,
+    paddingBottom: 100,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  scrollContentLandscape: {
+    paddingBottom: spacing.xl,
+  },
   imageContainer: {
     width: '100%',
-    height: height * 0.4,
     position: 'relative',
   },
   heroImage: {
@@ -278,8 +492,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: spacing.md,
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
@@ -288,8 +502,8 @@ const styles = StyleSheet.create({
   shareButton: {
     position: 'absolute',
     right: spacing.md,
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
@@ -298,11 +512,18 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
   },
+  contentLandscape: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
   title: {
     color: colors.foreground,
     fontSize: fontSize['2xl'],
     fontWeight: fontWeight.bold,
     marginBottom: spacing.lg,
+  },
+  titleTablet: {
+    fontSize: fontSize['3xl'],
   },
   infoSection: {
     gap: spacing.md,
@@ -314,12 +535,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   infoIcon: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.md,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   infoLabel: {
     color: colors.mutedForeground,
@@ -374,7 +597,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   ticketAvailable: {
-    color: colors.mutedForeground,
+    color: colors.teal,
     fontSize: fontSize.xs,
     marginTop: spacing.xs,
   },
@@ -384,18 +607,23 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   quantityButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.md,
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quantityButtonDisabled: {
+    opacity: 0.5,
   },
   quantityText: {
     color: colors.foreground,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
-    minWidth: 30,
+    minWidth: 36,
     textAlign: 'center',
   },
   bottomBar: {
@@ -411,6 +639,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  bottomBarLandscape: {
+    left: '40%',
+  },
   priceContainer: {
     flex: 1,
   },
@@ -419,12 +650,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   priceValue: {
-    color: colors.foreground,
+    color: colors.primary,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },
   ticketCount: {
-    color: colors.mutedForeground,
+    color: colors.teal,
     fontSize: fontSize.xs,
   },
   addToCartButton: {
@@ -436,7 +667,6 @@ const styles = StyleSheet.create({
   },
   skeletonImage: {
     width: '100%',
-    height: height * 0.4,
     backgroundColor: colors.card,
   },
   skeletonContent: {
@@ -445,13 +675,13 @@ const styles = StyleSheet.create({
   },
   skeletonTitle: {
     height: 32,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     width: '80%',
   },
   skeletonText: {
     height: 20,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     width: '60%',
   },

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Button, Card, Input, Header } from '../../components';
 import { api } from '../../lib/api';
 
@@ -33,7 +33,9 @@ interface OrderSummary {
 export function CheckoutScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { cartId, type, resaleId, quantity, total } = route.params || {};
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
@@ -124,29 +126,39 @@ export function CheckoutScreen() {
 
   const isLoading = loadingPaymentMethods || loadingOrder;
 
+  const formMaxWidth = isTablet ? 600 : undefined;
+
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header title="Pagamento" showBack onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Caricamento...</Text>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <Header title="Pagamento" showBack onBack={() => navigation.goBack()} testID="header-checkout" />
+        <View style={styles.loadingContainer} testID="container-loading">
+          <ActivityIndicator size="large" color={colors.primary} testID="indicator-loading" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Header title="Pagamento" showBack onBack={() => navigation.goBack()} />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <Header title="Pagamento" showBack onBack={() => navigation.goBack()} testID="header-checkout" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 160 }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: isLandscape ? 120 : 160 },
+        ]}
+        testID="scrollview-checkout"
       >
-        <View style={styles.content}>
+        <View style={[
+          styles.content,
+          isTablet && styles.contentTablet,
+          { maxWidth: formMaxWidth, alignSelf: isTablet ? 'center' : undefined, width: isTablet ? '100%' : undefined },
+        ]}>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informazioni Acquirente</Text>
+            <Text style={styles.sectionTitle} testID="text-section-buyer">Informazioni Acquirente</Text>
             <Input
               label="Email"
               value={email}
@@ -155,6 +167,7 @@ export function CheckoutScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               leftIcon={<Ionicons name="mail-outline" size={20} color={colors.mutedForeground} />}
+              testID="input-email"
             />
             <Input
               label="Nome Completo"
@@ -162,11 +175,12 @@ export function CheckoutScreen() {
               onChangeText={setName}
               placeholder="Mario Rossi"
               leftIcon={<Ionicons name="person-outline" size={20} color={colors.mutedForeground} />}
+              testID="input-name"
             />
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Metodo di Pagamento</Text>
+            <Text style={styles.sectionTitle} testID="text-section-payment">Metodo di Pagamento</Text>
             
             {(paymentMethods || []).map((method) => (
               <TouchableOpacity
@@ -176,7 +190,8 @@ export function CheckoutScreen() {
                   selectedPaymentMethod === method.id && styles.paymentOptionSelected,
                 ]}
                 onPress={() => setSelectedPaymentMethod(method.id)}
-                data-testid={`button-payment-${method.id}`}
+                testID={`button-payment-${method.id}`}
+                accessibilityLabel={`Seleziona ${getPaymentMethodLabel(method)}`}
               >
                 <View style={styles.paymentOptionIcon}>
                   <Ionicons
@@ -186,11 +201,11 @@ export function CheckoutScreen() {
                   />
                 </View>
                 <View style={styles.paymentOptionInfo}>
-                  <Text style={styles.paymentOptionLabel}>
+                  <Text style={styles.paymentOptionLabel} testID={`text-payment-label-${method.id}`}>
                     {getPaymentMethodLabel(method)}
                   </Text>
                   {method.expiryMonth && method.expiryYear && (
-                    <Text style={styles.paymentOptionExpiry}>
+                    <Text style={styles.paymentOptionExpiry} testID={`text-payment-expiry-${method.id}`}>
                       Scade {method.expiryMonth}/{method.expiryYear}
                     </Text>
                   )}
@@ -209,7 +224,8 @@ export function CheckoutScreen() {
             <TouchableOpacity
               style={styles.addPaymentButton}
               onPress={handleAddPaymentMethod}
-              data-testid="button-add-payment"
+              testID="button-add-payment"
+              accessibilityLabel="Aggiungi nuova carta"
             >
               <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
               <Text style={styles.addPaymentText}>Aggiungi nuova carta</Text>
@@ -217,35 +233,35 @@ export function CheckoutScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Riepilogo Ordine</Text>
-            <Card style={styles.summaryCard}>
+            <Text style={styles.sectionTitle} testID="text-section-summary">Riepilogo Ordine</Text>
+            <Card style={styles.summaryCard} testID="card-order-summary">
               {(orderSummary?.items || []).map((item, index) => (
-                <View key={index} style={styles.summaryItem}>
-                  <Text style={styles.summaryItemName}>
+                <View key={index} style={styles.summaryItem} testID={`container-item-${index}`}>
+                  <Text style={styles.summaryItemName} testID={`text-item-name-${index}`}>
                     {item.quantity}x {item.name}
                   </Text>
-                  <Text style={styles.summaryItemPrice}>
+                  <Text style={styles.summaryItemPrice} testID={`text-item-price-${index}`}>
                     €{(item.price * item.quantity).toFixed(2)}
                   </Text>
                 </View>
               ))}
               <View style={styles.summaryDivider} />
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotale</Text>
-                <Text style={styles.summaryValue}>
+                <Text style={styles.summaryLabel} testID="text-subtotal-label">Subtotale</Text>
+                <Text style={styles.summaryValue} testID="text-subtotal-value">
                   €{(orderSummary?.subtotal || 0).toFixed(2)}
                 </Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Commissione servizio</Text>
-                <Text style={styles.summaryValue}>
+                <Text style={styles.summaryLabel} testID="text-fee-label">Commissione servizio</Text>
+                <Text style={styles.summaryValue} testID="text-fee-value">
                   €{(orderSummary?.serviceFee || 0).toFixed(2)}
                 </Text>
               </View>
               {orderSummary?.discount && (
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Sconto</Text>
-                  <Text style={styles.discountValue}>
+                  <Text style={styles.summaryLabel} testID="text-discount-label">Sconto</Text>
+                  <Text style={styles.discountValue} testID="text-discount-value">
                     -€{orderSummary.discount.toFixed(2)}
                   </Text>
                 </View>
@@ -256,14 +272,16 @@ export function CheckoutScreen() {
           <TouchableOpacity
             style={styles.termsRow}
             onPress={() => setAcceptTerms(!acceptTerms)}
-            data-testid="button-accept-terms"
+            testID="button-accept-terms"
+            accessibilityLabel="Accetta termini e condizioni"
+            accessibilityState={{ checked: acceptTerms }}
           >
             <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
               {acceptTerms && (
                 <Ionicons name="checkmark" size={14} color={colors.primaryForeground} />
               )}
             </View>
-            <Text style={styles.termsText}>
+            <Text style={styles.termsText} testID="text-terms">
               Accetto i{' '}
               <Text style={styles.termsLink}>Termini e Condizioni</Text>
               {' '}e la{' '}
@@ -271,11 +289,11 @@ export function CheckoutScreen() {
             </Text>
           </TouchableOpacity>
 
-          <Card style={styles.securityCard}>
+          <Card style={styles.securityCard} testID="card-security">
             <Ionicons name="shield-checkmark" size={24} color={colors.success} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.securityTitle}>Pagamento Sicuro</Text>
-              <Text style={styles.securityText}>
+              <Text style={styles.securityTitle} testID="text-security-title">Pagamento Sicuro</Text>
+              <Text style={styles.securityText} testID="text-security-description">
                 I tuoi dati sono protetti con crittografia SSL
               </Text>
             </View>
@@ -283,21 +301,27 @@ export function CheckoutScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Totale da pagare</Text>
-          <Text style={styles.totalAmount}>
-            €{(orderSummary?.total || total || 0).toFixed(2)}
-          </Text>
+      <View style={[styles.bottomBar, isTablet && styles.bottomBarTablet]} testID="container-bottom-bar">
+        <View style={[
+          styles.bottomBarContent,
+          { maxWidth: formMaxWidth, alignSelf: isTablet ? 'center' : undefined, width: isTablet ? '100%' : undefined },
+        ]}>
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalLabel} testID="text-total-label">Totale da pagare</Text>
+            <Text style={styles.totalAmount} testID="text-total-amount">
+              €{(orderSummary?.total || total || 0).toFixed(2)}
+            </Text>
+          </View>
+          <Button
+            title={processing ? 'Elaborazione...' : 'Paga Ora'}
+            onPress={handlePayment}
+            loading={processing}
+            disabled={!selectedPaymentMethod || !email || !name || !acceptTerms}
+            testID="button-pay-now"
+          />
         </View>
-        <Button
-          title={processing ? 'Elaborazione...' : 'Paga Ora'}
-          onPress={handlePayment}
-          loading={processing}
-          disabled={!selectedPaymentMethod || !email || !name || !acceptTerms}
-        />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -306,8 +330,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
     padding: spacing.lg,
+  },
+  contentTablet: {
+    paddingHorizontal: spacing.xl,
   },
   loadingContainer: {
     flex: 1,
@@ -476,14 +506,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     padding: spacing.md,
+  },
+  bottomBarTablet: {
+    paddingHorizontal: spacing.xl,
+  },
+  bottomBarContent: {
+    width: '100%',
   },
   totalContainer: {
     flexDirection: 'row',

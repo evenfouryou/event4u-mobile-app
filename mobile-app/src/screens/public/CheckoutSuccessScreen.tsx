@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity, Share } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Share, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Button, Card } from '../../components';
 import { api } from '../../lib/api';
 
@@ -27,7 +27,9 @@ interface OrderConfirmation {
 export function CheckoutSuccessScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { orderId, type } = route.params || {};
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -86,9 +88,19 @@ export function CheckoutSuccessScreen() {
     if (!order) return;
   };
 
+  const contentMaxWidth = isTablet ? 600 : undefined;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.content}>
+    <SafeAreaView 
+      style={styles.container} 
+      edges={['top', 'bottom', 'left', 'right']}
+      testID="screen-checkout-success"
+    >
+      <View style={[
+        styles.content,
+        isLandscape && styles.contentLandscape,
+        isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }
+      ]}>
         <Animated.View
           style={[
             styles.successIcon,
@@ -96,6 +108,7 @@ export function CheckoutSuccessScreen() {
               transform: [{ scale: scaleAnim }],
             },
           ]}
+          testID="icon-success"
         >
           <View style={styles.successIconInner}>
             <Ionicons name="checkmark" size={48} color={colors.successForeground} />
@@ -103,33 +116,33 @@ export function CheckoutSuccessScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.textContainer, { opacity: fadeAnim }]}>
-          <Text style={styles.title}>Acquisto Completato!</Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.title} testID="text-success-title">Acquisto Completato!</Text>
+          <Text style={styles.subtitle} testID="text-success-subtitle">
             I tuoi biglietti sono stati acquistati con successo
           </Text>
         </Animated.View>
 
         {order && (
-          <Animated.View style={[styles.orderCard, { opacity: fadeAnim }]}>
+          <Animated.View style={[styles.orderCard, { opacity: fadeAnim }]} testID="card-order-confirmation">
             <Card>
               <View style={styles.orderHeader}>
-                <Text style={styles.orderLabel}>Ordine</Text>
-                <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
+                <Text style={styles.orderLabel} testID="text-order-label">Ordine</Text>
+                <Text style={styles.orderNumber} testID="text-order-number">#{order.orderNumber}</Text>
               </View>
 
               <View style={styles.orderDivider} />
 
               <View style={styles.eventInfo}>
-                <Text style={styles.eventTitle}>{order.eventTitle}</Text>
+                <Text style={styles.eventTitle} testID="text-event-title">{order.eventTitle}</Text>
                 <View style={styles.eventDetail}>
                   <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.eventDetailText}>
+                  <Text style={styles.eventDetailText} testID="text-event-date">
                     {order.eventDate} • {order.eventTime}
                   </Text>
                 </View>
                 <View style={styles.eventDetail}>
                   <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.eventDetailText}>{order.eventLocation}</Text>
+                  <Text style={styles.eventDetailText} testID="text-event-location">{order.eventLocation}</Text>
                 </View>
               </View>
 
@@ -137,7 +150,7 @@ export function CheckoutSuccessScreen() {
 
               <View style={styles.ticketsSummary}>
                 {order.tickets.map((ticket, index) => (
-                  <View key={index} style={styles.ticketRow}>
+                  <View key={index} style={styles.ticketRow} testID={`row-ticket-${index}`}>
                     <Text style={styles.ticketType}>{ticket.type}</Text>
                     <Text style={styles.ticketQuantity}>x{ticket.quantity}</Text>
                   </View>
@@ -147,13 +160,13 @@ export function CheckoutSuccessScreen() {
               <View style={styles.orderDivider} />
 
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Totale Pagato</Text>
-                <Text style={styles.totalValue}>€{order.total.toFixed(2)}</Text>
+                <Text style={styles.totalLabel} testID="text-total-label">Totale Pagato</Text>
+                <Text style={styles.totalValue} testID="text-total-value">€{order.total.toFixed(2)}</Text>
               </View>
 
               <View style={styles.emailInfo}>
                 <Ionicons name="mail-outline" size={16} color={colors.mutedForeground} />
-                <Text style={styles.emailText}>
+                <Text style={styles.emailText} testID="text-email-confirmation">
                   Conferma inviata a {order.email}
                 </Text>
               </View>
@@ -165,7 +178,7 @@ export function CheckoutSuccessScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleShare}
-            data-testid="button-share"
+            testID="button-share"
           >
             <View style={styles.actionIcon}>
               <Ionicons name="share-social-outline" size={24} color={colors.primary} />
@@ -176,7 +189,7 @@ export function CheckoutSuccessScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleAddToCalendar}
-            data-testid="button-calendar"
+            testID="button-calendar"
           >
             <View style={styles.actionIcon}>
               <Ionicons name="calendar-outline" size={24} color={colors.primary} />
@@ -186,18 +199,24 @@ export function CheckoutSuccessScreen() {
         </Animated.View>
       </View>
 
-      <Animated.View style={[styles.bottomButtons, { opacity: fadeAnim }]}>
+      <Animated.View style={[
+        styles.bottomButtons, 
+        { opacity: fadeAnim },
+        isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }
+      ]}>
         <Button
           title="Visualizza i miei biglietti"
           onPress={handleViewTickets}
+          testID="button-view-tickets"
         />
         <Button
           title="Torna alla Home"
           variant="outline"
           onPress={handleBackToHome}
+          testID="button-back-home"
         />
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -211,6 +230,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xxl,
+  },
+  contentLandscape: {
+    paddingTop: spacing.md,
   },
   successIcon: {
     marginBottom: spacing.lg,

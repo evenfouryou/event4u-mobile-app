@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, RefreshControl, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Input, Card, Button } from '../../components';
 import { api } from '../../lib/api';
 
@@ -33,7 +33,9 @@ const SORT_OPTIONS = [
 
 export function ResalesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
@@ -57,40 +59,50 @@ export function ResalesScreen() {
     return discount > 0 ? discount : 0;
   };
 
-  const renderResaleItem = ({ item }: { item: ResaleTicket }) => {
+  const numColumns = isLandscape || isTablet ? 2 : 1;
+
+  const renderResaleItem = ({ item, index }: { item: ResaleTicket; index: number }) => {
     const discount = getDiscount(item.originalPrice, item.resalePrice);
+    const isLastInRow = numColumns === 2 && index % 2 === 1;
+    const isFirstInRow = numColumns === 2 && index % 2 === 0;
 
     return (
       <TouchableOpacity
-        style={styles.resaleCard}
+        style={[
+          styles.resaleCard,
+          numColumns === 2 && styles.resaleCardGrid,
+          numColumns === 2 && isFirstInRow && { marginRight: spacing.xs },
+          numColumns === 2 && isLastInRow && { marginLeft: spacing.xs },
+        ]}
         onPress={() => handleResalePress(item)}
         activeOpacity={0.8}
-        data-testid={`button-resale-${item.id}`}
+        testID={`button-resale-${item.id}`}
       >
         <Image
           source={{ uri: item.eventImageUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' }}
-          style={styles.eventImage}
+          style={[styles.eventImage, numColumns === 2 && styles.eventImageGrid]}
+          testID={`image-resale-event-${item.id}`}
         />
         <View style={styles.resaleContent}>
-          <Text style={styles.eventTitle} numberOfLines={1}>{item.eventTitle}</Text>
+          <Text style={styles.eventTitle} numberOfLines={1} testID={`text-resale-title-${item.id}`}>{item.eventTitle}</Text>
           <View style={styles.eventInfo}>
             <Ionicons name="calendar-outline" size={12} color={colors.mutedForeground} />
-            <Text style={styles.eventDate}>{item.eventDate} • {item.eventTime}</Text>
+            <Text style={styles.eventDate} testID={`text-resale-date-${item.id}`}>{item.eventDate} • {item.eventTime}</Text>
           </View>
           <View style={styles.ticketTypeRow}>
             <Ionicons name="ticket-outline" size={12} color={colors.primary} />
-            <Text style={styles.ticketType}>{item.ticketType}</Text>
-            <Text style={styles.quantity}>x{item.quantity}</Text>
+            <Text style={styles.ticketType} testID={`text-resale-ticket-type-${item.id}`}>{item.ticketType}</Text>
+            <Text style={styles.quantity} testID={`text-resale-quantity-${item.id}`}>x{item.quantity}</Text>
           </View>
           <View style={styles.priceRow}>
             <View>
-              <Text style={styles.resalePrice}>€{item.resalePrice.toFixed(2)}</Text>
+              <Text style={styles.resalePrice} testID={`text-resale-price-${item.id}`}>€{item.resalePrice.toFixed(2)}</Text>
               {discount > 0 && (
-                <Text style={styles.originalPrice}>€{item.originalPrice.toFixed(2)}</Text>
+                <Text style={styles.originalPrice} testID={`text-resale-original-price-${item.id}`}>€{item.originalPrice.toFixed(2)}</Text>
               )}
             </View>
             {discount > 0 && (
-              <View style={styles.discountBadge}>
+              <View style={styles.discountBadge} testID={`badge-resale-discount-${item.id}`}>
                 <Text style={styles.discountText}>-{discount.toFixed(0)}%</Text>
               </View>
             )}
@@ -98,10 +110,10 @@ export function ResalesScreen() {
           <View style={styles.sellerRow}>
             <View style={styles.sellerInfo}>
               <Ionicons name="person-circle-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.sellerName}>{item.sellerName}</Text>
+              <Text style={styles.sellerName} testID={`text-resale-seller-${item.id}`}>{item.sellerName}</Text>
             </View>
             {item.sellerRating && (
-              <View style={styles.sellerRating}>
+              <View style={styles.sellerRating} testID={`badge-resale-rating-${item.id}`}>
                 <Ionicons name="star" size={12} color={colors.warning} />
                 <Text style={styles.ratingText}>{item.sellerRating.toFixed(1)}</Text>
               </View>
@@ -116,12 +128,12 @@ export function ResalesScreen() {
   const selectedSort = SORT_OPTIONS.find((s) => s.id === sortBy);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']} testID="screen-resales">
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} data-testid="button-back">
+        <TouchableOpacity onPress={() => navigation.goBack()} testID="button-back">
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.title}>Rivendite</Text>
+        <Text style={styles.title} testID="text-screen-title">Rivendite</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -132,6 +144,7 @@ export function ResalesScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Ionicons name="search" size={20} color={colors.mutedForeground} />}
           containerStyle={styles.searchInput}
+          testID="input-search-resales"
         />
       </View>
 
@@ -139,10 +152,10 @@ export function ResalesScreen() {
         <TouchableOpacity
           style={styles.sortButton}
           onPress={() => setShowSortOptions(!showSortOptions)}
-          data-testid="button-sort"
+          testID="button-sort"
         >
           <Ionicons name="swap-vertical" size={18} color={colors.foreground} />
-          <Text style={styles.sortButtonText}>{selectedSort?.label}</Text>
+          <Text style={styles.sortButtonText} testID="text-sort-selected">{selectedSort?.label}</Text>
           <Ionicons
             name={showSortOptions ? 'chevron-up' : 'chevron-down'}
             size={16}
@@ -152,7 +165,7 @@ export function ResalesScreen() {
       </View>
 
       {showSortOptions && (
-        <Card style={styles.sortDropdown}>
+        <Card style={styles.sortDropdown} testID="dropdown-sort-options">
           {SORT_OPTIONS.map((option) => (
             <TouchableOpacity
               key={option.id}
@@ -161,13 +174,14 @@ export function ResalesScreen() {
                 sortBy === option.id && styles.sortOptionActive,
               ]}
               onPress={() => handleSortSelect(option.id)}
-              data-testid={`button-sort-${option.id}`}
+              testID={`button-sort-${option.id}`}
             >
               <Text
                 style={[
                   styles.sortOptionText,
                   sortBy === option.id && styles.sortOptionTextActive,
                 ]}
+                testID={`text-sort-option-${option.id}`}
               >
                 {option.label}
               </Text>
@@ -180,33 +194,35 @@ export function ResalesScreen() {
       )}
 
       <FlatList
+        key={numColumns}
         data={resalesList}
         renderItem={renderResaleItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.resalesList,
-          { paddingBottom: insets.bottom + 80 },
-        ]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.resalesList}
+        columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
+        testID="flatlist-resales"
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
             tintColor={colors.primary}
+            testID="refresh-control-resales"
           />
         }
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.loadingContainer}>
+            <View style={styles.loadingContainer} testID="container-loading">
               {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.skeletonCard} />
+                <View key={i} style={styles.skeletonCard} testID={`skeleton-card-${i}`} />
               ))}
             </View>
           ) : (
-            <Card style={styles.emptyCard}>
+            <Card style={styles.emptyCard} testID="card-empty-state">
               <Ionicons name="ticket-outline" size={48} color={colors.mutedForeground} />
-              <Text style={styles.emptyTitle}>Nessun biglietto in vendita</Text>
-              <Text style={styles.emptyText}>
+              <Text style={styles.emptyTitle} testID="text-empty-title">Nessun biglietto in vendita</Text>
+              <Text style={styles.emptyText} testID="text-empty-description">
                 Non ci sono biglietti in rivendita al momento
               </Text>
             </Card>
@@ -214,21 +230,22 @@ export function ResalesScreen() {
         }
       />
 
-      <View style={[styles.sellBanner, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={styles.sellBanner} testID="banner-sell-tickets">
         <View style={styles.sellBannerContent}>
           <Ionicons name="pricetag" size={24} color={colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.sellBannerTitle}>Hai biglietti da vendere?</Text>
-            <Text style={styles.sellBannerText}>Mettili in vendita in modo sicuro</Text>
+            <Text style={styles.sellBannerTitle} testID="text-sell-banner-title">Hai biglietti da vendere?</Text>
+            <Text style={styles.sellBannerText} testID="text-sell-banner-description">Mettili in vendita in modo sicuro</Text>
           </View>
         </View>
         <Button
           title="Vendi"
           size="sm"
           onPress={() => navigation.navigate('Account')}
+          testID="button-sell-tickets"
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -306,6 +323,10 @@ const styles = StyleSheet.create({
   resalesList: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
   },
   resaleCard: {
     flexDirection: 'row',
@@ -314,10 +335,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing.md,
   },
+  resaleCardGrid: {
+    flex: 1,
+    flexDirection: 'column',
+    maxWidth: '48%',
+  },
   eventImage: {
     width: 100,
     height: 140,
     backgroundColor: colors.muted,
+  },
+  eventImageGrid: {
+    width: '100%',
+    height: 100,
   },
   resaleContent: {
     flex: 1,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
@@ -22,12 +22,16 @@ interface EventData {
 export function EventShortLinkScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'EventShortLink'>>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const shortCode = route.params?.shortCode;
+
+  const contentMaxWidth = isTablet ? 500 : undefined;
 
   useEffect(() => {
     if (!shortCode) {
@@ -64,30 +68,38 @@ export function EventShortLinkScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.centerContent}>
-          <View style={styles.loadingIconContainer}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[
+          styles.centerContent,
+          isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+          isLandscape && styles.landscapeContent,
+        ]} testID="container-loading">
+          <View style={styles.loadingIconContainer} testID="container-loading-icon">
             <Ionicons name="calendar" size={48} color={colors.primary} />
           </View>
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-          <Text style={styles.loadingText}>Caricamento evento...</Text>
-          <Text style={styles.loadingSubtext}>Attendere prego</Text>
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} testID="indicator-loading" />
+          <Text style={styles.loadingText} testID="text-loading">Caricamento evento...</Text>
+          <Text style={styles.loadingSubtext} testID="text-loading-subtext">Attendere prego</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.centerContent}>
-          <Card variant="glass" style={styles.errorCard}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[
+          styles.centerContent,
+          isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+          isLandscape && styles.landscapeContent,
+        ]} testID="container-error">
+          <Card variant="glass" style={styles.errorCard} testID="card-error">
             <View style={styles.errorIconContainer}>
               <Ionicons name="alert-circle" size={64} color={colors.error} />
             </View>
-            <Text style={styles.errorTitle}>Evento non trovato</Text>
-            <Text style={styles.errorMessage}>{error}</Text>
-            <Text style={styles.errorHint}>
+            <Text style={styles.errorTitle} testID="text-error-title">Evento non trovato</Text>
+            <Text style={styles.errorMessage} testID="text-error-message">{error}</Text>
+            <Text style={styles.errorHint} testID="text-error-hint">
               Il link potrebbe essere scaduto o l'evento potrebbe non essere più disponibile.
             </Text>
           </Card>
@@ -99,6 +111,7 @@ export function EventShortLinkScreen() {
               onPress={handleExploreEvents}
               style={styles.actionButton}
               icon={<Ionicons name="search-outline" size={20} color={colors.primaryForeground} />}
+              testID="button-explore-events"
             />
             <Button
               title="Torna alla Home"
@@ -106,10 +119,11 @@ export function EventShortLinkScreen() {
               onPress={handleGoHome}
               style={styles.actionButton}
               icon={<Ionicons name="home-outline" size={20} color={colors.foreground} />}
+              testID="button-go-home"
             />
           </View>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -126,6 +140,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+  },
+  landscapeContent: {
+    paddingHorizontal: spacing['2xl'],
   },
   loadingIconContainer: {
     width: 96,

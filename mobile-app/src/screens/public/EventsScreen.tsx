@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Input, EventCard, Card } from '../../components';
 import { api } from '../../lib/api';
 
@@ -37,7 +37,9 @@ const CATEGORIES = [
 export function EventsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -70,8 +72,15 @@ export function EventsScreen() {
     setActiveCategory(activeCategory === categoryId ? null : categoryId);
   };
 
-  const renderEventItem = useCallback(({ item }: { item: Event }) => (
-    <View style={styles.eventItem}>
+  const numColumns = isLandscape || isTablet ? 2 : 1;
+
+  const renderEventItem = useCallback(({ item, index }: { item: Event; index: number }) => (
+    <View style={[
+      styles.eventItem,
+      numColumns === 2 && styles.eventItemGrid,
+      numColumns === 2 && index % 2 === 0 && styles.eventItemGridLeft,
+      numColumns === 2 && index % 2 === 1 && styles.eventItemGridRight,
+    ]}>
       <EventCard
         id={item.id}
         title={item.title}
@@ -81,20 +90,21 @@ export function EventsScreen() {
         imageUrl={item.imageUrl}
         price={item.price}
         onPress={() => handleEventPress(item.id)}
+        testID={`card-event-${item.id}`}
       />
     </View>
-  ), [handleEventPress]);
+  ), [handleEventPress, numColumns]);
 
   const filteredEvents = (events as Event[]) || [];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Eventi</Text>
+        <Text style={styles.title} testID="text-events-title">Eventi</Text>
         <TouchableOpacity
           style={styles.mapButton}
           onPress={() => navigation.navigate('Venues')}
-          data-testid="button-map"
+          testID="button-map"
         >
           <Ionicons name="map-outline" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -107,6 +117,7 @@ export function EventsScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Ionicons name="search" size={20} color={colors.mutedForeground} />}
           containerStyle={styles.searchInput}
+          testID="input-search-events"
         />
       </View>
 
@@ -124,7 +135,7 @@ export function EventsScreen() {
                 activeFilter === item.id && styles.filterChipActive,
               ]}
               onPress={() => handleFilterPress(item.id)}
-              data-testid={`button-filter-${item.id}`}
+              testID={`button-filter-${item.id}`}
             >
               <Text
                 style={[
@@ -153,7 +164,7 @@ export function EventsScreen() {
                 activeCategory === item.id && styles.categoryChipActive,
               ]}
               onPress={() => handleCategoryPress(item.id)}
-              data-testid={`button-category-${item.id}`}
+              testID={`button-category-${item.id}`}
             >
               <Ionicons
                 name={item.icon as any}
@@ -174,30 +185,30 @@ export function EventsScreen() {
       </View>
 
       <FlatList
+        key={numColumns}
         data={filteredEvents}
         renderItem={renderEventItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.eventsList,
-          { paddingBottom: insets.bottom + 80 },
-        ]}
+        numColumns={numColumns}
+        contentContainerStyle={styles.eventsList}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
             tintColor={colors.primary}
+            testID="refresh-control-events"
           />
         }
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.loadingContainer}>
+            <View style={styles.loadingContainer} testID="loading-events">
               {[1, 2, 3].map((i) => (
                 <View key={i} style={styles.skeletonCard} />
               ))}
             </View>
           ) : (
-            <Card style={styles.emptyCard}>
+            <Card style={styles.emptyCard} testID="empty-events">
               <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
               <Text style={styles.emptyTitle}>Nessun evento trovato</Text>
               <Text style={styles.emptyText}>
@@ -206,8 +217,9 @@ export function EventsScreen() {
             </Card>
           )
         }
+        testID="flatlist-events"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -303,9 +315,20 @@ const styles = StyleSheet.create({
   eventsList: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
   eventItem: {
     marginBottom: spacing.md,
+  },
+  eventItemGrid: {
+    flex: 1,
+    maxWidth: '50%',
+  },
+  eventItemGridLeft: {
+    paddingRight: spacing.xs,
+  },
+  eventItemGridRight: {
+    paddingLeft: spacing.xs,
   },
   loadingContainer: {
     gap: spacing.md,

@@ -1,15 +1,13 @@
 import { useState, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Dimensions, Image, Platform } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, Platform, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Input, Card } from '../../components';
 import { api } from '../../lib/api';
-
-const { width, height } = Dimensions.get('window');
 
 interface Venue {
   id: string;
@@ -26,12 +24,17 @@ interface Venue {
 
 export function VenuesScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
+
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+
+  const numColumns = isLandscape || isTablet ? 2 : 1;
 
   const { data: venues, isLoading } = useQuery<Venue[]>({
     queryKey: ['/api/public/all-locations', { search: searchQuery }],
@@ -61,43 +64,51 @@ export function VenuesScreen() {
     }
   };
 
-  const renderVenueItem = ({ item }: { item: Venue }) => (
-    <TouchableOpacity
-      style={styles.venueCard}
-      onPress={() => handleVenuePress(item)}
-      activeOpacity={0.8}
-      data-testid={`button-venue-${item.id}`}
-    >
-      <Image
-        source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=400' }}
-        style={styles.venueImage}
-      />
-      <View style={styles.venueContent}>
-        <Text style={styles.venueName}>{item.name}</Text>
-        <View style={styles.venueInfo}>
-          <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-          <Text style={styles.venueAddress}>{item.address}, {item.city}</Text>
+  const renderVenueItem = ({ item, index }: { item: Venue; index: number }) => {
+    const isLeftColumn = index % 2 === 0;
+    const cardStyle = numColumns === 2
+      ? [styles.venueCard, isLeftColumn ? styles.venueCardLeft : styles.venueCardRight]
+      : styles.venueCard;
+
+    return (
+      <TouchableOpacity
+        style={cardStyle}
+        onPress={() => handleVenuePress(item)}
+        activeOpacity={0.8}
+        testID={`button-venue-${item.id}`}
+      >
+        <Image
+          source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=400' }}
+          style={numColumns === 2 ? styles.venueImageGrid : styles.venueImage}
+          testID={`image-venue-${item.id}`}
+        />
+        <View style={styles.venueContent}>
+          <Text style={styles.venueName} testID={`text-venue-name-${item.id}`}>{item.name}</Text>
+          <View style={styles.venueInfo}>
+            <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+            <Text style={styles.venueAddress} testID={`text-venue-address-${item.id}`}>{item.address}, {item.city}</Text>
+          </View>
+          <View style={styles.venueStats}>
+            {item.rating && (
+              <View style={styles.ratingStat}>
+                <Ionicons name="star" size={14} color={colors.warning} />
+                <Text style={styles.ratingText} testID={`text-venue-rating-${item.id}`}>{item.rating.toFixed(1)}</Text>
+              </View>
+            )}
+            {item.eventsCount !== undefined && (
+              <View style={styles.eventsStat}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.eventsText} testID={`text-venue-events-${item.id}`}>{item.eventsCount} eventi</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.venueType}>
+            <Text style={styles.venueTypeText} testID={`text-venue-type-${item.id}`}>{item.type}</Text>
+          </View>
         </View>
-        <View style={styles.venueStats}>
-          {item.rating && (
-            <View style={styles.ratingStat}>
-              <Ionicons name="star" size={14} color={colors.warning} />
-              <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-            </View>
-          )}
-          {item.eventsCount !== undefined && (
-            <View style={styles.eventsStat}>
-              <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.eventsText}>{item.eventsCount} eventi</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.venueType}>
-          <Text style={styles.venueTypeText}>{item.type}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const venuesList = (venues || []) as Venue[];
 
@@ -114,17 +125,17 @@ export function VenuesScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} data-testid="button-back">
+        <TouchableOpacity onPress={() => navigation.goBack()} testID="button-back">
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.title}>Locali</Text>
+        <Text style={styles.title} testID="text-screen-title">Locali</Text>
         <View style={styles.viewToggle}>
           <TouchableOpacity
             style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
             onPress={() => setViewMode('list')}
-            data-testid="button-list-view"
+            testID="button-list-view"
           >
             <Ionicons
               name="list"
@@ -135,7 +146,7 @@ export function VenuesScreen() {
           <TouchableOpacity
             style={[styles.toggleButton, viewMode === 'map' && styles.toggleButtonActive]}
             onPress={() => setViewMode('map')}
-            data-testid="button-map-view"
+            testID="button-map-view"
           >
             <Ionicons
               name="map"
@@ -153,31 +164,33 @@ export function VenuesScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Ionicons name="search" size={20} color={colors.mutedForeground} />}
           containerStyle={styles.searchInput}
+          testID="input-search-venues"
         />
       </View>
 
       {viewMode === 'list' ? (
         <FlatList
+          key={numColumns}
           data={venuesList}
           renderItem={renderVenueItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[
-            styles.venuesList,
-            { paddingBottom: insets.bottom + 80 },
-          ]}
+          numColumns={numColumns}
+          contentContainerStyle={styles.venuesList}
+          columnWrapperStyle={numColumns === 2 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
+          testID="flatlist-venues"
           ListEmptyComponent={
             isLoading ? (
-              <View style={styles.loadingContainer}>
+              <View style={styles.loadingContainer} testID="container-loading">
                 {[1, 2, 3].map((i) => (
-                  <View key={i} style={styles.skeletonCard} />
+                  <View key={i} style={styles.skeletonCard} testID={`skeleton-card-${i}`} />
                 ))}
               </View>
             ) : (
-              <Card style={styles.emptyCard}>
+              <Card style={styles.emptyCard} testID="card-empty-state">
                 <Ionicons name="business-outline" size={48} color={colors.mutedForeground} />
-                <Text style={styles.emptyTitle}>Nessun locale trovato</Text>
-                <Text style={styles.emptyText}>
+                <Text style={styles.emptyTitle} testID="text-empty-title">Nessun locale trovato</Text>
+                <Text style={styles.emptyText} testID="text-empty-message">
                   Prova a cercare con un altro termine
                 </Text>
               </Card>
@@ -185,19 +198,21 @@ export function VenuesScreen() {
           }
         />
       ) : (
-        <View style={styles.mapContainer}>
+        <View style={styles.mapContainer} testID="container-map">
           <MapView
             ref={mapRef}
             style={styles.map}
             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             initialRegion={initialRegion}
             customMapStyle={mapDarkStyle}
+            testID="map-view"
           >
             {venuesList.map((venue) => (
               <Marker
                 key={venue.id}
                 coordinate={{ latitude: venue.latitude, longitude: venue.longitude }}
                 onPress={() => handleMarkerPress(venue)}
+                testID={`marker-venue-${venue.id}`}
               >
                 <View style={[
                   styles.marker,
@@ -215,25 +230,26 @@ export function VenuesScreen() {
 
           {selectedVenue && (
             <TouchableOpacity
-              style={[styles.selectedVenueCard, { bottom: insets.bottom + 90 }]}
+              style={styles.selectedVenueCard}
               onPress={handleSelectedVenuePress}
               activeOpacity={0.9}
-              data-testid={`button-selected-venue-${selectedVenue.id}`}
+              testID={`button-selected-venue-${selectedVenue.id}`}
             >
               <Image
                 source={{ uri: selectedVenue.imageUrl || 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=400' }}
                 style={styles.selectedVenueImage}
+                testID={`image-selected-venue-${selectedVenue.id}`}
               />
               <View style={styles.selectedVenueContent}>
-                <Text style={styles.selectedVenueName}>{selectedVenue.name}</Text>
-                <Text style={styles.selectedVenueAddress}>
+                <Text style={styles.selectedVenueName} testID={`text-selected-venue-name-${selectedVenue.id}`}>{selectedVenue.name}</Text>
+                <Text style={styles.selectedVenueAddress} testID={`text-selected-venue-address-${selectedVenue.id}`}>
                   {selectedVenue.address}, {selectedVenue.city}
                 </Text>
                 <View style={styles.selectedVenueStats}>
                   {selectedVenue.rating && (
                     <View style={styles.ratingStat}>
                       <Ionicons name="star" size={12} color={colors.warning} />
-                      <Text style={styles.ratingText}>{selectedVenue.rating.toFixed(1)}</Text>
+                      <Text style={styles.ratingText} testID={`text-selected-venue-rating-${selectedVenue.id}`}>{selectedVenue.rating.toFixed(1)}</Text>
                     </View>
                   )}
                 </View>
@@ -243,7 +259,7 @@ export function VenuesScreen() {
           )}
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -294,16 +310,31 @@ const styles = StyleSheet.create({
   },
   venuesList: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  columnWrapper: {
     gap: spacing.md,
   },
   venueCard: {
-    flexDirection: 'row',
+    flex: 1,
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
+    marginBottom: spacing.md,
+  },
+  venueCardLeft: {
+    marginRight: 0,
+  },
+  venueCardRight: {
+    marginLeft: 0,
   },
   venueImage: {
-    width: 100,
+    width: '100%',
+    height: 120,
+    backgroundColor: colors.muted,
+  },
+  venueImageGrid: {
+    width: '100%',
     height: 100,
     backgroundColor: colors.muted,
   },
@@ -407,6 +438,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
+    bottom: spacing.xxl,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,

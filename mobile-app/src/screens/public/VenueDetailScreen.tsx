@@ -1,14 +1,12 @@
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Dimensions, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../theme';
 import { Button, Card, EventCard } from '../../components';
 import { api } from '../../lib/api';
-
-const { width, height } = Dimensions.get('window');
 
 interface Venue {
   id: string;
@@ -45,7 +43,9 @@ interface Event {
 export function VenueDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
   const { venueId } = route.params;
 
   const { data: venue, isLoading } = useQuery<Venue>({
@@ -86,192 +86,227 @@ export function VenueDetailScreen() {
     navigation.navigate('EventDetail', { eventId });
   };
 
+  const imageHeight = isLandscape || isTablet ? height * 0.5 : height * 0.35;
+
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.skeletonImage} />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[styles.skeletonImage, { height: imageHeight }]} testID="skeleton-image" />
         <View style={styles.skeletonContent}>
-          <View style={styles.skeletonTitle} />
-          <View style={styles.skeletonText} />
+          <View style={styles.skeletonTitle} testID="skeleton-title" />
+          <View style={styles.skeletonText} testID="skeleton-text" />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!venue) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom', 'left', 'right']}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
-        <Text style={styles.errorText}>Locale non trovato</Text>
-        <Button title="Torna indietro" onPress={() => navigation.goBack()} />
-      </View>
+        <Text style={styles.errorText} testID="text-error-message">Locale non trovato</Text>
+        <Button title="Torna indietro" onPress={() => navigation.goBack()} testID="button-go-back" />
+      </SafeAreaView>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+  const renderImageSection = () => (
+    <View style={[
+      styles.imageContainer, 
+      { 
+        height: isLandscape || isTablet ? '100%' : imageHeight, 
+        width: isLandscape || isTablet ? '50%' : '100%' 
+      }
+    ]}>
+      <Image
+        source={{ uri: venue.imageUrl || 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=800' }}
+        style={styles.heroImage}
+        testID="image-venue-hero"
+      />
+      <View style={styles.imageOverlay} />
+      <TouchableOpacity
+        style={[styles.backButton, { top: spacing.md }]}
+        onPress={() => navigation.goBack()}
+        testID="button-back"
       >
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: venue.imageUrl || 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=800' }}
-            style={styles.heroImage}
-          />
-          <View style={styles.imageOverlay} />
-          <TouchableOpacity
-            style={[styles.backButton, { top: insets.top + spacing.sm }]}
-            onPress={() => navigation.goBack()}
-            data-testid="button-back"
+        <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderContent = () => (
+    <View style={styles.content}>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.venueType} testID="text-venue-type">{venue.type}</Text>
+          <Text style={styles.title} testID="text-venue-name">{venue.name}</Text>
+        </View>
+        {venue.rating && (
+          <View style={styles.ratingBadge} testID="badge-rating">
+            <Ionicons name="star" size={16} color={colors.warning} />
+            <Text style={styles.ratingText} testID="text-rating">{venue.rating.toFixed(1)}</Text>
+            {venue.reviewCount && (
+              <Text style={styles.reviewCount} testID="text-review-count">({venue.reviewCount})</Text>
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.locationRow}>
+        <Ionicons name="location" size={16} color={colors.primary} />
+        <Text style={styles.address} testID="text-address">
+          {venue.address}, {venue.postalCode} {venue.city}
+        </Text>
+      </View>
+
+      <View style={styles.actionsRow}>
+        {venue.phone && (
+          <TouchableOpacity style={styles.actionButton} onPress={handleCall} testID="button-call">
+            <Ionicons name="call" size={20} color={colors.primary} />
+            <Text style={styles.actionText}>Chiama</Text>
+          </TouchableOpacity>
+        )}
+        {venue.email && (
+          <TouchableOpacity style={styles.actionButton} onPress={handleEmail} testID="button-email">
+            <Ionicons name="mail" size={20} color={colors.primary} />
+            <Text style={styles.actionText}>Email</Text>
+          </TouchableOpacity>
+        )}
+        {venue.website && (
+          <TouchableOpacity style={styles.actionButton} onPress={handleWebsite} testID="button-website">
+            <Ionicons name="globe" size={20} color={colors.primary} />
+            <Text style={styles.actionText}>Sito</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.actionButton} onPress={handleDirections} testID="button-directions">
+          <Ionicons name="navigate" size={20} color={colors.primary} />
+          <Text style={styles.actionText}>Indicazioni</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle} testID="text-section-description">Descrizione</Text>
+        <Text style={styles.description} testID="text-description">{venue.description}</Text>
+      </View>
+
+      {venue.capacity && (
+        <Card style={styles.infoCard} testID="card-capacity">
+          <View style={styles.infoItem}>
+            <Ionicons name="people" size={20} color={colors.primary} />
+            <Text style={styles.infoLabel}>Capacità</Text>
+            <Text style={styles.infoValue} testID="text-capacity">{venue.capacity} persone</Text>
+          </View>
+        </Card>
+      )}
+
+      {venue.amenities && venue.amenities.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} testID="text-section-amenities">Servizi</Text>
+          <View style={styles.amenitiesGrid}>
+            {venue.amenities.map((amenity, index) => (
+              <View key={index} style={styles.amenityChip} testID={`chip-amenity-${index}`}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <Text style={styles.amenityText}>{amenity}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {venue.openingHours && venue.openingHours.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} testID="text-section-hours">Orari di Apertura</Text>
+          <Card style={styles.hoursCard} testID="card-hours">
+            {venue.openingHours.map((item, index) => (
+              <View key={index} style={styles.hoursRow} testID={`row-hours-${index}`}>
+                <Text style={styles.hoursDay}>{item.day}</Text>
+                <Text style={styles.hoursTime}>{item.hours}</Text>
+              </View>
+            ))}
+          </Card>
+        </View>
+      )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle} testID="text-section-location">Posizione</Text>
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={{
+              latitude: venue.latitude,
+              longitude: venue.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            testID="map-venue"
           >
-            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+            <Marker
+              coordinate={{ latitude: venue.latitude, longitude: venue.longitude }}
+              title={venue.name}
+              testID="marker-venue"
+            />
+          </MapView>
+          <TouchableOpacity
+            style={styles.mapOverlay}
+            onPress={handleDirections}
+            activeOpacity={0.8}
+            testID="button-open-maps"
+          >
+            <Text style={styles.mapOverlayText}>Apri in Google Maps</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        <View style={styles.content}>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.venueType}>{venue.type}</Text>
-              <Text style={styles.title}>{venue.name}</Text>
-            </View>
-            {venue.rating && (
-              <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={16} color={colors.warning} />
-                <Text style={styles.ratingText}>{venue.rating.toFixed(1)}</Text>
-                {venue.reviewCount && (
-                  <Text style={styles.reviewCount}>({venue.reviewCount})</Text>
-                )}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={16} color={colors.primary} />
-            <Text style={styles.address}>
-              {venue.address}, {venue.postalCode} {venue.city}
-            </Text>
-          </View>
-
-          <View style={styles.actionsRow}>
-            {venue.phone && (
-              <TouchableOpacity style={styles.actionButton} onPress={handleCall} data-testid="button-call">
-                <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={styles.actionText}>Chiama</Text>
-              </TouchableOpacity>
-            )}
-            {venue.email && (
-              <TouchableOpacity style={styles.actionButton} onPress={handleEmail} data-testid="button-email">
-                <Ionicons name="mail" size={20} color={colors.primary} />
-                <Text style={styles.actionText}>Email</Text>
-              </TouchableOpacity>
-            )}
-            {venue.website && (
-              <TouchableOpacity style={styles.actionButton} onPress={handleWebsite} data-testid="button-website">
-                <Ionicons name="globe" size={20} color={colors.primary} />
-                <Text style={styles.actionText}>Sito</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.actionButton} onPress={handleDirections} data-testid="button-directions">
-              <Ionicons name="navigate" size={20} color={colors.primary} />
-              <Text style={styles.actionText}>Indicazioni</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Descrizione</Text>
-            <Text style={styles.description}>{venue.description}</Text>
-          </View>
-
-          {venue.capacity && (
-            <Card style={styles.infoCard}>
-              <View style={styles.infoItem}>
-                <Ionicons name="people" size={20} color={colors.primary} />
-                <Text style={styles.infoLabel}>Capacità</Text>
-                <Text style={styles.infoValue}>{venue.capacity} persone</Text>
-              </View>
-            </Card>
-          )}
-
-          {venue.amenities && venue.amenities.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Servizi</Text>
-              <View style={styles.amenitiesGrid}>
-                {venue.amenities.map((amenity, index) => (
-                  <View key={index} style={styles.amenityChip}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                    <Text style={styles.amenityText}>{amenity}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {venue.openingHours && venue.openingHours.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Orari di Apertura</Text>
-              <Card style={styles.hoursCard}>
-                {venue.openingHours.map((item, index) => (
-                  <View key={index} style={styles.hoursRow}>
-                    <Text style={styles.hoursDay}>{item.day}</Text>
-                    <Text style={styles.hoursTime}>{item.hours}</Text>
-                  </View>
-                ))}
-              </Card>
-            </View>
-          )}
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Posizione</Text>
-            <View style={styles.mapContainer}>
-              <MapView
-                style={styles.map}
-                provider={PROVIDER_GOOGLE}
-                initialRegion={{
-                  latitude: venue.latitude,
-                  longitude: venue.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-                scrollEnabled={false}
-                zoomEnabled={false}
-              >
-                <Marker
-                  coordinate={{ latitude: venue.latitude, longitude: venue.longitude }}
-                  title={venue.name}
-                />
-              </MapView>
-              <TouchableOpacity
-                style={styles.mapOverlay}
-                onPress={handleDirections}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.mapOverlayText}>Apri in Google Maps</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {venueEvents && venueEvents.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
-              {venueEvents.slice(0, 3).map((event) => (
-                <EventCard
-                  key={event.id}
-                  id={event.id}
-                  title={event.title}
-                  date={event.date}
-                  time={event.time}
-                  location={event.location}
-                  imageUrl={event.imageUrl}
-                  price={event.price}
-                  onPress={() => handleEventPress(event.id)}
-                />
-              ))}
-            </View>
-          )}
+      {venueEvents && venueEvents.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} testID="text-section-events">Prossimi Eventi</Text>
+          {venueEvents.slice(0, 3).map((event) => (
+            <EventCard
+              key={event.id}
+              id={event.id}
+              title={event.title}
+              date={event.date}
+              time={event.time}
+              location={event.location}
+              imageUrl={event.imageUrl}
+              price={event.price}
+              onPress={() => handleEventPress(event.id)}
+              testID={`card-event-${event.id}`}
+            />
+          ))}
         </View>
-      </ScrollView>
+      )}
     </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      {isLandscape || isTablet ? (
+        <View style={styles.landscapeContainer} testID="container-landscape">
+          {renderImageSection()}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: spacing.xl }}
+            style={styles.landscapeScrollView}
+            testID="scroll-landscape"
+          >
+            {renderContent()}
+          </ScrollView>
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
+          testID="scroll-portrait"
+        >
+          {renderImageSection()}
+          {renderContent()}
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -285,9 +320,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  landscapeContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  landscapeScrollView: {
+    flex: 1,
+    width: '50%',
+  },
   imageContainer: {
-    width: '100%',
-    height: height * 0.35,
     position: 'relative',
   },
   heroImage: {
@@ -475,7 +516,6 @@ const styles = StyleSheet.create({
   },
   skeletonImage: {
     width: '100%',
-    height: height * 0.35,
     backgroundColor: colors.card,
   },
   skeletonContent: {

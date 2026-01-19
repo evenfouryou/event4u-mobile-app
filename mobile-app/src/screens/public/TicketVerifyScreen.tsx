@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Vibration } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Vibration, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
@@ -22,7 +22,9 @@ interface TicketVerifyResult {
 
 export function TicketVerifyScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
 
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -76,7 +78,7 @@ export function TicketVerifyScreen() {
   };
 
   const renderPermissionDenied = () => (
-    <View style={styles.centerContent}>
+    <View style={styles.centerContent} testID="container-permission-denied">
       <Ionicons name="camera-outline" size={64} color={colors.mutedForeground} />
       <Text style={styles.permissionTitle}>Accesso alla fotocamera negato</Text>
       <Text style={styles.permissionText}>
@@ -87,62 +89,80 @@ export function TicketVerifyScreen() {
         variant="outline"
         onPress={() => setShowManualInput(true)}
         style={styles.manualButton}
+        testID="button-manual-input-fallback"
       />
     </View>
   );
 
   const renderResult = () => (
-    <View style={styles.resultContainer}>
+    <View 
+      style={[
+        styles.resultContainer,
+        isLandscape && styles.resultContainerLandscape,
+        isTablet && styles.resultContainerTablet,
+      ]}
+      testID="container-result"
+    >
       <Card
         variant={result?.valid ? 'glass' : 'default'}
         style={[
           styles.resultCard,
           result?.valid ? styles.resultCardValid : styles.resultCardInvalid,
+          isTablet && styles.resultCardTablet,
         ]}
+        testID="card-result"
       >
         <View
           style={[
             styles.resultIconContainer,
             { backgroundColor: result?.valid ? colors.success + '20' : colors.error + '20' },
           ]}
+          testID={result?.valid ? "icon-valid" : "icon-invalid"}
         >
           <Ionicons
             name={result?.valid ? 'checkmark-circle' : 'close-circle'}
-            size={64}
+            size={isTablet ? 80 : 64}
             color={result?.valid ? colors.success : colors.error}
           />
         </View>
 
-        <Text style={[styles.resultTitle, { color: result?.valid ? colors.success : colors.error }]}>
+        <Text 
+          style={[
+            styles.resultTitle, 
+            { color: result?.valid ? colors.success : colors.error },
+            isTablet && styles.resultTitleTablet,
+          ]}
+          testID="text-result-title"
+        >
           {result?.valid ? 'Biglietto Valido' : 'Biglietto Non Valido'}
         </Text>
 
         {result?.message && (
-          <Text style={styles.resultMessage}>{result.message}</Text>
+          <Text style={styles.resultMessage} testID="text-result-message">{result.message}</Text>
         )}
 
         {result?.valid && result.eventName && (
-          <View style={styles.ticketDetails}>
+          <View style={styles.ticketDetails} testID="container-ticket-details">
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Evento</Text>
-              <Text style={styles.detailValue}>{result.eventName}</Text>
+              <Text style={styles.detailValue} testID="text-event-name">{result.eventName}</Text>
             </View>
             {result.ticketType && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Tipo</Text>
-                <Text style={styles.detailValue}>{result.ticketType}</Text>
+                <Text style={styles.detailValue} testID="text-ticket-type">{result.ticketType}</Text>
               </View>
             )}
             {result.holderName && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Intestatario</Text>
-                <Text style={styles.detailValue}>{result.holderName}</Text>
+                <Text style={styles.detailValue} testID="text-holder-name">{result.holderName}</Text>
               </View>
             )}
             {result.ticketCode && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Codice</Text>
-                <Text style={styles.detailValue}>{result.ticketCode}</Text>
+                <Text style={styles.detailValue} testID="text-ticket-code">{result.ticketCode}</Text>
               </View>
             )}
           </View>
@@ -153,67 +173,137 @@ export function TicketVerifyScreen() {
         title="Scansiona un altro biglietto"
         variant="primary"
         onPress={handleReset}
-        style={styles.resetButton}
+        style={[styles.resetButton, isTablet && styles.resetButtonTablet]}
         icon={<Ionicons name="scan-outline" size={20} color={colors.primaryForeground} />}
+        testID="button-scan-another"
       />
     </View>
   );
 
+  const scannerFrameSize = isTablet ? 320 : isLandscape ? 200 : 250;
+
   const renderScanner = () => (
-    <View style={styles.scannerContainer}>
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: ['qr'],
-        }}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-      />
-
-      <View style={styles.scannerOverlay}>
-        <View style={styles.scannerMask} />
-        <View style={styles.scannerMiddle}>
-          <View style={styles.scannerMask} />
-          <View style={styles.scannerFrame}>
-            <View style={[styles.corner, styles.cornerTopLeft]} />
-            <View style={[styles.corner, styles.cornerTopRight]} />
-            <View style={[styles.corner, styles.cornerBottomLeft]} />
-            <View style={[styles.corner, styles.cornerBottomRight]} />
+    <View 
+      style={[styles.scannerContainer, isLandscape && styles.scannerContainerLandscape]}
+      testID="container-scanner"
+    >
+      {isLandscape ? (
+        <View style={styles.landscapeScannerLayout}>
+          <View style={styles.landscapeCameraSection}>
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              facing="back"
+              barcodeScannerSettings={{
+                barcodeTypes: ['qr'],
+              }}
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+              testID="camera-view"
+            />
+            <View style={styles.scannerOverlay}>
+              <View style={styles.scannerMask} />
+              <View style={styles.scannerMiddle}>
+                <View style={styles.scannerMask} />
+                <View style={[styles.scannerFrame, { width: scannerFrameSize, height: scannerFrameSize }]}>
+                  <View style={[styles.corner, styles.cornerTopLeft]} />
+                  <View style={[styles.corner, styles.cornerTopRight]} />
+                  <View style={[styles.corner, styles.cornerBottomLeft]} />
+                  <View style={[styles.corner, styles.cornerBottomRight]} />
+                </View>
+                <View style={styles.scannerMask} />
+              </View>
+              <View style={styles.scannerMask} />
+            </View>
           </View>
-          <View style={styles.scannerMask} />
+          <View style={styles.landscapeControlsSection}>
+            <Text style={styles.scannerHintLandscape}>
+              Inquadra il codice QR del biglietto
+            </Text>
+            <TouchableOpacity
+              style={styles.manualInputToggleLandscape}
+              onPress={() => setShowManualInput(true)}
+              testID="button-manual-input"
+            >
+              <Ionicons name="keypad-outline" size={24} color={colors.primary} />
+              <Text style={styles.manualInputTextLandscape}>Inserisci codice manualmente</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.scannerMask} />
-      </View>
+      ) : (
+        <>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
+            }}
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            testID="camera-view"
+          />
 
-      <View style={[styles.scannerFooter, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Text style={styles.scannerHint}>
-          Inquadra il codice QR del biglietto
-        </Text>
-        <TouchableOpacity
-          style={styles.manualInputToggle}
-          onPress={() => setShowManualInput(true)}
-        >
-          <Ionicons name="keypad-outline" size={20} color={colors.primary} />
-          <Text style={styles.manualInputText}>Inserisci codice manualmente</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerMask} />
+            <View style={styles.scannerMiddle}>
+              <View style={styles.scannerMask} />
+              <View style={[styles.scannerFrame, { width: scannerFrameSize, height: scannerFrameSize }]}>
+                <View style={[styles.corner, styles.cornerTopLeft]} />
+                <View style={[styles.corner, styles.cornerTopRight]} />
+                <View style={[styles.corner, styles.cornerBottomLeft]} />
+                <View style={[styles.corner, styles.cornerBottomRight]} />
+              </View>
+              <View style={styles.scannerMask} />
+            </View>
+            <View style={styles.scannerMask} />
+          </View>
+
+          <View style={styles.scannerFooter}>
+            <Text style={styles.scannerHint}>
+              Inquadra il codice QR del biglietto
+            </Text>
+            <TouchableOpacity
+              style={styles.manualInputToggle}
+              onPress={() => setShowManualInput(true)}
+              testID="button-manual-input"
+            >
+              <Ionicons name="keypad-outline" size={20} color={colors.primary} />
+              <Text style={styles.manualInputText}>Inserisci codice manualmente</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 
   const renderManualInput = () => (
-    <View style={styles.manualInputContainer}>
-      <Card variant="glass" style={styles.manualInputCard}>
-        <Text style={styles.manualInputTitle}>Inserisci il codice del biglietto</Text>
+    <View 
+      style={[
+        styles.manualInputContainer,
+        isLandscape && styles.manualInputContainerLandscape,
+        isTablet && styles.manualInputContainerTablet,
+      ]}
+      testID="container-manual-input"
+    >
+      <Card 
+        variant="glass" 
+        style={[
+          styles.manualInputCard,
+          isTablet && styles.manualInputCardTablet,
+        ]}
+        testID="card-manual-input"
+      >
+        <Text style={[styles.manualInputTitle, isTablet && styles.manualInputTitleTablet]}>
+          Inserisci il codice del biglietto
+        </Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, isTablet && styles.inputTablet]}
           value={manualCode}
           onChangeText={setManualCode}
           placeholder="Es. ABC123XYZ"
           placeholderTextColor={colors.mutedForeground}
           autoCapitalize="characters"
           autoCorrect={false}
+          testID="input-ticket-code"
         />
-        <View style={styles.manualInputActions}>
+        <View style={[styles.manualInputActions, isLandscape && styles.manualInputActionsLandscape]}>
           <Button
             title="Annulla"
             variant="outline"
@@ -222,6 +312,7 @@ export function TicketVerifyScreen() {
               setManualCode('');
             }}
             style={styles.cancelButton}
+            testID="button-cancel"
           />
           <Button
             title="Verifica"
@@ -229,6 +320,7 @@ export function TicketVerifyScreen() {
             onPress={handleManualVerify}
             loading={loading}
             style={styles.verifyButton}
+            testID="button-verify"
           />
         </View>
       </Card>
@@ -236,24 +328,29 @@ export function TicketVerifyScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView 
+      style={styles.container} 
+      edges={['top', 'bottom', 'left', 'right']}
+      testID="screen-ticket-verify"
+    >
       <Header
         title="Verifica Biglietto"
         showBack
         onBack={() => navigation.goBack()}
         transparent={!result && !showManualInput && hasPermission}
+        testID="header-ticket-verify"
       />
 
       {hasPermission === false && renderPermissionDenied()}
       {hasPermission === null && (
-        <View style={styles.centerContent}>
+        <View style={styles.centerContent} testID="container-loading">
           <Text style={styles.loadingText}>Richiesta permessi...</Text>
         </View>
       )}
       {hasPermission && !result && !showManualInput && renderScanner()}
       {showManualInput && !result && renderManualInput()}
       {result && renderResult()}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -292,6 +389,24 @@ const styles = StyleSheet.create({
   scannerContainer: {
     flex: 1,
   },
+  scannerContainerLandscape: {
+    flexDirection: 'row',
+  },
+  landscapeScannerLayout: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  landscapeCameraSection: {
+    flex: 1,
+    position: 'relative',
+  },
+  landscapeControlsSection: {
+    width: 280,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
   scannerOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -303,8 +418,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   scannerFrame: {
-    width: 250,
-    height: 250,
     position: 'relative',
   },
   corner: {
@@ -348,6 +461,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     padding: spacing.xl,
+    paddingBottom: spacing.xl,
     backgroundColor: colors.overlay.dark,
   },
   scannerHint: {
@@ -355,24 +469,61 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginBottom: spacing.lg,
   },
+  scannerHintLandscape: {
+    fontSize: fontSize.lg,
+    color: colors.foreground,
+    marginBottom: spacing.xl,
+    textAlign: 'center',
+  },
   manualInputToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
+  manualInputToggleLandscape: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.glass.background,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.glass.border,
+  },
   manualInputText: {
     fontSize: fontSize.sm,
     color: colors.primary,
     fontWeight: fontWeight.medium,
+  },
+  manualInputTextLandscape: {
+    fontSize: fontSize.base,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+    textAlign: 'center',
   },
   manualInputContainer: {
     flex: 1,
     justifyContent: 'center',
     padding: spacing.xl,
   },
+  manualInputContainerLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualInputContainerTablet: {
+    padding: spacing['2xl'],
+  },
   manualInputCard: {
     padding: spacing.xl,
+  },
+  manualInputCardTablet: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
+    padding: spacing['2xl'],
   },
   manualInputTitle: {
     fontSize: fontSize.lg,
@@ -380,6 +531,10 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginBottom: spacing.lg,
     textAlign: 'center',
+  },
+  manualInputTitleTablet: {
+    fontSize: fontSize.xl,
+    marginBottom: spacing.xl,
   },
   input: {
     height: 56,
@@ -394,9 +549,17 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: spacing.lg,
   },
+  inputTablet: {
+    height: 64,
+    fontSize: fontSize.xl,
+    marginBottom: spacing.xl,
+  },
   manualInputActions: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  manualInputActionsLandscape: {
+    justifyContent: 'center',
   },
   cancelButton: {
     flex: 1,
@@ -409,6 +572,17 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     justifyContent: 'center',
   },
+  resultContainerLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xl,
+  },
+  resultContainerTablet: {
+    padding: spacing['2xl'],
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
   resultCard: {
     padding: spacing['2xl'],
     alignItems: 'center',
@@ -419,6 +593,9 @@ const styles = StyleSheet.create({
   },
   resultCardInvalid: {
     borderColor: colors.error + '40',
+  },
+  resultCardTablet: {
+    padding: spacing['2xl'],
   },
   resultIconContainer: {
     width: 100,
@@ -432,6 +609,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize['2xl'],
     fontWeight: fontWeight.bold,
     marginBottom: spacing.sm,
+  },
+  resultTitleTablet: {
+    fontSize: fontSize['3xl'],
   },
   resultMessage: {
     fontSize: fontSize.base,
@@ -462,5 +642,9 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     width: '100%',
+  },
+  resetButtonTablet: {
+    maxWidth: 400,
+    alignSelf: 'center',
   },
 });
