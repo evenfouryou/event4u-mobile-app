@@ -384,6 +384,9 @@ interface SiaeTransmissionEmailOptions {
   // CAdES-BES support: se presente, il file è firmato CAdES-BES (SHA-256)
   p7mBase64?: string; // Contenuto P7M in Base64 (binario CAdES-BES)
   signatureFormat?: 'cades' | 'xmldsig'; // Formato firma (default: autodetect)
+  // FIX 2026-01-19: Nome file allegato ESPLICITO per garantire coerenza con attributo NomeFile nell'XML
+  // Se fornito, sovrascrive il nome generato internamente per evitare errore SIAE 0600
+  explicitFileName?: string;
 }
 
 // Risultato dell'invio email SIAE con info sulla firma
@@ -418,7 +421,8 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     signWithSmime = false,
     requireSignature, // undefined = auto (true per RCA, false per altri)
     p7mBase64,
-    signatureFormat
+    signatureFormat,
+    explicitFileName // FIX 2026-01-19: Nome file allegato esplicito per coerenza con NomeFile nell'XML
   } = options;
   
   // VALIDAZIONE CRITICA: systemCode DEVE essere sempre passato esplicitamente
@@ -477,14 +481,26 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const useRawXmlForSmime = signWithSmime;
   const effectiveSignatureFormat = useRawXmlForSmime ? null : (isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null));
   
-  const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
+  // FIX 2026-01-19: Se explicitFileName è fornito, usalo per garantire coerenza con attributo NomeFile nell'XML
+  // Questo evita errore SIAE 0600 causato da discrepanze tra nome allegato e NomeFile nell'XML
+  let fileName: string;
+  let emailSubject: string;
   
-  // Subject conforme a RFC-2822 SIAE (Sezione 1.5.3)
-  // FIX 2026-01-16: Subject DEVE essere uguale al nome file senza estensione (errore 0603)
-  const emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
+  if (explicitFileName) {
+    // Usa il nome file esplicito fornito dal caller (stesso usato per attributo NomeFile nell'XML)
+    fileName = explicitFileName;
+    // Subject = nome file senza estensione (per errore 0603)
+    emailSubject = explicitFileName.replace(/\.xsi(\.p7m)?$/i, '');
+    console.log(`[EMAIL-SERVICE] FIX 0600: Usando nome file esplicito dal caller: ${fileName}`);
+  } else {
+    // Fallback: genera nome file internamente (legacy)
+    fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
+    emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
+    console.log(`[EMAIL-SERVICE] WARNING: explicitFileName non fornito, generato internamente: ${fileName}`);
+  }
   
   // Validazione coerenza subject/filename per prevenire errore SIAE 0603
-  const fileNameBase = fileName.replace(/\.xsi(\.p7m)?$/, '');
+  const fileNameBase = fileName.replace(/\.xsi(\.p7m)?$/i, '');
   if (emailSubject !== fileNameBase) {
     console.error(`[EMAIL-SERVICE] CRITICAL: Subject/filename mismatch! subject="${emailSubject}" != fileNameBase="${fileNameBase}"`);
     throw new Error(`SIAE 0603: Subject email non corrisponde al nome file. subject="${emailSubject}", filename="${fileName}"`);

@@ -5094,6 +5094,8 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     let resendTicketsCount: number;
     let resendTotalAmount: number;
     let resendCancelledCount: number = 0;
+    // FIX 2026-01-19: Nome file allegato email ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+    let resendEmailFileName: string | undefined;
     
     if (original.transmissionType === 'rca') {
       // RCA: Use generateRCAXml
@@ -5145,6 +5147,16 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       resendTicketsCount = rcaResult.ticketCount;
       resendTotalAmount = rcaResult.totalGrossAmount;
       resendCancelledCount = rcaResult.cancelledCount;
+      
+      // FIX 2026-01-19: Genera nome file RCA per coerenza con attributo NomeFile nell'XML (errore 0600)
+      const rcaEventDate = baseEvent?.startDatetime ? new Date(baseEvent.startDatetime) : new Date(original.periodDate);
+      resendEmailFileName = generateSiaeFileName(
+        'rca',
+        rcaEventDate,
+        nextProgressivo,
+        null,
+        resendResolvedSystemCode
+      );
     } else {
       // Monthly (RPM) or Daily (RMG): Use generateC1Xml with hydrateC1EventContextFromTickets
       const isMonthly = original.transmissionType === 'monthly';
@@ -5197,6 +5209,9 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       resendTicketsCount = c1Result.stats.ticketsCount;
       resendTotalAmount = c1Result.stats.totalRevenue;
       resendCancelledCount = 0; // C1 doesn't track cancelled separately in result
+      
+      // FIX 2026-01-19: Usa lo stesso nome file per email e attributo NomeFile (errore 0600)
+      resendEmailFileName = resendPreGeneratedFileName;
     }
     
     // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per tutti i flussi
@@ -5326,6 +5341,8 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         sequenceNumber: nextProgressivo,
         signWithSmime: true,
         requireSignature: true,
+        // FIX 2026-01-19: Nome file allegato ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+        explicitFileName: resendEmailFileName,
       });
       
       await siaeStorage.updateSiaeTransmission(newTransmission.id, {
@@ -5751,6 +5768,17 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     
     // Send the email to SIAE test environment
     const destinationEmail = getSiaeDestinationEmail(toEmail);
+    
+    // FIX 2026-01-19: Genera nome file per coerenza con attributo NomeFile nell'XML (errore 0600)
+    // Usa sequenceNumber dalla trasmissione se disponibile
+    const sendEmailFileName = generateSiaeFileName(
+      transmissionReportType,
+      new Date(transmission.periodDate),
+      transmission.sequenceNumber || 1,
+      null,
+      resolvedSystemCodeForEmail
+    );
+    
     const emailResult = await sendSiaeTransmissionEmail({
       to: destinationEmail,
       companyName,
@@ -5765,6 +5793,8 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
       signWithSmime: true,
       requireSignature: true,
+      // FIX 2026-01-19: Nome file allegato ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+      explicitFileName: sendEmailFileName,
     });
     
     if (!emailResult.success) {
@@ -5972,6 +6002,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   let xml: string;
   // FIX 2026-01-14: Calcola il progressivo UNA SOLA VOLTA e riusa per XML e nome file
   let calculatedProgressivo: number;
+  // FIX 2026-01-19: Nome file allegato email ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+  let emailFileName: string | undefined;
   
   // FIX 2026-01-18: Legge ATTIVAMENTE il file EFFF dalla Smart Card
   // Il systemId non viene inviato nello status automatico, serve richiesta esplicita READ_EFFF
@@ -6121,6 +6153,16 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // FIX 2026-01-14: Salva progressivo per riuso nel nome file
     calculatedProgressivo = rcaProgressivo;
     
+    // FIX 2026-01-19: Genera nome file RCA per coerenza con attributo NomeFile nell'XML (errore 0600)
+    const rcaEventDate = rcaEventDetails?.startDatetime ? new Date(rcaEventDetails.startDatetime) : new Date();
+    emailFileName = generateSiaeFileName(
+      'rca',
+      rcaEventDate,
+      rcaProgressivo,
+      null, // senza firma - il nome .xsi è quello che va nell'attributo NomeFile
+      preResolvedSystemCode
+    );
+    
     // Generate RCA XML (RiepilogoControlloAccessi format - Allegato B Provvedimento 04/03/2008)
     // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
     // FIX 2026-01-15: Usa preResolvedSystemCode per coerenza con nome file allegato (errori SIAE 0600/0603)
@@ -6221,6 +6263,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       null, // senza firma - il nome .xsi è quello che va nell'attributo NomeFile
       preResolvedSystemCode
     );
+    
+    // FIX 2026-01-19: Salva nome file per coerenza con attributo NomeFile nell'XML (errore 0600)
+    emailFileName = preGeneratedFileName;
     
     const hydratedData = await hydrateC1EventContextFromTickets(filteredTickets, companyId, effectiveReportDate, isMonthly);
     
@@ -6531,6 +6576,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     requireSignature: true,
     p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
     signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
+    // FIX 2026-01-19: Nome file allegato ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+    explicitFileName: emailFileName,
   });
   
   // Controlla se l'invio è fallito (firma S/MIME non disponibile)
@@ -9834,6 +9881,10 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         });
       }
       
+      // FIX 2026-01-19: Genera nome file per email SENZA firma (usa .xsi per S/MIME)
+      // Il nome file .xsi deve corrispondere all'attributo NomeFile nell'XML (errore 0600)
+      const rcaEmailFileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, null, rcaResolvedSystemCode);
+      
       const emailResult = await sendSiaeTransmissionEmail({
         to: toEmail,
         companyName: company?.name || 'N/A',
@@ -9848,6 +9899,8 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         requireSignature: true,
         p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
         signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
+        // FIX 2026-01-19: Nome file allegato ESPLICITO per coerenza con attributo NomeFile nell'XML (errore 0600)
+        explicitFileName: rcaEmailFileName,
       });
 
       // Controlla se l'invio è fallito (firma S/MIME non disponibile)
