@@ -15,12 +15,30 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Build SiaeBridge
+      run: |
+        cd SiaeBridge
+        dotnet publish -c Release -r win-x86 --self-contained true -o ../resources/SiaeBridge
+      shell: pwsh
+    
+    - name: Copy prebuilt DLLs
+      run: |
+        Copy-Item -Path "SiaeBridge/prebuilt/*" -Destination "resources/SiaeBridge/" -Force
+        Copy-Item -Path "SiaeBridge/libSIAEp7.dll" -Destination "resources/SiaeBridge/" -Force
+        Get-ChildItem resources/SiaeBridge
+      shell: pwsh
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
     
-    - name: Install dependencies
+    - name: Install npm dependencies
       run: npm install
     
     - name: Build Electron app
