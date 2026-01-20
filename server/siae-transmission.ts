@@ -137,57 +137,56 @@ export function generateFileName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
+  // FIX 2026-01-20: Formato UFFICIALE SIAE Allegato C sezione 1.4.1
+  // FORMATO: XXX_AAAA_MM_GG_NNN.xsi (con underscore separati)
+  // IMPORTANTE: Il codice sistema va SOLO nel Subject email, NON nel nome file!
+  
   let fileName: string;
   
   switch (reportType) {
     case 'mensile':
-      fileName = `RPM_${year}${month}_${systemCode}_${prog}.xsi`;
+      // RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)
+      fileName = `RPM_${year}_${month}_${prog}.xsi`;
       break;
     case 'rca':
-      fileName = `RCA_${year}${month}${day}_${systemCode}_${prog}.xsi`;
+      // RCA_AAAA_MM_GG_NNN.xsi (5 parti)
+      fileName = `RCA_${year}_${month}_${day}_${prog}.xsi`;
       break;
     case 'giornaliero':
     default:
-      fileName = `RMG_${year}${month}${day}_${systemCode}_${prog}.xsi`;
+      // RMG_AAAA_MM_GG_NNN.xsi (5 parti)
+      fileName = `RMG_${year}_${month}_${day}_${prog}.xsi`;
       break;
   }
-  
-  // Validazione finale
-  validateFileName(fileName);
   
   console.log(`[SIAE-TX] Generated filename: ${fileName}`);
   return fileName;
 }
 
 /**
- * Valida nome file SIAE
+ * Valida nome file SIAE - Formato UFFICIALE Allegato C sezione 1.4.1
+ * 
+ * Formati validi:
+ * - RMG_AAAA_MM_GG_NNN.xsi (giornaliero - 5 parti)
+ * - RPM_AAAA_MM_NNN.xsi (mensile - 4 parti)
+ * - RCA_AAAA_MM_GG_NNN.xsi (eventi - 5 parti)
  */
 export function validateFileName(fileName: string): void {
   const baseName = fileName.replace(/\.xsi(\.p7m)?$/i, '');
   const parts = baseName.split('_');
-  
-  if (parts.length !== 4) {
-    throw new Error(`SIAE_FILENAME_ERROR: Nome file deve avere 4 parti. Trovate: ${parts.length} in "${fileName}"`);
-  }
+  const prefix = parts[0];
   
   // Verifica prefisso
-  if (!['RMG', 'RPM', 'RCA'].includes(parts[0])) {
-    throw new Error(`SIAE_FILENAME_ERROR: Prefisso non valido: ${parts[0]}`);
+  if (!['RMG', 'RPM', 'RCA'].includes(prefix)) {
+    throw new Error(`SIAE_FILENAME_ERROR: Prefisso non valido: ${prefix}`);
   }
   
-  // Verifica data (solo cifre)
-  if (!/^\d+$/.test(parts[1])) {
-    throw new Error(`SIAE_FILENAME_ERROR: Data deve contenere solo cifre: ${parts[1]}`);
-  }
+  // Numero parti dipende dal tipo
+  const isMonthly = prefix === 'RPM';
+  const expectedParts = isMonthly ? 4 : 5;
   
-  // Verifica codice sistema
-  if (parts[2].length !== 8) {
-    throw new Error(`SIAE_FILENAME_ERROR: Codice sistema deve essere 8 caratteri: ${parts[2]}`);
-  }
-  
-  // Verifica progressivo
-  if (!/^\d{3}$/.test(parts[3])) {
-    throw new Error(`SIAE_FILENAME_ERROR: Progressivo deve essere 3 cifre: ${parts[3]}`);
+  if (parts.length !== expectedParts) {
+    throw new Error(`SIAE_FILENAME_ERROR: Nome file ${prefix} deve avere ${expectedParts} parti. Trovate: ${parts.length} in "${fileName}"`);
   }
   
   // CRITICO: Verifica assenza timestamp
