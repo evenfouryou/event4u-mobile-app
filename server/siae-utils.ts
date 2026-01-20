@@ -4859,23 +4859,25 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     const incidenza = tipoTassazione === 'I' ? (ticketedEvent.entertainmentIncidence ?? 100) : 0;
     const imponibileIntrattenimenti = 0;
     const genreCode = mapToSiaeTipoGenere(ticketedEvent.genreCode);
-    const incidenzaGenere = ticketedEvent.genreIncidence ?? 0;
+    // FIX 2026-01-20: IncidenzaGenere default 100 (non 0) come da esempio RMG_2015_09_00_001.xml
+    const incidenzaGenere = ticketedEvent.genreIncidence ?? 100;
     const eventName = eventRecord.name || 'Evento';
 
-    const genreNum = parseInt(genreCode);
-    const requiresPerformer = (genreNum >= 5 && genreNum <= 9) || (genreNum >= 45 && genreNum <= 59);
-
-    let autoreXml = '';
-    let esecutoreXml = '';
-    if (requiresPerformer) {
-      if (ticketedEvent.author) {
-        autoreXml = `
-                        <Autore>${escapeXml(ticketedEvent.author)}</Autore>`;
-      }
-      const performer = ticketedEvent.performer || eventName;
-      esecutoreXml = `
-                        <Esecutore>${escapeXml(performer)}</Esecutore>`;
-    }
+    // FIX 2026-01-20: Autore/Esecutore opzionali in DTD ma SEMPRE inclusi per conformità
+    // Vedi esempio ufficiale RMG_2015_09_00_001.xml che li include sempre:
+    //   <TitoliOpere>
+    //     <Titolo>Rainbow Magicland</Titolo>
+    //     <Autore>Rainbow Magicland</Autore>
+    //     <Esecutore>Rainbow Magicland Spa</Esecutore>
+    //   </TitoliOpere>
+    // Anche se la DTD li definisce opzionali (Autore?, Esecutore?), SIAE li richiede
+    // per evitare errore 40605 "riepilogo illeggibile"
+    const autore = escapeXml(ticketedEvent.author || eventName);
+    const esecutore = escapeXml(ticketedEvent.performer || businessName);
+    const autoreXml = `
+                        <Autore>${autore}</Autore>`;
+    const esecutoreXml = `
+                        <Esecutore>${esecutore}</Esecutore>`;
 
     let intrattenimentoXml: string;
     if (isMonthly) {
