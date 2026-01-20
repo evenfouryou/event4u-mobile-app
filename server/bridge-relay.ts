@@ -7,7 +7,7 @@ import { db } from './db';
 import { companies, sessions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import type { SiaeCardEfffData } from './siae-utils';
-import { validateFileName as validateSiaeFileNameFormat } from './siae-transmission';
+import { validateSiaeFileName } from './siae-filename';
 
 interface BridgeConnection {
   ws: WebSocket;
@@ -1484,7 +1484,7 @@ export async function requestSmimeSignature(
         // Blocca qualsiasi nome file con timestamp o formato non conforme Allegato C
         if (p.attachmentName && p.attachmentName.endsWith('.xsi')) {
           try {
-            validateSiaeFileNameFormat(p.attachmentName);
+            validateSiaeFileName(p.attachmentName);
             console.log(`[Bridge] [SIAE-FILENAME-VALIDATED] Nome file OK: ${p.attachmentName}`);
           } catch (fnError: any) {
             console.error(`[Bridge] [SIAE-FILENAME-ERROR] BLOCCATO nome file non valido: ${p.attachmentName}`);
