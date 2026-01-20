@@ -53,7 +53,7 @@ import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull, not } from "drizzle-o
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { generateTicketHtml } from "./template-routes";
 import { generateTicketPdf, generateWalletImage, generateDigitalTicketPdf } from "./pdf-service";
-import { isCancelledStatus } from "./siae-utils";
+import { isCancelledStatus, resolveSystemCodeSafe, SIAE_SYSTEM_CODE_DEFAULT } from "./siae-utils";
 import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
@@ -2324,10 +2324,15 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             console.log(`[PUBLIC] Found card by serialNumber: ${cardId}`);
           } else {
             // Se la carta non esiste nel DB, creala automaticamente
-            // IMPORTANTE: Usare systemId dalla smart card (EFFF data), non un placeholder
+            // FIX 2026-01-20: Usare resolveSystemCodeSafe per evitare errore SIAE 0600
+            // Il default EVENT4U1 NON è registrato presso SIAE!
             const cachedEfff = getCachedEfffData();
-            const systemCode = cachedEfff?.systemId || process.env.SIAE_SYSTEM_CODE || 'EVENT4U1';
-            console.log(`[PUBLIC] Card not found, creating new card for serialNumber: ${sealData.serialNumber}, systemCode: ${systemCode}`);
+            const systemCodeResult = resolveSystemCodeSafe(cachedEfff, { systemCode: process.env.SIAE_SYSTEM_CODE });
+            if (!systemCodeResult.success || !systemCodeResult.systemCode) {
+              throw new Error(`SIAE_SYSTEM_CODE_ERROR: ${systemCodeResult.error || 'Codice sistema SIAE non disponibile. Collegare la Smart Card o configurare il codice sistema.'}`);
+            }
+            const systemCode = systemCodeResult.systemCode;
+            console.log(`[PUBLIC] Card not found, creating new card for serialNumber: ${sealData.serialNumber}, systemCode: ${systemCode} (source: ${systemCodeResult.source})`);
             const [newCard] = await db
               .insert(siaeActivationCards)
               .values({
@@ -5614,8 +5619,15 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         .limit(1);
       
       if (!bridgeCard) {
+        // FIX 2026-01-20: Usare resolveSystemCodeSafe per evitare errore SIAE 0600
+        // Il default EVENT4U1 NON è registrato presso SIAE!
         const cachedEfff = getCachedEfffData();
-        const systemCode = cachedEfff?.systemId || process.env.SIAE_SYSTEM_CODE || 'EVENT4U1';
+        const systemCodeResult = resolveSystemCodeSafe(cachedEfff, { systemCode: process.env.SIAE_SYSTEM_CODE });
+        if (!systemCodeResult.success || !systemCodeResult.systemCode) {
+          throw new Error(`SIAE_SYSTEM_CODE_ERROR: ${systemCodeResult.error || 'Codice sistema SIAE non disponibile. Collegare la Smart Card o configurare il codice sistema.'}`);
+        }
+        const systemCode = systemCodeResult.systemCode;
+        console.log(`[PUBLIC] Creating card for serialNumber: ${sealData!.serialNumber}, systemCode: ${systemCode} (source: ${systemCodeResult.source})`);
         [bridgeCard] = await db
           .insert(siaeActivationCards)
           .values({
