@@ -7,7 +7,7 @@ import { db } from './db';
 import { companies, sessions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import type { SiaeCardEfffData } from './siae-utils';
-import { validateSiaeFileName } from './siae-filename';
+import { validateSiaeFileName } from './siae-utils';
 
 interface BridgeConnection {
   ws: WebSocket;
@@ -1482,15 +1482,15 @@ export async function requestSmimeSignature(
         
         // FIX 2026-01-20: Validazione CRITICA nome file SIAE prima dell'invio al bridge
         // Blocca qualsiasi nome file con timestamp o formato non conforme Allegato C
+        // FIX: Usa validateSiaeFileName da siae-utils.ts che supporta il formato corretto a 4 parti
         if (p.attachmentName && p.attachmentName.endsWith('.xsi')) {
-          try {
-            validateSiaeFileName(p.attachmentName);
-            console.log(`[Bridge] [SIAE-FILENAME-VALIDATED] Nome file OK: ${p.attachmentName}`);
-          } catch (fnError: any) {
+          const fnValidation = validateSiaeFileName(p.attachmentName);
+          if (!fnValidation.valid) {
             console.error(`[Bridge] [SIAE-FILENAME-ERROR] BLOCCATO nome file non valido: ${p.attachmentName}`);
-            console.error(`[Bridge] [SIAE-FILENAME-ERROR] Dettaglio: ${fnError.message}`);
-            throw new Error(`SIAE_FILENAME_INVALID: ${fnError.message}`);
+            console.error(`[Bridge] [SIAE-FILENAME-ERROR] Dettaglio: ${fnValidation.errors.join('; ')}`);
+            throw new Error(`SIAE_FILENAME_INVALID: ${fnValidation.errors.join('; ')}`);
           }
+          console.log(`[Bridge] [SIAE-FILENAME-VALIDATED] Nome file OK: ${p.attachmentName}`);
         }
         
         smimePayload = {

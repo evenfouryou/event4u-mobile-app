@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { isBridgeConnected, requestSmimeSignature, getCardSignerEmail } from './bridge-relay';
-import { validateSiaeFileName } from './siae-filename';
+// validateSiaeFileName usato da siae-utils.ts per formato corretto a 4 parti
 
 /**
  * Formatta una stringa Base64 in righe da 76 caratteri per MIME (RFC 2045)
