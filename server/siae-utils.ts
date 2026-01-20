@@ -2321,23 +2321,31 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const titoloEvento = escapeXml((event.name || 'Evento').substring(0, 100));
   const nomeLocale = escapeXml((venueName || event.name || 'Locale').substring(0, 100));
   
-  // Per tipoGenere Intrattenimento, Autore/Esecutore/NazionalitaFilm NON devono essere presenti
-  // SIAE Warning 2108/2110/2112/2114: OMETTERE completamente i tag, non usare '-'
-  // Codici Intrattenimento: 30-40 (giochi), 60-69 (ballo/discoteca), 70-74 (fiere/mostre), 79 (luna park)
-  // Codici Cinema (01-04): richiedono NazionalitaFilm (ISO 3166)
-  // Codici Teatro/Concerti (45-59): richiedono Autore ed Esecutore
-  const genreNum = parseInt(tipoGenere);
-  const isIntrattenimento = (genreNum >= 30 && genreNum <= 40) || 
-                            (genreNum >= 60 && genreNum <= 69) || 
-                            (genreNum >= 70 && genreNum <= 74) || 
-                            genreNum === 79;
-  const isCinema = genreNum >= 1 && genreNum <= 4;
-  const isTeatroConcerti = genreNum >= 45 && genreNum <= 59;
+  // FIX 2026-01-20: Secondo la DTD ControlloAccessi_v0001_20080626.dtd (linee 9-13),
+  // Autore, Esecutore, NazionalitaFilm sono elementi OBBLIGATORI, NON opzionali!
+  // La DTD definisce: <!ELEMENT Evento (CFOrganizzatore,...,Autore, Esecutore, NazionalitaFilm,...)>
+  // Devono essere SEMPRE presenti, anche con valori generici.
+  // 
+  // Vedi esempio ufficiale RCA_2015_09_22_001.xml che li include sempre:
+  //   <Autore>Rainbow Magicland</Autore>
+  //   <Esecutore>Rainbow Magicland Spa a socio unico</Esecutore>
+  //   <NazionalitaFilm>ITA</NazionalitaFilm>
+  //
+  // Contenuto varia per genere:
+  // - Cinema (01-04): usa nome film, regista, nazionalità ISO 3166
+  // - Teatro/Concerti (45-59): usa autore opera, artista/esecutore, "-" per nazionalità
+  // - Intrattenimento: usa titolo evento, organizzatore, "-" per nazionalità
   
-  // Genera valori solo se necessari (verranno inclusi condizionalmente nell'XML)
-  const autore = isTeatroConcerti ? escapeXml((author || event.name || 'N/D').substring(0, 100)) : null;
-  const esecutore = isTeatroConcerti ? escapeXml((performer || event.organizerName || companyName || 'N/D').substring(0, 100)) : null;
-  const nazionalitaFilm = isCinema ? 'IT' : null;
+  // Autore: per cinema/teatro usa autore specifico, altrimenti usa titolo evento
+  const autore = escapeXml((author || event.name || 'N/D').substring(0, 100));
+  
+  // Esecutore: per concerti usa performer, altrimenti usa organizzatore
+  const esecutore = escapeXml((performer || event.organizerName || companyName || 'N/D').substring(0, 100));
+  
+  // NazionalitaFilm: per cinema usa ISO 3166, per altri usa "-" (obbligatorio ma N/A)
+  const genreNum = parseInt(tipoGenere);
+  const isCinema = genreNum >= 1 && genreNum <= 4;
+  const nazionalitaFilm = isCinema ? 'IT' : '-';
   
   // SpettacoloIntrattenimento: S=spettacolo, I=intrattenimento (default S)
   const spettacoloIntrattenimento = event.tipoTassazione === 'I' ? 'I' : 'S';
@@ -2488,9 +2496,9 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   // ==================== Generazione XML conforme a DTD ====================
   const xmlLines: string[] = [];
   
-  // Intestazione XML con encoding ISO-8859-1 come richiesto da SIAE (Allegato C)
-  // IMPORTANTE: SIAE richiede Latin-1, non UTF-8
-  xmlLines.push('<?xml version="1.0" encoding="ISO-8859-1"?>');
+  // FIX 2026-01-20: Intestazione XML con UTF-8 (come da esempi ufficiali SIAE)
+  // Vedi RCA_2015_09_22_001.xml e RMG_2015_09_00_001.xml che usano UTF-8
+  xmlLines.push('<?xml version="1.0" encoding="UTF-8"?>');
   
   // DOCTYPE obbligatorio per validazione DTD SIAE
   // Riferimento: ControlloAccessi_v0001_20080626.dtd
@@ -2535,19 +2543,12 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   xmlLines.push(`        <OraEvento>${oraEvento}</OraEvento>`);
   xmlLines.push(`        <TipoGenere>${tipoGenere}</TipoGenere>`);
   xmlLines.push(`        <TitoloEvento>${titoloEvento}</TitoloEvento>`);
-  // Includi Autore/Esecutore/NazionalitaFilm SOLO per categorie che li richiedono
-  // Per Intrattenimento (30-40, 60-69, 70-74, 79): OMETTI completamente
-  // Per Teatro/Concerti (45-59): includi Autore e Esecutore
-  // Per Cinema (01-04): includi NazionalitaFilm
-  if (autore !== null) {
-    xmlLines.push(`        <Autore>${autore}</Autore>`);
-  }
-  if (esecutore !== null) {
-    xmlLines.push(`        <Esecutore>${esecutore}</Esecutore>`);
-  }
-  if (nazionalitaFilm !== null) {
-    xmlLines.push(`        <NazionalitaFilm>${nazionalitaFilm}</NazionalitaFilm>`);
-  }
+  // FIX 2026-01-20: Autore, Esecutore, NazionalitaFilm sono OBBLIGATORI secondo DTD
+  // Devono essere SEMPRE presenti per validazione corretta
+  // Vedi DTD linee 9-13: <!ELEMENT Evento (...,Autore, Esecutore, NazionalitaFilm,...)>
+  xmlLines.push(`        <Autore>${autore}</Autore>`);
+  xmlLines.push(`        <Esecutore>${esecutore}</Esecutore>`);
+  xmlLines.push(`        <NazionalitaFilm>${nazionalitaFilm}</NazionalitaFilm>`);
   xmlLines.push(`        <NumOpereRappresentate>1</NumOpereRappresentate>`);
   
   // ==================== SistemaEmissione ====================
@@ -4993,12 +4994,13 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
   const dtdFile = isMonthly ? 'RiepilogoMensile_v0039_20040209.dtd' : 'RiepilogoGiornaliero_v0039_20040209.dtd';
 
-  // FIX 2026-01-20: Aggiunto encoding ISO-8859-1 e DOCTYPE come richiesto da SIAE Allegato C
+  // FIX 2026-01-20: Aggiunto encoding UTF-8 e DOCTYPE come da esempi ufficiali SIAE
+  // Vedi RMG_2015_09_00_001.xml e RCA_2015_09_22_001.xml che usano UTF-8
   // La DTD RiepilogoGiornaliero_v0039_20040209.dtd e RiepilogoMensile_v0039_20040209.dtd
-  // richiedono DOCTYPE e encoding Latin-1 (ISO-8859-1) per conformità
+  // richiedono DOCTYPE per conformità
   // Il nome file corretto viene usato SOLO per l'allegato email (parametro nomeFile ignorato nell'XML)
   
-  const xml = `<?xml version="1.0" encoding="ISO-8859-1"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ${rootElement} SYSTEM "${dtdFile}">
 <${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
     <Titolare>
