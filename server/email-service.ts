@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { isBridgeConnected, requestSmimeSignature, getCardSignerEmail } from './bridge-relay';
+import { validateFileName as validateSiaeFileNameFormat } from './siae-transmission';
 
 /**
  * Formatta una stringa Base64 in righe da 76 caratteri per MIME (RFC 2045)
@@ -497,6 +498,17 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
     emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
     console.log(`[EMAIL-SERVICE] WARNING: explicitFileName non fornito, generato internamente: ${fileName}`);
+  }
+  
+  // VALIDAZIONE CRITICA: Blocca qualsiasi nome file con timestamp (errore SIAE 0600)
+  // FIX 2026-01-20: Validazione centralizzata per prevenire suffissi timestamp
+  try {
+    validateSiaeFileNameFormat(fileName);
+    console.log(`[EMAIL-SERVICE] [SIAE-FILENAME-OK] Nome file validato: ${fileName}`);
+  } catch (validationError: any) {
+    console.error(`[EMAIL-SERVICE] [SIAE-FILENAME-ERROR] Nome file NON VALIDO: ${fileName}`);
+    console.error(`[EMAIL-SERVICE] [SIAE-FILENAME-ERROR] Dettaglio: ${validationError.message}`);
+    throw new Error(`SIAE_FILENAME_INVALID: ${validationError.message}`);
   }
   
   // Validazione coerenza subject/filename per prevenire errore SIAE 0603
