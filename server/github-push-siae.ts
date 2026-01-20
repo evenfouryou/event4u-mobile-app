@@ -45,7 +45,7 @@ async function getGitHubClient() {
 
 const OWNER = 'evenfouryou';
 const REPO = 'event-four-you-siae-lettore';
-const COMMIT_MESSAGE = 'v3.15: S/MIME via libSIAEp7.dll (PKCS7SignML) + SHA-256 + multi-pattern email extraction';
+const COMMIT_MESSAGE = 'v3.50.0: FIX errore SIAE 0600 - log diagnostici nome file allegato';
 
 interface FileUpdate {
   localPath: string;
@@ -56,78 +56,23 @@ interface FileUpdate {
 const filesToUpdate: FileUpdate[] = [
   // SiaeBridge .NET project files
   {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/Program.cs',
-    repoPath: 'desktop-app/SiaeBridge/Program.cs'
+    localPath: 'siae-lettore-fix/SiaeBridge/Program.cs',
+    repoPath: 'SiaeBridge/Program.cs'
   },
   {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/LibSiae.cs',
-    repoPath: 'desktop-app/SiaeBridge/LibSiae.cs'
+    localPath: 'siae-lettore-fix/SiaeBridge/LibSiae.cs',
+    repoPath: 'SiaeBridge/LibSiae.cs'
   },
   {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/SIAEReader.cs',
-    repoPath: 'desktop-app/SiaeBridge/SIAEReader.cs'
+    localPath: 'siae-lettore-fix/SiaeBridge/SiaeBridge.csproj',
+    repoPath: 'SiaeBridge/SiaeBridge.csproj'
   },
   {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/SiaeBridge.csproj',
-    repoPath: 'desktop-app/SiaeBridge/SiaeBridge.csproj'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/libSIAEp7.dll',
-    repoPath: 'desktop-app/SiaeBridge/libSIAEp7.dll',
-    binary: true
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/prebuilt/libSIAE.dll',
-    repoPath: 'desktop-app/SiaeBridge/prebuilt/libSIAE.dll',
-    binary: true
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/prebuilt/Newtonsoft.Json.dll',
-    repoPath: 'desktop-app/SiaeBridge/prebuilt/Newtonsoft.Json.dll',
+    localPath: 'siae-lettore-fix/SiaeBridge/libSIAEp7.dll',
+    repoPath: 'SiaeBridge/libSIAEp7.dll',
     binary: true
   },
   // Electron app files
-  {
-    localPath: 'siae-lettore-fix/desktop-app/main.js',
-    repoPath: 'desktop-app/main.js'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/preload.js',
-    repoPath: 'desktop-app/preload.js'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/renderer.js',
-    repoPath: 'desktop-app/renderer.js'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/index.html',
-    repoPath: 'desktop-app/index.html'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/styles.css',
-    repoPath: 'desktop-app/styles.css'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/package.json',
-    repoPath: 'desktop-app/package.json'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/build-local.ps1',
-    repoPath: 'desktop-app/build-local.ps1'
-  },
-  {
-    localPath: 'siae-lettore-fix/desktop-app/BUILD_INSTRUCTIONS.md',
-    repoPath: 'desktop-app/BUILD_INSTRUCTIONS.md'
-  },
-  // Root files
-  {
-    localPath: 'siae-lettore-fix/README.md',
-    repoPath: 'README.md'
-  },
-  {
-    localPath: 'siae-lettore-fix/package.json',
-    repoPath: 'package.json'
-  },
   {
     localPath: 'siae-lettore-fix/main.js',
     repoPath: 'main.js'
@@ -149,12 +94,21 @@ const filesToUpdate: FileUpdate[] = [
     repoPath: 'styles.css'
   },
   {
+    localPath: 'siae-lettore-fix/package.json',
+    repoPath: 'package.json'
+  },
+  {
     localPath: 'siae-lettore-fix/build-local.ps1',
     repoPath: 'build-local.ps1'
   },
   {
     localPath: 'siae-lettore-fix/BUILD_INSTRUCTIONS.md',
     repoPath: 'BUILD_INSTRUCTIONS.md'
+  },
+  // Root files
+  {
+    localPath: 'siae-lettore-fix/README.md',
+    repoPath: 'README.md'
   },
   {
     localPath: 'siae-lettore-fix/icon.png',
