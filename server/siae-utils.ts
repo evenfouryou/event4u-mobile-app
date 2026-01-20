@@ -4992,13 +4992,15 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const organizerTaxId = taxId;
   const organizerType = 'G';
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
+  const dtdFile = isMonthly ? 'RiepilogoMensile_v0039_20040209.dtd' : 'RiepilogoGiornaliero_v0039_20040209.dtd';
 
-  // FIX 2026-01-19: Rimosso attributo NomeFile dall'XML per conformità DTD ufficiale SIAE
+  // FIX 2026-01-20: Aggiunto encoding ISO-8859-1 e DOCTYPE come richiesto da SIAE Allegato C
   // La DTD RiepilogoGiornaliero_v0039_20040209.dtd e RiepilogoMensile_v0039_20040209.dtd
-  // NON includono l'attributo NomeFile - solo: Sostituzione, Data, DataGenerazione, OraGenerazione, ProgressivoGenerazione
+  // richiedono DOCTYPE e encoding Latin-1 (ISO-8859-1) per conformità
   // Il nome file corretto viene usato SOLO per l'allegato email (parametro nomeFile ignorato nell'XML)
   
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE ${rootElement} SYSTEM "${dtdFile}">
 <${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
