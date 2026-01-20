@@ -249,25 +249,12 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   const parts = nameWithoutExt.split('_');
   const prefix = parts[0];
   
-  // FIX 2026-01-20: Formato CORRETTO secondo Allegato C sezione 1.4.1
-  // SEMPRE 4 parti: XXX_YYYYMMDD_SSSSSSSS_NNN (o XXX_YYYYMM_SSSSSSSS_NNN per mensile)
-  // Dove:
-  //   - XXX = Prefisso (RMG, RPM, RCA, LTA)
-  //   - YYYYMMDD = Data CONTIGUA (senza underscore) - YYYYMM per mensile
-  //   - SSSSSSSS = Codice sistema 8 caratteri
-  //   - NNN = Progressivo 3 cifre
-  const expectedParts = 4;
-  
-  if (parts.length !== expectedParts) {
-    const formatExample = prefix === 'RPM' 
-      ? 'RPM_YYYYMM_SSSSSSSS_NNN.xsi (mensile)'
-      : 'RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (giornaliero) o RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (evento)';
-    errors.push(
-      `FORMATO NOME FILE NON VALIDO: Servono ${expectedParts} parti. ` +
-      `Trovate ${parts.length} parti in "${fileName}". Formato corretto: ${formatExample}`
-    );
-    return { valid: false, errors, warnings };
-  }
+  // FIX 2026-01-20: Formato UFFICIALE secondo Allegato C sezione 1.4.1
+  // FORMATO NOME FILE ALLEGATO (SIAE UFFICIALE):
+  //   - RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN (5 parti con underscore)
+  //   - RPM: RPM_AAAA_MM_NNN (4 parti, senza giorno)
+  // 
+  // IMPORTANTE: Il codice sistema NON va nel nome file, solo nel Subject email!
   
   // Verifica prefisso valido
   if (!['RMG', 'RPM', 'RCA', 'LTA'].includes(prefix)) {
@@ -275,49 +262,65 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
       `PREFISSO NON VALIDO: Il prefisso "${prefix}" non è valido. ` +
       `Prefissi validi: RMG (giornaliero), RPM (mensile), RCA (eventi), LTA (lista accessi).`
     );
+    return { valid: false, errors, warnings };
   }
   
-  // Parsing: XXX_DATE_SYSTEMCODE_PROGRESSIVO
-  const [, dateStr, systemCode, progressivo] = parts;
+  // Numero parti dipende dal tipo di report
+  const isMonthly = prefix === 'RPM';
+  const expectedParts = isMonthly ? 4 : 5;
   
-  // Verifica data contigua
-  if (prefix === 'RPM') {
-    // Mensile: YYYYMM (6 cifre)
-    if (!/^\d{6}$/.test(dateStr)) {
-      errors.push(`DATA NON VALIDA: Per RPM la data deve essere YYYYMM (6 cifre). Trovato: "${dateStr}"`);
-    } else {
-      const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6));
-      if (year < 2000 || year > 2100) {
-        errors.push(`ANNO NON VALIDO: L'anno deve essere tra 2000 e 2100. Trovato: ${year}`);
-      }
-      if (month < 1 || month > 12) {
-        errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: ${String(month).padStart(2, '0')}`);
-      }
-    }
+  if (parts.length !== expectedParts) {
+    const formatExample = isMonthly 
+      ? 'RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)'
+      : `${prefix}_AAAA_MM_GG_NNN.xsi (5 parti con underscore)`;
+    errors.push(
+      `FORMATO NOME FILE NON VALIDO: Servono ${expectedParts} parti. ` +
+      `Trovate ${parts.length} parti in "${fileName}". Formato corretto: ${formatExample}`
+    );
+    return { valid: false, errors, warnings };
+  }
+  
+  let year: string, month: string, day: string, progressivo: string;
+  
+  if (isMonthly) {
+    // RPM: XXX_AAAA_MM_NNN (4 parti)
+    [, year, month, progressivo] = parts;
+    day = '01';
   } else {
-    // Giornaliero/RCA: YYYYMMDD (8 cifre)
-    if (!/^\d{8}$/.test(dateStr)) {
-      errors.push(`DATA NON VALIDA: Per ${prefix} la data deve essere YYYYMMDD (8 cifre). Trovato: "${dateStr}"`);
-    } else {
-      const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6));
-      const day = parseInt(dateStr.substring(6, 8));
-      if (year < 2000 || year > 2100) {
-        errors.push(`ANNO NON VALIDO: L'anno deve essere tra 2000 e 2100. Trovato: ${year}`);
-      }
-      if (month < 1 || month > 12) {
-        errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: ${String(month).padStart(2, '0')}`);
-      }
-      if (day < 1 || day > 31) {
-        errors.push(`GIORNO NON VALIDO: Il giorno deve essere tra 01 e 31. Trovato: ${String(day).padStart(2, '0')}`);
-      }
+    // RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN (5 parti)
+    [, year, month, day, progressivo] = parts;
+  }
+  
+  // Verifica anno (4 cifre)
+  if (!/^\d{4}$/.test(year)) {
+    errors.push(`ANNO NON VALIDO: L'anno deve essere 4 cifre. Trovato: "${year}"`);
+  } else {
+    const yearNum = parseInt(year);
+    if (yearNum < 2000 || yearNum > 2100) {
+      errors.push(`ANNO NON VALIDO: L'anno deve essere tra 2000 e 2100. Trovato: ${yearNum}`);
     }
   }
   
-  // Verifica codice sistema (8 caratteri alfanumerici)
-  if (!/^[A-Z0-9]{8}$/i.test(systemCode)) {
-    errors.push(`CODICE SISTEMA NON VALIDO: Deve essere 8 caratteri alfanumerici. Trovato: "${systemCode}"`);
+  // Verifica mese (2 cifre)
+  if (!/^\d{2}$/.test(month)) {
+    errors.push(`MESE NON VALIDO: Il mese deve essere 2 cifre. Trovato: "${month}"`);
+  } else {
+    const monthNum = parseInt(month);
+    if (monthNum < 1 || monthNum > 12) {
+      errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: ${month}`);
+    }
+  }
+  
+  // Verifica giorno (2 cifre) - solo per report non mensili
+  if (!isMonthly) {
+    if (!/^\d{2}$/.test(day)) {
+      errors.push(`GIORNO NON VALIDO: Il giorno deve essere 2 cifre. Trovato: "${day}"`);
+    } else {
+      const dayNum = parseInt(day);
+      if (dayNum < 1 || dayNum > 31) {
+        errors.push(`GIORNO NON VALIDO: Il giorno deve essere tra 01 e 31. Trovato: ${day}`);
+      }
+    }
   }
   
   // Verifica progressivo (3 cifre)
@@ -329,7 +332,6 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   }
   
   // Validazione estensione
-  // Accettati: .xsi (per S/MIME), .xsi.p7m (per CAdES-BES), .p7m
   if (!extension) {
     errors.push('Estensione file mancante. Richiesta: .xsi o .xsi.p7m');
   } else if (!['.xsi', '.xsi.p7m', '.p7m'].includes(extension.toLowerCase())) {
@@ -342,8 +344,8 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     warnings,
     parsedData: {
       reportType: prefix as 'RMG' | 'RPM' | 'RCA' | 'LTA',
-      date: dateStr,
-      systemCode: systemCode,
+      date: `${year}_${month}_${day}`,
+      systemCode: undefined, // Non presente nel nome file (solo nel Subject)
       progressivo: progressivo,
       extension: extension,
     }
@@ -633,25 +635,23 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // FIX 2026-01-20: Formato CORRETTO secondo Allegato C sezione 1.4.1
+  // FIX 2026-01-20: Formato UFFICIALE secondo Allegato C sezione 1.4.1
   // 
-  // FORMATO NOME FILE ALLEGATO (UFFICIALE):
-  //   XXX_YYYYMMDD_SSSSSSSS_NNN.xsi(.p7m)
+  // FORMATO NOME FILE ALLEGATO (Allegato C SIAE):
+  //   XXX_AAAA_MM_GG_NNN.xsi(.p7m)
   // Dove:
   //   XXX = Prefisso tipo report (RMG, RPM, RCA)
-  //   YYYYMMDD = Data CONTIGUA (senza underscore!) - YYYYMM per mensile
-  //   SSSSSSSS = Codice sistema a 8 caratteri (es: P0004010)
+  //   AAAA_MM_GG = Data con UNDERSCORE separati
   //   NNN = Progressivo (001-999)
   //   .xsi = XML SIAE
   //   .p7m = firma CAdES-BES
   //
+  // IMPORTANTE: Il codice sistema va SOLO nel Subject email, NON nel nome file!
+  //
   // Esempi corretti:
-  //   RMG_20260120_P0004010_001.xsi (giornaliero)
-  //   RPM_202601_P0004010_001.xsi (mensile)
-  //   RCA_20260120_P0004010_001.xsi (evento)
-  
-  // Codice sistema: usa quello fornito o fallback a default
-  const sysCode = (systemCode || 'EVENT4U1').padStart(8, '0').substring(0, 8);
+  //   RMG_2026_01_20_001.xsi (giornaliero)
+  //   RPM_2026_01_001.xsi (mensile - senza giorno)
+  //   RCA_2026_01_20_001.xsi (evento)
   
   // Estensione: .xsi.p7m per file firmati CAdES
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
@@ -659,30 +659,22 @@ export function generateSiaeAttachmentName(
   let result: string;
   switch (reportType) {
     case 'giornaliero':
-      // RMG_YYYYMMDD_SSSSSSSS_NNN.xsi
-      result = `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      // RMG_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
+      result = `RMG_${year}_${month}_${day}_${prog}${extension}`;
       break;
     case 'mensile':
-      // RPM_YYYYMM_SSSSSSSS_NNN.xsi (senza giorno)
-      result = `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
+      // RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)
+      result = `RPM_${year}_${month}_${prog}${extension}`;
       break;
     case 'log':
     case 'rca':
     default:
-      // RCA_YYYYMMDD_SSSSSSSS_NNN.xsi
-      result = `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      // RCA_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
+      result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
       break;
   }
   
-  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, date=${date.toISOString()}, systemCode=${sysCode}, result=${result}`);
-  
-  // Validazione formato - 4 parti per tutti (XXX_DATE_SYSTEM_PROG)
-  const baseName = result.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '');
-  const parts = baseName.split('_');
-  if (parts.length !== 4) {
-    console.error(`[SIAE-UTILS] ERRORE CRITICO: Nome file generato con ${parts.length} parti invece di 4: ${result}`);
-    console.error(`[SIAE-UTILS] Formato corretto: XXX_YYYYMMDD_SSSSSSSS_NNN.xsi`);
-  }
+  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, date=${date.toISOString()}, result=${result}`);
   
   return result;
 }
