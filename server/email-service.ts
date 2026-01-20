@@ -487,37 +487,19 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   let fileName: string;
   let emailSubject: string;
   
-  if (explicitFileName) {
-    // Usa il nome file esplicito fornito dal caller (stesso usato per attributo NomeFile nell'XML)
-    fileName = explicitFileName;
-    // Subject = nome file senza estensione (per errore 0603)
-    emailSubject = explicitFileName.replace(/\.xsi(\.p7m)?$/i, '');
-    console.log(`[EMAIL-SERVICE] FIX 0600: Usando nome file esplicito dal caller: ${fileName}`);
-  } else {
-    // Fallback: genera nome file internamente (legacy)
-    fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
-    emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
-    console.log(`[EMAIL-SERVICE] WARNING: explicitFileName non fornito, generato internamente: ${fileName}`);
-  }
+  // FIX 2026-01-20: Formato SIAE Allegato C - Nome file e Subject sono DIVERSI!
+  // Nome file allegato (sezione 1.4.1): RCA_AAAA_MM_GG_###.xsi.p7m (SENZA codice sistema)
+  // Subject email (sezione 1.5.3): RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY (CON codice sistema e versione)
   
-  // VALIDAZIONE CRITICA: Blocca qualsiasi nome file con timestamp (errore SIAE 0600)
-  // FIX 2026-01-20: Validazione centralizzata per prevenire suffissi timestamp
-  try {
-    validateSiaeFileName(fileName);
-    console.log(`[EMAIL-SERVICE] [SIAE-FILENAME-OK] Nome file validato: ${fileName}`);
-  } catch (validationError: any) {
-    console.error(`[EMAIL-SERVICE] [SIAE-FILENAME-ERROR] Nome file NON VALIDO: ${fileName}`);
-    console.error(`[EMAIL-SERVICE] [SIAE-FILENAME-ERROR] Dettaglio: ${validationError.message}`);
-    throw new Error(`SIAE_FILENAME_INVALID: ${validationError.message}`);
-  }
+  // Genera nome file allegato (senza codice sistema)
+  fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
   
-  // Validazione coerenza subject/filename per prevenire errore SIAE 0603
-  const fileNameBase = fileName.replace(/\.xsi(\.p7m)?$/i, '');
-  if (emailSubject !== fileNameBase) {
-    console.error(`[EMAIL-SERVICE] CRITICAL: Subject/filename mismatch! subject="${emailSubject}" != fileNameBase="${fileNameBase}"`);
-    throw new Error(`SIAE 0603: Subject email non corrisponde al nome file. subject="${emailSubject}", filename="${fileName}"`);
-  }
-  console.log(`[EMAIL-SERVICE] SIAE file naming: attachmentName=${fileName}, subject=${emailSubject} (coerenza verificata)`);
+  // Genera subject email (con codice sistema e versione)
+  emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
+  
+  console.log(`[EMAIL-SERVICE] SIAE Allegato C formato:`);
+  console.log(`[EMAIL-SERVICE]   - Attachment: ${fileName} (formato 1.4.1)`);
+  console.log(`[EMAIL-SERVICE]   - Subject: ${emailSubject} (formato 1.5.3)`);
   console.log(`[EMAIL-SERVICE] FIX 2026-01-07: Using raw XML for S/MIME (no double signature)`);
   if (p7mBase64) {
     console.log(`[EMAIL-SERVICE] WARNING: P7M provided but ignored - S/MIME includes XML directly`);

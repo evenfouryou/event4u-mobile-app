@@ -215,14 +215,18 @@ export interface SiaeFileNameValidationResult {
 /**
  * Valida il formato del nome file SIAE secondo Allegato C sezione 1.4.1
  * 
- * FORMATI VALIDI (data CONTIGUA senza underscore):
- * - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RMG_20260118_P0004010_001.xsi)
- * - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (es: RPM_202601_P0004010_001.xsi)
- * - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (es: RCA_20260118_P0004010_001.xsi)
+ * FIX 2026-01-20: Formato UFFICIALE secondo documentazione Agenzia Entrate
  * 
- * FORMATI NON VALIDI (data con underscore - causa errore SIAE 0600):
- * - RMG_2026_01_18_P0004010_001.xsi (SBAGLIATO!)
- * - RPM_2026_01_P0004010_001.xsi (SBAGLIATO!)
+ * FORMATO VALIDO (nome file ALLEGATO):
+ *   XXX_AAAA_MM_GG_###.xsi.p7m
+ * Dove:
+ *   XXX = RCA o LTA (solo questi prefissi per email)
+ *   AAAA_MM_GG = data SEPARATA da underscore
+ *   ### = progressivo (001-999)
+ * 
+ * Esempio corretto: RCA_2026_01_20_001.xsi.p7m
+ * 
+ * NOTA: Il codice sistema NON va nel nome file allegato, solo nel Subject email
  * 
  * @param fileName - Nome file da validare (con o senza estensione)
  * @returns Risultato validazione con eventuali errori
@@ -238,66 +242,57 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   // Split per underscore
   const parts = nameWithoutExt.split('_');
   
-  // Verifica numero parti (deve essere esattamente 4 per tutti i tipi)
-  if (parts.length !== 4) {
-    // Potrebbe essere il vecchio formato sbagliato con underscore nella data
-    if (parts.length === 6 && (parts[0] === 'RMG' || parts[0] === 'RCA')) {
+  // FIX 2026-01-20: Nuovo formato ha 5 parti (XXX_AAAA_MM_GG_###)
+  if (parts.length !== 5) {
+    if (parts.length === 4) {
       errors.push(
-        `FORMATO NOME FILE ERRATO: Rilevato formato con data separata da underscore (${fileName}). ` +
-        `Il formato corretto usa data CONTIGUA: ${parts[0]}_${parts[1]}${parts[2]}${parts[3]}_${parts[4]}_${parts[5]}.xsi. ` +
-        `Questo errore causa SIAE 0600 "Nome del file contenente il riepilogo sbagliato".`
-      );
-    } else if (parts.length === 5 && parts[0] === 'RPM') {
-      errors.push(
-        `FORMATO NOME FILE ERRATO: Rilevato formato con data separata da underscore (${fileName}). ` +
-        `Il formato corretto usa data CONTIGUA: ${parts[0]}_${parts[1]}${parts[2]}_${parts[3]}_${parts[4]}.xsi. ` +
-        `Questo errore causa SIAE 0600 "Nome del file contenente il riepilogo sbagliato".`
+        `FORMATO NOME FILE OBSOLETO: Rilevato vecchio formato con 4 parti (${fileName}). ` +
+        `Il formato Allegato C corretto ha 5 parti: RCA_AAAA_MM_GG_###.xsi.p7m. ` +
+        `Il codice sistema NON va nel nome file, solo nel Subject email.`
       );
     } else {
       errors.push(
-        `FORMATO NOME FILE NON VALIDO: Il nome file deve avere esattamente 4 parti separate da underscore ` +
-        `(es: RMG_20260118_P0004010_001.xsi). Trovate ${parts.length} parti in "${fileName}".`
+        `FORMATO NOME FILE NON VALIDO: Il nome file deve avere 5 parti (RCA_AAAA_MM_GG_###). ` +
+        `Trovate ${parts.length} parti in "${fileName}".`
       );
     }
     
     return { valid: false, errors, warnings };
   }
   
-  const [prefix, datePart, systemCode, progressivo] = parts;
+  const [prefix, year, month, day, progressivo] = parts;
   
-  // Verifica prefisso valido
-  if (!['RMG', 'RPM', 'RCA'].includes(prefix)) {
+  // Verifica prefisso valido (solo RCA e LTA per trasmissioni email)
+  if (!['RCA', 'LTA'].includes(prefix)) {
     errors.push(
-      `PREFISSO NON VALIDO: Il prefisso "${prefix}" non è riconosciuto. ` +
-      `Prefissi validi: RMG (giornaliero), RPM (mensile), RCA (evento).`
+      `PREFISSO NON VALIDO: Il prefisso "${prefix}" non è valido per trasmissioni email. ` +
+      `Prefissi validi secondo Allegato C: RCA (Riepilogo Controllo Accessi), LTA (Lista Titoli Accessi).`
     );
   }
   
-  // Verifica formato data (deve essere contigua, non con underscore)
-  if (prefix === 'RPM') {
-    // RPM usa YYYYMM (6 cifre)
-    if (!/^\d{6}$/.test(datePart)) {
-      errors.push(
-        `FORMATO DATA RPM NON VALIDO: La data per RPM deve essere YYYYMM (6 cifre contigue). ` +
-        `Trovato: "${datePart}". Esempio corretto: 202601`
-      );
-    }
+  // Verifica anno (4 cifre)
+  if (!/^\d{4}$/.test(year)) {
+    errors.push(`ANNO NON VALIDO: L'anno deve essere 4 cifre. Trovato: "${year}"`);
+  }
+  
+  // Verifica mese (2 cifre, 01-12)
+  if (!/^\d{2}$/.test(month)) {
+    errors.push(`MESE NON VALIDO: Il mese deve essere 2 cifre. Trovato: "${month}"`);
   } else {
-    // RMG e RCA usano YYYYMMDD (8 cifre)
-    if (!/^\d{8}$/.test(datePart)) {
-      errors.push(
-        `FORMATO DATA ${prefix} NON VALIDO: La data per ${prefix} deve essere YYYYMMDD (8 cifre contigue). ` +
-        `Trovato: "${datePart}". Esempio corretto: 20260118`
-      );
+    const monthNum = parseInt(month);
+    if (monthNum < 1 || monthNum > 12) {
+      errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: "${month}"`);
     }
   }
   
-  // Verifica codice sistema (8 caratteri alfanumerici)
-  if (!/^[A-Z0-9]{8}$/.test(systemCode)) {
-    errors.push(
-      `CODICE SISTEMA NON VALIDO: Il codice sistema deve essere di 8 caratteri alfanumerici maiuscoli. ` +
-      `Trovato: "${systemCode}". Esempio corretto: P0004010`
-    );
+  // Verifica giorno (2 cifre, 01-31)
+  if (!/^\d{2}$/.test(day)) {
+    errors.push(`GIORNO NON VALIDO: Il giorno deve essere 2 cifre. Trovato: "${day}"`);
+  } else {
+    const dayNum = parseInt(day);
+    if (dayNum < 1 || dayNum > 31) {
+      errors.push(`GIORNO NON VALIDO: Il giorno deve essere tra 01 e 31. Trovato: "${day}"`);
+    }
   }
   
   // Verifica progressivo (3 cifre)
@@ -308,11 +303,11 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     );
   }
   
-  // Warning se estensione mancante o non standard
+  // Warning se estensione non è .xsi.p7m (file firmati)
   if (!extension) {
-    warnings.push('Estensione file mancante. Attesa: .xsi o .xsi.p7m');
-  } else if (extension.toLowerCase() !== '.xsi' && extension.toLowerCase() !== '.xsi.p7m') {
-    warnings.push(`Estensione non standard: "${extension}". Attesa: .xsi o .xsi.p7m`);
+    warnings.push('Estensione file mancante. Attesa: .xsi.p7m');
+  } else if (extension.toLowerCase() !== '.xsi.p7m') {
+    warnings.push(`Estensione: "${extension}". Per trasmissioni SIAE usare .xsi.p7m (file firmato)`);
   }
   
   return {
@@ -320,9 +315,9 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     errors,
     warnings,
     parsedData: {
-      reportType: ['RMG', 'RPM', 'RCA'].includes(prefix) ? prefix as 'RMG' | 'RPM' | 'RCA' : null,
-      date: datePart,
-      systemCode: systemCode,
+      reportType: ['RCA', 'LTA'].includes(prefix) ? 'RCA' as 'RMG' | 'RPM' | 'RCA' : null,
+      date: `${year}_${month}_${day}`,
+      systemCode: null, // Non presente nel nome file allegato
       progressivo: progressivo,
       extension: extension,
     }
@@ -612,79 +607,73 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // FIX 2026-01-17: Codice sistema OBBLIGATORIO - non usare default!
-  // Il default EVENT4U1 NON è registrato presso SIAE e causa errore 0600
-  if (!systemCode || systemCode.length !== 8) {
-    console.error(`[SIAE-UTILS] CRITICAL: Codice sistema mancante o invalido in generateSiaeAttachmentName! Valore: "${systemCode || 'undefined'}"`);
-    // Se il codice è il default o mancante, BLOCCA con errore esplicito invece di usare placeholder
-    if (!systemCode || systemCode === SIAE_SYSTEM_CODE_DEFAULT) {
-      throw new Error(`Codice sistema SIAE non configurato. Il codice "${SIAE_SYSTEM_CODE_DEFAULT}" non è registrato presso SIAE e causerebbe errore 0600.`);
-    }
-  }
-  const sysCode = systemCode;
+  // FIX 2026-01-20: Formato SIAE Allegato C sezione 1.4.1 UFFICIALE
+  // Il nome file allegato NON contiene il codice sistema!
+  // Solo il Subject email contiene il codice sistema (sezione 1.5.3)
+  // 
+  // FORMATO NOME FILE ALLEGATO (sezione 1.4.1):
+  //   XXX_AAAA_MM_GG_###.xsi.p7m
+  // Dove:
+  //   XXX = "RCA" (Riepilogo Controllo Accessi) - unico tipo per trasmissioni email
+  //   AAAA_MM_GG = data SEPARATA da underscore
+  //   ### = progressivo (001-999)
+  //   .xsi = XML SIAE
+  //   .p7m = firma digitale
+  //
+  // Esempio corretto: RCA_2026_01_20_001.xsi.p7m
+  // Esempio SBAGLIATO: RMG_20260120_P0004010_001.xsi (data contigua, codice sistema incluso)
   
-  // Estensione: .xsi.p7m per CAdES, .xsi per non firmato
-  const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
+  // Estensione: .xsi.p7m per file firmati (sempre per trasmissioni SIAE)
+  const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi.p7m';
   
-  // FIX 2026-01-19: Formato SIAE Allegato C sezione 1.4.1 usa DATA CONTIGUA (YYYYMMDD)
-  // NON usare underscore tra i componenti della data!
-  // Formato: XXX_YYYYMMDD_SSSSSSSS_NNN.xsi
-  // Esempio corretto: RMG_20260118_P0004010_004.xsi
-  // Esempio SBAGLIATO: RMG_2026_01_18_P0004010_004.xsi (causa errore SIAE 0600!)
-  
-  // NOTA: La data nel nome file DEVE corrispondere al formato della data nel contenuto XML
-  // Nell'XML: Data="20260118" (contigua) - il nome file deve usare lo stesso formato
-  
-  // Formato allegato conforme SIAE Allegato C sezione 1.4.1:
-  // - RMG: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua)
-  // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (anno-mese contiguo)
-  // - RCA: RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua)
+  // NOTA: Secondo Allegato C sezione 1.4.1, solo "RCA" e "LTA" sono tipi validi
+  // Tutti i report (giornaliero, mensile, evento) vanno come RCA per trasmissione email
   let result: string;
   switch (reportType) {
     case 'mensile':
-      // RPM = Riepilogo Periodico Mensile
-      result = `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
+      // Report mensile - usa RCA con data del primo giorno del mese
+      result = `RCA_${year}_${month}_01_${prog}${extension}`;
       break;
     case 'log':
     case 'rca':
-      // RCA = Riepilogo Controllo Accessi
-      result = `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
-      break;
     case 'giornaliero':
     default:
-      // RMG = Riepilogo Giornaliero (report C1 giornaliero)
-      result = `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
+      // RCA = Riepilogo Controllo Accessi (tutti i report usano questo prefisso)
+      result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
       break;
   }
   
-  // FIX 2026-01-19: Log di debug per tracciare formato nome file
-  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, date=${date.toISOString()}, year=${year}, month=${month}, day=${day}, result=${result}`);
+  console.log(`[SIAE-UTILS] generateSiaeAttachmentName (FIX Allegato C): type=${reportType}, date=${date.toISOString()}, result=${result}`);
   
-  // Validazione formato: verifica che non ci siano underscore extra nella data
-  const parts = result.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '').split('_');
-  if (parts.length !== 4) {
-    console.error(`[SIAE-UTILS] ERRORE CRITICO: Nome file generato con ${parts.length} parti invece di 4: ${result}`);
-    console.error(`[SIAE-UTILS] Questo causerebbe errore SIAE 0600!`);
+  // Validazione formato: 4 parti separate da underscore (RCA_AAAA_MM_GG_###)
+  const baseName = result.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '');
+  const parts = baseName.split('_');
+  if (parts.length !== 5) { // RCA + AAAA + MM + GG + ###
+    console.error(`[SIAE-UTILS] ERRORE CRITICO: Nome file generato con ${parts.length} parti invece di 5: ${result}`);
+    console.error(`[SIAE-UTILS] Formato corretto: RCA_AAAA_MM_GG_###.xsi.p7m`);
   }
   
   return result;
 }
 
 /**
- * Genera SUBJECT EMAIL conforme Allegato C SIAE
+ * Genera SUBJECT EMAIL conforme Allegato C SIAE sezione 1.5.3
  * 
- * FIX 2026-01-16: Il subject DEVE essere IDENTICO al nome file allegato (senza estensione)
- * per evitare errore SIAE 0603 "Le date dell'oggetto, del nome file, e del contenuto non sono coerenti"
+ * FIX 2026-01-20: Formato Subject diverso dal nome file allegato!
  * 
- * FORMATO SUBJECT = nome file senza estensione:
- * - RMG_YYYYMMDD_SSSSSSSS_NNN (giornaliero)
- * - RPM_YYYYMM_SSSSSSSS_NNN (mensile)
- * - RCA_YYYYMMDD_SSSSSSSS_NNN (evento)
+ * FORMATO SUBJECT EMAIL (Allegato C sezione 1.5.3):
+ *   RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
  * 
- * Esempi:
- * - RMG_20260115_P0004010_012
- * - RPM_202601_P0004010_009
- * - RCA_20260115_P0004010_001
+ * Dove:
+ *   AAAA = Anno (4 cifre)
+ *   MM = Mese (2 cifre)
+ *   GG = Giorno (2 cifre)
+ *   SSSSSSSS = Codice sistema (8 caratteri, con zeri iniziali se necessario)
+ *   ### = Progressivo (001-999)
+ *   TTT = Tipo file (XSI per XML, TXT per testo)
+ *   V.XX.YY = Versione formato (es: V.01.00)
+ * 
+ * Esempio: RCA_2026_01_20_P0004010_001_XSI_V.01.00
  */
 export function generateSiaeSubject(
   reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
@@ -692,11 +681,35 @@ export function generateSiaeSubject(
   progressivo: number,
   systemCode?: string
 ): string {
-  // Genera il nome file completo e rimuovi l'estensione
-  // Questo garantisce che subject e nome file siano SEMPRE identici
-  const fullFileName = generateSiaeAttachmentName(reportType, date, progressivo, null, systemCode);
-  // Rimuovi .xsi o .xsi.p7m dall'estensione
-  const subject = fullFileName.replace(/\.xsi(\.p7m)?$/, '');
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const prog = String(progressivo).padStart(3, '0');
+  
+  // Codice sistema OBBLIGATORIO nel subject (8 caratteri)
+  if (!systemCode || systemCode.length !== 8) {
+    throw new Error(`Codice sistema SIAE obbligatorio per il Subject email. Ricevuto: "${systemCode || 'undefined'}"`);
+  }
+  
+  // Versione formato - usiamo V.01.00 come da documentazione
+  const formatVersion = 'V.01.00';
+  
+  // Tutti i report vanno come RCA per trasmissione email
+  let subject: string;
+  switch (reportType) {
+    case 'mensile':
+      // Report mensile - usa primo giorno del mese
+      subject = `RCA_${year}_${month}_01_${systemCode}_${prog}_XSI_${formatVersion}`;
+      break;
+    case 'log':
+    case 'rca':
+    case 'giornaliero':
+    default:
+      subject = `RCA_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
+      break;
+  }
+  
+  console.log(`[SIAE-UTILS] generateSiaeSubject (FIX Allegato C 1.5.3): type=${reportType}, result=${subject}`);
   return subject;
 }
 
