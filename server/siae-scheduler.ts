@@ -714,6 +714,8 @@ async function sendDailyReports() {
 
         // Invio automatico email a SIAE con nuovo formato subject
         try {
+          // FIX 2026-01-20: Passa explicitFileName per garantire coerenza tra nome file allegato e XML
+          // Questo previene errore SIAE 0600 causato da discrepanze nel nome file
           await sendSiaeTransmissionEmail({
             to: SIAE_TEST_EMAIL,
             companyName: reportData.company?.name || 'N/A',
@@ -729,6 +731,7 @@ async function sendDailyReports() {
             signatureFormat: signatureFormat || undefined,
             signWithSmime: true,
             requireSignature: true,
+            explicitFileName: fileName, // FIX: Usa lo stesso nome file generato per l'XML
           });
 
           // Aggiorna status a 'sent'
@@ -1001,6 +1004,7 @@ async function sendMonthlyReports() {
 
         // Invio automatico email a SIAE con nuovo formato subject
         try {
+          // FIX 2026-01-20: Passa explicitFileName per garantire coerenza tra nome file allegato e XML
           await sendSiaeTransmissionEmail({
             to: SIAE_TEST_EMAIL,
             companyName: reportData.company?.name || 'N/A',
@@ -1016,6 +1020,7 @@ async function sendMonthlyReports() {
             signatureFormat: signatureFormat || undefined,
             signWithSmime: true,
             requireSignature: true,
+            explicitFileName: fileName, // FIX: Usa lo stesso nome file generato per l'XML
           });
 
           // Aggiorna status a 'sent'
@@ -1365,6 +1370,7 @@ async function sendRCAReports() {
 
         // Invio email
         try {
+          // FIX 2026-01-20: Passa explicitFileName per garantire coerenza tra nome file allegato e XML
           await sendSiaeTransmissionEmail({
             to: SIAE_TEST_EMAIL,
             companyName: companyBusinessName,
@@ -1380,6 +1386,7 @@ async function sendRCAReports() {
             signatureFormat: signatureFormat || undefined,
             signWithSmime: true,
             requireSignature: true,
+            explicitFileName: fileName, // FIX: Usa lo stesso nome file generato per l'XML
           });
           
           await siaeStorage.updateSiaeTransmission(transmission.id, {
