@@ -223,8 +223,13 @@ export function validateSiaeFileName(fileName: string): void {
 /**
  * Genera il Subject email SIAE conforme Allegato C sezione 1.5.3
  * 
- * FORMATO: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
- * (DIVERSO dal nome file allegato - include codice sistema e versione)
+ * FORMATI per tipo report:
+ * - RMG_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY (giornaliero)
+ * - RPM_AAAA_MM_SSSSSSSS_###_XSI_V.XX.YY (mensile - SENZA giorno)
+ * - RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY (eventi)
+ * 
+ * NOTA: Il prefisso del Subject DEVE corrispondere al tipo report (RMG/RPM/RCA)
+ * Il Subject include codice sistema (8 caratteri) a differenza del nome file allegato
  */
 export function generateSiaeEmailSubject(params: SiaeFileNameParams): string {
   const { reportType, date, progressivo, systemCode } = params;
@@ -240,41 +245,64 @@ export function generateSiaeEmailSubject(params: SiaeFileNameParams): string {
   const prog = String(progressivo).padStart(3, '0');
   const formatVersion = 'V.01.00';
   
-  // Formato Subject: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
-  let dateComponent: string;
+  // FIX 2026-01-20: Subject deve usare il prefisso corretto per tipo report
+  // e per RPM NON includere il giorno (Allegato C sezione 1.5.3)
   switch (reportType) {
     case 'mensile':
-      dateComponent = `${year}_${month}_01`;
-      break;
-    case 'rca':
+      // RPM: formato SENZA giorno - RPM_AAAA_MM_SSSSSSSS_###_XSI_V.XX.YY
+      return `RPM_${year}_${month}_${systemCode}_${prog}_XSI_${formatVersion}`;
     case 'giornaliero':
+      // RMG: formato CON giorno - RMG_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
+      return `RMG_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
+    case 'rca':
     default:
-      dateComponent = `${year}_${month}_${day}`;
-      break;
+      // RCA: formato CON giorno - RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
+      return `RCA_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
   }
-  
-  return `RCA_${dateComponent}_${systemCode}_${prog}_XSI_${formatVersion}`;
 }
 
 /**
  * Estrae informazioni da un nome file SIAE esistente
- * Supporta nuovo formato Allegato C (RCA_AAAA_MM_GG_###)
+ * Supporta tutti i formati Allegato C:
+ * - RMG_AAAA_MM_GG_### (giornaliero - 5 parti)
+ * - RPM_AAAA_MM_### (mensile - 4 parti, senza giorno)
+ * - RCA_AAAA_MM_GG_### (eventi - 5 parti)
+ * - LTA_AAAA_MM_GG_### (alternativo eventi - 5 parti)
  */
 export function parseSiaeFileName(fileName: string): SiaeFileNameResult | null {
   const nameWithoutExt = fileName.replace(/\.xsi(\.p7m)?$/i, '');
   const parts = nameWithoutExt.split('_');
   
-  // Nuovo formato: 5 parti (RCA_AAAA_MM_GG_###)
-  if (parts.length !== 5) {
+  const prefix = parts[0];
+  
+  // Verifica prefisso valido
+  if (!['RCA', 'LTA', 'RMG', 'RPM'].includes(prefix)) {
     return null;
   }
   
-  const prefix = parts[0];
-  const dateComponent = `${parts[1]}_${parts[2]}_${parts[3]}`;
-  const progressivoFormatted = parts[4];
+  // RPM ha 4 parti (senza giorno): RPM_AAAA_MM_###
+  // Gli altri hanno 5 parti: XXX_AAAA_MM_GG_###
+  const isMonthly = prefix === 'RPM';
+  const expectedParts = isMonthly ? 4 : 5;
   
-  if (!['RCA', 'LTA'].includes(prefix)) {
+  if (parts.length !== expectedParts) {
     return null;
+  }
+  
+  let dateComponent: string;
+  let progressivoFormatted: string;
+  let fullDateComponent: string;
+  
+  if (isMonthly) {
+    // RPM: parts = [RPM, AAAA, MM, ###]
+    dateComponent = `${parts[1]}_${parts[2]}`;
+    progressivoFormatted = parts[3];
+    fullDateComponent = `${parts[1]}_${parts[2]}_01`; // Usa 01 come giorno default
+  } else {
+    // RMG/RCA/LTA: parts = [XXX, AAAA, MM, GG, ###]
+    dateComponent = `${parts[1]}_${parts[2]}_${parts[3]}`;
+    progressivoFormatted = parts[4];
+    fullDateComponent = dateComponent;
   }
   
   return {
@@ -282,7 +310,9 @@ export function parseSiaeFileName(fileName: string): SiaeFileNameResult | null {
     baseName: nameWithoutExt,
     prefix,
     dateComponent,
-    progressivoFormatted
+    progressivoFormatted,
+    isMonthly,
+    fullDateComponent
   };
 }
 
