@@ -491,8 +491,16 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   // Nome file allegato (sezione 1.4.1): RCA_AAAA_MM_GG_###.xsi.p7m (SENZA codice sistema)
   // Subject email (sezione 1.5.3): RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY (CON codice sistema e versione)
   
-  // Genera nome file allegato (senza codice sistema)
-  fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
+  // FIX 2026-01-20: Usa explicitFileName se fornito, altrimenti genera nuovo nome file
+  // Questo garantisce coerenza tra nome file e attributo NomeFile nell'XML
+  if (explicitFileName && explicitFileName.trim() !== '') {
+    fileName = explicitFileName;
+    console.log(`[EMAIL-SERVICE] Usando explicitFileName: ${fileName}`);
+  } else {
+    // Genera nome file allegato (senza codice sistema)
+    fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
+    console.log(`[EMAIL-SERVICE] Nome file generato: ${fileName}`);
+  }
   
   // Genera subject email (con codice sistema e versione)
   emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);

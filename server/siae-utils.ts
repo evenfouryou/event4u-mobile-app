@@ -249,17 +249,21 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   const parts = nameWithoutExt.split('_');
   const prefix = parts[0];
   
-  // FIX 2026-01-20: Formato dipende dal tipo di report:
-  // - RPM (mensile): 4 parti (RPM_AAAA_MM_###)
-  // - Altri: 5 parti (XXX_AAAA_MM_GG_###)
-  const expectedParts = prefix === 'RPM' ? 4 : 5;
+  // FIX 2026-01-20: Formato CORRETTO secondo Allegato C sezione 1.4.1
+  // SEMPRE 4 parti: XXX_YYYYMMDD_SSSSSSSS_NNN (o XXX_YYYYMM_SSSSSSSS_NNN per mensile)
+  // Dove:
+  //   - XXX = Prefisso (RMG, RPM, RCA, LTA)
+  //   - YYYYMMDD = Data CONTIGUA (senza underscore) - YYYYMM per mensile
+  //   - SSSSSSSS = Codice sistema 8 caratteri
+  //   - NNN = Progressivo 3 cifre
+  const expectedParts = 4;
   
   if (parts.length !== expectedParts) {
     const formatExample = prefix === 'RPM' 
-      ? 'RPM_AAAA_MM_###.xsi.p7m (mensile)'
-      : 'RMG_AAAA_MM_GG_###.xsi.p7m (giornaliero) o RCA_AAAA_MM_GG_###.xsi.p7m (evento)';
+      ? 'RPM_YYYYMM_SSSSSSSS_NNN.xsi (mensile)'
+      : 'RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (giornaliero) o RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (evento)';
     errors.push(
-      `FORMATO NOME FILE NON VALIDO: Per il prefisso ${prefix} servono ${expectedParts} parti. ` +
+      `FORMATO NOME FILE NON VALIDO: Servono ${expectedParts} parti. ` +
       `Trovate ${parts.length} parti in "${fileName}". Formato corretto: ${formatExample}`
     );
     return { valid: false, errors, warnings };
@@ -273,41 +277,47 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     );
   }
   
-  // Parsing basato sul formato
-  let year: string, month: string, day: string | undefined, progressivo: string;
+  // Parsing: XXX_DATE_SYSTEMCODE_PROGRESSIVO
+  const [, dateStr, systemCode, progressivo] = parts;
   
+  // Verifica data contigua
   if (prefix === 'RPM') {
-    [, year, month, progressivo] = parts;
-    day = undefined;
-  } else {
-    [, year, month, day, progressivo] = parts;
-  }
-  
-  // Verifica anno (4 cifre)
-  if (!/^\d{4}$/.test(year)) {
-    errors.push(`ANNO NON VALIDO: L'anno deve essere 4 cifre. Trovato: "${year}"`);
-  }
-  
-  // Verifica mese (2 cifre, 01-12)
-  if (!/^\d{2}$/.test(month)) {
-    errors.push(`MESE NON VALIDO: Il mese deve essere 2 cifre. Trovato: "${month}"`);
-  } else {
-    const monthNum = parseInt(month);
-    if (monthNum < 1 || monthNum > 12) {
-      errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: "${month}"`);
-    }
-  }
-  
-  // Verifica giorno (solo per report con giorno)
-  if (day !== undefined) {
-    if (!/^\d{2}$/.test(day)) {
-      errors.push(`GIORNO NON VALIDO: Il giorno deve essere 2 cifre. Trovato: "${day}"`);
+    // Mensile: YYYYMM (6 cifre)
+    if (!/^\d{6}$/.test(dateStr)) {
+      errors.push(`DATA NON VALIDA: Per RPM la data deve essere YYYYMM (6 cifre). Trovato: "${dateStr}"`);
     } else {
-      const dayNum = parseInt(day);
-      if (dayNum < 1 || dayNum > 31) {
-        errors.push(`GIORNO NON VALIDO: Il giorno deve essere tra 01 e 31. Trovato: "${day}"`);
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6));
+      if (year < 2000 || year > 2100) {
+        errors.push(`ANNO NON VALIDO: L'anno deve essere tra 2000 e 2100. Trovato: ${year}`);
+      }
+      if (month < 1 || month > 12) {
+        errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: ${String(month).padStart(2, '0')}`);
       }
     }
+  } else {
+    // Giornaliero/RCA: YYYYMMDD (8 cifre)
+    if (!/^\d{8}$/.test(dateStr)) {
+      errors.push(`DATA NON VALIDA: Per ${prefix} la data deve essere YYYYMMDD (8 cifre). Trovato: "${dateStr}"`);
+    } else {
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6));
+      const day = parseInt(dateStr.substring(6, 8));
+      if (year < 2000 || year > 2100) {
+        errors.push(`ANNO NON VALIDO: L'anno deve essere tra 2000 e 2100. Trovato: ${year}`);
+      }
+      if (month < 1 || month > 12) {
+        errors.push(`MESE NON VALIDO: Il mese deve essere tra 01 e 12. Trovato: ${String(month).padStart(2, '0')}`);
+      }
+      if (day < 1 || day > 31) {
+        errors.push(`GIORNO NON VALIDO: Il giorno deve essere tra 01 e 31. Trovato: ${String(day).padStart(2, '0')}`);
+      }
+    }
+  }
+  
+  // Verifica codice sistema (8 caratteri alfanumerici)
+  if (!/^[A-Z0-9]{8}$/i.test(systemCode)) {
+    errors.push(`CODICE SISTEMA NON VALIDO: Deve essere 8 caratteri alfanumerici. Trovato: "${systemCode}"`);
   }
   
   // Verifica progressivo (3 cifre)
@@ -318,16 +328,12 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     );
   }
   
-  // Validazione estensione - deve essere .xsi.p7m per trasmissioni SIAE
-  // (file firmato digitalmente obbligatorio)
+  // Validazione estensione
+  // Accettati: .xsi (per S/MIME), .xsi.p7m (per CAdES-BES), .p7m
   if (!extension) {
-    errors.push('Estensione file mancante. Richiesta: .xsi.p7m (file firmato)');
-  } else if (extension.toLowerCase() !== '.xsi.p7m') {
-    if (extension.toLowerCase() === '.xsi') {
-      errors.push('Estensione .xsi non valida per trasmissioni SIAE. I file devono essere firmati (.xsi.p7m)');
-    } else {
-      errors.push(`Estensione "${extension}" non valida. Richiesta: .xsi.p7m`);
-    }
+    errors.push('Estensione file mancante. Richiesta: .xsi o .xsi.p7m');
+  } else if (!['.xsi', '.xsi.p7m', '.p7m'].includes(extension.toLowerCase())) {
+    errors.push(`Estensione "${extension}" non valida. Accettate: .xsi, .xsi.p7m`);
   }
   
   return {
@@ -336,8 +342,8 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     warnings,
     parsedData: {
       reportType: prefix as 'RMG' | 'RPM' | 'RCA' | 'LTA',
-      date: day ? `${year}_${month}_${day}` : `${year}_${month}`,
-      systemCode: null, // Non presente nel nome file allegato
+      date: dateStr,
+      systemCode: systemCode,
       progressivo: progressivo,
       extension: extension,
     }
@@ -627,59 +633,55 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // FIX 2026-01-20: Formato SIAE Allegato C sezione 1.4.1 UFFICIALE
-  // Il nome file allegato NON contiene il codice sistema!
-  // Solo il Subject email contiene il codice sistema (sezione 1.5.3)
+  // FIX 2026-01-20: Formato CORRETTO secondo Allegato C sezione 1.4.1
   // 
-  // FORMATO NOME FILE ALLEGATO (sezione 1.4.1):
-  //   XXX_AAAA_MM_GG_###.xsi.p7m (o XXX_AAAA_MM_### per mensile)
+  // FORMATO NOME FILE ALLEGATO (UFFICIALE):
+  //   XXX_YYYYMMDD_SSSSSSSS_NNN.xsi(.p7m)
   // Dove:
-  //   XXX = Prefisso tipo report:
-  //     - RMG = Riepilogo Musica Generale (giornaliero)
-  //     - RPM = Riepilogo Programmi Musicali (mensile)
-  //     - RCA = Riepilogo Controllo Accessi (eventi)
-  //   AAAA_MM_GG = data SEPARATA da underscore (AAAA_MM per mensile)
-  //   ### = progressivo (001-999)
+  //   XXX = Prefisso tipo report (RMG, RPM, RCA)
+  //   YYYYMMDD = Data CONTIGUA (senza underscore!) - YYYYMM per mensile
+  //   SSSSSSSS = Codice sistema a 8 caratteri (es: P0004010)
+  //   NNN = Progressivo (001-999)
   //   .xsi = XML SIAE
-  //   .p7m = firma digitale
+  //   .p7m = firma CAdES-BES
   //
   // Esempi corretti:
-  //   RMG_2026_01_20_001.xsi.p7m (giornaliero)
-  //   RPM_2026_01_001.xsi.p7m (mensile)
-  //   RCA_2026_01_20_001.xsi.p7m (evento)
+  //   RMG_20260120_P0004010_001.xsi (giornaliero)
+  //   RPM_202601_P0004010_001.xsi (mensile)
+  //   RCA_20260120_P0004010_001.xsi (evento)
   
-  // Estensione: .xsi.p7m per file firmati
+  // Codice sistema: usa quello fornito o fallback a default
+  const sysCode = (systemCode || 'EVENT4U1').padStart(8, '0').substring(0, 8);
+  
+  // Estensione: .xsi.p7m per file firmati CAdES
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
   let result: string;
   switch (reportType) {
     case 'giornaliero':
-      // RMG = Riepilogo Musica Generale (giornaliero)
-      result = `RMG_${year}_${month}_${day}_${prog}${extension}`;
+      // RMG_YYYYMMDD_SSSSSSSS_NNN.xsi
+      result = `RMG_${year}${month}${day}_${sysCode}_${prog}${extension}`;
       break;
     case 'mensile':
-      // RPM = Riepilogo Programmi Musicali (mensile) - senza giorno
-      result = `RPM_${year}_${month}_${prog}${extension}`;
+      // RPM_YYYYMM_SSSSSSSS_NNN.xsi (senza giorno)
+      result = `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
       break;
     case 'log':
     case 'rca':
     default:
-      // RCA = Riepilogo Controllo Accessi (eventi)
-      result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
+      // RCA_YYYYMMDD_SSSSSSSS_NNN.xsi
+      result = `RCA_${year}${month}${day}_${sysCode}_${prog}${extension}`;
       break;
   }
   
-  console.log(`[SIAE-UTILS] generateSiaeAttachmentName (FIX Allegato C): type=${reportType}, date=${date.toISOString()}, result=${result}`);
+  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, date=${date.toISOString()}, systemCode=${sysCode}, result=${result}`);
   
-  // Validazione formato - numero parti dipende dal tipo:
-  // - RPM (mensile): 4 parti (RPM_AAAA_MM_###)
-  // - Altri: 5 parti (XXX_AAAA_MM_GG_###)
+  // Validazione formato - 4 parti per tutti (XXX_DATE_SYSTEM_PROG)
   const baseName = result.replace(/\.(xsi|xsi\.p7m|p7m)$/i, '');
   const parts = baseName.split('_');
-  const expectedParts = reportType === 'mensile' ? 4 : 5;
-  if (parts.length !== expectedParts) {
-    console.error(`[SIAE-UTILS] ERRORE CRITICO: Nome file generato con ${parts.length} parti invece di ${expectedParts}: ${result}`);
-    console.error(`[SIAE-UTILS] Formato corretto: ${reportType === 'mensile' ? 'RPM_AAAA_MM_###.xsi.p7m' : 'XXX_AAAA_MM_GG_###.xsi.p7m'}`);
+  if (parts.length !== 4) {
+    console.error(`[SIAE-UTILS] ERRORE CRITICO: Nome file generato con ${parts.length} parti invece di 4: ${result}`);
+    console.error(`[SIAE-UTILS] Formato corretto: XXX_YYYYMMDD_SSSSSSSS_NNN.xsi`);
   }
   
   return result;
