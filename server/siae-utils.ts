@@ -4872,12 +4872,13 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     //   </TitoliOpere>
     // Anche se la DTD li definisce opzionali (Autore?, Esecutore?), SIAE li richiede
     // per evitare errore 40605 "riepilogo illeggibile"
+    // FIX 2026-01-20: Indentazione corretta come da esempio RMG_2015_09_00_001.xml
     const autore = escapeXml(ticketedEvent.author || eventName);
     const esecutore = escapeXml(ticketedEvent.performer || businessName);
     const autoreXml = `
-                        <Autore>${autore}</Autore>`;
+                    <Autore>${autore}</Autore>`;
     const esecutoreXml = `
-                        <Esecutore>${esecutore}</Esecutore>`;
+                    <Esecutore>${esecutore}</Esecutore>`;
 
     let intrattenimentoXml: string;
     if (isMonthly) {
@@ -4888,18 +4889,13 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
                 <ImponibileIntrattenimenti>${imponibileIntrattenimenti}</ImponibileIntrattenimenti>
             </Intrattenimento>`;
     } else {
-      if (tipoTassazione === 'I' && incidenza > 0) {
-        intrattenimentoXml = `
+      // FIX 2026-01-20: Incidenza SEMPRE presente come da esempio RMG_2015_09_00_001.xml
+      // L'esempio include <Incidenza>0</Incidenza> anche quando TipoTassazione="S"
+      intrattenimentoXml = `
             <Intrattenimento>
                 <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
                 <Incidenza>${incidenza}</Incidenza>
             </Intrattenimento>`;
-      } else {
-        intrattenimentoXml = `
-            <Intrattenimento>
-                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
-            </Intrattenimento>`;
-      }
     }
 
     eventsXml += `
