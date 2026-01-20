@@ -122,13 +122,9 @@ function addToLogBuffer(level, message) {
   if (logBuffer.length > MAX_LOG_BUFFER) {
     logBuffer.shift();
   }
-  // Send to renderer if window exists and not destroyed
-  try {
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-      mainWindow.webContents.send('log:entry', entry);
-    }
-  } catch (e) {
-    // Window was destroyed, ignore
+  // Send to renderer if window exists
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('log:entry', entry);
   }
 }
 
@@ -152,10 +148,16 @@ log.error = (...args) => {
 
 function getBridgePath() {
   const possiblePaths = [
+    // Primary path - directly in SiaeBridge folder
     path.join(process.resourcesPath, 'SiaeBridge', 'SiaeBridge.exe'),
+    // Fallback: nested SiaeBridge folder (build artifact issue)
+    path.join(process.resourcesPath, 'SiaeBridge', 'SiaeBridge', 'SiaeBridge.exe'),
+    // Dev paths
     path.join(__dirname, 'SiaeBridge', 'bin', 'Release', 'net472', 'SiaeBridge.exe'),
     path.join(__dirname, 'SiaeBridge', 'bin', 'Debug', 'net472', 'SiaeBridge.exe'),
     path.join(__dirname, 'SiaeBridge', 'SiaeBridge.exe'),
+    // .NET 8 dev paths
+    path.join(__dirname, 'SiaeBridge', 'bin', 'Release', 'net8.0-windows', 'win-x86', 'publish', 'SiaeBridge.exe'),
   ];
 
   log.info('Searching for SiaeBridge.exe...');
@@ -636,6 +638,47 @@ async function handleWebSocketMessage(ws, msg) {
         }
       } catch (err) {
         sendResponse('retriesStatusResponse', { success: false, error: err.message });
+      }
+      break;
+
+    case 'READ_EFFF':
+      try {
+        const requestId = msg.requestId || '';
+        log.info(`[EFFF] Reading EFFF data from card, requestId=${requestId}`);
+        const result = await sendBridgeCommand('READ_EFFF');
+        if (result.success && result.efffData) {
+          log.info(`[EFFF] EFFF read success: systemId=${result.efffData.systemId}`);
+          // Send EFFF_RESPONSE (uppercase) to match server handler
+          ws.send(JSON.stringify({
+            type: 'EFFF_RESPONSE',
+            requestId,
+            payload: {
+              success: true,
+              efffData: result.efffData,
+              isTestCard: result.isTestCard || false
+            }
+          }));
+        } else {
+          log.error(`[EFFF] EFFF read failed: ${result.error}`);
+          ws.send(JSON.stringify({
+            type: 'EFFF_RESPONSE',
+            requestId,
+            payload: {
+              success: false,
+              error: result.error || 'Errore lettura EFFF'
+            }
+          }));
+        }
+      } catch (err) {
+        log.error(`[EFFF] Exception reading EFFF: ${err.message}`);
+        ws.send(JSON.stringify({
+          type: 'EFFF_RESPONSE',
+          requestId: msg.requestId || '',
+          payload: {
+            success: false,
+            error: err.message
+          }
+        }));
       }
       break;
 
@@ -1502,7 +1545,7 @@ async function handleRelayCommand(msg) {
           log.info(`[SIGNATURE] XML signed successfully`);
           
           if (relayWs && relayWs.readyState === WebSocket.OPEN) {
-            // v3.15.0: SOLO CAdES-BES con SHA-256 è accettato
+            // v3.16.2: SOLO CAdES-BES con SHA-256 è accettato
             // NO FALLBACK a XMLDSig/SHA-1 (deprecato e rifiutato da SIAE dal 2025)
             if (!result.signature.p7mBase64) {
               log.error(`[SIGNATURE] CRITICAL: No p7mBase64 in signature response - CAdES-BES failed`);
@@ -1572,9 +1615,23 @@ async function handleRelayCommand(msg) {
       try {
         const smimeRequestId = msg.requestId;
         const smimePayload = msg.payload || {};
+        
+        // Supporto nuovo formato SMIMESignML con parametri separati
+        const smimeFrom = smimePayload.from || '';
+        const smimeTo = smimePayload.to || '';
+        const smimeSubject = smimePayload.subject || '';
+        const smimeBody = smimePayload.body || '';
+        const attachmentBase64 = smimePayload.attachmentBase64 || '';
+        const attachmentName = smimePayload.attachmentName || '';
         const mimeContent = smimePayload.mimeContent || '';
         
-        log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, mimeLength=${mimeContent.length}`);
+        const isNewFormat = smimeFrom && smimeTo;
+        log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, format=${isNewFormat ? 'SMIMESignML' : 'legacy'}, from=${smimeFrom}, to=${smimeTo}`);
+        // v3.50 FIX: Log esplicito nome file allegato per debug errore SIAE 0600
+        log.info(`[S/MIME] v3.50 ATTACHMENT NAME RECEIVED: "${attachmentName}" (length=${attachmentName.length})`);
+        if (attachmentName && !attachmentName.match(/^(RMG|RPM|RCA)_\d{8}_[A-Z0-9]+_\d{3}\.xsi(\.p7m)?$/i)) {
+          log.warn(`[S/MIME] v3.50 WARNING: Attachment name does not match expected SIAE format!`);
+        }
         
         // Check if bridge is ready
         if (!bridgeProcess || !currentStatus.readerConnected) {
@@ -1626,40 +1683,23 @@ async function handleRelayCommand(msg) {
         }
         
         // Execute S/MIME signature command
-        // Supporta sia nuovo formato SMIMESignML che legacy mimeContent
-        const smimeSignPayload = {};
-        
-        // Nuovo formato: parametri separati per SMIMESignML
-        if (smimePayload.from && smimePayload.to) {
-          smimeSignPayload.from = smimePayload.from;
-          smimeSignPayload.to = smimePayload.to;
-          smimeSignPayload.subject = smimePayload.subject || '';
-          smimeSignPayload.body = smimePayload.body || '';
-          smimeSignPayload.attachmentBase64 = smimePayload.attachmentBase64 || '';
-          smimeSignPayload.attachmentName = smimePayload.attachmentName || '';
-          log.info(`[S/MIME] Using SMIMESignML format: from=${smimePayload.from}, to=${smimePayload.to}`);
-        } else if (mimeContent) {
-          // Fallback: legacy formato mimeContent
-          smimeSignPayload.mimeContent = mimeContent;
-          log.warn(`[S/MIME] Using LEGACY mimeContent format - may cause SIAE errors!`);
-        } else {
-          log.error(`[S/MIME] No valid payload: neither SMIMESignML params nor mimeContent provided`);
-          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
-            relayWs.send(JSON.stringify({
-              type: 'SMIME_SIGNATURE_RESPONSE',
-              requestId: smimeRequestId,
-              payload: { 
-                success: false, 
-                error: 'Payload email non valido - mancano parametri' 
-              }
-            }));
-          }
-          return;
-        }
-        
-        smimeSignPayload.pin = lastVerifiedPin || '';
-        
-        log.info(`[S/MIME] Sending SIGN_SMIME command...`);
+        // Pass PIN if available, otherwise let the bridge handle it (card already unlocked)
+        // Supporto nuovo formato SMIMESignML con parametri separati
+        const smimeSignPayload = isNewFormat ? {
+          from: smimeFrom,
+          to: smimeTo,
+          subject: smimeSubject,
+          body: smimeBody,
+          attachmentBase64: attachmentBase64,
+          attachmentName: attachmentName,
+          pin: lastVerifiedPin || ''
+        } : { 
+          mimeContent,
+          pin: lastVerifiedPin || '' 
+        };
+        // v3.50 FIX: Log dettagliato payload prima di inviare al bridge
+        log.info(`[S/MIME] Sending SIGN_SMIME command (${isNewFormat ? 'SMIMESignML' : 'legacy'})...`);
+        log.info(`[S/MIME] v3.50 PAYLOAD TO BRIDGE: attachmentName="${smimeSignPayload.attachmentName || '(none)'}", subject="${smimeSignPayload.subject?.substring(0, 50) || '(none)'}..."`);
         const smimeResult = await sendBridgeCommand(`SIGN_SMIME:${JSON.stringify(smimeSignPayload)}`);
         
         if (smimeResult.success && smimeResult.signature) {
@@ -1703,6 +1743,88 @@ async function handleRelayCommand(msg) {
             payload: { 
               success: false, 
               error: smimeErr.message 
+            }
+          }));
+        }
+      }
+      break;
+    
+    case 'READ_EFFF':
+      // Read EFFF anagrafica data from Smart Card (15 fields)
+      try {
+        const efffRequestId = msg.requestId || '';
+        log.info(`[EFFF] Reading EFFF data from card via relay, requestId=${efffRequestId}`);
+        
+        // Check if bridge is ready
+        if (!bridgeProcess || !currentStatus.readerConnected) {
+          log.error(`[EFFF] Bridge not ready: bridge=${!!bridgeProcess}, reader=${currentStatus.readerConnected}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: { 
+                success: false, 
+                error: 'App desktop Event4U non connessa o lettore non disponibile' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        if (!currentStatus.cardInserted) {
+          log.error(`[EFFF] No card inserted for EFFF read`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: { 
+                success: false, 
+                error: 'Smart Card SIAE non inserita' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        // Execute EFFF read command
+        const efffResult = await sendBridgeCommand('READ_EFFF');
+        
+        if (efffResult.success && efffResult.efffData) {
+          log.info(`[EFFF] EFFF read success: systemId=${efffResult.efffData.systemId}, siaeEmail=${efffResult.efffData.siaeEmail}`);
+          
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: {
+                success: true,
+                efffData: efffResult.efffData,
+                isTestCard: efffResult.isTestCard || false
+              }
+            }));
+          }
+        } else {
+          log.error(`[EFFF] EFFF read failed: ${efffResult.error || 'Unknown error'}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: { 
+                success: false, 
+                error: efffResult.error || 'Errore lettura EFFF' 
+              }
+            }));
+          }
+        }
+      } catch (efffErr) {
+        log.error(`[EFFF] Exception reading EFFF via relay: ${efffErr.message}`);
+        if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+          relayWs.send(JSON.stringify({
+            type: 'EFFF_RESPONSE',
+            requestId: msg.requestId || '',
+            payload: { 
+              success: false, 
+              error: efffErr.message 
             }
           }));
         }
@@ -1864,11 +1986,20 @@ ipcMain.handle('relay:switchServer', async (event, serverType) => {
     disconnectRelay();
   }
   
+  // SECURITY: Reset PIN verification when switching servers
+  // Each server session requires fresh PIN authentication
+  log.info(`[SERVER-SWITCH] Resetting PIN verification for new server session`);
+  pinVerified = false;
+  lastVerifiedPin = null;
+  
   // Update config
   relayConfig.serverType = serverType;
   relayConfig.serverUrl = AVAILABLE_SERVERS[serverType];
   
-  log.info(`Server switched to: ${relayConfig.serverUrl}`);
+  // Save the server preference
+  saveRelayConfig();
+  
+  log.info(`Server switched to: ${relayConfig.serverUrl} - PIN reset required`);
   
   // Reconnect with new server
   setTimeout(() => {
@@ -1878,7 +2009,8 @@ ipcMain.handle('relay:switchServer', async (event, serverType) => {
   return { 
     success: true, 
     serverType,
-    serverUrl: relayConfig.serverUrl 
+    serverUrl: relayConfig.serverUrl,
+    pinReset: true // Notify UI that PIN needs to be re-entered
   };
 });
 

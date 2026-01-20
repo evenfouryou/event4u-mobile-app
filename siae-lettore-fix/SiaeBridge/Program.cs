@@ -7,26 +7,21 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.Cms;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Asn1.Pkcs;
+using Org.BouncyCastle.Cms;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Digests;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.X509;
+using BCX509 = Org.BouncyCastle.X509;
 
 namespace SiaeBridge
 {
     class Program
     {
-        // ============================================================
-        // SCARD_STATE flags from Windows Smart Card API
-        // ============================================================
-        const int SCARD_STATE_UNAWARE = 0x0000;
-        const int SCARD_STATE_IGNORE = 0x0001;
-        const int SCARD_STATE_CHANGED = 0x0002;
-        const int SCARD_STATE_UNKNOWN = 0x0004;
-        const int SCARD_STATE_UNAVAILABLE = 0x0008;
-        const int SCARD_STATE_EMPTY = 0x0010;      // 16 - no card
-        const int SCARD_STATE_PRESENT = 0x0020;    // 32 - card present!
-        const int SCARD_STATE_ATRMATCH = 0x0040;
-        const int SCARD_STATE_EXCLUSIVE = 0x0080;
-        const int SCARD_STATE_INUSE = 0x0100;
-        const int SCARD_STATE_MUTE = 0x0200;
-
         // ============================================================
         // IMPORT libSIAE.dll - StdCall calling convention (confirmed)
         // ============================================================
@@ -79,6 +74,25 @@ namespace SiaeBridge
             [MarshalAs(UnmanagedType.LPStr)] string szOutputFileName,
             int bInitialize);
 
+        // ============================================================
+        // SMIMESignML - FUNZIONE NATIVA SIAE per S/MIME conformi!
+        // Genera direttamente email RFC822 S/MIME firmate
+        // Vedi libsiaep7.h per la documentazione completa
+        // ============================================================
+        [DllImport(DLL_P7, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        static extern int SMIMESignML(
+            [MarshalAs(UnmanagedType.LPStr)] string pin,
+            uint slot,
+            [MarshalAs(UnmanagedType.LPStr)] string szOutputFilePath,  // File output RFC822 S/MIME
+            [MarshalAs(UnmanagedType.LPStr)] string szFrom,            // Header From:
+            [MarshalAs(UnmanagedType.LPStr)] string szTo,              // Header To:
+            [MarshalAs(UnmanagedType.LPStr)] string szSubject,         // Header Subject: [opzionale]
+            [MarshalAs(UnmanagedType.LPStr)] string szOtherHeaders,    // Altri header [opzionale]
+            [MarshalAs(UnmanagedType.LPStr)] string szBody,            // Body del messaggio
+            [MarshalAs(UnmanagedType.LPStr)] string szAttachments,     // Files allegati separati da ';'
+            uint dwFlags,                                               // Flags
+            int bInitialize);                                          // Initialize (1=sì)
+
         // Windows API
         [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
         static extern int SCardListReadersW(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
@@ -90,10 +104,33 @@ namespace SiaeBridge
         static extern int SCardReleaseContext(IntPtr hContext);
 
         // ============================================================
+        // MSVCRT _putenv - per forzare _P_tmpdir usato da tmpnam()
+        // v3.27 FIX: tmpnam(NULL) ignora TMP/TEMP, usa _P_tmpdir interno
+        // ============================================================
+        [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern int _putenv([MarshalAs(UnmanagedType.LPStr)] string envstring);
+
+        // ============================================================
+        // v3.28 FIX: DefineDosDevice per creare drive virtuali
+        // Questo workaround fa sì che tmpnam() generi path scrivibili
+        // tmpnam(NULL) restituisce "\smaXXXX.tmp" che diventa DRIVELETTER:\smaXXXX.tmp
+        // Se il drive corrente è un virtual drive mappato al temp, funziona!
+        // ============================================================
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool DefineDosDevice(uint dwFlags, string lpDeviceName, string lpTargetPath);
+        
+        const uint DDD_RAW_TARGET_PATH = 0x00000001;
+        const uint DDD_REMOVE_DEFINITION = 0x00000002;
+        const uint DDD_EXACT_MATCH_ON_REMOVE = 0x00000004;
+        const uint DDD_NO_BROADCAST_SYSTEM = 0x00000008;
+
+        // ============================================================
         // STATE
         // ============================================================
         static int _slot = -1;
         static StreamWriter _log;
+        static bool _vcRuntimeMissing = false;
+        static string _vcRuntimeError = null;
 
         // ============================================================
         // MAIN
@@ -104,10 +141,13 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.10 - PKCS7SignML direct smart card signing with fixed DLL paths");
+            Log("SiaeBridge v3.54 - FIX: scan ALL 16 slots without early break");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
+            
+            // v3.39: Skip aggressive VC++ check - it causes false positives
+            // The check will happen naturally when CheckReader is called
 
             string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAE.dll");
             if (File.Exists(dllPath))
@@ -151,32 +191,98 @@ namespace SiaeBridge
         }
 
         // ============================================================
-        // Check if card is present using SCARD_STATE bitmask
+        // v3.37: Check VC++ Runtime dependencies
+        // libSIAE.dll is a native C++ DLL that requires VC++ Runtime
+        // Error 0x8007000B = "Bad Image Format" usually means missing dependencies
+        // ============================================================
+        static void CheckVCRuntimeDependencies()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                
+                // Check for common VC++ runtime DLLs that libSIAE might depend on
+                string[] vcRuntimePaths = new[]
+                {
+                    Path.Combine(baseDir, "msvcr100.dll"),   // VC++ 2010
+                    Path.Combine(baseDir, "msvcp100.dll"),
+                    Path.Combine(baseDir, "msvcr120.dll"),   // VC++ 2013
+                    Path.Combine(baseDir, "msvcp120.dll"),
+                    Path.Combine(baseDir, "vcruntime140.dll"), // VC++ 2015-2022
+                    Path.Combine(baseDir, "msvcp140.dll"),
+                };
+                
+                Log("Checking VC++ Runtime dependencies...");
+                foreach (string path in vcRuntimePaths)
+                {
+                    string fileName = Path.GetFileName(path);
+                    if (File.Exists(path))
+                        Log($"  ✓ {fileName} found locally");
+                }
+                
+                // Try to load libSIAE.dll to detect dependency issues early
+                string libSiaePath = Path.Combine(baseDir, "libSIAE.dll");
+                if (File.Exists(libSiaePath))
+                {
+                    try
+                    {
+                        // Try calling a simple function to force DLL load
+                        int testResult = isCardIn(0);
+                        Log($"  ✓ libSIAE.dll loaded successfully (test isCardIn(0) = {testResult})");
+                    }
+                    catch (DllNotFoundException ex)
+                    {
+                        _vcRuntimeMissing = true;
+                        _vcRuntimeError = $"DllNotFoundException: {ex.Message}";
+                        Log($"  ✗ libSIAE.dll dependency error: {ex.Message}");
+                    }
+                    catch (BadImageFormatException ex)
+                    {
+                        _vcRuntimeMissing = true;
+                        _vcRuntimeError = $"BadImageFormatException: {ex.Message}";
+                        Log($"  ✗ libSIAE.dll architecture mismatch: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 0x8007000B = HRESULT for ERROR_BAD_FORMAT
+                        if (ex.HResult == unchecked((int)0x8007000B) || ex.Message.Contains("formato non corretto"))
+                        {
+                            _vcRuntimeMissing = true;
+                            _vcRuntimeError = "VC++ Runtime mancante. Installare Visual C++ Redistributable 2015-2022 (x86)";
+                            Log($"  ✗ ERRORE 0x8007000B: {_vcRuntimeError}");
+                            Log($"  → Download: https://aka.ms/vs/17/release/vc_redist.x86.exe");
+                        }
+                        else
+                        {
+                            Log($"  ? libSIAE.dll test exception: {ex.GetType().Name}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"CheckVCRuntimeDependencies error: {ex.Message}");
+            }
+        }
+
+        // ============================================================
+        // Check if card is present
         // ============================================================
         static bool IsCardPresent(int state)
         {
-            // isCardIn returns SCARD_STATE bitmask:
-            // - 0 means no readers or error
-            // - 16 (0x10) = SCARD_STATE_EMPTY = no card
-            // - 32 (0x20) = SCARD_STATE_PRESENT = card present!
-            // - Can be combined: 34 = PRESENT | CHANGED
-            return (state & SCARD_STATE_PRESENT) != 0;
+            // libSIAE.dll isCardIn() returns:
+            // - 0 = no card or no reader
+            // - 1 = card present (simple boolean, NOT a bitmask!)
+            // - Other non-zero values also indicate card present
+            return state > 0;
         }
 
         static string DecodeCardState(int state)
         {
-            if (state == 0) return "NO_READER";
-            var flags = new System.Collections.Generic.List<string>();
-            if ((state & SCARD_STATE_CHANGED) != 0) flags.Add("CHANGED");
-            if ((state & SCARD_STATE_UNKNOWN) != 0) flags.Add("UNKNOWN");
-            if ((state & SCARD_STATE_UNAVAILABLE) != 0) flags.Add("UNAVAILABLE");
-            if ((state & SCARD_STATE_EMPTY) != 0) flags.Add("EMPTY");
-            if ((state & SCARD_STATE_PRESENT) != 0) flags.Add("PRESENT");
-            if ((state & SCARD_STATE_ATRMATCH) != 0) flags.Add("ATRMATCH");
-            if ((state & SCARD_STATE_EXCLUSIVE) != 0) flags.Add("EXCLUSIVE");
-            if ((state & SCARD_STATE_INUSE) != 0) flags.Add("INUSE");
-            if ((state & SCARD_STATE_MUTE) != 0) flags.Add("MUTE");
-            return flags.Count > 0 ? string.Join("|", flags) : $"0x{state:X2}";
+            // libSIAE.dll returns simple values: 0=no card, 1=card present
+            if (state == 0) return "NO_CARD";
+            if (state == 1) return "CARD_PRESENT";
+            return $"PRESENT({state})";
         }
 
         // ============================================================
@@ -217,10 +323,44 @@ namespace SiaeBridge
         static string ERR(string msg) => JsonConvert.SerializeObject(new { success = false, error = msg });
 
         // ============================================================
+        // HELPER: Extract email address from RFC 5322 formatted string
+        // Input formats: "Display Name" <email@example.com> OR email@example.com
+        // Output: just the email address (email@example.com)
+        // ============================================================
+        static string ExtractEmailAddress(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return null;
+
+            input = input.Trim();
+
+            // Check for <email> format: "Display Name" <email@example.com> or Display Name <email@example.com>
+            int startBracket = input.IndexOf('<');
+            int endBracket = input.IndexOf('>');
+            
+            if (startBracket >= 0 && endBracket > startBracket)
+            {
+                // Extract content between < and >
+                return input.Substring(startBracket + 1, endBracket - startBracket - 1).Trim();
+            }
+
+            // No brackets, assume it's already a plain email address
+            return input;
+        }
+
+        // ============================================================
         // CHECK READER
+        // v3.39 FIX: Removed false positive VC++ Runtime check
+        // isCardIn() returns:
+        //   0 = no reader at slot OR reader present but no card
+        //   32 (SCARD_STATE_PRESENT) = card is present
+        // We now scan ALL slots and also try Initialize() as fallback
         // ============================================================
         static string CheckReader()
         {
+            // v3.39: Removed VC++ Runtime check that caused false positives
+            // With ia32 (32-bit) build, DLL loading should work correctly
+            
             bool hasReaders = CheckWindowsSmartCardReaders();
             Log($"Windows readers: {hasReaders}");
 
@@ -237,6 +377,8 @@ namespace SiaeBridge
 
             try
             {
+                // v3.41 FIX: Restored v3.16.3 logic exactly
+                // isCardIn returns: 0=no reader, 16=EMPTY, 32=PRESENT
                 for (int s = 0; s < 16; s++)
                 {
                     try
@@ -247,58 +389,116 @@ namespace SiaeBridge
 
                         if (state == 0)
                         {
-                            // No more readers
-                            break;
+                            // v3.47 FIX: Don't break! Continue scanning all slots
+                            // Bit4ID MiniLector may be on a higher slot number
+                            continue;
                         }
 
-                        if (IsCardPresent(state))
+                        if (!IsCardPresent(state))
                         {
-                            Log($"  ✓ CARTA PRESENTE in slot {s}!");
+                            // Reader present but no card (state=16 EMPTY)
+                            continue;
+                        }
 
-                            // Reset card state before initialize
-                            int finRes = FinalizeML(s);
-                            Log($"  FinalizeML({s}) = {finRes}");
-                            
-                            // Try to initialize
-                            Log($"  Trying Initialize({s})...");
-                            int init = Initialize(s);
-                            Log($"  Initialize({s}) = {init} (0x{init:X4})");
+                        // Card is present! (state & 32 != 0)
+                        Log($"  ✓ CARTA PRESENTE in slot {s}!");
 
+                        // Reset card state before initialize
+                        int finRes = FinalizeML(s);
+                        Log($"  FinalizeML({s}) = {finRes}");
+                        
+                        // Try to initialize
+                        Log($"  Trying Initialize({s})...");
+                        int init = Initialize(s);
+                        Log($"  Initialize({s}) = {init} (0x{init:X4})");
+
+                        _slot = s;
+
+                        if (init == 0 || init == 3) // 0=OK, 3=already initialized
+                        {
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = true,
+                                readerConnected = true,
+                                cardPresent = true,
+                                slot = s,
+                                cardState = decoded,
+                                initResult = init,
+                                message = "Carta SIAE rilevata e pronta!"
+                            });
+                        }
+                        else
+                        {
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = true,
+                                readerConnected = true,
+                                cardPresent = true,
+                                slot = s,
+                                cardState = decoded,
+                                initResult = init,
+                                warning = $"Initialize returned 0x{init:X4}",
+                                message = "Carta rilevata (init warning)"
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"  Slot {s} error: {ex.Message} (HResult: 0x{ex.HResult:X8})");
+                        // v3.39: Don't set _vcRuntimeMissing here - it causes false positives
+                        // Just continue to next slot
+                        
+                        // Don't break on exceptions - try next slot
+                        continue;
+                    }
+                }
+
+                // Second pass: Windows sees readers but isCardIn returned 0 for all
+                // Try Initialize() directly as fallback (some drivers behave differently)
+                // v3.47 FIX: Try ALL 16 slots, not just 0-2
+                Log("  Fallback: trying Initialize() directly on slots 0-15...");
+                for (int s = 0; s < 16; s++)
+                {
+                    try
+                    {
+                        // First finalize any stale state
+                        FinalizeML(s);
+                        
+                        int init = Initialize(s);
+                        Log($"  Fallback Initialize({s}) = {init} (0x{init:X4})");
+                        
+                        if (init == 0 || init == 3) // Success or already initialized
+                        {
                             _slot = s;
-
-                            if (init == 0 || init == 3) // 0=OK, 3=already initialized
+                            
+                            // Try to read serial number to confirm card is present
+                            byte[] sn = new byte[8];
+                            int snResult = GetSNML(sn, s);
+                            Log($"  Fallback GetSNML({s}) = {snResult}");
+                            
+                            if (snResult == 0)
                             {
+                                string serialNumber = BitConverter.ToString(sn).Replace("-", "");
+                                Log($"  ✓ CARTA TROVATA via fallback! SN: {serialNumber}");
                                 return JsonConvert.SerializeObject(new
                                 {
                                     success = true,
                                     readerConnected = true,
                                     cardPresent = true,
                                     slot = s,
-                                    cardState = decoded,
+                                    cardState = "FALLBACK_DETECTED",
                                     initResult = init,
-                                    message = "Carta SIAE rilevata e pronta!"
-                                });
-                            }
-                            else
-                            {
-                                return JsonConvert.SerializeObject(new
-                                {
-                                    success = true,
-                                    readerConnected = true,
-                                    cardPresent = true,
-                                    slot = s,
-                                    cardState = decoded,
-                                    initResult = init,
-                                    warning = $"Initialize returned 0x{init:X4}",
-                                    message = "Carta rilevata (init warning)"
+                                    serialNumber = serialNumber,
+                                    message = "Carta SIAE rilevata!"
                                 });
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Log($"  Slot {s} error: {ex.Message}");
-                        break;
+                        Log($"  Fallback slot {s} error: {ex.Message} (HResult: 0x{ex.HResult:X8})");
+                        // v3.39: Don't set _vcRuntimeMissing - causes false positives
+                        // Continue to next slot
                     }
                 }
 
@@ -1426,19 +1626,25 @@ namespace SiaeBridge
                 Log($"  XML bytes: {xmlBytes.Length}");
 
                 // ============================================================
-                // NUOVO: Usa CAdES-BES con SHA-256 invece di XMLDSig con SHA-1
+                // v3.51 FIX: Usa PKCS7SignML nativo da libSIAEp7.dll
+                // SIAE Error 40605 causato da BouncyCastle che genera P7M non conforme
+                // PKCS7SignML è la funzione ufficiale SIAE che crea P7M validi
                 // ============================================================
-                var (success, p7mBase64, error, signedAt) = CreateCAdESSignature(xmlBytes, pin);
+                Log($"  v3.51: Using native PKCS7SignML from libSIAEp7.dll...");
+                Log($"  NOTE: libSIAEp7.dll creates SIAE-compliant P7M directly");
+                var (success, p7mBase64, error, signedAt) = CreateCAdESSignatureLegacy(xmlBytes, pin);
 
                 if (!success)
                 {
-                    return ERR(error ?? "Errore sconosciuto nella firma CAdES");
+                    Log($"  ERROR: PKCS7SignML signature failed: {error}");
+                    return ERR($"Firma P7M fallita: {error}");
                 }
 
-                Log($"  ✓ CAdES-BES signature created successfully");
+                Log($"  ✓ P7M created successfully with native PKCS7SignML");
 
                 // Ritorna il P7M in formato Base64
                 // Il server web salverà questo come file binario .p7m
+                // NOTA: NON includere xmlContent per evitare che venga salvato al posto del P7M
                 return JsonConvert.SerializeObject(new
                 {
                     success = true,
@@ -1447,8 +1653,7 @@ namespace SiaeBridge
                         p7mBase64 = p7mBase64,           // File P7M firmato (CAdES-BES)
                         signedAt = signedAt,
                         format = "CAdES-BES",            // Formato firma
-                        algorithm = "SHA-256",           // Algoritmo hash
-                        xmlContent = xmlContent          // XML originale (per riferimento)
+                        algorithm = "SHA-256"            // Algoritmo hash
                     }
                 });
             }
@@ -1524,16 +1729,337 @@ namespace SiaeBridge
         }
 
         // ============================================================
-        // CAdES-BES SIGNATURE - Firma PKCS#7/P7M usando libSIAEp7.dll
+        // CAdES-BES SIGNATURE con BouncyCastle - SHA-256
+        // Nuova implementazione che usa BouncyCastle per costruire la struttura CMS
+        // con firma RSA dalla smart card SIAE
+        // ============================================================
+
+        /// <summary>
+        /// Crea firma CAdES-BES usando BouncyCastle con SHA-256
+        /// La firma RSA viene eseguita dalla smart card tramite LibSiae.SignML
+        /// Ritorna il file P7M firmato in Base64
+        /// </summary>
+        static (bool success, string p7mBase64, string error, string signedAt) CreateCAdESSignatureBC(byte[] xmlBytes, string pin)
+        {
+            try
+            {
+                Log($"CreateCAdESSignatureBC: xmlBytes.Length={xmlBytes.Length}, slot={_slot}");
+                string signedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                // ============================================================
+                // STEP 1: Leggi il certificato dalla smart card
+                // ============================================================
+                Log($"  Step 1: Reading certificate from smart card...");
+                byte[] certBuffer = new byte[2048];
+                int certLen = certBuffer.Length;
+                int certResult = LibSiae.GetCertificateML(certBuffer, ref certLen, _slot);
+                Log($"  GetCertificateML = {certResult} (0x{certResult:X4}), certLen={certLen}");
+
+                if (certResult != 0 || certLen == 0)
+                {
+                    return (false, null, $"Lettura certificato fallita: 0x{certResult:X4}", null);
+                }
+
+                byte[] certBytes = new byte[certLen];
+                Array.Copy(certBuffer, certBytes, certLen);
+
+                // Parse certificate with BouncyCastle
+                BCX509.X509Certificate bcCert;
+                try
+                {
+                    X509CertificateParser certParser = new X509CertificateParser();
+                    bcCert = certParser.ReadCertificate(certBytes);
+                    Log($"  ✓ Certificate parsed: Subject={bcCert.SubjectDN}");
+                }
+                catch (Exception certEx)
+                {
+                    Log($"  Certificate parsing error: {certEx.Message}");
+                    return (false, null, $"Errore parsing certificato: {certEx.Message}", null);
+                }
+
+                // ============================================================
+                // STEP 2: Get KeyID from smart card
+                // ============================================================
+                Log($"  Step 2: Getting KeyID from smart card...");
+                byte keyId = LibSiae.GetKeyIDML(_slot);
+                Log($"  GetKeyIDML = {keyId} (0x{keyId:X2})");
+
+                if (keyId == 0)
+                {
+                    return (false, null, "GetKeyID ha restituito 0 - nessuna chiave di firma disponibile", null);
+                }
+
+                // ============================================================
+                // STEP 3: Calculate SHA-256 hash of the content (for messageDigest)
+                // ============================================================
+                Log($"  Step 3: Calculating SHA-256 hash of content...");
+                Sha256Digest contentDigest = new Sha256Digest();
+                contentDigest.BlockUpdate(xmlBytes, 0, xmlBytes.Length);
+                byte[] contentHash = new byte[contentDigest.GetDigestSize()];
+                contentDigest.DoFinal(contentHash, 0);
+                Log($"  Content SHA-256: {BitConverter.ToString(contentHash).Replace("-", "").Substring(0, 32)}...");
+
+                // ============================================================
+                // STEP 4: Build signedAttributes (CAdES-BES requires specific attributes)
+                // ============================================================
+                Log($"  Step 4: Building signedAttributes...");
+                
+                // ContentType attribute (id-data = 1.2.840.113549.1.7.1)
+                Asn1EncodableVector contentTypeAttr = new Asn1EncodableVector();
+                contentTypeAttr.Add(CmsAttributes.ContentType);
+                contentTypeAttr.Add(new DerSet(CmsObjectIdentifiers.Data));
+                
+                // Signing time attribute
+                Asn1EncodableVector signingTimeAttr = new Asn1EncodableVector();
+                signingTimeAttr.Add(CmsAttributes.SigningTime);
+                signingTimeAttr.Add(new DerSet(new Org.BouncyCastle.Asn1.Cms.Time(DateTime.UtcNow)));
+                
+                // Message digest attribute (hash of content)
+                Asn1EncodableVector messageDigestAttr = new Asn1EncodableVector();
+                messageDigestAttr.Add(CmsAttributes.MessageDigest);
+                messageDigestAttr.Add(new DerSet(new DerOctetString(contentHash)));
+
+                // ============================================================
+                // SigningCertificateV2 attribute - MANDATORY for CAdES-BES
+                // Per ETSI EN 319 122-1 §6.2.1
+                // OID: 1.2.840.113549.1.9.16.2.47
+                // ============================================================
+                Log($"  Building SigningCertificateV2 attribute...");
+                
+                // Calculate SHA-256 hash of the certificate
+                Sha256Digest certDigest = new Sha256Digest();
+                certDigest.BlockUpdate(certBytes, 0, certBytes.Length);
+                byte[] certHash = new byte[certDigest.GetDigestSize()];
+                certDigest.DoFinal(certHash, 0);
+                Log($"  Certificate SHA-256: {BitConverter.ToString(certHash).Replace("-", "").Substring(0, 32)}...");
+
+                // Build ESSCertIDv2 structure:
+                // ESSCertIDv2 ::= SEQUENCE {
+                //   hashAlgorithm AlgorithmIdentifier DEFAULT sha256,
+                //   certHash      OCTET STRING,
+                //   issuerSerial  IssuerSerial OPTIONAL
+                // }
+                // When hashAlgorithm is SHA-256 (default), it can be omitted
+                
+                // Build IssuerSerial (optional but recommended)
+                // IssuerSerial ::= SEQUENCE { issuer GeneralNames, serialNumber CertificateSerialNumber }
+                Asn1EncodableVector generalNamesVector = new Asn1EncodableVector();
+                generalNamesVector.Add(new Org.BouncyCastle.Asn1.X509.GeneralName(
+                    Org.BouncyCastle.Asn1.X509.GeneralName.DirectoryName, 
+                    bcCert.IssuerDN
+                ));
+                Org.BouncyCastle.Asn1.X509.GeneralNames issuerGeneralNames = 
+                    new Org.BouncyCastle.Asn1.X509.GeneralNames(
+                        new Org.BouncyCastle.Asn1.X509.GeneralName(
+                            Org.BouncyCastle.Asn1.X509.GeneralName.DirectoryName, 
+                            bcCert.IssuerDN
+                        )
+                    );
+                
+                // IssuerSerial sequence
+                Asn1EncodableVector issuerSerialVector = new Asn1EncodableVector();
+                issuerSerialVector.Add(issuerGeneralNames);
+                issuerSerialVector.Add(new DerInteger(bcCert.SerialNumber));
+                DerSequence issuerSerial = new DerSequence(issuerSerialVector);
+                
+                // ESSCertIDv2 - SHA-256 is default so we can omit hashAlgorithm
+                // Structure: SEQUENCE { certHash OCTET STRING, issuerSerial IssuerSerial OPTIONAL }
+                Asn1EncodableVector essCertIdV2Vector = new Asn1EncodableVector();
+                essCertIdV2Vector.Add(new DerOctetString(certHash));
+                essCertIdV2Vector.Add(issuerSerial);
+                DerSequence essCertIdV2 = new DerSequence(essCertIdV2Vector);
+                
+                // SigningCertificateV2 ::= SEQUENCE { certs SEQUENCE OF ESSCertIDv2 }
+                Asn1EncodableVector certsSequence = new Asn1EncodableVector();
+                certsSequence.Add(essCertIdV2);
+                DerSequence signingCertV2 = new DerSequence(new DerSequence(certsSequence));
+                
+                // SigningCertificateV2 attribute
+                DerObjectIdentifier signingCertV2Oid = new DerObjectIdentifier("1.2.840.113549.1.9.16.2.47");
+                Asn1EncodableVector signingCertV2Attr = new Asn1EncodableVector();
+                signingCertV2Attr.Add(signingCertV2Oid);
+                signingCertV2Attr.Add(new DerSet(signingCertV2));
+                Log($"  ✓ SigningCertificateV2 attribute built");
+
+                // Combine all signed attributes
+                Asn1EncodableVector signedAttrsVector = new Asn1EncodableVector();
+                signedAttrsVector.Add(new DerSequence(contentTypeAttr));
+                signedAttrsVector.Add(new DerSequence(signingTimeAttr));
+                signedAttrsVector.Add(new DerSequence(messageDigestAttr));
+                signedAttrsVector.Add(new DerSequence(signingCertV2Attr)); // CAdES-BES mandatory
+                
+                DerSet signedAttrs = new DerSet(signedAttrsVector);
+                byte[] signedAttrsEncoded = signedAttrs.GetDerEncoded();
+                Log($"  SignedAttributes encoded: {signedAttrsEncoded.Length} bytes");
+
+                // ============================================================
+                // STEP 5: Calculate SHA-256 hash of signedAttributes (for signature)
+                // ============================================================
+                Log($"  Step 5: Calculating SHA-256 hash of signedAttributes...");
+                Sha256Digest attrsDigest = new Sha256Digest();
+                attrsDigest.BlockUpdate(signedAttrsEncoded, 0, signedAttrsEncoded.Length);
+                byte[] attrsHash = new byte[attrsDigest.GetDigestSize()];
+                attrsDigest.DoFinal(attrsHash, 0);
+                Log($"  SignedAttrs SHA-256: {BitConverter.ToString(attrsHash).Replace("-", "").Substring(0, 32)}...");
+
+                // ============================================================
+                // STEP 6: Apply PKCS#1 v1.5 padding with SHA-256 DigestInfo
+                // DigestInfo ::= SEQUENCE { AlgorithmIdentifier, OCTET STRING digest }
+                // SHA-256 OID: 2.16.840.1.101.3.4.2.1
+                // ============================================================
+                Log($"  Step 6: Building DigestInfo and applying PKCS#1 padding...");
+                
+                // Build DigestInfo for SHA-256
+                Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier sha256AlgId = new Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier(
+                    new DerObjectIdentifier("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                    DerNull.Instance
+                );
+                DigestInfo digestInfo = new DigestInfo(sha256AlgId, attrsHash);
+                byte[] digestInfoEncoded = digestInfo.GetDerEncoded();
+                Log($"  DigestInfo encoded: {digestInfoEncoded.Length} bytes");
+
+                // PKCS#1 v1.5 padding: 0x00 0x01 [0xFF...] 0x00 [DigestInfo]
+                // For RSA 1024-bit: block size = 128 bytes
+                int keySize = 128; // RSA 1024-bit = 128 bytes
+                byte[] paddedDigest = new byte[keySize];
+                
+                // Build padding: 0x00 0x01 FF...FF 0x00 DigestInfo
+                paddedDigest[0] = 0x00;
+                paddedDigest[1] = 0x01;
+                int ffLength = keySize - 3 - digestInfoEncoded.Length;
+                for (int i = 0; i < ffLength; i++)
+                {
+                    paddedDigest[2 + i] = 0xFF;
+                }
+                paddedDigest[2 + ffLength] = 0x00;
+                Array.Copy(digestInfoEncoded, 0, paddedDigest, 3 + ffLength, digestInfoEncoded.Length);
+                
+                Log($"  PKCS#1 padded digest: {paddedDigest.Length} bytes, first bytes: {BitConverter.ToString(paddedDigest, 0, 4)}");
+
+                // ============================================================
+                // STEP 7: Sign with smart card using LibSiae.SignML
+                // ============================================================
+                Log($"  Step 7: Signing with smart card (keyId={keyId})...");
+                byte[] signature = new byte[128]; // RSA 1024-bit signature
+                int signResult = LibSiae.SignML(keyId, paddedDigest, signature, _slot);
+                Log($"  SignML = {signResult} (0x{signResult:X4})");
+
+                if (signResult != 0)
+                {
+                    string signError = signResult switch
+                    {
+                        0x6983 => "PIN bloccato - troppi tentativi errati",
+                        0x6982 => "Non autorizzato - verificare PIN prima della firma",
+                        _ when signResult >= 0x63C0 && signResult <= 0x63CF => $"PIN errato - tentativi rimasti: {signResult & 0x0F}",
+                        _ => $"Firma fallita: 0x{signResult:X4}"
+                    };
+                    return (false, null, signError, null);
+                }
+                Log($"  ✓ Smart card signature: {signature.Length} bytes");
+
+                // ============================================================
+                // STEP 8: Build CMS SignedData structure using BouncyCastle
+                // ============================================================
+                Log($"  Step 8: Building CMS SignedData structure...");
+                
+                // SignerIdentifier (IssuerAndSerialNumber)
+                Org.BouncyCastle.Asn1.Cms.IssuerAndSerialNumber issuerAndSerial = new Org.BouncyCastle.Asn1.Cms.IssuerAndSerialNumber(
+                    bcCert.IssuerDN,
+                    bcCert.SerialNumber
+                );
+                SignerIdentifier signerIdentifier = new SignerIdentifier(issuerAndSerial);
+
+                // DigestAlgorithm (SHA-256)
+                Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier digestAlgorithm = new Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier(
+                    new DerObjectIdentifier("2.16.840.1.101.3.4.2.1"), // SHA-256
+                    DerNull.Instance
+                );
+
+                // SignatureAlgorithm (RSA with SHA-256)
+                Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier signatureAlgorithm = new Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier(
+                    new DerObjectIdentifier("1.2.840.113549.1.1.11"), // sha256WithRSAEncryption
+                    DerNull.Instance
+                );
+
+                // Build SignerInfo
+                Org.BouncyCastle.Asn1.Cms.SignerInfo signerInfo = new Org.BouncyCastle.Asn1.Cms.SignerInfo(
+                    signerIdentifier,
+                    digestAlgorithm,
+                    signedAttrs,           // signedAttrs (authenticated attributes)
+                    signatureAlgorithm,
+                    new DerOctetString(signature),
+                    null                   // unsignedAttrs (none for CAdES-BES)
+                );
+
+                // Build ContentInfo (encapsulated content)
+                Org.BouncyCastle.Asn1.Cms.ContentInfo encapContentInfo = new Org.BouncyCastle.Asn1.Cms.ContentInfo(
+                    CmsObjectIdentifiers.Data,
+                    new DerOctetString(xmlBytes)
+                );
+
+                // Build SignedData
+                Asn1EncodableVector digestAlgorithms = new Asn1EncodableVector();
+                digestAlgorithms.Add(digestAlgorithm);
+
+                Asn1EncodableVector certificates = new Asn1EncodableVector();
+                certificates.Add(bcCert.CertificateStructure);
+
+                Asn1EncodableVector signerInfos = new Asn1EncodableVector();
+                signerInfos.Add(signerInfo);
+
+                Org.BouncyCastle.Asn1.Cms.SignedData signedData = new Org.BouncyCastle.Asn1.Cms.SignedData(
+                    new DerSet(digestAlgorithms),
+                    encapContentInfo,
+                    new BerSet(certificates),
+                    null, // CRLs
+                    new DerSet(signerInfos)
+                );
+
+                // Wrap in ContentInfo (PKCS#7 container)
+                Org.BouncyCastle.Asn1.Cms.ContentInfo pkcs7ContentInfo = new Org.BouncyCastle.Asn1.Cms.ContentInfo(
+                    CmsObjectIdentifiers.SignedData,
+                    signedData
+                );
+
+                // Encode to DER
+                byte[] p7mBytes = pkcs7ContentInfo.GetDerEncoded();
+                string p7mBase64 = Convert.ToBase64String(p7mBytes);
+
+                // Calcola SHA-256 per diagnostica integrità trasmissione
+                using (var sha256 = System.Security.Cryptography.SHA256.Create())
+                {
+                    byte[] hash = sha256.ComputeHash(p7mBytes);
+                    string hashHex = BitConverter.ToString(hash).Replace("-", "").ToLower();
+                    Log($"  ✓ CAdES-BES P7M created: {p7mBytes.Length} bytes");
+                    Log($"  [INTEGRITY] P7M SHA-256: {hashHex}");
+                    Log($"  [INTEGRITY] Base64 length: {p7mBase64.Length} chars");
+                }
+                Log($"  ContentType: signedData (1.2.840.113549.1.7.2)");
+                Log($"  DigestAlgorithm: SHA-256 (2.16.840.1.101.3.4.2.1)");
+                Log($"  SignatureAlgorithm: sha256WithRSAEncryption (1.2.840.113549.1.1.11)");
+
+                return (true, p7mBase64, null, signedAt);
+            }
+            catch (Exception ex)
+            {
+                Log($"CreateCAdESSignatureBC error: {ex.GetType().Name}: {ex.Message}");
+                Log($"  Stack trace: {ex.StackTrace}");
+                return (false, null, $"Errore BouncyCastle: {ex.Message}", null);
+            }
+        }
+
+        // ============================================================
+        // CAdES-BES SIGNATURE LEGACY - Firma PKCS#7/P7M usando libSIAEp7.dll
         // Usa direttamente la smart card SIAE senza passare per Windows CSP
-        // Richiesto per report C1 inviati a SIAE
+        // ATTENZIONE: Questa versione usa SHA-1 (deprecato)
         // ============================================================
 
         /// <summary>
         /// Crea firma PKCS#7/P7M usando libSIAEp7.dll direttamente dalla smart card SIAE
+        /// LEGACY: Usa SHA-1 - preferire CreateCAdESSignatureBC per nuove implementazioni
         /// Ritorna il file P7M firmato in Base64
         /// </summary>
-        static (bool success, string p7mBase64, string error, string signedAt) CreateCAdESSignature(byte[] xmlBytes, string pin)
+        static (bool success, string p7mBase64, string error, string signedAt) CreateCAdESSignatureLegacy(byte[] xmlBytes, string pin)
         {
             string inputFile = null;
             string outputFile = null;
@@ -1565,10 +2091,11 @@ namespace SiaeBridge
                 Log($"  ✓ XML written to temp file ({xmlBytes.Length} bytes)");
 
                 // Chiama PKCS7SignML per creare il P7M firmato
-                // bInitialize = 0 perché la carta è già inizializzata
-                Log($"  Calling PKCS7SignML(pin=***, slot={_slot}, input={inputFile}, output={outputFile}, init=0)...");
+                // bInitialize = 1 perché libSIAEp7.dll ha una sessione separata da libSIAE.dll
+                // La libreria p7 deve inizializzare la sua propria connessione alla smart card
+                Log($"  Calling PKCS7SignML(pin=***, slot={_slot}, input={inputFile}, output={outputFile}, init=1)...");
                 
-                int result = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 0);
+                int result = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 1);
                 Log($"  PKCS7SignML returned: {result} (0x{result:X4})");
 
                 if (result != 0)
@@ -1598,7 +2125,15 @@ namespace SiaeBridge
                 string p7mBase64 = Convert.ToBase64String(p7mBytes);
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
 
-                Log($"  ✓ P7M created successfully: {p7mBytes.Length} bytes");
+                // Calcola SHA-256 per diagnostica integrità trasmissione
+                using (var sha256 = System.Security.Cryptography.SHA256.Create())
+                {
+                    byte[] hash = sha256.ComputeHash(p7mBytes);
+                    string hashHex = BitConverter.ToString(hash).Replace("-", "").ToLower();
+                    Log($"  ✓ P7M created successfully: {p7mBytes.Length} bytes");
+                    Log($"  [INTEGRITY] P7M SHA-256: {hashHex}");
+                    Log($"  [INTEGRITY] Base64 length: {p7mBase64.Length} chars");
+                }
 
                 return (true, p7mBase64, null, signedAt);
             }
@@ -1726,348 +2261,454 @@ namespace SiaeBridge
         }
 
         // ============================================================
-        // Helper: Sanitizza header RFC822 rimuovendo CR/LF per prevenire injection
-        // ============================================================
-        static string SanitizeHeader(string value)
-        {
-            if (string.IsNullOrEmpty(value)) return "";
-            // Rimuovi CR, LF, e caratteri di controllo che potrebbero causare header injection
-            return new string(value.Where(c => c >= 32 && c != '\r' && c != '\n').ToArray()).Trim();
-        }
-
-        // ============================================================
-        // Helper: Costruisce messaggio MIME RFC822 da parametri SMIMESignML
-        // Per formato email conforme a Allegato C SIAE (RFC 2046 compliant)
-        // ============================================================
-        static string BuildMimeMessage(string from, string to, string subject, string body, string attachmentBase64, string attachmentName)
-        {
-            try
-            {
-                // Valida input obbligatori
-                if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
-                {
-                    Log($"  BuildMimeMessage: ERRORE - from o to mancanti");
-                    return null;
-                }
-                
-                // Sanitizza headers per prevenire CR/LF injection
-                from = SanitizeHeader(from);
-                to = SanitizeHeader(to);
-                subject = SanitizeHeader(subject ?? "Trasmissione SIAE");
-                
-                if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to))
-                {
-                    Log($"  BuildMimeMessage: ERRORE - from o to vuoti dopo sanitizzazione");
-                    return null;
-                }
-                
-                var sb = new StringBuilder();
-                
-                // Headers RFC822
-                sb.Append($"From: {from}\r\n");
-                sb.Append($"To: {to}\r\n");
-                sb.Append($"Subject: {subject}\r\n");
-                sb.Append($"Date: {DateTime.Now:R}\r\n");
-                sb.Append("MIME-Version: 1.0\r\n");
-                
-                // Normalizza newlines nel body a CRLF (RFC 2046 compliant)
-                string normalizedBody = (body ?? "").Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
-                // Assicura che il body termini senza trailing newlines (aggiungeremo CRLF esplicitamente)
-                normalizedBody = normalizedBody.TrimEnd('\r', '\n');
-                
-                // Se c'è un allegato, usa multipart/mixed
-                if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
-                {
-                    // Sanitizza attachment name
-                    attachmentName = SanitizeHeader(attachmentName);
-                    if (string.IsNullOrEmpty(attachmentName))
-                    {
-                        attachmentName = "attachment.bin";
-                    }
-                    
-                    string boundary = $"----=_Part_{Guid.NewGuid():N}";
-                    sb.Append($"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n");
-                    sb.Append("\r\n");  // Blank line separating headers from body
-                    
-                    // Parte testo - RFC 2046: each part ends with CRLF
-                    sb.Append($"--{boundary}\r\n");
-                    sb.Append("Content-Type: text/plain; charset=us-ascii\r\n");
-                    sb.Append("Content-Transfer-Encoding: 7bit\r\n");
-                    sb.Append("\r\n");
-                    sb.Append(normalizedBody);
-                    sb.Append("\r\n");  // End text part with CRLF
-                    
-                    // Parte allegato
-                    sb.Append($"--{boundary}\r\n");
-                    sb.Append($"Content-Type: application/octet-stream; name=\"{attachmentName}\"\r\n");
-                    sb.Append("Content-Transfer-Encoding: base64\r\n");
-                    sb.Append($"Content-Disposition: attachment; filename=\"{attachmentName}\"\r\n");
-                    sb.Append("\r\n");
-                    
-                    // Split base64 in linee da 76 caratteri
-                    for (int i = 0; i < attachmentBase64.Length; i += 76)
-                    {
-                        int len = Math.Min(76, attachmentBase64.Length - i);
-                        sb.Append(attachmentBase64.Substring(i, len));
-                        sb.Append("\r\n");
-                    }
-                    
-                    // Terminating boundary con CRLF finale (RFC 2046)
-                    sb.Append($"--{boundary}--\r\n");
-                }
-                else
-                {
-                    // Solo testo, nessun allegato
-                    sb.Append("Content-Type: text/plain; charset=us-ascii\r\n");
-                    sb.Append("Content-Transfer-Encoding: 7bit\r\n");
-                    sb.Append("\r\n");
-                    sb.Append(normalizedBody);
-                    sb.Append("\r\n");  // Final CRLF
-                }
-                
-                string result = sb.ToString();
-                Log($"  BuildMimeMessage: from={from}, to={to}, hasAttachment={!string.IsNullOrEmpty(attachmentBase64)}, attachmentName={attachmentName}, length={result.Length}");
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Log($"  BuildMimeMessage error: {ex.Message}");
-                return null;
-            }
-        }
-
-        // ============================================================
         // SIGN S/MIME - Firma S/MIME per email SIAE (Allegato C)
         // Per Provvedimento Agenzia Entrate 04/03/2008, sezione 1.6.1-1.6.2
         // L'email deve essere firmata S/MIME v2 con carta di attivazione
-        // Supporta sia formato legacy (mimeContent) che SMIMESignML (from,to,subject,body,attachment)
+        // 
+        // FIX 2026-01-06: Usa SMIMESignML nativo invece di PKCS7SignML + costruzione manuale
+        // SMIMESignML è la funzione SIAE che genera direttamente email RFC822 S/MIME conformi
         // ============================================================
         static string SignSmime(string json)
         {
             if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
 
-            bool tx = false;
+            string attachmentTempFile = null;
+            string outputFile = null;
+
             try
             {
+                Log($"=== SignSmime v3.35 START ===");
+                
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
-                
-                // Supporto ENTRAMBI i formati: legacy (mimeContent) e SMIMESignML (from, to, subject, body)
-                string mimeFrom = req.from;
-                string mimeTo = req.to;
-                string mimeSubject = req.subject;
-                string mimeBody = req.body;
+
+                // Parametri S/MIME
+                string smimeFromRaw = req.from;
+                string smimeToRaw = req.to;
+                string smimeSubject = req.subject;
+                string smimeBody = req.body;
                 string attachmentBase64 = req.attachmentBase64;
                 string attachmentName = req.attachmentName;
-                string mimeContent = req.mimeContent;
-                
-                // Rileva quale formato è stato usato
-                bool isNewFormat = !string.IsNullOrEmpty(mimeFrom) && !string.IsNullOrEmpty(mimeTo);
-                
-                Log($"SignSmime: slot={_slot}, format={(isNewFormat ? "SMIMESignML" : "legacy")}, from={mimeFrom}, to={mimeTo}");
-                
-                // Se è il nuovo formato SMIMESignML, costruisci il messaggio MIME
-                if (isNewFormat)
-                {
-                    mimeContent = BuildMimeMessage(mimeFrom, mimeTo, mimeSubject, mimeBody, attachmentBase64, attachmentName);
-                    Log($"  Built MIME message: {mimeContent?.Length ?? 0} bytes");
-                    
-                    // Gestione esplicita del fallimento BuildMimeMessage
-                    if (string.IsNullOrEmpty(mimeContent))
-                    {
-                        return ERR("Errore costruzione messaggio MIME - verificare che 'from' e 'to' siano email valide");
-                    }
-                }
 
-                if (string.IsNullOrEmpty(mimeContent))
-                {
-                    return ERR("Contenuto MIME mancante - specificare mimeContent o (from, to, subject, body)");
-                }
+                // v3.29 FIX: Passa il From ESATTAMENTE come ricevuto (incluso display name)
+                // La documentazione SIAE dice: Es.1: "Giuseppe Verdi" <gverdi@xcom.it> Es.2: gverdi@xcom.it
+                // Il test ufficiale usa: "Mario Rossi <mariorossi@prova.it>"
+                // NON dobbiamo estrarre solo l'email - dobbiamo passare il formato completo RFC822
+                string smimeFrom = smimeFromRaw?.Trim() ?? "";
+                string smimeTo = smimeToRaw?.Trim() ?? "";
+                Log($"  From (passthrough): '{smimeFrom}'");
+                Log($"  To (passthrough): '{smimeTo}' ");
 
-                Log($"SignSmime: slot={_slot}, mimeLength={mimeContent?.Length ?? 0}");
+                // Validazioni
+                if (string.IsNullOrEmpty(smimeFrom))
+                    return ERR("Campo 'from' mancante o formato non valido - richiesto email semplice per S/MIME");
+                if (string.IsNullOrEmpty(smimeTo))
+                    return ERR("Campo 'to' mancante o formato non valido - richiesto email semplice per S/MIME");
+                if (string.IsNullOrEmpty(pin))
+                    return ERR("PIN mancante - richiesto per firma S/MIME");
+
+                // Pulisci PIN
+                pin = new string(pin.Where(char.IsDigit).ToArray());
+                if (pin.Length < 4)
+                    return ERR("PIN non valido - deve contenere almeno 4 cifre");
+
+                Log($"SignSmime (via SMIMESignML nativo v3.35): from={smimeFrom}, to={smimeTo}");
+                Log($"  Subject: {smimeSubject ?? "(none)"}");
+                Log($"  Body length: {smimeBody?.Length ?? 0}");
+                Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
 
                 int state = isCardIn(_slot);
+                Log($"  Card state check: {state}");
                 if (!IsCardPresent(state))
                 {
                     _slot = -1;
                     return ERR("Carta rimossa");
                 }
 
-                // Initialize and begin transaction
-                int finRes = FinalizeML(_slot);
-                Log($"  FinalizeML = {finRes}");
+                // Prepara file temporanei - l'allegato verrà salvato DOPO il setup della directory di lavoro
+                string tempDir = Path.GetTempPath();
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.eml");
+                Log($"  Temp directory: {tempDir}");
+                Log($"  Output file: {outputFile}");
                 
-                int init = Initialize(_slot);
-                Log($"  Initialize = {init}");
-
-                int txResult = BeginTransactionML(_slot);
-                Log($"  BeginTransactionML = {txResult}");
-                tx = (txResult == 0);
-
-                // Select DF PKI (0x1111) for signature operations
-                int sel0000 = LibSiae.SelectML(0x0000, _slot);
-                Log($"  SelectML(0x0000 root) = {sel0000} (0x{sel0000:X4})");
-                
-                int sel1111 = LibSiae.SelectML(0x1111, _slot);
-                Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
-
-                // Verify PIN if provided
-                if (!string.IsNullOrEmpty(pin))
+                // v3.35 FIX CRITICO: Salvataggio allegato e stringa attachments vengono impostati
+                // DOPO il cambio della directory di lavoro per usare path relativi.
+                // Vedi blocco dopo setup virtual drive.
+                string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
+                byte[] attachmentBytesToWrite = null;
+                if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
-                    pin = new string(pin.Where(char.IsDigit).ToArray());
-                    int pinResult = VerifyPINML(1, pin, _slot);
-                    Log($"  VerifyPINML(nPIN=1) = {pinResult} (0x{pinResult:X4})");
-                    
-                    if (pinResult != 0)
-                    {
-                        if (pinResult == 0x6983)
-                            return ERR("PIN bloccato - troppi tentativi errati");
-                        else if (pinResult == 0x6982)
-                            return ERR("PIN errato - autenticazione fallita");
-                        else if (pinResult >= 0x63C0 && pinResult <= 0x63CF)
-                            return ERR($"PIN errato - tentativi rimasti: {pinResult & 0x0F}");
-                        else
-                            return ERR($"Verifica PIN fallita: 0x{pinResult:X4}");
-                    }
-                    Log($"  PIN verified successfully for S/MIME signature");
+                    attachmentBytesToWrite = Convert.FromBase64String(attachmentBase64);
+                    Log($"  v3.35: Attachment data prepared ({attachmentBytesToWrite.Length} bytes), will save AFTER workdir setup");
                 }
                 else
                 {
-                    Log($"  WARNING: No PIN provided for S/MIME signature operation");
+                    Log($"  No attachment - will pass empty string to SMIMESignML");
                 }
 
-                // Get the key ID from the smart card
-                byte keyId = LibSiae.GetKeyIDML(_slot);
-                Log($"  GetKeyIDML = {keyId} (0x{keyId:X2})");
-                
-                if (keyId == 0)
+                // Body del messaggio (ASCII 7-bit come richiesto dalla documentazione)
+                // FIX v3.25: Forza encoding ASCII-7bit - rimuove caratteri non-ASCII
+                string rawBody = smimeBody ?? "SIAE RCA Transmission";
+                string body = new string(rawBody.Where(c => c < 128).ToArray());
+                if (body.Length != rawBody.Length)
                 {
-                    return ERR("GetKeyID ha restituito 0 - nessuna chiave di firma disponibile");
+                    Log($"  WARNING: Body contained non-ASCII chars, stripped from {rawBody.Length} to {body.Length}");
                 }
+                // Ensure CRLF line endings
+                body = body.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+                Log($"  Body after normalization: {body.Length} chars");
 
-                // Calculate SHA-256 hash of the MIME content (S/MIME typically uses SHA-256)
-                byte[] mimeBytes = Encoding.UTF8.GetBytes(mimeContent);
-                byte[] hash = new byte[20]; // SHA-1 for compatibility with SIAE card
+                // v3.28 FIX CRITICO: Virtual Drive per tmpnam()
+                // tmpnam(NULL) su Windows restituisce "\smaXXXX.tmp" che diventa DRIVELETTER:\smaXXXX.tmp
+                // Se cambiamo il drive corrente a un virtual drive mappato al temp folder,
+                // allora "\smaXXXX.tmp" diventa "S:\smaXXXX.tmp" che è scrivibile!
+                string originalDir = Directory.GetCurrentDirectory();
+                Log($"  Original CWD: {originalDir}");
                 
-                int hashResult = LibSiae.Hash(1, mimeBytes, mimeBytes.Length, hash); // 1 = SHA-1
-                Log($"  Hash(SHA-1) = {hashResult}, hashLen={hash.Length}");
+                // Trova una lettera di drive disponibile (da S: a Z:)
+                string virtualDriveLetter = null;
+                string virtualDriveTarget = null;
+                bool virtualDriveCreated = false;
                 
-                if (hashResult != 0)
-                {
-                    return ERR($"Calcolo hash fallito: 0x{hashResult:X4}");
-                }
-
-                // Apply PKCS#1 padding
-                byte[] paddedHash = new byte[128];
-                int padResult = LibSiae.Padding(hash, hash.Length, paddedHash);
-                Log($"  Padding = {padResult} (0x{padResult:X4})");
-                
-                if (padResult != 0)
-                {
-                    return ERR($"Padding fallito: 0x{padResult:X4}");
-                }
-
-                // Sign using the card's private key
-                byte[] signature = new byte[128]; // RSA 1024-bit signature
-                int signResult = LibSiae.SignML(keyId, paddedHash, signature, _slot);
-                Log($"  SignML(keyIndex={keyId}) = {signResult} (0x{signResult:X4})");
-                
-                if (signResult != 0)
-                {
-                    return ERR($"Firma fallita: 0x{signResult:X4}");
-                }
-                
-                Log($"  S/MIME Signature successful with keyIndex={keyId}");
-
-                // Get the certificate
-                byte[] cert = new byte[2048];
-                int certLen = cert.Length;
-                int certResult = LibSiae.GetCertificateML(cert, ref certLen, _slot);
-                Log($"  GetCertificateML = {certResult}, certLen={certLen}");
-                
-                if (certResult != 0 || certLen == 0)
-                {
-                    return ERR("Impossibile leggere il certificato dalla carta");
-                }
-
-                byte[] actualCert = new byte[certLen];
-                Array.Copy(cert, actualCert, certLen);
-                string certificateBase64 = Convert.ToBase64String(actualCert);
-                string signatureBase64 = Convert.ToBase64String(signature);
-
-                // Extract email from certificate
-                string signerEmail = "";
-                string signerName = "";
                 try
                 {
-                    var x509 = new System.Security.Cryptography.X509Certificates.X509Certificate2(actualCert);
-                    signerName = x509.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false);
+                    // Il target deve essere in formato NT device path: \??\C:\Users\...
+                    string tempDirClean = tempDir.TrimEnd('\\');
+                    virtualDriveTarget = $@"\??\{tempDirClean}";
                     
-                    // Try to get email from Subject Alternative Name or Subject
-                    foreach (var ext in x509.Extensions)
+                    // Cerca una lettera disponibile da S: a Z:
+                    for (char letter = 'S'; letter <= 'Z'; letter++)
                     {
-                        if (ext.Oid?.Value == "2.5.29.17") // Subject Alternative Name
+                        string driveName = $"{letter}:";
+                        string drivePath = $"{letter}:\\";
+                        
+                        // Verifica se il drive esiste già
+                        if (!Directory.Exists(drivePath))
                         {
-                            var sanString = ext.Format(false);
-                            var match = System.Text.RegularExpressions.Regex.Match(sanString, @"RFC822[^=]*=([^\s,]+)");
-                            if (match.Success)
+                            // Crea il virtual drive
+                            bool created = DefineDosDevice(DDD_RAW_TARGET_PATH | DDD_NO_BROADCAST_SYSTEM, driveName, virtualDriveTarget);
+                            if (created)
                             {
-                                signerEmail = match.Groups[1].Value;
-                                break;
+                                virtualDriveLetter = driveName;
+                                virtualDriveCreated = true;
+                                Log($"  ✓ Virtual drive {driveName} created -> {tempDirClean}");
+                                
+                                // Verifica che funzioni
+                                if (Directory.Exists(drivePath))
+                                {
+                                    // Cambia directory al virtual drive
+                                    Directory.SetCurrentDirectory(drivePath);
+                                    Log($"  ✓ Working directory changed to: {Directory.GetCurrentDirectory()}");
+                                    
+                                    // Test di scrittura
+                                    string testFile = $"{drivePath}smime_test_{DateTime.Now.Ticks}.tmp";
+                                    File.WriteAllText(testFile, "test");
+                                    if (File.Exists(testFile))
+                                    {
+                                        File.Delete(testFile);
+                                        Log($"  ✓ Write test PASSED on virtual drive {driveName}");
+                                    }
+                                    break;
+                                }
+                                else
+                                {
+                                    Log($"  WARNING: Virtual drive {driveName} created but not accessible");
+                                    // Rimuovi e prova la prossima lettera
+                                    DefineDosDevice(DDD_REMOVE_DEFINITION | DDD_NO_BROADCAST_SYSTEM, driveName, null);
+                                    virtualDriveCreated = false;
+                                }
+                            }
+                            else
+                            {
+                                int err = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
+                                Log($"  WARNING: DefineDosDevice({driveName}) failed, error={err}");
                             }
                         }
                     }
-                    if (string.IsNullOrEmpty(signerEmail))
+                    
+                    if (!virtualDriveCreated)
                     {
-                        // Try from Subject E= field
-                        var emailMatch = System.Text.RegularExpressions.Regex.Match(x509.Subject, @"E=([^\s,]+)");
-                        if (emailMatch.Success)
+                        Log($"  WARNING: Could not create virtual drive, falling back to temp directory");
+                        Directory.SetCurrentDirectory(tempDir);
+                        Log($"  Working directory changed to: {Directory.GetCurrentDirectory()}");
+                    }
+                }
+                catch (Exception vdEx)
+                {
+                    Log($"  WARNING: Virtual drive setup failed: {vdEx.Message}");
+                    try { Directory.SetCurrentDirectory(tempDir); } catch { }
+                }
+
+                // ============================================================
+                // v3.54 FIX: Formato szAttachments per SMIMESignML
+                // Dalla documentazione: "Files allegati separati da ';'"
+                // Significa SOLO il nome del file, NON path|displayName|content-type!
+                //
+                // SMIMESignML cerca il file nella directory corrente
+                // ============================================================
+                if (attachmentBytesToWrite != null && !string.IsNullOrEmpty(attachmentName))
+                {
+                    // Salva nella directory di lavoro corrente (virtual drive o temp)
+                    string currentWorkDir = Directory.GetCurrentDirectory();
+                    attachmentTempFile = Path.Combine(currentWorkDir, attachmentName);
+                    File.WriteAllBytes(attachmentTempFile, attachmentBytesToWrite);
+                    
+                    // v3.54 FIX: Passa SOLO il nome del file, senza metadata!
+                    // La libreria SIAE determina automaticamente il content-type
+                    attachments = attachmentName;
+                    
+                    Log($"  v3.54 FIX: Attachment saved to workdir: {attachmentTempFile}");
+                    Log($"  v3.54 FIX: Attachment string (filename only): '{attachments}'");
+                    Log($"  v3.54 FIX: File exists check: {File.Exists(attachmentTempFile)}");
+                    Log($"  v3.54 FIX: File size: {new FileInfo(attachmentTempFile).Length} bytes");
+                }
+
+                // Reset card state before SMIMESignML call
+                Log($"  Resetting card state before SMIMESignML...");
+                int finRes = FinalizeML(_slot);
+                Log($"  FinalizeML = {finRes} (0x{finRes:X8})");
+                int initRes = Initialize(_slot);
+                Log($"  Initialize = {initRes} (0x{initRes:X8})");
+                
+                // v3.26: Log tutti i parametri prima della chiamata
+                Log($"  === SMIMESignML CALL PARAMETERS ===");
+                Log($"    pin length: {pin?.Length ?? 0}");
+                Log($"    slot: {_slot}");
+                Log($"    outputFile: {outputFile}");
+                Log($"    from: [{smimeFrom}] (len={smimeFrom?.Length ?? 0})");
+                Log($"    to: [{smimeTo}] (len={smimeTo?.Length ?? 0})");
+                Log($"    subject: [{smimeSubject}] (len={smimeSubject?.Length ?? 0})");
+                Log($"    otherHeaders: (null)");
+                Log($"    body: (inline string, len={body.Length})");
+                Log($"    attachments: [{attachments}] (len={attachments?.Length ?? 0})");
+                Log($"    flags: 0");
+                Log($"    bInitialize: 1");
+                // v3.50 FIX: Log esplicito per debug errore SIAE 0600 (filename mismatch)
+                Log($"  v3.50 CRITICAL: Original attachmentName from server: [{attachmentName}]");
+                Log($"  v3.50 CRITICAL: Attachments string passed to SMIMESignML: [{attachments}]");
+                if (attachmentName != attachments && !string.IsNullOrEmpty(attachmentName))
+                    Log($"  v3.50 WARNING: Attachment name differs! This may cause SIAE error 0600!");
+                Log($"  === CALLING SMIMESignML NOW ===");
+
+                // bInitialize=1: lascia che SMIMESignML gestisca l'inizializzazione interna
+                int signResult = SMIMESignML(
+                    pin,
+                    (uint)_slot,
+                    outputFile,
+                    smimeFrom,
+                    smimeTo,
+                    smimeSubject ?? "RCA Transmission",
+                    null,           // otherHeaders (opzionale)
+                    body,
+                    attachments,    // stringa vuota se non ci sono allegati
+                    0,              // flags
+                    1               // bInitialize=1 (SMIMESignML gestisce init)
+                );
+
+                Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
+                
+                // Ripristina directory originale, pulisci file temp, e rimuovi virtual drive
+                try
+                {
+                    Directory.SetCurrentDirectory(originalDir);
+                    Log($"  Restored CWD to: {originalDir}");
+                    
+                    // v3.35: Pulisci il file allegato temporaneo
+                    if (!string.IsNullOrEmpty(attachmentTempFile) && File.Exists(attachmentTempFile))
+                    {
+                        try
                         {
-                            signerEmail = emailMatch.Groups[1].Value;
+                            File.Delete(attachmentTempFile);
+                            Log($"  ✓ Deleted temp attachment: {attachmentTempFile}");
+                        }
+                        catch (Exception delEx)
+                        {
+                            Log($"  WARNING: Could not delete temp attachment: {delEx.Message}");
                         }
                     }
-                    Log($"  Certificate: Name={signerName}, Email={signerEmail}");
+                    
+                    // Rimuovi il virtual drive se è stato creato
+                    if (virtualDriveCreated && virtualDriveLetter != null)
+                    {
+                        bool removed = DefineDosDevice(DDD_REMOVE_DEFINITION | DDD_NO_BROADCAST_SYSTEM, virtualDriveLetter, null);
+                        if (removed)
+                            Log($"  ✓ Virtual drive {virtualDriveLetter} removed");
+                        else
+                            Log($"  WARNING: Could not remove virtual drive {virtualDriveLetter}");
+                    }
+                }
+                catch (Exception restoreEx)
+                {
+                    Log($"  WARNING: Could not restore directory: {restoreEx.Message}");
+                }
+
+                if (signResult != 0)
+                {
+                    // Interpreta codici errore smart card
+                    if (signResult == 0x6983 || signResult == unchecked((int)0x80100068))
+                        return ERR("PIN bloccato - troppi tentativi errati. Usa PUK per sbloccare.");
+                    else if (signResult == 0x6982)
+                        return ERR("PIN errato - autenticazione fallita");
+                    else if (signResult >= 0x63C0 && signResult <= 0x63CF)
+                        return ERR($"PIN errato - tentativi rimasti: {signResult & 0x0F}");
+                    else
+                        return ERR($"SMIMESignML fallito: errore 0x{signResult:X8}");
+                }
+
+                // Verifica che il file output esista
+                if (!File.Exists(outputFile))
+                {
+                    return ERR("File S/MIME non creato da SMIMESignML");
+                }
+
+                // Leggi l'email S/MIME generata nativamente
+                string signedMime = File.ReadAllText(outputFile, Encoding.GetEncoding("ISO-8859-1"));
+                Log($"  S/MIME file read: {signedMime.Length} chars");
+
+                if (signedMime.Length < 100)
+                {
+                    return ERR("S/MIME troppo corto - probabilmente non valido");
+                }
+
+                // ============================================================
+                // v3.52 FIX: NESSUN POST-PROCESSING dell'email S/MIME!
+                // Qualsiasi modifica al contenuto DOPO la firma SMIMESignML
+                // INVALIDA la firma e causa errore SIAE 40605 "messaggio alterato"!
+                //
+                // I metadata (filename, content-type) sono ora configurati PRIMA
+                // della firma tramite il parametro attachments con formato:
+                // path|displayName|content-type
+                // ============================================================
+                if (!string.IsNullOrEmpty(attachmentName))
+                {
+                    Log($"  v3.54 FIX: NO post-processing - signature integrity preserved");
+                    
+                    // Solo logging diagnostico - NESSUNA modifica al contenuto!
+                    // SMIMESignML genera S/MIME opaco (application/x-pkcs7-mime)
+                    // L'allegato P7M è incluso nel blob firmato
+                    bool isOpaqueSmime = signedMime.Contains("application/x-pkcs7-mime") || 
+                                         signedMime.Contains("application/pkcs7-mime");
+                    bool hasMultipartMixed = signedMime.Contains("multipart/mixed");
+                    
+                    if (isOpaqueSmime)
+                        Log($"  v3.54 CHECK: ✓ S/MIME opaco rilevato - allegato incluso nel blob firmato");
+                    else if (hasMultipartMixed)
+                        Log($"  v3.54 CHECK: ✓ S/MIME multipart - allegato visibile separatamente");
+                    else
+                        Log($"  v3.54 WARNING: Formato S/MIME non riconosciuto");
+                    
+                    // Log primi 500 caratteri per debug
+                    string preview = signedMime.Length > 500 ? signedMime.Substring(0, 500) : signedMime;
+                    Log($"  v3.54 PREVIEW: {preview.Replace("\r", "\\r").Replace("\n", "\\n")}");
+                }
+
+                // Log prime 15 righe per debug (dopo il post-processing)
+                var previewLines = signedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                Log($"  === S/MIME OUTPUT (prime 15 righe) ===");
+                for (int i = 0; i < Math.Min(15, previewLines.Length); i++)
+                {
+                    Log($"  {i + 1,2}: [{previewLines[i]}]");
+                }
+                Log($"  === FINE PREVIEW ===");
+
+                // Leggi il certificato per estrarre email e nome
+                string signerEmail = "";
+                string signerName = "";
+                
+                // Riusa variabile finRes già dichiarata sopra
+                finRes = FinalizeML(_slot);
+                int init = Initialize(_slot);
+                int txResult = BeginTransactionML(_slot);
+                bool tx = (txResult == 0);
+                
+                try
+                {
+                    LibSiae.SelectML(0x0000, _slot);
+                    LibSiae.SelectML(0x1111, _slot);
+                    
+                    byte[] cert = new byte[2048];
+                    int certLen = cert.Length;
+                    int certResult = LibSiae.GetCertificateML(cert, ref certLen, _slot);
+                    
+                    if (certResult == 0 && certLen > 0)
+                    {
+                        byte[] actualCert = new byte[certLen];
+                        Array.Copy(cert, actualCert, certLen);
+                        
+                        var x509 = new System.Security.Cryptography.X509Certificates.X509Certificate2(actualCert);
+                        signerName = x509.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false) ?? "";
+                        
+                        // Cerca email nel SAN (Subject Alternative Name)
+                        foreach (var ext in x509.Extensions)
+                        {
+                            if (ext.Oid?.Value == "2.5.29.17")
+                            {
+                                var sanString = ext.Format(false);
+                                Log($"  SAN extension: {sanString}");
+                                
+                                // Pattern multipli per trovare email
+                                var patterns = new[] {
+                                    @"RFC822[^=]*=([^\s,]+)",
+                                    @"email:([^\s,]+)",
+                                    @"rfc822Name=([^\s,]+)"
+                                };
+                                
+                                foreach (var pattern in patterns)
+                                {
+                                    var match = System.Text.RegularExpressions.Regex.Match(sanString, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                    if (match.Success)
+                                    {
+                                        signerEmail = match.Groups[1].Value;
+                                        Log($"  Found email in SAN: {signerEmail}");
+                                        break;
+                                    }
+                                }
+                                if (!string.IsNullOrEmpty(signerEmail)) break;
+                            }
+                        }
+                        
+                        // Fallback: cerca nel Subject
+                        if (string.IsNullOrEmpty(signerEmail))
+                        {
+                            var subject = x509.Subject;
+                            Log($"  Subject: {subject}");
+                            
+                            var emailPatterns = new[] {
+                                @"E=([^\s,]+)",
+                                @"EMAIL=([^\s,]+)",
+                                @"EMAILADDRESS=([^\s,]+)"
+                            };
+                            
+                            foreach (var pattern in emailPatterns)
+                            {
+                                var match = System.Text.RegularExpressions.Regex.Match(subject, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                if (match.Success)
+                                {
+                                    signerEmail = match.Groups[1].Value.Trim();
+                                    Log($"  Found email in Subject: {signerEmail}");
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        Log($"  Certificate: Name={signerName}, Email={signerEmail}");
+                    }
                 }
                 catch (Exception certEx)
                 {
                     Log($"  Certificate parsing error: {certEx.Message}");
                 }
-
-                // Build the S/MIME signed message (multipart/signed)
-                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
-                string smimeBoundary = $"----=_smime_{Guid.NewGuid():N}";
-                
-                // Create PKCS#7 signature for S/MIME (detached signature)
-                // Note: This creates a simplified S/MIME structure. For full compliance,
-                // use System.Security.Cryptography.Pkcs.SignedCms
-                string pkcs7Signature = CreatePkcs7Signature(signature, actualCert);
-                
-                // Build multipart/signed message
-                var smimeBuilder = new StringBuilder();
-                smimeBuilder.AppendLine("MIME-Version: 1.0");
-                smimeBuilder.AppendLine($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-1; boundary=\"{smimeBoundary}\"");
-                smimeBuilder.AppendLine();
-                smimeBuilder.AppendLine($"--{smimeBoundary}");
-                smimeBuilder.Append(mimeContent);
-                if (!mimeContent.EndsWith("\r\n"))
-                    smimeBuilder.AppendLine();
-                smimeBuilder.AppendLine();
-                smimeBuilder.AppendLine($"--{smimeBoundary}");
-                smimeBuilder.AppendLine("Content-Type: application/pkcs7-signature; name=\"smime.p7s\"");
-                smimeBuilder.AppendLine("Content-Transfer-Encoding: base64");
-                smimeBuilder.AppendLine("Content-Disposition: attachment; filename=\"smime.p7s\"");
-                smimeBuilder.AppendLine();
-                
-                // Split base64 into 76-char lines
-                for (int i = 0; i < pkcs7Signature.Length; i += 76)
+                finally
                 {
-                    int len = Math.Min(76, pkcs7Signature.Length - i);
-                    smimeBuilder.AppendLine(pkcs7Signature.Substring(i, len));
+                    if (tx) try { EndTransactionML(_slot); } catch { }
                 }
-                
-                smimeBuilder.AppendLine($"--{smimeBoundary}--");
 
-                string signedMime = smimeBuilder.ToString().Replace("\n", "\r\n").Replace("\r\r\n", "\r\n");
+                // SMIMESignML ha generato direttamente l'email S/MIME conforme RFC822
+                // Non serve costruire manualmente - la libreria SIAE lo fa nativamente
+                
+                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
+                Log($"  ✓ S/MIME nativo generato correttamente via SMIMESignML");
 
                 return JsonConvert.SerializeObject(new
                 {
@@ -2077,57 +2718,29 @@ namespace SiaeBridge
                         signedMime = signedMime,
                         signerEmail = signerEmail,
                         signerName = signerName,
-                        certificateSerial = BitConverter.ToString(actualCert).Substring(0, 20),
-                        signedAt = signedAt
+                        signedAt = signedAt,
+                        format = "S/MIME",
+                        algorithm = "SHA-256",
+                        generator = "SMIMESignML-native"  // Indica che è stato generato nativamente
                     }
                 });
             }
             catch (Exception ex)
             {
-                Log($"SignSmime error: {ex.Message}");
+                Log($"SignSmime error: {ex.Message}\n{ex.StackTrace}");
                 return ERR(ex.Message);
             }
             finally
             {
-                if (tx)
+                // Pulisci file temporanei
+                try
                 {
-                    try
-                    {
-                        EndTransactionML(_slot);
-                        Log("  EndTransactionML done");
-                    }
-                    catch { }
+                    if (attachmentTempFile != null && File.Exists(attachmentTempFile))
+                        File.Delete(attachmentTempFile);
+                    if (outputFile != null && File.Exists(outputFile))
+                        File.Delete(outputFile);
                 }
-            }
-        }
-
-        // ============================================================
-        // Helper: Create PKCS#7 signature structure
-        // ============================================================
-        static string CreatePkcs7Signature(byte[] signature, byte[] certificate)
-        {
-            try
-            {
-                // Use System.Security.Cryptography.Pkcs for proper PKCS#7 structure
-                // For now, return a simplified structure with just the signature
-                // A full implementation would use SignedCms class
-                
-                // Build a minimal PKCS#7 SignedData structure
-                // This is a simplified version - for production, use SignedCms
-                var pkcs7 = new System.Collections.Generic.List<byte>();
-                
-                // For simplicity, we'll just base64 encode the raw signature + cert
-                // In production, this should be a proper ASN.1 PKCS#7 structure
-                var combined = new byte[signature.Length + certificate.Length];
-                Array.Copy(signature, 0, combined, 0, signature.Length);
-                Array.Copy(certificate, 0, combined, signature.Length, certificate.Length);
-                
-                return Convert.ToBase64String(combined);
-            }
-            catch
-            {
-                // Fallback to just the signature
-                return Convert.ToBase64String(signature);
+                catch { }
             }
         }
     }

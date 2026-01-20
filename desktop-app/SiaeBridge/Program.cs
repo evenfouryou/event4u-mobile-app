@@ -2484,6 +2484,11 @@ namespace SiaeBridge
                 Log($"    attachments: [{attachments}] (len={attachments?.Length ?? 0})");
                 Log($"    flags: 0");
                 Log($"    bInitialize: 1");
+                // v3.50 FIX: Log esplicito per debug errore SIAE 0600 (filename mismatch)
+                Log($"  v3.50 CRITICAL: Original attachmentName from server: [{attachmentName}]");
+                Log($"  v3.50 CRITICAL: Attachments string passed to SMIMESignML: [{attachments}]");
+                if (attachmentName != attachments && !string.IsNullOrEmpty(attachmentName))
+                    Log($"  v3.50 WARNING: Attachment name differs! This may cause SIAE error 0600!");
                 Log($"  === CALLING SMIMESignML NOW ===");
 
                 // bInitialize=1: lascia che SMIMESignML gestisca l'inizializzazione interna

@@ -1627,6 +1627,11 @@ async function handleRelayCommand(msg) {
         
         const isNewFormat = smimeFrom && smimeTo;
         log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, format=${isNewFormat ? 'SMIMESignML' : 'legacy'}, from=${smimeFrom}, to=${smimeTo}`);
+        // v3.50 FIX: Log esplicito nome file allegato per debug errore SIAE 0600
+        log.info(`[S/MIME] v3.50 ATTACHMENT NAME RECEIVED: "${attachmentName}" (length=${attachmentName.length})`);
+        if (attachmentName && !attachmentName.match(/^(RMG|RPM|RCA)_\d{8}_[A-Z0-9]+_\d{3}\.xsi(\.p7m)?$/i)) {
+          log.warn(`[S/MIME] v3.50 WARNING: Attachment name does not match expected SIAE format!`);
+        }
         
         // Check if bridge is ready
         if (!bridgeProcess || !currentStatus.readerConnected) {
@@ -1692,7 +1697,9 @@ async function handleRelayCommand(msg) {
           mimeContent,
           pin: lastVerifiedPin || '' 
         };
+        // v3.50 FIX: Log dettagliato payload prima di inviare al bridge
         log.info(`[S/MIME] Sending SIGN_SMIME command (${isNewFormat ? 'SMIMESignML' : 'legacy'})...`);
+        log.info(`[S/MIME] v3.50 PAYLOAD TO BRIDGE: attachmentName="${smimeSignPayload.attachmentName || '(none)'}", subject="${smimeSignPayload.subject?.substring(0, 50) || '(none)'}..."`);
         const smimeResult = await sendBridgeCommand(`SIGN_SMIME:${JSON.stringify(smimeSignPayload)}`);
         
         if (smimeResult.success && smimeResult.signature) {
