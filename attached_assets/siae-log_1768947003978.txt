@@ -1,0 +1,299 @@
+[2026-01-20 22:35:10.138] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:10.185] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:10.186] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:10.186] [info]  Auto-reading card data...
+[2026-01-20 22:35:10.187] [info]  >> Command: READ_CARD
+[2026-01-20 22:35:11.067] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:11.068] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 349,
+  balance: 438861,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-20 22:35:11.068] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:11.068] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":349,"cardBalance":438861,"cardKeyId":129,"cardSlot":0}
+[2026-01-20 22:35:11.135] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:11.185] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:11.185] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:11.186] [info]  Auto-reading card data...
+[2026-01-20 22:35:11.187] [info]  >> Command: READ_CARD
+[2026-01-20 22:35:12.048] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:12.048] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 349,
+  balance: 438861,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-20 22:35:12.049] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:12.049] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":349,"cardBalance":438861,"cardKeyId":129,"cardSlot":0}
+[2026-01-20 22:35:12.150] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:12.205] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:12.206] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:12.207] [info]  Auto-reading card data...
+[2026-01-20 22:35:12.207] [info]  >> Command: READ_CARD
+[2026-01-20 22:35:13.114] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:13.116] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 349,
+  balance: 438861,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-20 22:35:13.117] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:13.118] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":349,"cardBalance":438861,"cardKeyId":129,"cardSlot":0}
+[2026-01-20 22:35:13.163] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:13.212] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:13.213] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:13.214] [info]  Auto-reading card data...
+[2026-01-20 22:35:13.215] [info]  >> Command: READ_CARD
+[2026-01-20 22:35:14.106] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:14.106] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 349,
+  balance: 438861,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-20 22:35:14.107] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:14.108] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":349,"cardBalance":438861,"cardKeyId":129,"cardSlot":0}
+[2026-01-20 22:35:14.176] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:14.230] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:14.231] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:14.232] [info]  Auto-reading card data...
+[2026-01-20 22:35:14.233] [info]  >> Command: READ_CARD
+[2026-01-20 22:35:14.556] [info]  IPC: checkReader
+[2026-01-20 22:35:15.125] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:15.126] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 349,
+  balance: 438861,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-20 22:35:15.128] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":349,"balance":438861,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-20 22:35:15.129] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":349,"cardBalance":438861,"cardKeyId":129,"cardSlot":0}
+[2026-01-20 22:35:15.130] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:15.181] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:15.181] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:15.182] [info]  >> Command: CHECK_READER
+[2026-01-20 22:35:15.224] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-20 22:35:15.225] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-20 22:35:15.225] [info]  Auto-reading card data...
+[2026-01-20 22:35:15.226] [info]  >> Command: READ_CARD
+[2026-01-20 22:35:15.862] [info]  Main window closed
+[2026-01-20 22:35:15.863] [error] Uncaught exception: TypeError: Object has been destroyed
+    at addToLogBuffer (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:126:32)
+    at log.info (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:138:3)
+    at BrowserWindow.<anonymous> (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:223:9)
+    at BrowserWindow.emit (node:events:517:28)
+[2026-01-20 22:55:01.753] [info]  ============================================================
+[2026-01-20 22:55:01.761] [info]  App starting at 2026-01-20T21:55:01.761Z
+[2026-01-20 22:55:01.762] [info]  App version: 3.55.0
+[2026-01-20 22:55:01.762] [info]  Electron version: 28.3.3
+[2026-01-20 22:55:01.763] [info]  Node version: 18.18.2
+[2026-01-20 22:55:01.764] [info]  Platform: win32 x64
+[2026-01-20 22:55:01.765] [info]  User data path: C:\Users\Pc\AppData\Roaming\event-four-you-siae-lettore
+[2026-01-20 22:55:01.766] [info]  ============================================================
+[2026-01-20 22:55:01.900] [info]  App ready
+[2026-01-20 22:55:01.914] [info]  Relay config loaded - Server: production (wss://manage.eventfouryou.com)
+[2026-01-20 22:55:01.915] [info]  Creating main window...
+[2026-01-20 22:55:02.115] [info]  --- Directory Structure ---
+[2026-01-20 22:55:02.117] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources:
+[2026-01-20 22:55:02.118] [info]    [DIR] app 
+[2026-01-20 22:55:02.119] [info]    [FILE] app-update.yml (161 bytes)
+[2026-01-20 22:55:02.120] [info]    [FILE] elevate.exe (107520 bytes)
+[2026-01-20 22:55:02.121] [info]  Directory not found: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge
+[2026-01-20 22:55:02.122] [info]  --- End Directory Structure ---
+[2026-01-20 22:55:02.124] [info]  Searching for SiaeBridge.exe...
+[2026-01-20 22:55:02.125] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-20 22:55:02.125] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-20 22:55:02.127] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge\SiaeBridge.exe
+[2026-01-20 22:55:02.127] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net472\SiaeBridge.exe
+[2026-01-20 22:55:02.128] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Debug\net472\SiaeBridge.exe
+[2026-01-20 22:55:02.129] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\SiaeBridge.exe
+[2026-01-20 22:55:02.130] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net8.0-windows\win-x86\publish\SiaeBridge.exe
+[2026-01-20 22:55:02.131] [error] SiaeBridge.exe not found!
+[2026-01-20 22:55:02.139] [info]  WebSocket server started on port 18765
+[2026-01-20 22:55:02.140] [info]  Auto-connecting to relay...
+[2026-01-20 22:55:02.141] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-20 22:55:02.596] [info]  Relay WebSocket connected
+[2026-01-20 22:55:02.598] [info]  Sent bridge_register to relay
+[2026-01-20 22:55:02.915] [info]  Window shown
+[2026-01-20 22:55:02.923] [info]  Relay message received: bridge_register_response
+[2026-01-20 22:55:02.924] [info]  ✓ Registered with relay successfully
+[2026-01-20 22:55:02.926] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-20 22:55:02.928] [debug] Sent status to relay
+[2026-01-20 22:55:02.929] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-20 22:55:02.930] [debug] Sent status to relay
+[2026-01-20 22:55:04.552] [info]  Relay message received: ping
+[2026-01-20 22:55:05.386] [info]  IPC: bridge:start
+[2026-01-20 22:55:05.387] [info]  Searching for SiaeBridge.exe...
+[2026-01-20 22:55:05.388] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-20 22:55:05.388] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-20 22:55:05.389] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge\SiaeBridge.exe
+[2026-01-20 22:55:05.389] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net472\SiaeBridge.exe
+[2026-01-20 22:55:05.390] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Debug\net472\SiaeBridge.exe
+[2026-01-20 22:55:05.391] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\SiaeBridge.exe
+[2026-01-20 22:55:05.391] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net8.0-windows\win-x86\publish\SiaeBridge.exe
+[2026-01-20 22:55:05.392] [error] SiaeBridge.exe not found!
+[2026-01-20 22:55:05.392] [error] SiaeBridge.exe non trovato
+[2026-01-20 22:55:11.684] [info]  Main window closed
+[2026-01-20 22:55:11.685] [error] Uncaught exception: TypeError: Object has been destroyed
+    at addToLogBuffer (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:126:32)
+    at log.info (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:138:3)
+    at BrowserWindow.<anonymous> (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:223:9)
+    at BrowserWindow.emit (node:events:517:28)
+[2026-01-20 23:09:33.221] [info]  ============================================================
+[2026-01-20 23:09:33.228] [info]  App starting at 2026-01-20T22:09:33.228Z
+[2026-01-20 23:09:33.229] [info]  App version: 3.56.0
+[2026-01-20 23:09:33.230] [info]  Electron version: 28.3.3
+[2026-01-20 23:09:33.230] [info]  Node version: 18.18.2
+[2026-01-20 23:09:33.231] [info]  Platform: win32 ia32
+[2026-01-20 23:09:33.231] [info]  User data path: C:\Users\Pc\AppData\Roaming\event-four-you-siae-lettore
+[2026-01-20 23:09:33.232] [info]  ============================================================
+[2026-01-20 23:09:33.341] [info]  App ready
+[2026-01-20 23:09:33.342] [info]  Relay config loaded - Server: production (wss://manage.eventfouryou.com)
+[2026-01-20 23:09:33.343] [info]  Creating main window...
+[2026-01-20 23:09:33.553] [info]  --- Directory Structure ---
+[2026-01-20 23:09:33.555] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources:
+[2026-01-20 23:09:33.556] [info]    [DIR] app 
+[2026-01-20 23:09:33.557] [info]    [FILE] app-update.yml (161 bytes)
+[2026-01-20 23:09:33.558] [info]    [FILE] elevate.exe (107520 bytes)
+[2026-01-20 23:09:33.559] [info]    [DIR] SiaeBridge 
+[2026-01-20 23:09:33.561] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge:
+[2026-01-20 23:09:33.562] [info]    [DIR] SiaeBridge 
+[2026-01-20 23:09:33.563] [info]  --- End Directory Structure ---
+[2026-01-20 23:09:33.563] [info]  Searching for SiaeBridge.exe...
+[2026-01-20 23:09:33.564] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-20 23:09:33.565] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-20 23:09:33.565] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge\SiaeBridge.exe
+[2026-01-20 23:09:33.567] [info]    ✓ FOUND: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge\SiaeBridge.exe
+[2026-01-20 23:09:33.568] [info]  ✓ libSIAE.dll found at C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge\libSIAE.dll
+[2026-01-20 23:09:33.574] [info]  WebSocket server started on port 18765
+[2026-01-20 23:09:33.575] [info]  Auto-connecting to relay...
+[2026-01-20 23:09:33.576] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-20 23:09:34.181] [info]  Relay WebSocket connected
+[2026-01-20 23:09:34.183] [info]  Sent bridge_register to relay
+[2026-01-20 23:09:34.263] [info]  Window shown
+[2026-01-20 23:09:34.571] [info]  Relay message received: bridge_register_response
+[2026-01-20 23:09:34.572] [info]  ✓ Registered with relay successfully
+[2026-01-20 23:09:34.573] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-20 23:09:34.574] [debug] Sent status to relay
+[2026-01-20 23:09:34.575] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-20 23:09:34.576] [debug] Sent status to relay
+[2026-01-20 23:09:34.774] [info]  Relay message received: ping
+[2026-01-20 23:09:37.013] [info]  IPC: bridge:start
+[2026-01-20 23:09:37.014] [info]  Starting bridge: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge\SiaeBridge.exe
+[2026-01-20 23:09:37.700] [info]  [Bridge] READY
+[2026-01-20 23:09:37.701] [info]  Bridge READY
+[2026-01-20 23:09:37.701] [info]  Starting automatic status polling every 1000ms
+[2026-01-20 23:09:37.702] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-20 23:09:37.703] [debug] Sent status to relay
+[2026-01-20 23:09:37.704] [info]  Starting automatic status polling every 1000ms
+[2026-01-20 23:09:37.710] [info]  IPC: checkReader
+[2026-01-20 23:09:37.711] [info]  >> Command: CHECK_READER
+[2026-01-20 23:09:38.632] [error] [Bridge ERROR] Unhandled exception.
+[2026-01-20 23:09:38.730] [error] [Bridge ERROR] System.IO.FileNotFoundException: Could not load file or assembly 'System.Security.Permissions, Version=0.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51'. Impossibile trovare il file specificato.
+File name: 'System.Security.Permissions, Version=0.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51'
+   at Newtonsoft.Json.Serialization.JsonTypeReflector.get_DynamicCodeGeneration()
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.get_DynamicCodeGeneration()
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.CreateMemberValueProvider(MemberInfo member)
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.CreateProperties(Type type, MemberSerialization memberSerialization)
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.CreateObjectContract(Type objectType)
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.CreateContract(Type objectType)
+   at System.Collections.Concurrent.ConcurrentDictionary`2.GetOrAdd(TKey key, Func`2 valueFactory)
+   at Newtonsoft.Json.Utilities.ThreadSafeStore`2.Get(TKey key)
+   at Newtonsoft.Json.Serialization.DefaultContractResolver.ResolveContract(Type type)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalWriter.GetContract(Object value)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalWriter.GetContractSafe(Object value)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalWriter.Serialize(JsonWriter jsonWriter, Object value, Type objectType)
+   at Newtonsoft.Json.JsonSerializer.SerializeInternal(JsonWriter jsonWriter, Object value, Type objectType)
+   at Newtonsoft.Json.JsonSerializer.Serialize(JsonWriter jsonWriter, Object value, Type objectType)
+   at Newtonsoft.Json.JsonConvert.SerializeObjectInternal(Object value, Type type, JsonSerializer jsonSerializer)
+   at Newtonsoft.Json.JsonConvert.SerializeObject(Object value, Type type, JsonSerializerSettings settings)
+   at Newtonsoft.Json.JsonConvert.SerializeObject(Object value)
+   at SiaeBridge.Program.ERR(String msg) in D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\SiaeBridge\Program.cs:line 323
+   at SiaeBridge.Program.Handle(String cmd) in D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\SiaeBridge\Program.cs:line 318
+   at SiaeBridge.Program.Main() in D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\SiaeBridge\Program.cs:line 182
+[2026-01-20 23:09:38.743] [info]  Bridge exited with code 3762504530
+[2026-01-20 23:09:40.714] [info]  IPC: checkReader
+[2026-01-20 23:09:43.712] [info]  IPC: checkReader
+[2026-01-20 23:09:46.711] [info]  IPC: checkReader
+[2026-01-20 23:09:49.358] [info]  Relay message received: pong
+[2026-01-20 23:09:49.359] [debug] Received pong, connection alive
+[2026-01-20 23:09:49.693] [info]  Relay message received: ping
+[2026-01-20 23:09:49.717] [info]  IPC: checkReader
