@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useParams, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -108,13 +109,14 @@ const invoiceFormSchema = z.object({
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 const tabItems = [
-  { id: "subscription", icon: CreditCard, label: "Abbonamento" },
-  { id: "commissions", icon: Percent, label: "Commissioni" },
-  { id: "wallet", icon: Wallet, label: "Wallet" },
-  { id: "invoices", icon: Receipt, label: "Fatture" },
+  { id: "subscription", icon: CreditCard, labelKey: "admin.billing.organizerDetail.tabs.subscription" },
+  { id: "commissions", icon: Percent, labelKey: "admin.billing.organizerDetail.tabs.commissions" },
+  { id: "wallet", icon: Wallet, labelKey: "admin.billing.organizerDetail.tabs.wallet" },
+  { id: "invoices", icon: Receipt, labelKey: "admin.billing.organizerDetail.tabs.invoices" },
 ];
 
 export default function AdminBillingOrganizerDetail() {
+  const { t } = useTranslation();
   const { companyId } = useParams<{ companyId: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -178,11 +180,11 @@ export default function AdminBillingOrganizerDetail() {
       triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
       setIsSubscriptionSheetOpen(false);
-      toast({ title: "Abbonamento Creato", description: "L'abbonamento è stato assegnato con successo." });
+      toast({ title: t('admin.billing.organizerDetail.subscription.assignedSuccess'), description: t('admin.billing.organizerDetail.subscription.assignedSuccessMessage') });
     },
     onError: (error: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -193,11 +195,11 @@ export default function AdminBillingOrganizerDetail() {
     onSuccess: () => {
       triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
-      toast({ title: "Commissioni Aggiornate", description: "Il profilo commissioni è stato salvato." });
+      toast({ title: t('admin.billing.organizerDetail.commissions.savedSuccess'), description: t('admin.billing.organizerDetail.commissions.savedSuccessMessage') });
     },
     onError: (error: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -210,11 +212,11 @@ export default function AdminBillingOrganizerDetail() {
     onSuccess: () => {
       triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
-      toast({ title: "Soglia Aggiornata", description: "La soglia fatturazione è stata aggiornata." });
+      toast({ title: t('admin.billing.organizerDetail.wallet.thresholdUpdatedSuccess'), description: t('admin.billing.organizerDetail.wallet.thresholdUpdatedMessage') });
     },
     onError: (error: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -227,11 +229,11 @@ export default function AdminBillingOrganizerDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
       setIsInvoiceSheetOpen(false);
       invoiceForm.reset();
-      toast({ title: "Fattura Creata", description: "La fattura è stata generata con successo." });
+      toast({ title: t('admin.billing.invoices.generatedSuccess'), description: t('admin.billing.invoices.generatedSuccessMessage') });
     },
     onError: (error: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -242,11 +244,11 @@ export default function AdminBillingOrganizerDetail() {
     onSuccess: () => {
       triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
-      toast({ title: "Fattura Pagata", description: "La fattura è stata segnata come pagata." });
+      toast({ title: t('admin.billing.invoices.paidSuccess'), description: t('admin.billing.invoices.paidSuccessMessage') });
     },
     onError: (error: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -279,7 +281,7 @@ export default function AdminBillingOrganizerDetail() {
       <MobileAppLayout
         header={
           <MobileHeader
-            title="Caricamento..."
+            title={t('admin.billing.common.loading')}
             leftAction={
               <HapticButton variant="ghost" size="icon" onClick={handleBack}>
                 <ArrowLeft className="w-5 h-5" />
@@ -305,9 +307,9 @@ export default function AdminBillingOrganizerDetail() {
             <Button variant="ghost" size="icon" onClick={handleBack} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Organizzatore non trovato</h1>
+            <h1 className="text-2xl font-bold">{t('admin.billing.organizerDetail.notFound')}</h1>
           </div>
-          <p className="text-muted-foreground">L'organizzatore richiesto non esiste o non è accessibile.</p>
+          <p className="text-muted-foreground">{t('admin.billing.organizerDetail.notFoundMessage')}</p>
         </div>
       );
     }
@@ -315,7 +317,7 @@ export default function AdminBillingOrganizerDetail() {
       <MobileAppLayout
         header={
           <MobileHeader
-            title="Non trovato"
+            title={t('admin.billing.organizerDetail.notFound')}
             leftAction={
               <HapticButton variant="ghost" size="icon" onClick={handleBack}>
                 <ArrowLeft className="w-5 h-5" />
@@ -325,7 +327,7 @@ export default function AdminBillingOrganizerDetail() {
         }
       >
         <div className="flex items-center justify-center h-full pb-24" data-testid="page-admin-billing-organizer-detail">
-          <p className="text-muted-foreground">Organizzatore non trovato</p>
+          <p className="text-muted-foreground">{t('admin.billing.organizerDetail.notFound')}</p>
         </div>
       </MobileAppLayout>
     );
@@ -349,7 +351,7 @@ export default function AdminBillingOrganizerDetail() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{company.name}</h1>
-                <p className="text-muted-foreground text-sm">Gestione billing organizzatore</p>
+                <p className="text-muted-foreground text-sm">{t('admin.billing.organizerDetail.billingManagement')}</p>
               </div>
             </div>
           </div>
@@ -360,7 +362,7 @@ export default function AdminBillingOrganizerDetail() {
             {tabItems.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="gap-2" data-testid={`tab-${tab.id}`}>
                 <tab.icon className="w-4 h-4" />
-                {tab.label}
+                {t(tab.labelKey)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -369,60 +371,60 @@ export default function AdminBillingOrganizerDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Abbonamento</CardTitle>
-                  <CardDescription>Stato attuale dell'abbonamento</CardDescription>
+                  <CardTitle>{t('admin.billing.organizerDetail.subscription.title')}</CardTitle>
+                  <CardDescription>{t('admin.billing.organizerDetail.subscription.currentStatus')}</CardDescription>
                 </div>
                 <Button onClick={() => setIsSubscriptionDialogOpen(true)} data-testid="button-assign-plan">
                   <Plus className="w-4 h-4 mr-2" />
-                  {subscription ? "Cambia Piano" : "Assegna Piano"}
+                  {subscription ? t('admin.billing.organizerDetail.subscription.changePlan') : t('admin.billing.organizerDetail.subscription.assignPlan')}
                 </Button>
               </CardHeader>
               <CardContent>
                 {subscription && plan ? (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="p-4 rounded-lg bg-muted/50">
-                      <p className="text-sm text-muted-foreground mb-1">Piano</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.plan')}</p>
                       <p className="font-semibold">{plan.name}</p>
                     </div>
                     <div className="p-4 rounded-lg bg-muted/50">
-                      <p className="text-sm text-muted-foreground mb-1">Tipo Fatturazione</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.type')}</p>
                       <Badge variant={subscription.billingCycle === "monthly" ? "default" : "secondary"}>
-                        {subscription.billingCycle === "monthly" ? "Mensile" : "Per Evento"}
+                        {subscription.billingCycle === "monthly" ? t('admin.billing.billingCycle.monthly') : t('admin.billing.billingCycle.perEvent')}
                       </Badge>
                     </div>
                     <div className="p-4 rounded-lg bg-muted/50">
-                      <p className="text-sm text-muted-foreground mb-1">Stato</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('common.status')}</p>
                       {subscription.status === "active" ? (
                         <Badge className="bg-green-500/20 text-green-500">
                           <CheckCircle className="w-3 h-3 mr-1" />
-                          Attivo
+                          {t('admin.billing.status.active')}
                         </Badge>
                       ) : subscription.status === "suspended" ? (
                         <Badge variant="secondary">
                           <Clock className="w-3 h-3 mr-1" />
-                          Sospeso
+                          {t('admin.billing.status.suspended')}
                         </Badge>
                       ) : (
                         <Badge variant="destructive">
                           <XCircle className="w-3 h-3 mr-1" />
-                          Scaduto
+                          {t('admin.billing.status.expired')}
                         </Badge>
                       )}
                     </div>
                     <div className="p-4 rounded-lg bg-muted/50">
-                      <p className="text-sm text-muted-foreground mb-1">Data Inizio</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.startDate')}</p>
                       <p className="font-semibold">{formatDate(subscription.startDate)}</p>
                     </div>
                     <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 col-span-2 lg:col-span-4">
-                      <p className="text-sm text-muted-foreground mb-1">Prezzo</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.price')}</p>
                       <p className="text-3xl font-bold text-primary">{formatCurrency(plan.price)}</p>
                     </div>
                   </div>
                 ) : (
                   <div className="py-12 text-center">
                     <CreditCard className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                    <p className="text-muted-foreground">Nessun abbonamento attivo</p>
-                    <p className="text-sm text-muted-foreground/70">Assegna un piano per iniziare</p>
+                    <p className="text-muted-foreground">{t('admin.billing.organizerDetail.subscription.noSubscription')}</p>
+                    <p className="text-sm text-muted-foreground/70">{t('admin.billing.organizerDetail.subscription.noSubscriptionMessage')}</p>
                   </div>
                 )}
               </CardContent>
@@ -432,8 +434,8 @@ export default function AdminBillingOrganizerDetail() {
           <TabsContent value="commissions" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profilo Commissioni</CardTitle>
-                <CardDescription>Configura le commissioni per ogni canale di vendita</CardDescription>
+                <CardTitle>{t('admin.billing.organizerDetail.commissions.title')}</CardTitle>
+                <CardDescription>{t('admin.billing.organizerDetail.commissions.subtitle')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...commissionForm}>
@@ -447,7 +449,7 @@ export default function AdminBillingOrganizerDetail() {
                           <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                             <CreditCard className="w-4 h-4 text-blue-500" />
                           </div>
-                          Vendite Online
+                          {t('admin.billing.channels.online')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
@@ -455,7 +457,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelOnlineType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Tipo</FormLabel>
+                                <FormLabel>{t('admin.billing.plans.form.type')}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-online-type">
@@ -463,8 +465,8 @@ export default function AdminBillingOrganizerDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="percent">Percentuale</SelectItem>
-                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                    <SelectItem value="percent">{t('admin.billing.organizerDetail.commissions.percentage')}</SelectItem>
+                                    <SelectItem value="fixed">{t('admin.billing.organizerDetail.commissions.fixedAmount')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -475,7 +477,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelOnlineValue"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Valore</FormLabel>
+                                <FormLabel>{t('admin.billing.organizerDetail.commissions.value')}</FormLabel>
                                 <FormControl>
                                   <Input type="number" step="0.01" {...field} data-testid="input-online-value" />
                                 </FormControl>
@@ -490,7 +492,7 @@ export default function AdminBillingOrganizerDetail() {
                           <div className="h-8 w-8 rounded-lg bg-green-500/20 flex items-center justify-center">
                             <Receipt className="w-4 h-4 text-green-500" />
                           </div>
-                          Biglietteria Fisica
+                          {t('admin.billing.channels.printed')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
@@ -498,7 +500,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrintedType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Tipo</FormLabel>
+                                <FormLabel>{t('admin.billing.plans.form.type')}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-printed-type">
@@ -506,8 +508,8 @@ export default function AdminBillingOrganizerDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="percent">Percentuale</SelectItem>
-                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                    <SelectItem value="percent">{t('admin.billing.organizerDetail.commissions.percentage')}</SelectItem>
+                                    <SelectItem value="fixed">{t('admin.billing.organizerDetail.commissions.fixedAmount')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -518,7 +520,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrintedValue"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Valore</FormLabel>
+                                <FormLabel>{t('admin.billing.organizerDetail.commissions.value')}</FormLabel>
                                 <FormControl>
                                   <Input type="number" step="0.01" {...field} data-testid="input-printed-value" />
                                 </FormControl>
@@ -533,7 +535,7 @@ export default function AdminBillingOrganizerDetail() {
                           <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
                             <Percent className="w-4 h-4 text-purple-500" />
                           </div>
-                          Vendite PR
+                          {t('admin.billing.channels.pr')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
@@ -541,7 +543,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Tipo</FormLabel>
+                                <FormLabel>{t('admin.billing.plans.form.type')}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-pr-type">
@@ -549,8 +551,8 @@ export default function AdminBillingOrganizerDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="percent">Percentuale</SelectItem>
-                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                    <SelectItem value="percent">{t('admin.billing.organizerDetail.commissions.percentage')}</SelectItem>
+                                    <SelectItem value="fixed">{t('admin.billing.organizerDetail.commissions.fixedAmount')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -561,7 +563,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrValue"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Valore</FormLabel>
+                                <FormLabel>{t('admin.billing.organizerDetail.commissions.value')}</FormLabel>
                                 <FormControl>
                                   <Input type="number" step="0.01" {...field} data-testid="input-pr-value" />
                                 </FormControl>
@@ -577,7 +579,7 @@ export default function AdminBillingOrganizerDetail() {
                         <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
                           <Wallet className="w-4 h-4 text-amber-500" />
                         </div>
-                        Chi paga le commissioni?
+                        {t('admin.billing.feePayer.title')}
                       </h4>
                       <FormField
                         control={commissionForm.control}
@@ -592,17 +594,17 @@ export default function AdminBillingOrganizerDetail() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="organizer">
-                                  Gestore - Commissioni detratte dal bonifico
+                                  {t('admin.billing.feePayer.organizer')}
                                 </SelectItem>
                                 <SelectItem value="customer">
-                                  Cliente - Commissioni aggiunte al carrello
+                                  {t('admin.billing.feePayer.customer')}
                                 </SelectItem>
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground mt-2">
                               {field.value === "customer" 
-                                ? "Le commissioni verranno aggiunte al totale del carrello del cliente"
-                                : "Le commissioni verranno detratte dall'importo che verrà bonificato al gestore"}
+                                ? t('admin.billing.feePayer.customerDescription')
+                                : t('admin.billing.feePayer.organizerDescription')}
                             </p>
                           </FormItem>
                         )}
@@ -615,7 +617,7 @@ export default function AdminBillingOrganizerDetail() {
                       data-testid="button-save-commissions"
                     >
                       {updateCommissionsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Salva Commissioni
+                      {t('admin.billing.organizerDetail.commissions.save')}
                     </Button>
                   </form>
                 </Form>
@@ -628,12 +630,12 @@ export default function AdminBillingOrganizerDetail() {
               <Card className="lg:col-span-1">
                 <CardContent className="pt-6">
                   <div className={`p-6 rounded-lg ${balance < 0 ? "bg-destructive/10" : "bg-green-500/10"}`}>
-                    <p className="text-sm text-muted-foreground mb-1">Saldo Wallet</p>
+                    <p className="text-sm text-muted-foreground mb-1">{t('admin.billing.organizerDetail.wallet.balance')}</p>
                     <p className={`text-4xl font-bold ${balance < 0 ? "text-destructive" : "text-green-500"}`}>
                       {formatCurrency(balance)}
                     </p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      {balance < 0 ? "Debito accumulato" : "Credito disponibile"}
+                      {balance < 0 ? t('admin.billing.organizerDetail.wallet.debitAccumulated') : t('admin.billing.organizerDetail.wallet.creditAvailable')}
                     </p>
                   </div>
                 </CardContent>
@@ -641,8 +643,8 @@ export default function AdminBillingOrganizerDetail() {
 
               <Card className="lg:col-span-2">
                 <CardHeader>
-                  <CardTitle>Soglia Fatturazione</CardTitle>
-                  <CardDescription>Importo minimo per fattura automatica</CardDescription>
+                  <CardTitle>{t('admin.billing.organizerDetail.wallet.threshold')}</CardTitle>
+                  <CardDescription>{t('admin.billing.organizerDetail.wallet.thresholdDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
@@ -661,11 +663,11 @@ export default function AdminBillingOrganizerDetail() {
                       data-testid="button-update-threshold"
                     >
                       {updateThresholdMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Aggiorna
+                      {t('admin.billing.organizerDetail.wallet.updateThreshold')}
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Attuale: {formatCurrency(wallet.thresholdAmount)}
+                    {t('admin.billing.common.current')}: {formatCurrency(wallet.thresholdAmount)}
                   </p>
                 </CardContent>
               </Card>
@@ -673,17 +675,17 @@ export default function AdminBillingOrganizerDetail() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Movimenti Recenti</CardTitle>
+                <CardTitle>{t('admin.billing.organizerDetail.wallet.recentMovements')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {recentLedgerEntries?.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Descrizione</TableHead>
-                        <TableHead className="text-right">Importo</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.wallet.tableHeaders.type')}</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.wallet.tableHeaders.date')}</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.wallet.tableHeaders.description')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.organizerDetail.wallet.tableHeaders.amount')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -701,14 +703,14 @@ export default function AdminBillingOrganizerDetail() {
                                 )}
                               </div>
                               {entry.type === "commission"
-                                ? "Commissione"
+                                ? t('admin.billing.ledgerTypes.commission')
                                 : entry.type === "subscription"
-                                ? "Abbonamento"
+                                ? t('admin.billing.ledgerTypes.subscription')
                                 : entry.type === "invoice"
-                                ? "Fattura"
+                                ? t('admin.billing.ledgerTypes.invoice')
                                 : entry.type === "payment"
-                                ? "Pagamento"
-                                : "Rettifica"}
+                                ? t('admin.billing.ledgerTypes.payment')
+                                : t('admin.billing.ledgerTypes.adjustment')}
                             </div>
                           </TableCell>
                           <TableCell>{formatDate(entry.createdAt)}</TableCell>
@@ -726,7 +728,7 @@ export default function AdminBillingOrganizerDetail() {
                 ) : (
                   <div className="py-12 text-center">
                     <Wallet className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                    <p className="text-muted-foreground">Nessun movimento</p>
+                    <p className="text-muted-foreground">{t('admin.billing.organizerDetail.wallet.noMovements')}</p>
                   </div>
                 )}
               </CardContent>
@@ -737,12 +739,12 @@ export default function AdminBillingOrganizerDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Fatture</CardTitle>
-                  <CardDescription>Elenco fatture generate</CardDescription>
+                  <CardTitle>{t('admin.billing.organizerDetail.invoiceList.title')}</CardTitle>
+                  <CardDescription>{t('admin.billing.organizerDetail.invoiceList.subtitle')}</CardDescription>
                 </div>
                 <Button onClick={() => setIsInvoiceDialogOpen(true)} data-testid="button-create-invoice">
                   <Plus className="w-4 h-4 mr-2" />
-                  Genera Fattura
+                  {t('admin.billing.invoices.generateInvoice')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -750,11 +752,11 @@ export default function AdminBillingOrganizerDetail() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Numero</TableHead>
-                        <TableHead>Periodo</TableHead>
-                        <TableHead>Scadenza</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead className="text-right">Importo</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.invoiceList.tableHeaders.number')}</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.invoiceList.tableHeaders.period')}</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.invoiceList.tableHeaders.dueDate')}</TableHead>
+                        <TableHead>{t('admin.billing.organizerDetail.invoiceList.tableHeaders.status')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.organizerDetail.invoiceList.tableHeaders.amount')}</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -770,17 +772,17 @@ export default function AdminBillingOrganizerDetail() {
                             {invoice.status === "paid" ? (
                               <Badge className="bg-green-500/20 text-green-500">
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                Pagata
+                                {t('admin.billing.status.paid')}
                               </Badge>
                             ) : invoice.status === "issued" ? (
                               <Badge variant="secondary">
                                 <Clock className="w-3 h-3 mr-1" />
-                                Emessa
+                                {t('admin.billing.status.issued')}
                               </Badge>
                             ) : invoice.status === "void" ? (
-                              <Badge variant="destructive">Annullata</Badge>
+                              <Badge variant="destructive">{t('admin.billing.status.void')}</Badge>
                             ) : (
-                              <Badge variant="outline">Bozza</Badge>
+                              <Badge variant="outline">{t('admin.billing.status.draft')}</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right font-semibold">
@@ -800,7 +802,7 @@ export default function AdminBillingOrganizerDetail() {
                                 ) : (
                                   <>
                                     <CheckCircle className="w-4 h-4 mr-2" />
-                                    Segna Pagata
+                                    {t('admin.billing.invoices.markPaid')}
                                   </>
                                 )}
                               </Button>
@@ -813,7 +815,7 @@ export default function AdminBillingOrganizerDetail() {
                 ) : (
                   <div className="py-12 text-center">
                     <Receipt className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                    <p className="text-muted-foreground">Nessuna fattura</p>
+                    <p className="text-muted-foreground">{t('admin.billing.invoices.noInvoicesEmpty')}</p>
                   </div>
                 )}
               </CardContent>
@@ -824,8 +826,8 @@ export default function AdminBillingOrganizerDetail() {
         <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Assegna Piano</DialogTitle>
-              <DialogDescription>Seleziona un piano e configura l'abbonamento</DialogDescription>
+              <DialogTitle>{t('admin.billing.organizerDetail.subscription.assignPlan')}</DialogTitle>
+              <DialogDescription>{t('admin.billing.organizerDetail.subscription.assignPlanDescription')}</DialogDescription>
             </DialogHeader>
             <Form {...subscriptionForm}>
               <form
@@ -841,11 +843,11 @@ export default function AdminBillingOrganizerDetail() {
                   name="planId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Piano</FormLabel>
+                      <FormLabel>{t('admin.billing.organizerDetail.subscription.plan')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-plan">
-                            <SelectValue placeholder="Seleziona piano" />
+                            <SelectValue placeholder={t('admin.billing.organizerDetail.subscription.selectPlan')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -867,7 +869,7 @@ export default function AdminBillingOrganizerDetail() {
                   name="billingCycle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ciclo Fatturazione</FormLabel>
+                      <FormLabel>{t('admin.billing.organizerDetail.subscription.billingCycle')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-billing-cycle">
@@ -875,8 +877,8 @@ export default function AdminBillingOrganizerDetail() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="monthly">Mensile</SelectItem>
-                          <SelectItem value="per_event">Per Evento</SelectItem>
+                          <SelectItem value="monthly">{t('admin.billing.billingCycle.monthly')}</SelectItem>
+                          <SelectItem value="per_event">{t('admin.billing.billingCycle.perEvent')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -888,7 +890,7 @@ export default function AdminBillingOrganizerDetail() {
                   name="startDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data Inizio</FormLabel>
+                      <FormLabel>{t('admin.billing.organizerDetail.subscription.startDate')}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} data-testid="input-start-date" />
                       </FormControl>
@@ -902,7 +904,7 @@ export default function AdminBillingOrganizerDetail() {
                     variant="outline"
                     onClick={() => setIsSubscriptionDialogOpen(false)}
                   >
-                    Annulla
+                    {t('admin.billing.common.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -910,7 +912,7 @@ export default function AdminBillingOrganizerDetail() {
                     data-testid="button-confirm-subscription"
                   >
                     {createSubscriptionMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Assegna
+                    {t('admin.billing.organizerDetail.subscription.assign')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -921,8 +923,8 @@ export default function AdminBillingOrganizerDetail() {
         <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Genera Fattura</DialogTitle>
-              <DialogDescription>Seleziona il periodo per la fattura</DialogDescription>
+              <DialogTitle>{t('admin.billing.invoices.generateInvoice')}</DialogTitle>
+              <DialogDescription>{t('admin.billing.invoices.generateInvoiceDescription')}</DialogDescription>
             </DialogHeader>
             <Form {...invoiceForm}>
               <form
@@ -941,7 +943,7 @@ export default function AdminBillingOrganizerDetail() {
                   name="periodStart"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data Inizio Periodo</FormLabel>
+                      <FormLabel>{t('admin.billing.invoices.periodStart')}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} data-testid="input-period-start" />
                       </FormControl>
@@ -954,7 +956,7 @@ export default function AdminBillingOrganizerDetail() {
                   name="periodEnd"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data Fine Periodo</FormLabel>
+                      <FormLabel>{t('admin.billing.invoices.periodEnd')}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} data-testid="input-period-end" />
                       </FormControl>
@@ -967,7 +969,7 @@ export default function AdminBillingOrganizerDetail() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note (opzionale)</FormLabel>
+                      <FormLabel>{t('admin.billing.invoices.notesOptional')}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-invoice-notes" />
                       </FormControl>
@@ -981,7 +983,7 @@ export default function AdminBillingOrganizerDetail() {
                     variant="outline"
                     onClick={() => setIsInvoiceDialogOpen(false)}
                   >
-                    Annulla
+                    {t('admin.billing.common.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -989,7 +991,7 @@ export default function AdminBillingOrganizerDetail() {
                     data-testid="button-confirm-invoice"
                   >
                     {createInvoiceMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Genera
+                    {t('admin.billing.invoices.generate')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -1025,7 +1027,7 @@ export default function AdminBillingOrganizerDetail() {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold truncate">{company.name}</h1>
-            <p className="text-muted-foreground text-sm">Gestione billing</p>
+            <p className="text-muted-foreground text-sm">{t('admin.billing.organizerDetail.billingManagement')}</p>
           </div>
         </motion.div>
 
@@ -1063,8 +1065,8 @@ export default function AdminBillingOrganizerDetail() {
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <CardTitle className="text-lg">Abbonamento</CardTitle>
-                      <CardDescription className="text-sm">Stato attuale</CardDescription>
+                      <CardTitle className="text-lg">{t('admin.billing.organizerDetail.subscription.title')}</CardTitle>
+                      <CardDescription className="text-sm">{t('admin.billing.organizerDetail.subscription.currentStatus')}</CardDescription>
                     </div>
                     <HapticButton
                       onClick={() => setIsSubscriptionSheetOpen(true)}
@@ -1072,7 +1074,7 @@ export default function AdminBillingOrganizerDetail() {
                       className="rounded-xl"
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      {subscription ? "Cambia" : "Assegna"}
+                      {subscription ? t('admin.billing.organizerDetail.subscription.changePlan') : t('admin.billing.organizerDetail.subscription.assignPlan')}
                     </HapticButton>
                   </div>
                 </CardHeader>
@@ -1086,7 +1088,7 @@ export default function AdminBillingOrganizerDetail() {
                           transition={{ ...springConfig, delay: 0.1 }}
                           className="p-4 rounded-xl bg-muted/50"
                         >
-                          <p className="text-xs text-muted-foreground mb-1">Piano</p>
+                          <p className="text-xs text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.plan')}</p>
                           <p className="font-semibold">{plan.name}</p>
                         </motion.div>
                         <motion.div
@@ -1095,9 +1097,9 @@ export default function AdminBillingOrganizerDetail() {
                           transition={{ ...springConfig, delay: 0.15 }}
                           className="p-4 rounded-xl bg-muted/50"
                         >
-                          <p className="text-xs text-muted-foreground mb-1">Tipo</p>
+                          <p className="text-xs text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.type')}</p>
                           <Badge variant={subscription.billingCycle === "monthly" ? "default" : "secondary"}>
-                            {subscription.billingCycle === "monthly" ? "Mensile" : "Per Evento"}
+                            {subscription.billingCycle === "monthly" ? t('admin.billing.billingCycle.monthly') : t('admin.billing.billingCycle.perEvent')}
                           </Badge>
                         </motion.div>
                       </div>
@@ -1108,21 +1110,21 @@ export default function AdminBillingOrganizerDetail() {
                           transition={{ ...springConfig, delay: 0.2 }}
                           className="p-4 rounded-xl bg-muted/50"
                         >
-                          <p className="text-xs text-muted-foreground mb-1">Stato</p>
+                          <p className="text-xs text-muted-foreground mb-1">{t('common.status')}</p>
                           {subscription.status === "active" ? (
                             <Badge className="bg-green-500/20 text-green-500">
                               <CheckCircle className="w-3 h-3 mr-1" />
-                              Attivo
+                              {t('admin.billing.status.active')}
                             </Badge>
                           ) : subscription.status === "suspended" ? (
                             <Badge variant="secondary">
                               <Clock className="w-3 h-3 mr-1" />
-                              Sospeso
+                              {t('admin.billing.status.suspended')}
                             </Badge>
                           ) : (
                             <Badge variant="destructive">
                               <XCircle className="w-3 h-3 mr-1" />
-                              Scaduto
+                              {t('admin.billing.status.expired')}
                             </Badge>
                           )}
                         </motion.div>
@@ -1132,7 +1134,7 @@ export default function AdminBillingOrganizerDetail() {
                           transition={{ ...springConfig, delay: 0.25 }}
                           className="p-4 rounded-xl bg-muted/50"
                         >
-                          <p className="text-xs text-muted-foreground mb-1">Data Inizio</p>
+                          <p className="text-xs text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.startDate')}</p>
                           <p className="font-semibold">{formatDate(subscription.startDate)}</p>
                         </motion.div>
                       </div>
@@ -1142,15 +1144,15 @@ export default function AdminBillingOrganizerDetail() {
                         transition={{ ...springConfig, delay: 0.3 }}
                         className="p-4 rounded-xl bg-primary/10 border border-primary/20"
                       >
-                        <p className="text-xs text-muted-foreground mb-1">Prezzo</p>
+                        <p className="text-xs text-muted-foreground mb-1">{t('admin.billing.organizerDetail.subscription.price')}</p>
                         <p className="text-2xl font-bold text-primary">{formatCurrency(plan.price)}</p>
                       </motion.div>
                     </div>
                   ) : (
                     <div className="py-12 text-center">
                       <CreditCard className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                      <p className="text-muted-foreground">Nessun abbonamento attivo</p>
-                      <p className="text-sm text-muted-foreground/70">Assegna un piano per iniziare</p>
+                      <p className="text-muted-foreground">{t('admin.billing.organizerDetail.subscription.noSubscription')}</p>
+                      <p className="text-sm text-muted-foreground/70">{t('admin.billing.organizerDetail.subscription.noSubscriptionMessage')}</p>
                     </div>
                   )}
                 </CardContent>
@@ -1168,8 +1170,8 @@ export default function AdminBillingOrganizerDetail() {
             >
               <Card className="rounded-2xl">
                 <CardHeader className="p-4">
-                  <CardTitle className="text-lg">Profilo Commissioni</CardTitle>
-                  <CardDescription className="text-sm">Configura per canale</CardDescription>
+                  <CardTitle className="text-lg">{t('admin.billing.organizerDetail.commissions.title')}</CardTitle>
+                  <CardDescription className="text-sm">{t('admin.billing.organizerDetail.commissions.byChannel')}</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <Form {...commissionForm}>
@@ -1187,7 +1189,7 @@ export default function AdminBillingOrganizerDetail() {
                           <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                             <CreditCard className="w-4 h-4 text-blue-500" />
                           </div>
-                          Vendite Online
+                          {t('admin.billing.channels.online')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
@@ -1195,7 +1197,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelOnlineType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">Tipo</FormLabel>
+                                <FormLabel className="text-xs">{t('admin.billing.plans.form.type')}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger className="h-12" data-testid="select-online-type">
@@ -1203,8 +1205,8 @@ export default function AdminBillingOrganizerDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="percent">Percentuale</SelectItem>
-                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                    <SelectItem value="percent">{t('admin.billing.organizerDetail.commissions.percentage')}</SelectItem>
+                                    <SelectItem value="fixed">{t('admin.billing.organizerDetail.commissions.fixedAmount')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -1215,7 +1217,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelOnlineValue"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">Valore</FormLabel>
+                                <FormLabel className="text-xs">{t('admin.billing.organizerDetail.commissions.value')}</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -1241,7 +1243,7 @@ export default function AdminBillingOrganizerDetail() {
                           <div className="h-8 w-8 rounded-lg bg-green-500/20 flex items-center justify-center">
                             <Receipt className="w-4 h-4 text-green-500" />
                           </div>
-                          Biglietteria Fisica
+                          {t('admin.billing.channels.printed')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
@@ -1249,7 +1251,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrintedType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">Tipo</FormLabel>
+                                <FormLabel className="text-xs">{t('admin.billing.plans.form.type')}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger className="h-12" data-testid="select-printed-type">
@@ -1257,8 +1259,8 @@ export default function AdminBillingOrganizerDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="percent">Percentuale</SelectItem>
-                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                    <SelectItem value="percent">{t('admin.billing.organizerDetail.commissions.percentage')}</SelectItem>
+                                    <SelectItem value="fixed">{t('admin.billing.organizerDetail.commissions.fixedAmount')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -1269,7 +1271,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrintedValue"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">Valore</FormLabel>
+                                <FormLabel className="text-xs">{t('admin.billing.organizerDetail.commissions.value')}</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -1295,7 +1297,7 @@ export default function AdminBillingOrganizerDetail() {
                           <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
                             <Percent className="w-4 h-4 text-purple-500" />
                           </div>
-                          Vendite PR
+                          {t('admin.billing.channels.pr')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <FormField
@@ -1303,7 +1305,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">Tipo</FormLabel>
+                                <FormLabel className="text-xs">{t('admin.billing.plans.form.type')}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger className="h-12" data-testid="select-pr-type">
@@ -1311,8 +1313,8 @@ export default function AdminBillingOrganizerDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="percent">Percentuale</SelectItem>
-                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                    <SelectItem value="percent">{t('admin.billing.organizerDetail.commissions.percentage')}</SelectItem>
+                                    <SelectItem value="fixed">{t('admin.billing.organizerDetail.commissions.fixedAmount')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -1323,7 +1325,7 @@ export default function AdminBillingOrganizerDetail() {
                             name="channelPrValue"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">Valore</FormLabel>
+                                <FormLabel className="text-xs">{t('admin.billing.organizerDetail.commissions.value')}</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -1347,7 +1349,7 @@ export default function AdminBillingOrganizerDetail() {
                         hapticType="medium"
                       >
                         {updateCommissionsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Salva Commissioni
+                        {t('admin.billing.organizerDetail.commissions.save')}
                       </HapticButton>
                     </form>
                   </Form>
@@ -1372,12 +1374,12 @@ export default function AdminBillingOrganizerDetail() {
               >
                 <Card className="rounded-2xl overflow-hidden">
                   <div className={`p-6 ${balance < 0 ? "bg-destructive/10" : "bg-green-500/10"}`}>
-                    <p className="text-sm text-muted-foreground mb-1">Saldo Wallet</p>
+                    <p className="text-sm text-muted-foreground mb-1">{t('admin.billing.organizerDetail.wallet.balance')}</p>
                     <p className={`text-4xl font-bold ${balance < 0 ? "text-destructive" : "text-green-500"}`}>
                       {formatCurrency(balance)}
                     </p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      {balance < 0 ? "Debito accumulato" : "Credito disponibile"}
+                      {balance < 0 ? t('admin.billing.organizerDetail.wallet.debitAccumulated') : t('admin.billing.organizerDetail.wallet.creditAvailable')}
                     </p>
                   </div>
                 </Card>
@@ -1390,8 +1392,8 @@ export default function AdminBillingOrganizerDetail() {
               >
                 <Card className="rounded-2xl">
                   <CardHeader className="p-4">
-                    <CardTitle className="text-lg">Soglia Fatturazione</CardTitle>
-                    <CardDescription className="text-sm">Importo minimo per fattura automatica</CardDescription>
+                    <CardTitle className="text-lg">{t('admin.billing.organizerDetail.wallet.threshold')}</CardTitle>
+                    <CardDescription className="text-sm">{t('admin.billing.organizerDetail.wallet.thresholdDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-4">
                     <div className="flex gap-3">
@@ -1412,11 +1414,11 @@ export default function AdminBillingOrganizerDetail() {
                         hapticType="medium"
                       >
                         {updateThresholdMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Aggiorna
+                        {t('admin.billing.organizerDetail.wallet.updateThreshold')}
                       </HapticButton>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Attuale: {formatCurrency(wallet.thresholdAmount)}
+                      {t('admin.billing.common.current')}: {formatCurrency(wallet.thresholdAmount)}
                     </p>
                   </CardContent>
                 </Card>
@@ -1429,7 +1431,7 @@ export default function AdminBillingOrganizerDetail() {
               >
                 <Card className="rounded-2xl">
                   <CardHeader className="p-4">
-                    <CardTitle className="text-lg">Movimenti Recenti</CardTitle>
+                    <CardTitle className="text-lg">{t('admin.billing.organizerDetail.wallet.recentMovements')}</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
                     {recentLedgerEntries?.length > 0 ? (
@@ -1455,14 +1457,14 @@ export default function AdminBillingOrganizerDetail() {
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm">
                                 {entry.type === "commission"
-                                  ? "Commissione"
+                                  ? t('admin.billing.ledgerTypes.commission')
                                   : entry.type === "subscription"
-                                  ? "Abbonamento"
+                                  ? t('admin.billing.ledgerTypes.subscription')
                                   : entry.type === "invoice"
-                                  ? "Fattura"
+                                  ? t('admin.billing.ledgerTypes.invoice')
                                   : entry.type === "payment"
-                                  ? "Pagamento"
-                                  : "Rettifica"}
+                                  ? t('admin.billing.ledgerTypes.payment')
+                                  : t('admin.billing.ledgerTypes.adjustment')}
                               </p>
                               <p className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</p>
                             </div>
@@ -1478,7 +1480,7 @@ export default function AdminBillingOrganizerDetail() {
                     ) : (
                       <div className="py-12 text-center">
                         <Wallet className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                        <p className="text-muted-foreground">Nessun movimento</p>
+                        <p className="text-muted-foreground">{t('admin.billing.organizerDetail.wallet.noMovements')}</p>
                       </div>
                     )}
                   </CardContent>
@@ -1499,8 +1501,8 @@ export default function AdminBillingOrganizerDetail() {
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <CardTitle className="text-lg">Fatture</CardTitle>
-                      <CardDescription className="text-sm">Elenco fatture</CardDescription>
+                      <CardTitle className="text-lg">{t('admin.billing.organizerDetail.invoiceList.title')}</CardTitle>
+                      <CardDescription className="text-sm">{t('admin.billing.organizerDetail.invoiceList.subtitle')}</CardDescription>
                     </div>
                     <HapticButton
                       onClick={() => setIsInvoiceSheetOpen(true)}
@@ -1508,7 +1510,7 @@ export default function AdminBillingOrganizerDetail() {
                       className="rounded-xl"
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Genera
+                      {t('admin.billing.invoices.generate')}
                     </HapticButton>
                   </div>
                 </CardHeader>
@@ -1534,17 +1536,17 @@ export default function AdminBillingOrganizerDetail() {
                             {invoice.status === "paid" ? (
                               <Badge className="bg-green-500/20 text-green-500">
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                Pagata
+                                {t('admin.billing.status.paid')}
                               </Badge>
                             ) : invoice.status === "issued" ? (
                               <Badge variant="secondary">
                                 <Clock className="w-3 h-3 mr-1" />
-                                Emessa
+                                {t('admin.billing.status.issued')}
                               </Badge>
                             ) : invoice.status === "void" ? (
-                              <Badge variant="destructive">Annullata</Badge>
+                              <Badge variant="destructive">{t('admin.billing.status.void')}</Badge>
                             ) : (
-                              <Badge variant="outline">Bozza</Badge>
+                              <Badge variant="outline">{t('admin.billing.status.draft')}</Badge>
                             )}
                           </div>
                           <div className="flex items-center justify-between">
@@ -1563,14 +1565,14 @@ export default function AdminBillingOrganizerDetail() {
                                 ) : (
                                   <>
                                     <CheckCircle className="w-4 h-4 mr-2" />
-                                    Pagata
+                                    {t('admin.billing.invoices.markPaid')}
                                   </>
                                 )}
                               </HapticButton>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Scadenza: {formatDate(invoice.dueDate)}
+                            {t('admin.billing.organizerDetail.invoiceList.tableHeaders.dueDate')}: {formatDate(invoice.dueDate)}
                           </p>
                         </motion.div>
                       ))}
@@ -1578,7 +1580,7 @@ export default function AdminBillingOrganizerDetail() {
                   ) : (
                     <div className="py-12 text-center">
                       <Receipt className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                      <p className="text-muted-foreground">Nessuna fattura</p>
+                      <p className="text-muted-foreground">{t('admin.billing.invoices.noInvoicesEmpty')}</p>
                     </div>
                   )}
                 </CardContent>
@@ -1591,7 +1593,7 @@ export default function AdminBillingOrganizerDetail() {
       <BottomSheet
         open={isSubscriptionSheetOpen}
         onClose={() => setIsSubscriptionSheetOpen(false)}
-        title="Assegna Piano"
+        title={t('admin.billing.organizerDetail.subscription.assignPlan')}
       >
         <div className="p-4">
           <Form {...subscriptionForm}>
@@ -1604,11 +1606,11 @@ export default function AdminBillingOrganizerDetail() {
                 name="planId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Piano</FormLabel>
+                    <FormLabel>{t('admin.billing.organizerDetail.subscription.plan')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-12" data-testid="select-plan">
-                          <SelectValue placeholder="Seleziona piano" />
+                          <SelectValue placeholder={t('admin.billing.organizerDetail.subscription.selectPlan')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1630,7 +1632,7 @@ export default function AdminBillingOrganizerDetail() {
                 name="billingCycle"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ciclo Fatturazione</FormLabel>
+                    <FormLabel>{t('admin.billing.organizerDetail.subscription.billingCycle')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-12" data-testid="select-billing-cycle">
@@ -1638,8 +1640,8 @@ export default function AdminBillingOrganizerDetail() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="monthly">Mensile</SelectItem>
-                        <SelectItem value="per_event">Per Evento</SelectItem>
+                        <SelectItem value="monthly">{t('admin.billing.billingCycle.monthly')}</SelectItem>
+                        <SelectItem value="per_event">{t('admin.billing.billingCycle.perEvent')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -1651,7 +1653,7 @@ export default function AdminBillingOrganizerDetail() {
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data Inizio</FormLabel>
+                    <FormLabel>{t('admin.billing.organizerDetail.subscription.startDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" className="h-12" {...field} data-testid="input-start-date" />
                     </FormControl>
@@ -1666,7 +1668,7 @@ export default function AdminBillingOrganizerDetail() {
                   className="flex-1 h-12 rounded-xl"
                   onClick={() => setIsSubscriptionSheetOpen(false)}
                 >
-                  Annulla
+                  {t('admin.billing.common.cancel')}
                 </HapticButton>
                 <HapticButton
                   type="submit"
@@ -1676,7 +1678,7 @@ export default function AdminBillingOrganizerDetail() {
                   hapticType="medium"
                 >
                   {createSubscriptionMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Assegna
+                  {t('admin.billing.organizerDetail.subscription.assign')}
                 </HapticButton>
               </div>
             </form>
@@ -1687,7 +1689,7 @@ export default function AdminBillingOrganizerDetail() {
       <BottomSheet
         open={isInvoiceSheetOpen}
         onClose={() => setIsInvoiceSheetOpen(false)}
-        title="Genera Fattura"
+        title={t('admin.billing.invoices.generateInvoice')}
       >
         <div className="p-4">
           <Form {...invoiceForm}>
@@ -1700,7 +1702,7 @@ export default function AdminBillingOrganizerDetail() {
                 name="periodStart"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data Inizio Periodo</FormLabel>
+                    <FormLabel>{t('admin.billing.invoices.periodStart')}</FormLabel>
                     <FormControl>
                       <Input type="date" className="h-12" {...field} data-testid="input-period-start" />
                     </FormControl>
@@ -1713,7 +1715,7 @@ export default function AdminBillingOrganizerDetail() {
                 name="periodEnd"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data Fine Periodo</FormLabel>
+                    <FormLabel>{t('admin.billing.invoices.periodEnd')}</FormLabel>
                     <FormControl>
                       <Input type="date" className="h-12" {...field} data-testid="input-period-end" />
                     </FormControl>
@@ -1726,7 +1728,7 @@ export default function AdminBillingOrganizerDetail() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Note (opzionale)</FormLabel>
+                    <FormLabel>{t('admin.billing.invoices.notesOptional')}</FormLabel>
                     <FormControl>
                       <Input className="h-12" {...field} data-testid="input-invoice-notes" />
                     </FormControl>
@@ -1741,7 +1743,7 @@ export default function AdminBillingOrganizerDetail() {
                   className="flex-1 h-12 rounded-xl"
                   onClick={() => setIsInvoiceSheetOpen(false)}
                 >
-                  Annulla
+                  {t('admin.billing.common.cancel')}
                 </HapticButton>
                 <HapticButton
                   type="submit"
@@ -1751,7 +1753,7 @@ export default function AdminBillingOrganizerDetail() {
                   hapticType="medium"
                 >
                   {createInvoiceMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Genera
+                  {t('admin.billing.invoices.generate')}
                 </HapticButton>
               </div>
             </form>

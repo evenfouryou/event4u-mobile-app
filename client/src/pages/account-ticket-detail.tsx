@@ -526,7 +526,7 @@ export default function AccountTicketDetail() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <UserCog className="w-5 h-5" />
-                    Storico Cambio Nominativo
+                    {t("account.ticketDetailPage.nameChangeHistory")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -534,35 +534,35 @@ export default function AccountTicketDetail() {
                     <>
                       {ticket.nameChangeDate && (
                         <p className="text-sm text-muted-foreground">
-                          Data cambio: {format(new Date(ticket.nameChangeDate), "d MMMM yyyy 'ore' HH:mm", { locale: it })}
+                          {t("account.ticketDetailPage.changeDate")}: {format(new Date(ticket.nameChangeDate), "d MMMM yyyy 'ore' HH:mm", { locale: it })}
                         </p>
                       )}
                       <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-4 space-y-2">
                         <div className="flex items-center gap-2">
-                          <Badge variant="destructive" data-testid="badge-old-ticket-cancelled">ANNULLATO</Badge>
-                          <span className="text-sm text-muted-foreground">Biglietto precedente</span>
+                          <Badge variant="destructive" data-testid="badge-old-ticket-cancelled">{t("account.ticketDetailPage.cancelledBadge")}</Badge>
+                          <span className="text-sm text-muted-foreground">{t("account.ticketDetailPage.previousTicket")}</span>
                         </div>
                         <p className="text-sm">
-                          Sigillo: <span className="line-through text-muted-foreground" data-testid="text-old-sigillo">{ticket.previousTicket.sigilloFiscale}</span>
+                          {t("account.ticketDetailPage.seal")}: <span className="line-through text-muted-foreground" data-testid="text-old-sigillo">{ticket.previousTicket.sigilloFiscale}</span>
                         </p>
                         <p className="text-sm">
-                          Progressivo: <span className="line-through text-muted-foreground" data-testid="text-old-progressivo">#{ticket.previousTicket.progressiveNumber}</span>
+                          {t("account.ticketDetailPage.progressive")}: <span className="line-through text-muted-foreground" data-testid="text-old-progressivo">#{ticket.previousTicket.progressiveNumber}</span>
                         </p>
-                        <p className="text-xs text-muted-foreground italic">Questo biglietto sostituisce il precedente</p>
+                        <p className="text-xs text-muted-foreground italic">{t("account.ticketDetailPage.replacesOld")}</p>
                       </div>
                       <div className="flex justify-center py-2">
                         <ArrowDown className="w-6 h-6 text-muted-foreground" />
                       </div>
                       <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-4 space-y-2">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-green-600 hover:bg-green-600" data-testid="badge-new-ticket-valid">VALIDO</Badge>
-                          <span className="text-sm text-muted-foreground">Biglietto attuale</span>
+                          <Badge className="bg-green-600 hover:bg-green-600" data-testid="badge-new-ticket-valid">{t("account.ticketDetailPage.validBadge")}</Badge>
+                          <span className="text-sm text-muted-foreground">{t("account.ticketDetailPage.currentTicket")}</span>
                         </div>
                         <p className="text-sm">
-                          Sigillo: <span className="font-medium" data-testid="text-current-sigillo">{ticket.fiscalSealCode}</span>
+                          {t("account.ticketDetailPage.seal")}: <span className="font-medium" data-testid="text-current-sigillo">{ticket.fiscalSealCode}</span>
                         </p>
                         <p className="text-sm">
-                          Progressivo: <span className="font-medium" data-testid="text-current-progressivo">#{ticket.progressiveNumber}</span>
+                          {t("account.ticketDetailPage.progressive")}: <span className="font-medium" data-testid="text-current-progressivo">#{ticket.progressiveNumber}</span>
                         </p>
                       </div>
                     </>
@@ -570,16 +570,16 @@ export default function AccountTicketDetail() {
                   {ticket.replacedBy && (
                     <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-4 space-y-3">
                       <div className="flex items-center justify-center">
-                        <Badge variant="destructive" className="text-base px-4 py-1" data-testid="badge-replaced-cancelled">ANNULLATO</Badge>
+                        <Badge variant="destructive" className="text-base px-4 py-1" data-testid="badge-replaced-cancelled">{t("account.ticketDetailPage.cancelledBadge")}</Badge>
                       </div>
                       <p className="text-center text-sm text-muted-foreground">
-                        Questo biglietto è stato annullato a seguito di cambio nominativo
+                        {t("account.ticketDetailPage.cancelledByNameChange")}
                       </p>
                       <p className="text-sm text-center">
-                        Sigillo: <span className="line-through text-muted-foreground">{ticket.fiscalSealCode}</span>
+                        {t("account.ticketDetailPage.seal")}: <span className="line-through text-muted-foreground">{ticket.fiscalSealCode}</span>
                       </p>
                       <p className="text-xs text-center text-muted-foreground italic">
-                        Il nuovo biglietto è stato trasferito al nuovo intestatario
+                        {t("account.ticketDetailPage.transferredToNewHolder")}
                       </p>
                     </div>
                   )}
@@ -589,7 +589,7 @@ export default function AccountTicketDetail() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Informazioni Evento</CardTitle>
+                <CardTitle>{t("account.ticketDetailPage.eventInfo")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -597,7 +597,7 @@ export default function AccountTicketDetail() {
                     <Calendar className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Data e Ora</p>
+                    <p className="text-sm text-muted-foreground">{t("account.ticketDetailPage.dateTime")}</p>
                     <p className="text-base font-medium" data-testid="text-event-date">
                       {format(eventDate, "EEEE d MMMM yyyy", { locale: it })}
                     </p>

@@ -2154,6 +2154,8 @@
       "cancelPayment": "Cancel",
       "processing": "Processing...",
       "pay": "Pay",
+      "processingNote": "The request will be processed within 24 hours. You will receive a confirmation email.",
+      "paymentDialogTitle": "Fee Payment",
       "validation": {
         "firstNameMin": "First name must be at least 2 characters",
         "lastNameMin": "Last name must be at least 2 characters",
@@ -2490,6 +2492,280 @@
         "payment": "Payment",
         "customer": "Customer",
         "actions": "Actions"
+      }
+    },
+    "billing": {
+      "common": {
+        "error": "Error",
+        "unknown": "Unknown",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saveChanges": "Save Changes",
+        "update": "Update",
+        "confirm": "Confirm",
+        "details": "Details",
+        "actions": "Actions",
+        "search": "Search",
+        "filter": "Filter",
+        "all": "All",
+        "none": "None",
+        "days": "days",
+        "events": "events",
+        "loading": "Loading...",
+        "current": "Current"
+      },
+      "status": {
+        "paid": "Paid",
+        "issued": "Issued",
+        "void": "Void",
+        "draft": "Draft",
+        "active": "Active",
+        "suspended": "Suspended",
+        "expired": "Expired",
+        "enabled": "Active",
+        "disabled": "Disabled"
+      },
+      "channels": {
+        "online": "Online",
+        "printed": "Box Office",
+        "pr": "PR"
+      },
+      "billingCycle": {
+        "monthly": "Monthly",
+        "perEvent": "Per Event"
+      },
+      "ledgerTypes": {
+        "commission": "Commission",
+        "subscription": "Subscription",
+        "invoice": "Invoice",
+        "payment": "Payment",
+        "adjustment": "Adjustment"
+      },
+      "feePayer": {
+        "title": "Who pays the fees?",
+        "organizer": "Organizer - Fees deducted from transfer",
+        "customer": "Customer - Fees added to cart",
+        "organizerDescription": "Fees will be deducted from the amount transferred to the organizer",
+        "customerDescription": "Fees will be added to the customer's cart total"
+      },
+      "invoices": {
+        "title": "Invoices",
+        "subtitle": "Manage all organizer invoices",
+        "listTitle": "Invoice List",
+        "found": "invoices found",
+        "searchPlaceholder": "Search by number or company...",
+        "filterByStatus": "Filter by status",
+        "tableHeaders": {
+          "number": "Number",
+          "company": "Company",
+          "amount": "Amount",
+          "status": "Status",
+          "issueDate": "Issue Date",
+          "dueDate": "Due Date"
+        },
+        "detail": {
+          "title": "Invoice Detail",
+          "period": "Period",
+          "paymentDate": "Payment Date",
+          "notes": "Notes"
+        },
+        "markAsPaid": "Mark as Paid",
+        "markPaid": "Mark Paid",
+        "noInvoices": "No invoices found",
+        "noInvoicesEmpty": "No invoices",
+        "paidSuccess": "Invoice Paid",
+        "paidSuccessMessage": "The invoice has been marked as paid",
+        "generateInvoice": "Generate Invoice",
+        "generateInvoiceDescription": "Select the period for the invoice",
+        "periodStart": "Period Start Date",
+        "periodEnd": "Period End Date",
+        "notesOptional": "Notes (optional)",
+        "generate": "Generate",
+        "generatedSuccess": "Invoice Generated",
+        "generatedSuccessMessage": "The invoice has been generated successfully"
+      },
+      "organizers": {
+        "title": "Billing Organizers",
+        "subtitle": "Manage subscriptions, commissions and billing for organizers",
+        "listTitle": "Organizer List",
+        "found": "organizers found",
+        "searchPlaceholder": "Search organizer...",
+        "tableHeaders": {
+          "company": "Company",
+          "subscriptionStatus": "Subscription Status",
+          "walletBalance": "Wallet Balance",
+          "threshold": "Threshold",
+          "status": "Status"
+        },
+        "filters": {
+          "all": "All",
+          "activeSubscription": "Active Subscription",
+          "expired": "Expired",
+          "suspended": "Suspended",
+          "noSubscription": "No Subscription"
+        },
+        "toBill": "To Bill",
+        "noOrganizers": "No organizers found"
+      },
+      "organizerDetail": {
+        "billingManagement": "Billing management",
+        "notFound": "Organizer not found",
+        "notFoundMessage": "The requested organizer does not exist or is not accessible.",
+        "tabs": {
+          "subscription": "Subscription",
+          "commissions": "Commissions",
+          "wallet": "Wallet",
+          "invoices": "Invoices"
+        },
+        "subscription": {
+          "title": "Subscription",
+          "currentStatus": "Current status",
+          "plan": "Plan",
+          "type": "Type",
+          "price": "Price",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "noSubscription": "No active subscription",
+          "noSubscriptionMessage": "Assign a plan to start",
+          "assignPlan": "Assign Plan",
+          "changePlan": "Change",
+          "assignPlanDescription": "Select a plan and configure the subscription",
+          "selectPlan": "Select plan",
+          "billingCycle": "Billing Cycle",
+          "assign": "Assign",
+          "assignedSuccess": "Subscription Assigned",
+          "assignedSuccessMessage": "The subscription has been assigned successfully"
+        },
+        "commissions": {
+          "title": "Commissions",
+          "subtitle": "Configure commissions for each channel",
+          "byChannel": "Commissions by Channel",
+          "byChannelDescription": "Set fixed or percentage commissions for each sales channel",
+          "fixedAmount": "Fixed (€)",
+          "percentage": "Percentage (%)",
+          "value": "Value",
+          "save": "Save Commissions",
+          "savedSuccess": "Commissions Updated",
+          "savedSuccessMessage": "Commissions have been updated successfully"
+        },
+        "wallet": {
+          "title": "Wallet Balance",
+          "balance": "Wallet Balance",
+          "debitAccumulated": "Accumulated debt",
+          "creditAvailable": "Available credit",
+          "threshold": "Billing Threshold",
+          "thresholdDescription": "Minimum amount for automatic invoice",
+          "updateThreshold": "Update",
+          "thresholdUpdatedSuccess": "Threshold Updated",
+          "thresholdUpdatedMessage": "The billing threshold has been updated",
+          "recentMovements": "Recent Movements",
+          "noMovements": "No movements",
+          "tableHeaders": {
+            "type": "Type",
+            "date": "Date",
+            "description": "Description",
+            "amount": "Amount"
+          }
+        },
+        "invoiceList": {
+          "title": "Invoices",
+          "subtitle": "List of generated invoices",
+          "tableHeaders": {
+            "number": "Number",
+            "period": "Period",
+            "dueDate": "Due Date",
+            "status": "Status",
+            "amount": "Amount"
+          }
+        }
+      },
+      "plans": {
+        "title": "Billing Plans",
+        "subtitle": "Manage subscription plans for organizers",
+        "newPlan": "New Plan",
+        "createPlan": "Create New Plan",
+        "createPlanDescription": "Enter the details of the new subscription plan",
+        "editPlan": "Edit Plan",
+        "editPlanDescription": "Edit the subscription plan details",
+        "form": {
+          "planName": "Plan Name",
+          "planNamePlaceholder": "e.g., Basic Plan",
+          "name": "Plan Name",
+          "type": "Type",
+          "selectType": "Select type",
+          "price": "Price (€)",
+          "duration": "Duration (days)",
+          "eventsIncluded": "Events Included",
+          "description": "Description",
+          "descriptionPlaceholder": "Plan description..."
+        },
+        "listTitle": "Available Plans",
+        "listSubtitle": "List of all configured subscription plans",
+        "tableHeaders": {
+          "name": "Name",
+          "type": "Type",
+          "price": "Price",
+          "details": "Details",
+          "status": "Status"
+        },
+        "noPlans": "No plans configured. Create the first plan.",
+        "createButton": "Create Plan",
+        "saveChanges": "Save Changes",
+        "deactivatePlan": "Deactivate Plan?",
+        "deactivatePlanTitle": "Deactivate Plan?",
+        "deactivatePlanMessage": "Are you sure you want to deactivate the plan \"{{planName}}\"? Existing subscriptions will not be affected.",
+        "deactivatePlanConfirm": "Are you sure you want to deactivate the plan",
+        "deactivatePlanWarning": "It will no longer be available for new subscriptions.",
+        "deactivate": "Deactivate",
+        "createdSuccess": "Plan Created",
+        "createdSuccessMessage": "The new plan has been created successfully",
+        "updatedSuccess": "Plan Updated",
+        "updatedSuccessMessage": "The plan has been updated successfully",
+        "deactivatedSuccess": "Plan Deactivated",
+        "deactivatedSuccessMessage": "The plan has been deactivated"
+      },
+      "reports": {
+        "title": "Billing Reports",
+        "subtitle": "Sales and commission analysis for all organizers",
+        "exportCSV": "Export CSV",
+        "exportCsv": "Export CSV",
+        "filters": "Filters",
+        "dateFrom": "From",
+        "dateTo": "To",
+        "company": "Company",
+        "allCompanies": "All companies",
+        "resetFilters": "Reset Filters",
+        "summary": {
+          "ticketsSold": "Tickets Sold",
+          "grossRevenue": "Gross Revenue",
+          "totalCommissions": "Total Commissions",
+          "netToOrganizers": "Net to Organizers",
+          "netOrganizers": "Net to Organizers",
+          "ticketsOnline": "Online Tickets",
+          "ticketsPrinted": "Box Office Tickets",
+          "ticketsPr": "PR Tickets",
+          "onlineTickets": "Online Tickets",
+          "boxOfficeTickets": "Box Office Tickets",
+          "prTickets": "PR Tickets",
+          "commissions": "Commissions",
+          "invoicesIssued": "Invoices Issued",
+          "invoicesPaid": "Invoices Paid",
+          "walletDebt": "Total Wallet Debt",
+          "totalWalletDebt": "Total Wallet Debt"
+        },
+        "salesByChannel": "Sales by Channel",
+        "salesByEvent": "Sales by Event",
+        "salesByEventDescription": "Sales and commission details for each event",
+        "tableHeaders": {
+          "channel": "Channel",
+          "tickets": "Tickets",
+          "grossRevenue": "Gross Revenue",
+          "commissions": "Commissions",
+          "event": "Event",
+          "date": "Date",
+          "netRevenue": "Net Revenue"
+        },
+        "noData": "No data available for the selected period"
       }
     }
   },

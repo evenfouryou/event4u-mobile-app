@@ -2152,6 +2152,8 @@
       "cancelPayment": "Abbrechen",
       "processing": "Verarbeitung...",
       "pay": "Bezahlen",
+      "processingNote": "Die Anfrage wird innerhalb von 24 Stunden bearbeitet. Sie erhalten eine Bestätigungs-E-Mail.",
+      "paymentDialogTitle": "Gebührenzahlung",
       "validation": {
         "firstNameMin": "Vorname muss mindestens 2 Zeichen haben",
         "lastNameMin": "Nachname muss mindestens 2 Zeichen haben",
@@ -2488,6 +2490,280 @@
         "payment": "Zahlung",
         "customer": "Kunde",
         "actions": "Aktionen"
+      }
+    },
+    "billing": {
+      "common": {
+        "error": "Fehler",
+        "unknown": "Unbekannt",
+        "cancel": "Abbrechen",
+        "save": "Speichern",
+        "saveChanges": "Änderungen Speichern",
+        "update": "Aktualisieren",
+        "confirm": "Bestätigen",
+        "details": "Details",
+        "actions": "Aktionen",
+        "search": "Suchen",
+        "filter": "Filtern",
+        "all": "Alle",
+        "none": "Keine",
+        "days": "Tage",
+        "events": "Veranstaltungen",
+        "loading": "Laden...",
+        "current": "Aktuell"
+      },
+      "status": {
+        "paid": "Bezahlt",
+        "issued": "Ausgestellt",
+        "void": "Storniert",
+        "draft": "Entwurf",
+        "active": "Aktiv",
+        "suspended": "Gesperrt",
+        "expired": "Abgelaufen",
+        "enabled": "Aktiv",
+        "disabled": "Deaktiviert"
+      },
+      "channels": {
+        "online": "Online",
+        "printed": "Kasse",
+        "pr": "PR"
+      },
+      "billingCycle": {
+        "monthly": "Monatlich",
+        "perEvent": "Pro Veranstaltung"
+      },
+      "ledgerTypes": {
+        "commission": "Provision",
+        "subscription": "Abonnement",
+        "invoice": "Rechnung",
+        "payment": "Zahlung",
+        "adjustment": "Anpassung"
+      },
+      "feePayer": {
+        "title": "Wer zahlt die Gebühren?",
+        "organizer": "Veranstalter - Gebühren vom Überweisungsbetrag abgezogen",
+        "customer": "Kunde - Gebühren zum Warenkorb hinzugefügt",
+        "organizerDescription": "Gebühren werden vom an den Veranstalter überwiesenen Betrag abgezogen",
+        "customerDescription": "Gebühren werden zum Warenkorb-Gesamtbetrag des Kunden hinzugefügt"
+      },
+      "invoices": {
+        "title": "Rechnungen",
+        "subtitle": "Alle Veranstalter-Rechnungen verwalten",
+        "listTitle": "Rechnungsliste",
+        "found": "Rechnungen gefunden",
+        "searchPlaceholder": "Nach Nummer oder Firma suchen...",
+        "filterByStatus": "Nach Status filtern",
+        "tableHeaders": {
+          "number": "Nummer",
+          "company": "Firma",
+          "amount": "Betrag",
+          "status": "Status",
+          "issueDate": "Ausstellungsdatum",
+          "dueDate": "Fälligkeitsdatum"
+        },
+        "detail": {
+          "title": "Rechnungsdetails",
+          "period": "Zeitraum",
+          "paymentDate": "Zahlungsdatum",
+          "notes": "Notizen"
+        },
+        "markAsPaid": "Als Bezahlt markieren",
+        "markPaid": "Bezahlt markieren",
+        "noInvoices": "Keine Rechnungen gefunden",
+        "noInvoicesEmpty": "Keine Rechnungen",
+        "paidSuccess": "Rechnung Bezahlt",
+        "paidSuccessMessage": "Die Rechnung wurde als bezahlt markiert",
+        "generateInvoice": "Rechnung Erstellen",
+        "generateInvoiceDescription": "Wählen Sie den Zeitraum für die Rechnung",
+        "periodStart": "Zeitraum-Startdatum",
+        "periodEnd": "Zeitraum-Enddatum",
+        "notesOptional": "Notizen (optional)",
+        "generate": "Erstellen",
+        "generatedSuccess": "Rechnung Erstellt",
+        "generatedSuccessMessage": "Die Rechnung wurde erfolgreich erstellt"
+      },
+      "organizers": {
+        "title": "Abrechnungs-Veranstalter",
+        "subtitle": "Abonnements, Provisionen und Abrechnung für Veranstalter verwalten",
+        "listTitle": "Veranstalter-Liste",
+        "found": "Veranstalter gefunden",
+        "searchPlaceholder": "Veranstalter suchen...",
+        "tableHeaders": {
+          "company": "Firma",
+          "subscriptionStatus": "Abonnement-Status",
+          "walletBalance": "Wallet-Guthaben",
+          "threshold": "Schwellenwert",
+          "status": "Status"
+        },
+        "filters": {
+          "all": "Alle",
+          "activeSubscription": "Aktives Abonnement",
+          "expired": "Abgelaufen",
+          "suspended": "Gesperrt",
+          "noSubscription": "Ohne Abonnement"
+        },
+        "toBill": "Zu Berechnen",
+        "noOrganizers": "Keine Veranstalter gefunden"
+      },
+      "organizerDetail": {
+        "billingManagement": "Abrechnungsverwaltung",
+        "notFound": "Veranstalter nicht gefunden",
+        "notFoundMessage": "Der angeforderte Veranstalter existiert nicht oder ist nicht zugänglich.",
+        "tabs": {
+          "subscription": "Abonnement",
+          "commissions": "Provisionen",
+          "wallet": "Wallet",
+          "invoices": "Rechnungen"
+        },
+        "subscription": {
+          "title": "Abonnement",
+          "currentStatus": "Aktueller Status",
+          "plan": "Plan",
+          "type": "Typ",
+          "price": "Preis",
+          "startDate": "Startdatum",
+          "endDate": "Enddatum",
+          "noSubscription": "Kein aktives Abonnement",
+          "noSubscriptionMessage": "Weisen Sie einen Plan zu, um zu starten",
+          "assignPlan": "Plan Zuweisen",
+          "changePlan": "Ändern",
+          "assignPlanDescription": "Wählen Sie einen Plan und konfigurieren Sie das Abonnement",
+          "selectPlan": "Plan auswählen",
+          "billingCycle": "Abrechnungszyklus",
+          "assign": "Zuweisen",
+          "assignedSuccess": "Abonnement Zugewiesen",
+          "assignedSuccessMessage": "Das Abonnement wurde erfolgreich zugewiesen"
+        },
+        "commissions": {
+          "title": "Provisionen",
+          "subtitle": "Provisionen für jeden Kanal konfigurieren",
+          "byChannel": "Provisionen nach Kanal",
+          "byChannelDescription": "Legen Sie feste oder prozentuale Provisionen für jeden Verkaufskanal fest",
+          "fixedAmount": "Fest (€)",
+          "percentage": "Prozentsatz (%)",
+          "value": "Wert",
+          "save": "Provisionen Speichern",
+          "savedSuccess": "Provisionen Aktualisiert",
+          "savedSuccessMessage": "Die Provisionen wurden erfolgreich aktualisiert"
+        },
+        "wallet": {
+          "title": "Wallet-Guthaben",
+          "balance": "Wallet-Guthaben",
+          "debitAccumulated": "Angesammelte Schulden",
+          "creditAvailable": "Verfügbares Guthaben",
+          "threshold": "Abrechnungsschwelle",
+          "thresholdDescription": "Mindestbetrag für automatische Rechnung",
+          "updateThreshold": "Aktualisieren",
+          "thresholdUpdatedSuccess": "Schwellenwert Aktualisiert",
+          "thresholdUpdatedMessage": "Der Abrechnungsschwellenwert wurde aktualisiert",
+          "recentMovements": "Letzte Bewegungen",
+          "noMovements": "Keine Bewegungen",
+          "tableHeaders": {
+            "type": "Typ",
+            "date": "Datum",
+            "description": "Beschreibung",
+            "amount": "Betrag"
+          }
+        },
+        "invoiceList": {
+          "title": "Rechnungen",
+          "subtitle": "Liste der erstellten Rechnungen",
+          "tableHeaders": {
+            "number": "Nummer",
+            "period": "Zeitraum",
+            "dueDate": "Fälligkeitsdatum",
+            "status": "Status",
+            "amount": "Betrag"
+          }
+        }
+      },
+      "plans": {
+        "title": "Abrechnungspläne",
+        "subtitle": "Abonnementpläne für Veranstalter verwalten",
+        "newPlan": "Neuer Plan",
+        "createPlan": "Neuen Plan Erstellen",
+        "createPlanDescription": "Geben Sie die Details des neuen Abonnementplans ein",
+        "editPlan": "Plan Bearbeiten",
+        "editPlanDescription": "Bearbeiten Sie die Details des Abonnementplans",
+        "form": {
+          "planName": "Planname",
+          "planNamePlaceholder": "z.B. Basisplan",
+          "name": "Planname",
+          "type": "Typ",
+          "selectType": "Typ auswählen",
+          "price": "Preis (€)",
+          "duration": "Dauer (Tage)",
+          "eventsIncluded": "Enthaltene Veranstaltungen",
+          "description": "Beschreibung",
+          "descriptionPlaceholder": "Planbeschreibung..."
+        },
+        "listTitle": "Verfügbare Pläne",
+        "listSubtitle": "Liste aller konfigurierten Abonnementpläne",
+        "tableHeaders": {
+          "name": "Name",
+          "type": "Typ",
+          "price": "Preis",
+          "details": "Details",
+          "status": "Status"
+        },
+        "noPlans": "Keine Pläne konfiguriert. Erstellen Sie den ersten Plan.",
+        "createButton": "Plan Erstellen",
+        "saveChanges": "Änderungen Speichern",
+        "deactivatePlan": "Plan Deaktivieren?",
+        "deactivatePlanTitle": "Plan Deaktivieren?",
+        "deactivatePlanMessage": "Sind Sie sicher, dass Sie den Plan \"{{planName}}\" deaktivieren möchten? Bestehende Abonnements werden nicht betroffen.",
+        "deactivatePlanConfirm": "Sind Sie sicher, dass Sie den Plan deaktivieren möchten",
+        "deactivatePlanWarning": "Er wird für neue Abonnements nicht mehr verfügbar sein.",
+        "deactivate": "Deaktivieren",
+        "createdSuccess": "Plan Erstellt",
+        "createdSuccessMessage": "Der neue Plan wurde erfolgreich erstellt",
+        "updatedSuccess": "Plan Aktualisiert",
+        "updatedSuccessMessage": "Der Plan wurde erfolgreich aktualisiert",
+        "deactivatedSuccess": "Plan Deaktiviert",
+        "deactivatedSuccessMessage": "Der Plan wurde deaktiviert"
+      },
+      "reports": {
+        "title": "Abrechnungsberichte",
+        "subtitle": "Verkaufs- und Provisionsanalyse für alle Veranstalter",
+        "exportCSV": "CSV Exportieren",
+        "exportCsv": "CSV Exportieren",
+        "filters": "Filter",
+        "dateFrom": "Von",
+        "dateTo": "Bis",
+        "company": "Firma",
+        "allCompanies": "Alle Firmen",
+        "resetFilters": "Filter Zurücksetzen",
+        "summary": {
+          "ticketsSold": "Verkaufte Tickets",
+          "grossRevenue": "Bruttoeinnahmen",
+          "totalCommissions": "Gesamte Provisionen",
+          "netToOrganizers": "Netto an Veranstalter",
+          "netOrganizers": "Netto an Veranstalter",
+          "ticketsOnline": "Online-Tickets",
+          "ticketsPrinted": "Kassen-Tickets",
+          "ticketsPr": "PR-Tickets",
+          "onlineTickets": "Online-Tickets",
+          "boxOfficeTickets": "Kassen-Tickets",
+          "prTickets": "PR-Tickets",
+          "commissions": "Provisionen",
+          "invoicesIssued": "Ausgestellte Rechnungen",
+          "invoicesPaid": "Bezahlte Rechnungen",
+          "walletDebt": "Gesamte Wallet-Schulden",
+          "totalWalletDebt": "Gesamte Wallet-Schulden"
+        },
+        "salesByChannel": "Verkäufe nach Kanal",
+        "salesByEvent": "Verkäufe nach Veranstaltung",
+        "salesByEventDescription": "Verkaufs- und Provisionsdetails für jede Veranstaltung",
+        "tableHeaders": {
+          "channel": "Kanal",
+          "tickets": "Tickets",
+          "grossRevenue": "Bruttoeinnahmen",
+          "commissions": "Provisionen",
+          "event": "Veranstaltung",
+          "date": "Datum",
+          "netRevenue": "Nettoeinnahmen"
+        },
+        "noData": "Keine Daten für den ausgewählten Zeitraum verfügbar"
       }
     }
   },

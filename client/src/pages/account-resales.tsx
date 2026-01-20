@@ -108,16 +108,18 @@ function ResaleTicketCard({
   const resalePrice = parseFloat(resale.resalePrice || "0");
   const originalPrice = parseFloat(resale.originalPrice || "0");
 
+  const { t } = useTranslation();
+  
   const getStatusConfig = () => {
     switch (resale.status) {
       case "listed":
-        return { label: "In Vendita", variant: "default" as const, color: "text-primary" };
+        return { label: t("account.resalesPage.statusListed"), variant: "default" as const, color: "text-primary" };
       case "sold":
-        return { label: "Venduto", variant: "secondary" as const, color: "text-green-500" };
+        return { label: t("account.resalesPage.statusSold"), variant: "secondary" as const, color: "text-green-500" };
       case "cancelled":
-        return { label: "Annullato", variant: "destructive" as const, color: "text-destructive" };
+        return { label: t("account.resalesPage.statusCancelled"), variant: "destructive" as const, color: "text-destructive" };
       case "pending":
-        return { label: "In Attesa", variant: "outline" as const, color: "text-yellow-500" };
+        return { label: t("account.resalesPage.statusPending"), variant: "outline" as const, color: "text-yellow-500" };
       default:
         return { label: resale.status, variant: "outline" as const, color: "text-muted-foreground" };
     }
@@ -176,7 +178,7 @@ function ResaleTicketCard({
                 </div>
                 <div className="flex items-center gap-3 text-base text-muted-foreground">
                   <MapPin className="w-5 h-5 shrink-0" />
-                  <span>Settore: {resale.sectorName}</span>
+                  <span>{t("account.resalesPage.sectorLabel")}: {resale.sectorName}</span>
                 </div>
               </div>
 
@@ -215,7 +217,7 @@ function ResaleTicketCard({
               ) : (
                 <>
                   <XCircle className="w-6 h-6 mr-2" />
-                  Annulla Rivendita
+                  {t("account.resalesPage.cancelResale")}
                 </>
               )}
             </HapticButton>
@@ -227,6 +229,7 @@ function ResaleTicketCard({
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -249,7 +252,7 @@ function EmptyState() {
         transition={{ delay: 0.3 }}
         className="text-xl font-bold text-foreground mb-3 text-center"
       >
-        Nessun biglietto in vendita
+        {t("account.resalesPage.noResales")}
       </motion.h3>
       
       <motion.p
@@ -258,7 +261,7 @@ function EmptyState() {
         transition={{ delay: 0.4 }}
         className="text-base text-muted-foreground text-center max-w-xs mb-8"
       >
-        Metti in vendita i tuoi biglietti dalla pagina dettaglio del biglietto
+        {t("account.resalesPage.noResalesDesc")}
       </motion.p>
 
       <motion.div
@@ -267,7 +270,7 @@ function EmptyState() {
         transition={{ delay: 0.5 }}
         className="flex items-center gap-2 text-primary"
       >
-        <span className="text-base font-medium">Vai ai tuoi biglietti</span>
+        <span className="text-base font-medium">{t("account.resalesPage.goToTickets")}</span>
         <ArrowRight className="w-5 h-5" />
       </motion.div>
     </motion.div>
@@ -275,6 +278,7 @@ function EmptyState() {
 }
 
 function LoadingState() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <motion.div
@@ -289,7 +293,7 @@ function LoadingState() {
         transition={{ delay: 0.3 }}
         className="mt-4 text-lg text-muted-foreground"
       >
-        Caricamento...
+        {t("account.resalesPage.loading")}
       </motion.p>
     </div>
   );

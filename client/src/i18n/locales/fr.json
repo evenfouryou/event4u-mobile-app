@@ -2152,6 +2152,8 @@
       "cancelPayment": "Annuler",
       "processing": "Traitement...",
       "pay": "Payer",
+      "processingNote": "La demande sera traitée dans les 24 heures. Vous recevrez un email de confirmation.",
+      "paymentDialogTitle": "Paiement des Frais",
       "validation": {
         "firstNameMin": "Le prénom doit contenir au moins 2 caractères",
         "lastNameMin": "Le nom doit contenir au moins 2 caractères",
@@ -2488,6 +2490,280 @@
         "payment": "Paiement",
         "customer": "Client",
         "actions": "Actions"
+      }
+    },
+    "billing": {
+      "common": {
+        "error": "Erreur",
+        "unknown": "Inconnu",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "saveChanges": "Enregistrer les Modifications",
+        "update": "Mettre à jour",
+        "confirm": "Confirmer",
+        "details": "Détails",
+        "actions": "Actions",
+        "search": "Rechercher",
+        "filter": "Filtrer",
+        "all": "Tous",
+        "none": "Aucun",
+        "days": "jours",
+        "events": "événements",
+        "loading": "Chargement...",
+        "current": "Actuel"
+      },
+      "status": {
+        "paid": "Payée",
+        "issued": "Émise",
+        "void": "Annulée",
+        "draft": "Brouillon",
+        "active": "Actif",
+        "suspended": "Suspendu",
+        "expired": "Expiré",
+        "enabled": "Actif",
+        "disabled": "Désactivé"
+      },
+      "channels": {
+        "online": "En ligne",
+        "printed": "Guichet",
+        "pr": "RP"
+      },
+      "billingCycle": {
+        "monthly": "Mensuel",
+        "perEvent": "Par Événement"
+      },
+      "ledgerTypes": {
+        "commission": "Commission",
+        "subscription": "Abonnement",
+        "invoice": "Facture",
+        "payment": "Paiement",
+        "adjustment": "Ajustement"
+      },
+      "feePayer": {
+        "title": "Qui paie les frais ?",
+        "organizer": "Organisateur - Frais déduits du virement",
+        "customer": "Client - Frais ajoutés au panier",
+        "organizerDescription": "Les frais seront déduits du montant transféré à l'organisateur",
+        "customerDescription": "Les frais seront ajoutés au total du panier du client"
+      },
+      "invoices": {
+        "title": "Factures",
+        "subtitle": "Gérez toutes les factures des organisateurs",
+        "listTitle": "Liste des Factures",
+        "found": "factures trouvées",
+        "searchPlaceholder": "Rechercher par numéro ou entreprise...",
+        "filterByStatus": "Filtrer par statut",
+        "tableHeaders": {
+          "number": "Numéro",
+          "company": "Entreprise",
+          "amount": "Montant",
+          "status": "Statut",
+          "issueDate": "Date d'émission",
+          "dueDate": "Échéance"
+        },
+        "detail": {
+          "title": "Détail de la Facture",
+          "period": "Période",
+          "paymentDate": "Date de Paiement",
+          "notes": "Notes"
+        },
+        "markAsPaid": "Marquer comme Payée",
+        "markPaid": "Marquer Payée",
+        "noInvoices": "Aucune facture trouvée",
+        "noInvoicesEmpty": "Aucune facture",
+        "paidSuccess": "Facture Payée",
+        "paidSuccessMessage": "La facture a été marquée comme payée",
+        "generateInvoice": "Générer une Facture",
+        "generateInvoiceDescription": "Sélectionnez la période pour la facture",
+        "periodStart": "Date de Début de Période",
+        "periodEnd": "Date de Fin de Période",
+        "notesOptional": "Notes (optionnel)",
+        "generate": "Générer",
+        "generatedSuccess": "Facture Générée",
+        "generatedSuccessMessage": "La facture a été générée avec succès"
+      },
+      "organizers": {
+        "title": "Organisateurs Facturation",
+        "subtitle": "Gérez les abonnements, commissions et facturation pour les organisateurs",
+        "listTitle": "Liste des Organisateurs",
+        "found": "organisateurs trouvés",
+        "searchPlaceholder": "Rechercher un organisateur...",
+        "tableHeaders": {
+          "company": "Entreprise",
+          "subscriptionStatus": "Statut Abonnement",
+          "walletBalance": "Solde Portefeuille",
+          "threshold": "Seuil",
+          "status": "Statut"
+        },
+        "filters": {
+          "all": "Tous",
+          "activeSubscription": "Abonnement Actif",
+          "expired": "Expiré",
+          "suspended": "Suspendu",
+          "noSubscription": "Sans Abonnement"
+        },
+        "toBill": "À Facturer",
+        "noOrganizers": "Aucun organisateur trouvé"
+      },
+      "organizerDetail": {
+        "billingManagement": "Gestion de la facturation",
+        "notFound": "Organisateur non trouvé",
+        "notFoundMessage": "L'organisateur demandé n'existe pas ou n'est pas accessible.",
+        "tabs": {
+          "subscription": "Abonnement",
+          "commissions": "Commissions",
+          "wallet": "Portefeuille",
+          "invoices": "Factures"
+        },
+        "subscription": {
+          "title": "Abonnement",
+          "currentStatus": "Statut actuel",
+          "plan": "Plan",
+          "type": "Type",
+          "price": "Prix",
+          "startDate": "Date de Début",
+          "endDate": "Date de Fin",
+          "noSubscription": "Aucun abonnement actif",
+          "noSubscriptionMessage": "Assignez un plan pour commencer",
+          "assignPlan": "Assigner un Plan",
+          "changePlan": "Modifier",
+          "assignPlanDescription": "Sélectionnez un plan et configurez l'abonnement",
+          "selectPlan": "Sélectionner un plan",
+          "billingCycle": "Cycle de Facturation",
+          "assign": "Assigner",
+          "assignedSuccess": "Abonnement Assigné",
+          "assignedSuccessMessage": "L'abonnement a été assigné avec succès"
+        },
+        "commissions": {
+          "title": "Commissions",
+          "subtitle": "Configurez les commissions pour chaque canal",
+          "byChannel": "Commissions par Canal",
+          "byChannelDescription": "Définissez des commissions fixes ou en pourcentage pour chaque canal de vente",
+          "fixedAmount": "Fixe (€)",
+          "percentage": "Pourcentage (%)",
+          "value": "Valeur",
+          "save": "Enregistrer les Commissions",
+          "savedSuccess": "Commissions Mises à Jour",
+          "savedSuccessMessage": "Les commissions ont été mises à jour avec succès"
+        },
+        "wallet": {
+          "title": "Solde du Portefeuille",
+          "balance": "Solde du Portefeuille",
+          "debitAccumulated": "Dette accumulée",
+          "creditAvailable": "Crédit disponible",
+          "threshold": "Seuil de Facturation",
+          "thresholdDescription": "Montant minimum pour facture automatique",
+          "updateThreshold": "Mettre à jour",
+          "thresholdUpdatedSuccess": "Seuil Mis à Jour",
+          "thresholdUpdatedMessage": "Le seuil de facturation a été mis à jour",
+          "recentMovements": "Mouvements Récents",
+          "noMovements": "Aucun mouvement",
+          "tableHeaders": {
+            "type": "Type",
+            "date": "Date",
+            "description": "Description",
+            "amount": "Montant"
+          }
+        },
+        "invoiceList": {
+          "title": "Factures",
+          "subtitle": "Liste des factures générées",
+          "tableHeaders": {
+            "number": "Numéro",
+            "period": "Période",
+            "dueDate": "Échéance",
+            "status": "Statut",
+            "amount": "Montant"
+          }
+        }
+      },
+      "plans": {
+        "title": "Plans de Facturation",
+        "subtitle": "Gérez les plans d'abonnement pour les organisateurs",
+        "newPlan": "Nouveau Plan",
+        "createPlan": "Créer un Nouveau Plan",
+        "createPlanDescription": "Entrez les détails du nouveau plan d'abonnement",
+        "editPlan": "Modifier le Plan",
+        "editPlanDescription": "Modifiez les détails du plan d'abonnement",
+        "form": {
+          "planName": "Nom du Plan",
+          "planNamePlaceholder": "ex. Plan de Base",
+          "name": "Nom du Plan",
+          "type": "Type",
+          "selectType": "Sélectionner le type",
+          "price": "Prix (€)",
+          "duration": "Durée (jours)",
+          "eventsIncluded": "Événements Inclus",
+          "description": "Description",
+          "descriptionPlaceholder": "Description du plan..."
+        },
+        "listTitle": "Plans Disponibles",
+        "listSubtitle": "Liste de tous les plans d'abonnement configurés",
+        "tableHeaders": {
+          "name": "Nom",
+          "type": "Type",
+          "price": "Prix",
+          "details": "Détails",
+          "status": "Statut"
+        },
+        "noPlans": "Aucun plan configuré. Créez le premier plan.",
+        "createButton": "Créer le Plan",
+        "saveChanges": "Enregistrer les Modifications",
+        "deactivatePlan": "Désactiver le Plan ?",
+        "deactivatePlanTitle": "Désactiver le Plan ?",
+        "deactivatePlanMessage": "Êtes-vous sûr de vouloir désactiver le plan \"{{planName}}\" ? Les abonnements existants ne seront pas affectés.",
+        "deactivatePlanConfirm": "Êtes-vous sûr de vouloir désactiver le plan",
+        "deactivatePlanWarning": "Il ne sera plus disponible pour les nouveaux abonnements.",
+        "deactivate": "Désactiver",
+        "createdSuccess": "Plan Créé",
+        "createdSuccessMessage": "Le nouveau plan a été créé avec succès",
+        "updatedSuccess": "Plan Mis à Jour",
+        "updatedSuccessMessage": "Le plan a été mis à jour avec succès",
+        "deactivatedSuccess": "Plan Désactivé",
+        "deactivatedSuccessMessage": "Le plan a été désactivé"
+      },
+      "reports": {
+        "title": "Rapports de Facturation",
+        "subtitle": "Analyse des ventes et commissions pour tous les organisateurs",
+        "exportCSV": "Exporter CSV",
+        "exportCsv": "Exporter CSV",
+        "filters": "Filtres",
+        "dateFrom": "De",
+        "dateTo": "À",
+        "company": "Entreprise",
+        "allCompanies": "Toutes les entreprises",
+        "resetFilters": "Réinitialiser les Filtres",
+        "summary": {
+          "ticketsSold": "Billets Vendus",
+          "grossRevenue": "Revenu Brut",
+          "totalCommissions": "Commissions Totales",
+          "netToOrganizers": "Net aux Organisateurs",
+          "netOrganizers": "Net aux Organisateurs",
+          "ticketsOnline": "Billets En Ligne",
+          "ticketsPrinted": "Billets Guichet",
+          "ticketsPr": "Billets RP",
+          "onlineTickets": "Billets En Ligne",
+          "boxOfficeTickets": "Billets Guichet",
+          "prTickets": "Billets RP",
+          "commissions": "Commissions",
+          "invoicesIssued": "Factures Émises",
+          "invoicesPaid": "Factures Payées",
+          "walletDebt": "Dette Totale Portefeuille",
+          "totalWalletDebt": "Dette Totale Portefeuille"
+        },
+        "salesByChannel": "Ventes par Canal",
+        "salesByEvent": "Ventes par Événement",
+        "salesByEventDescription": "Détail des ventes et commissions pour chaque événement",
+        "tableHeaders": {
+          "channel": "Canal",
+          "tickets": "Billets",
+          "grossRevenue": "Revenu Brut",
+          "commissions": "Commissions",
+          "event": "Événement",
+          "date": "Date",
+          "netRevenue": "Revenu Net"
+        },
+        "noData": "Aucune donnée disponible pour la période sélectionnée"
       }
     }
   },

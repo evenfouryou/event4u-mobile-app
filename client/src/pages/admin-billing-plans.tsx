@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +65,7 @@ const planFormSchema = z.object({
 type PlanFormData = z.infer<typeof planFormSchema>;
 
 export default function AdminBillingPlans() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -102,10 +104,10 @@ export default function AdminBillingPlans() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/plans"] });
       setIsCreateOpen(false);
       form.reset();
-      toast({ title: "Piano Creato", description: "Il piano è stato creato con successo." });
+      toast({ title: t('admin.billing.plans.createSuccess'), description: t('admin.billing.plans.createSuccessMessage') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message || "Impossibile creare il piano", variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message || t('admin.billing.plans.createError'), variant: "destructive" });
     },
   });
 
@@ -125,10 +127,10 @@ export default function AdminBillingPlans() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/plans"] });
       setEditingPlan(null);
       form.reset();
-      toast({ title: "Piano Aggiornato", description: "Il piano è stato aggiornato con successo." });
+      toast({ title: t('admin.billing.plans.updateSuccess'), description: t('admin.billing.plans.updateSuccessMessage') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message || "Impossibile aggiornare il piano", variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message || t('admin.billing.plans.updateError'), variant: "destructive" });
     },
   });
 
@@ -139,10 +141,10 @@ export default function AdminBillingPlans() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/plans"] });
       setDeactivatingPlan(null);
-      toast({ title: "Piano Disattivato", description: "Il piano è stato disattivato." });
+      toast({ title: t('admin.billing.plans.deactivateSuccess'), description: t('admin.billing.plans.deactivateSuccessMessage') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message || "Impossibile disattivare il piano", variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message || t('admin.billing.plans.deactivateError'), variant: "destructive" });
     },
   });
 
@@ -189,23 +191,23 @@ export default function AdminBillingPlans() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-admin-billing-plans">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Piani Billing</h1>
+            <h1 className="text-3xl font-bold">{t('admin.billing.plans.title')}</h1>
             <p className="text-muted-foreground">
-              Gestisci i piani di abbonamento per gli organizzatori
+              {t('admin.billing.plans.subtitle')}
             </p>
           </div>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button data-testid="button-create-plan">
                 <Plus className="w-4 h-4 mr-2" />
-                Nuovo Piano
+                {t('admin.billing.plans.newPlan')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Crea Nuovo Piano</DialogTitle>
+                <DialogTitle>{t('admin.billing.plans.createPlan')}</DialogTitle>
                 <DialogDescription>
-                  Inserisci i dettagli del nuovo piano di abbonamento
+                  {t('admin.billing.plans.createDescription')}
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -215,9 +217,9 @@ export default function AdminBillingPlans() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome Piano</FormLabel>
+                        <FormLabel>{t('admin.billing.plans.form.planName')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="es. Piano Base" {...field} data-testid="input-plan-name" />
+                          <Input placeholder={t('admin.billing.plans.form.planNamePlaceholder')} {...field} data-testid="input-plan-name" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -228,16 +230,16 @@ export default function AdminBillingPlans() {
                     name="type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tipo</FormLabel>
+                        <FormLabel>{t('admin.billing.plans.form.type')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-plan-type">
-                              <SelectValue placeholder="Seleziona tipo" />
+                              <SelectValue placeholder={t('admin.billing.plans.form.selectType')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="monthly">Mensile</SelectItem>
-                            <SelectItem value="per_event">Per Evento</SelectItem>
+                            <SelectItem value="monthly">{t('admin.billing.billingCycle.monthly')}</SelectItem>
+                            <SelectItem value="per_event">{t('admin.billing.billingCycle.perEvent')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -249,7 +251,7 @@ export default function AdminBillingPlans() {
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Prezzo (€)</FormLabel>
+                        <FormLabel>{t('admin.billing.plans.form.price')}</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="0.00" {...field} data-testid="input-plan-price" />
                         </FormControl>
@@ -263,7 +265,7 @@ export default function AdminBillingPlans() {
                       name="durationDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Durata (giorni)</FormLabel>
+                          <FormLabel>{t('admin.billing.plans.form.duration')}</FormLabel>
                           <FormControl>
                             <Input type="number" placeholder="30" {...field} data-testid="input-plan-duration" />
                           </FormControl>
@@ -278,7 +280,7 @@ export default function AdminBillingPlans() {
                       name="eventsIncluded"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Eventi Inclusi</FormLabel>
+                          <FormLabel>{t('admin.billing.plans.form.eventsIncluded')}</FormLabel>
                           <FormControl>
                             <Input type="number" placeholder="10" {...field} data-testid="input-plan-events" />
                           </FormControl>
@@ -292,9 +294,9 @@ export default function AdminBillingPlans() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Descrizione</FormLabel>
+                        <FormLabel>{t('admin.billing.plans.form.description')}</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Descrizione del piano..." {...field} data-testid="textarea-plan-description" />
+                          <Textarea placeholder={t('admin.billing.plans.form.descriptionPlaceholder')} {...field} data-testid="textarea-plan-description" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -302,11 +304,11 @@ export default function AdminBillingPlans() {
                   />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-                      Annulla
+                      {t('admin.billing.common.cancel')}
                     </Button>
                     <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-plan">
                       {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Crea Piano
+                      {t('admin.billing.plans.createPlan')}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -317,19 +319,19 @@ export default function AdminBillingPlans() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Piani Disponibili</CardTitle>
-            <CardDescription>Elenco di tutti i piani di abbonamento configurati</CardDescription>
+            <CardTitle>{t('admin.billing.plans.availablePlans')}</CardTitle>
+            <CardDescription>{t('admin.billing.plans.availablePlansDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Prezzo</TableHead>
-                  <TableHead>Dettagli</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
+                  <TableHead>{t('admin.billing.plans.tableHeaders.name')}</TableHead>
+                  <TableHead>{t('admin.billing.plans.tableHeaders.type')}</TableHead>
+                  <TableHead>{t('admin.billing.plans.tableHeaders.price')}</TableHead>
+                  <TableHead>{t('admin.billing.plans.tableHeaders.details')}</TableHead>
+                  <TableHead>{t('admin.billing.plans.tableHeaders.status')}</TableHead>
+                  <TableHead className="text-right">{t('admin.billing.common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -338,28 +340,28 @@ export default function AdminBillingPlans() {
                     <TableCell className="font-medium">{plan.name}</TableCell>
                     <TableCell>
                       <Badge variant={plan.type === "monthly" ? "default" : "secondary"}>
-                        {plan.type === "monthly" ? "Mensile" : "Per Evento"}
+                        {plan.type === "monthly" ? t('admin.billing.billingCycle.monthly') : t('admin.billing.billingCycle.perEvent')}
                       </Badge>
                     </TableCell>
                     <TableCell>{formatPrice(plan.price)}</TableCell>
                     <TableCell>
                       {plan.type === "monthly" && plan.durationDays && (
-                        <span className="text-muted-foreground">{plan.durationDays} giorni</span>
+                        <span className="text-muted-foreground">{plan.durationDays} {t('admin.billing.plans.days')}</span>
                       )}
                       {plan.type === "per_event" && plan.eventsIncluded && (
-                        <span className="text-muted-foreground">{plan.eventsIncluded} eventi</span>
+                        <span className="text-muted-foreground">{plan.eventsIncluded} {t('admin.billing.plans.events')}</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {plan.isActive ? (
                         <Badge className="bg-green-500/20 text-green-500 hover:bg-green-500/30">
                           <CheckCircle className="w-3 h-3 mr-1" />
-                          Attivo
+                          {t('admin.billing.status.active')}
                         </Badge>
                       ) : (
                         <Badge variant="destructive">
                           <XCircle className="w-3 h-3 mr-1" />
-                          Disattivato
+                          {t('admin.billing.status.deactivated')}
                         </Badge>
                       )}
                     </TableCell>
@@ -390,7 +392,7 @@ export default function AdminBillingPlans() {
                 {(!plans || plans.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nessun piano configurato. Crea il primo piano.
+                      {t('admin.billing.plans.noPlans')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -402,9 +404,9 @@ export default function AdminBillingPlans() {
         <Dialog open={!!editingPlan} onOpenChange={(open) => !open && setEditingPlan(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Modifica Piano</DialogTitle>
+              <DialogTitle>{t('admin.billing.plans.editPlan')}</DialogTitle>
               <DialogDescription>
-                Modifica i dettagli del piano di abbonamento
+                {t('admin.billing.plans.editDescription')}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -414,9 +416,9 @@ export default function AdminBillingPlans() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome Piano</FormLabel>
+                      <FormLabel>{t('admin.billing.plans.form.planName')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="es. Piano Base" {...field} data-testid="input-edit-plan-name" />
+                        <Input placeholder={t('admin.billing.plans.form.planNamePlaceholder')} {...field} data-testid="input-edit-plan-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -427,16 +429,16 @@ export default function AdminBillingPlans() {
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo</FormLabel>
+                      <FormLabel>{t('admin.billing.plans.form.type')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-edit-plan-type">
-                            <SelectValue placeholder="Seleziona tipo" />
+                            <SelectValue placeholder={t('admin.billing.plans.form.selectType')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="monthly">Mensile</SelectItem>
-                          <SelectItem value="per_event">Per Evento</SelectItem>
+                          <SelectItem value="monthly">{t('admin.billing.billingCycle.monthly')}</SelectItem>
+                          <SelectItem value="per_event">{t('admin.billing.billingCycle.perEvent')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -448,7 +450,7 @@ export default function AdminBillingPlans() {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Prezzo (€)</FormLabel>
+                      <FormLabel>{t('admin.billing.plans.form.price')}</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} data-testid="input-edit-plan-price" />
                       </FormControl>
@@ -462,7 +464,7 @@ export default function AdminBillingPlans() {
                     name="durationDays"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Durata (giorni)</FormLabel>
+                        <FormLabel>{t('admin.billing.plans.form.duration')}</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="30" {...field} data-testid="input-edit-plan-duration" />
                         </FormControl>
@@ -477,7 +479,7 @@ export default function AdminBillingPlans() {
                     name="eventsIncluded"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Eventi Inclusi</FormLabel>
+                        <FormLabel>{t('admin.billing.plans.form.eventsIncluded')}</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="10" {...field} data-testid="input-edit-plan-events" />
                         </FormControl>
@@ -491,9 +493,9 @@ export default function AdminBillingPlans() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Descrizione</FormLabel>
+                      <FormLabel>{t('admin.billing.plans.form.description')}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Descrizione del piano..." {...field} data-testid="textarea-edit-plan-description" />
+                        <Textarea placeholder={t('admin.billing.plans.form.descriptionPlaceholder')} {...field} data-testid="textarea-edit-plan-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -501,11 +503,11 @@ export default function AdminBillingPlans() {
                 />
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setEditingPlan(null)}>
-                    Annulla
+                    {t('admin.billing.common.cancel')}
                   </Button>
                   <Button type="submit" disabled={updateMutation.isPending} data-testid="button-update-plan">
                     {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Salva Modifiche
+                    {t('admin.billing.common.saveChanges')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -516,21 +518,20 @@ export default function AdminBillingPlans() {
         <AlertDialog open={!!deactivatingPlan} onOpenChange={(open) => !open && setDeactivatingPlan(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Disattivare Piano?</AlertDialogTitle>
+              <AlertDialogTitle>{t('admin.billing.plans.deactivatePlanTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Sei sicuro di voler disattivare il piano "{deactivatingPlan?.name}"? 
-                Gli abbonamenti esistenti non saranno influenzati.
+                {t('admin.billing.plans.deactivatePlanMessage', { planName: deactivatingPlan?.name })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogCancel>{t('admin.billing.common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deactivatingPlan && deactivateMutation.mutate(deactivatingPlan.id)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 data-testid="button-confirm-deactivate"
               >
                 {deactivateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Disattiva
+                {t('admin.billing.plans.deactivate')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -541,7 +542,7 @@ export default function AdminBillingPlans() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Piani Billing" showBackButton showMenuButton />}
+      header={<MobileHeader title={t('admin.billing.plans.title')} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-plans">

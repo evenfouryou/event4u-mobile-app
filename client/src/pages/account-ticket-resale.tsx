@@ -362,10 +362,10 @@ export default function AccountTicketResale() {
       <MobileAppLayout>
         <div className="text-center py-16">
           <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Biglietto non trovato</p>
+          <p className="text-muted-foreground">{t("account.ticketResalePage.ticketNotFound")}</p>
           <Link href="/account/tickets">
             <Button variant="ghost" className="mt-4 text-primary" data-testid="button-back-to-tickets">
-              Torna ai biglietti
+              {t("account.ticketResalePage.backToTickets")}
             </Button>
           </Link>
         </div>
@@ -377,7 +377,7 @@ export default function AccountTicketResale() {
     return (
       <MobileAppLayout>
         <MobileHeader
-          title="Rivendi Biglietto"
+          title={t("account.ticketResalePage.title")}
           showBackButton
           onBack={() => window.history.back()}
         />
@@ -386,12 +386,12 @@ export default function AccountTicketResale() {
             <CardContent className="p-6 text-center">
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-foreground mb-2">
-                Rivendita non disponibile
+                {t("account.ticketResalePage.notAvailable")}
               </h2>
               <p className="text-muted-foreground">
                 {ticket.hoursToEvent < 24
-                  ? "La rivendita non è più disponibile (scadenza: 24h prima dell'evento)."
-                  : "La rivendita non è consentita per questo evento."}
+                  ? t("account.ticketResalePage.notAvailableDeadline")
+                  : t("account.ticketResalePage.notAllowed")}
               </p>
             </CardContent>
           </Card>
@@ -404,7 +404,7 @@ export default function AccountTicketResale() {
     return (
       <MobileAppLayout>
         <MobileHeader
-          title="Rivendi Biglietto"
+          title={t("account.ticketResalePage.title")}
           showBackButton
           onBack={() => window.history.back()}
         />
@@ -413,15 +413,15 @@ export default function AccountTicketResale() {
             <CardContent className="p-6 text-center">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-foreground mb-2">
-                Biglietto già in vendita
+                {t("account.ticketResalePage.alreadyListed")}
               </h2>
               <p className="text-muted-foreground mb-4">
-                Questo biglietto è già stato messo in vendita
+                {t("account.ticketResalePage.alreadyListedDesc")}
                 {ticket.existingResale && ` a €${parseFloat(ticket.existingResale.resalePrice).toFixed(2)}`}.
               </p>
               <Link href="/account/resales">
                 <Button variant="outline" data-testid="button-view-resales">
-                  Gestisci le tue rivendite
+                  {t("account.ticketResalePage.manageResales")}
                 </Button>
               </Link>
             </CardContent>
@@ -434,7 +434,7 @@ export default function AccountTicketResale() {
   return (
     <MobileAppLayout>
       <MobileHeader
-        title="Rivendi Biglietto"
+        title={t("account.ticketResalePage.title")}
         showBackButton
         onBack={() => window.history.back()}
       />
@@ -456,7 +456,7 @@ export default function AccountTicketResale() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Tag className="w-4 h-4 text-primary" />
-              <span>Prezzo originale: €{originalPrice.toFixed(2)}</span>
+              <span>{t("account.ticketResalePage.originalPrice")}: €{originalPrice.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -466,10 +466,10 @@ export default function AccountTicketResale() {
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                Prezzo massimo: €{originalPrice.toFixed(2)}
+                {t("account.ticketResalePage.maxPriceShort")}: €{originalPrice.toFixed(2)}
               </p>
               <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                Il prezzo non può superare il prezzo originale.
+                {t("account.ticketResalePage.maxPriceShortDesc")}
               </p>
             </div>
           </div>
@@ -482,7 +482,7 @@ export default function AccountTicketResale() {
               name="resalePrice"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Prezzo di Vendita</FormLabel>
+                  <FormLabel>{t("account.ticketResalePage.resalePrice")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -499,7 +499,7 @@ export default function AccountTicketResale() {
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Max €{originalPrice.toFixed(2)}
+                    {t("account.ticketResalePage.resalePriceMax")} €{originalPrice.toFixed(2)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -510,11 +510,11 @@ export default function AccountTicketResale() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Come funziona</p>
+                  <p className="text-sm font-medium text-foreground">{t("account.ticketResalePage.howItWorks")}</p>
                   <ul className="text-xs text-muted-foreground mt-1 space-y-1">
-                    <li>Il biglietto sarà visibile nel marketplace</li>
-                    <li>Riceverai il pagamento alla vendita</li>
-                    <li>Puoi rimuovere l'annuncio quando vuoi</li>
+                    <li>{t("account.ticketResalePage.howItWorksStep1")}</li>
+                    <li>{t("account.ticketResalePage.howItWorksStep2Short")}</li>
+                    <li>{t("account.ticketResalePage.howItWorksStep3Short")}</li>
                   </ul>
                 </div>
               </div>
@@ -530,15 +530,15 @@ export default function AccountTicketResale() {
                 {resaleMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Pubblicazione...
+                    {t("account.ticketResalePage.submitting")}
                   </>
                 ) : (
-                  "Metti in Vendita"
+                  t("account.ticketResalePage.submit")
                 )}
               </Button>
               <Link href={`/account/tickets/${id}`}>
                 <Button type="button" variant="outline" className="w-full" data-testid="button-cancel">
-                  Annulla
+                  {t("account.ticketResalePage.cancel")}
                 </Button>
               </Link>
             </div>
@@ -546,7 +546,7 @@ export default function AccountTicketResale() {
         </Form>
 
         <p className="text-xs text-muted-foreground text-center pb-4">
-          Il biglietto rimarrà valido fino alla vendita.
+          {t("account.ticketResalePage.validUntilSoldShort")}
         </p>
       </div>
     </MobileAppLayout>

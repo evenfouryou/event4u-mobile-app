@@ -2181,6 +2181,8 @@
       "cancelPayment": "Annulla",
       "processing": "Elaborazione...",
       "pay": "Paga",
+      "processingNote": "La richiesta sarà processata entro 24 ore. Riceverai una conferma via email.",
+      "paymentDialogTitle": "Pagamento Commissione",
       "validation": {
         "firstNameMin": "Il nome deve avere almeno 2 caratteri",
         "lastNameMin": "Il cognome deve avere almeno 2 caratteri",
@@ -2517,6 +2519,280 @@
         "payment": "Pagamento",
         "customer": "Cliente",
         "actions": "Azioni"
+      }
+    },
+    "billing": {
+      "common": {
+        "error": "Errore",
+        "unknown": "Sconosciuto",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "saveChanges": "Salva Modifiche",
+        "update": "Aggiorna",
+        "confirm": "Conferma",
+        "details": "Dettagli",
+        "actions": "Azioni",
+        "search": "Cerca",
+        "filter": "Filtra",
+        "all": "Tutti",
+        "none": "Nessuno",
+        "days": "giorni",
+        "events": "eventi",
+        "loading": "Caricamento...",
+        "current": "Attuale"
+      },
+      "status": {
+        "paid": "Pagata",
+        "issued": "Emessa",
+        "void": "Annullata",
+        "draft": "Bozza",
+        "active": "Attivo",
+        "suspended": "Sospeso",
+        "expired": "Scaduto",
+        "enabled": "Attivo",
+        "disabled": "Disattivato"
+      },
+      "channels": {
+        "online": "Online",
+        "printed": "Biglietteria",
+        "pr": "PR"
+      },
+      "billingCycle": {
+        "monthly": "Mensile",
+        "perEvent": "Per Evento"
+      },
+      "ledgerTypes": {
+        "commission": "Commissione",
+        "subscription": "Abbonamento",
+        "invoice": "Fattura",
+        "payment": "Pagamento",
+        "adjustment": "Rettifica"
+      },
+      "feePayer": {
+        "title": "Chi paga le commissioni?",
+        "organizer": "Gestore - Commissioni detratte dal bonifico",
+        "customer": "Cliente - Commissioni aggiunte al carrello",
+        "organizerDescription": "Le commissioni verranno detratte dall'importo che verrà bonificato al gestore",
+        "customerDescription": "Le commissioni verranno aggiunte al totale del carrello del cliente"
+      },
+      "invoices": {
+        "title": "Fatture",
+        "subtitle": "Gestisci tutte le fatture degli organizzatori",
+        "listTitle": "Elenco Fatture",
+        "found": "fatture trovate",
+        "searchPlaceholder": "Cerca per numero o azienda...",
+        "filterByStatus": "Filtra per stato",
+        "tableHeaders": {
+          "number": "Numero",
+          "company": "Azienda",
+          "amount": "Importo",
+          "status": "Stato",
+          "issueDate": "Data Emissione",
+          "dueDate": "Scadenza"
+        },
+        "detail": {
+          "title": "Dettaglio Fattura",
+          "period": "Periodo",
+          "paymentDate": "Data Pagamento",
+          "notes": "Note"
+        },
+        "markAsPaid": "Segna come Pagata",
+        "markPaid": "Segna Pagata",
+        "noInvoices": "Nessuna fattura trovata",
+        "noInvoicesEmpty": "Nessuna fattura",
+        "paidSuccess": "Fattura Pagata",
+        "paidSuccessMessage": "La fattura è stata segnata come pagata",
+        "generateInvoice": "Genera Fattura",
+        "generateInvoiceDescription": "Seleziona il periodo per la fattura",
+        "periodStart": "Data Inizio Periodo",
+        "periodEnd": "Data Fine Periodo",
+        "notesOptional": "Note (opzionale)",
+        "generate": "Genera",
+        "generatedSuccess": "Fattura Generata",
+        "generatedSuccessMessage": "La fattura è stata generata con successo"
+      },
+      "organizers": {
+        "title": "Organizzatori Billing",
+        "subtitle": "Gestisci abbonamenti, commissioni e fatturazione per gli organizzatori",
+        "listTitle": "Elenco Organizzatori",
+        "found": "organizzatori trovati",
+        "searchPlaceholder": "Cerca organizzatore...",
+        "tableHeaders": {
+          "company": "Azienda",
+          "subscriptionStatus": "Stato Abbonamento",
+          "walletBalance": "Saldo Wallet",
+          "threshold": "Soglia",
+          "status": "Stato"
+        },
+        "filters": {
+          "all": "Tutti",
+          "activeSubscription": "Abbonamento Attivo",
+          "expired": "Scaduto",
+          "suspended": "Sospeso",
+          "noSubscription": "Senza Abbonamento"
+        },
+        "toBill": "Da Fatturare",
+        "noOrganizers": "Nessun organizzatore trovato"
+      },
+      "organizerDetail": {
+        "billingManagement": "Gestione billing",
+        "notFound": "Organizzatore non trovato",
+        "notFoundMessage": "L'organizzatore richiesto non esiste o non è accessibile.",
+        "tabs": {
+          "subscription": "Abbonamento",
+          "commissions": "Commissioni",
+          "wallet": "Wallet",
+          "invoices": "Fatture"
+        },
+        "subscription": {
+          "title": "Abbonamento",
+          "currentStatus": "Stato attuale",
+          "plan": "Piano",
+          "type": "Tipo",
+          "price": "Prezzo",
+          "startDate": "Data Inizio",
+          "endDate": "Scadenza",
+          "noSubscription": "Nessun abbonamento attivo",
+          "noSubscriptionMessage": "Assegna un piano per iniziare",
+          "assignPlan": "Assegna Piano",
+          "changePlan": "Cambia",
+          "assignPlanDescription": "Seleziona un piano e configura l'abbonamento",
+          "selectPlan": "Seleziona piano",
+          "billingCycle": "Ciclo Fatturazione",
+          "assign": "Assegna",
+          "assignedSuccess": "Abbonamento Assegnato",
+          "assignedSuccessMessage": "L'abbonamento è stato assegnato con successo"
+        },
+        "commissions": {
+          "title": "Commissioni",
+          "subtitle": "Configura le commissioni per ogni canale",
+          "byChannel": "Commissioni per Canale",
+          "byChannelDescription": "Imposta commissioni fisse o percentuali per ogni canale di vendita",
+          "fixedAmount": "Fisso (€)",
+          "percentage": "Percentuale (%)",
+          "value": "Valore",
+          "save": "Salva Commissioni",
+          "savedSuccess": "Commissioni Aggiornate",
+          "savedSuccessMessage": "Le commissioni sono state aggiornate con successo"
+        },
+        "wallet": {
+          "title": "Saldo Wallet",
+          "balance": "Saldo Wallet",
+          "debitAccumulated": "Debito accumulato",
+          "creditAvailable": "Credito disponibile",
+          "threshold": "Soglia Fatturazione",
+          "thresholdDescription": "Importo minimo per fattura automatica",
+          "updateThreshold": "Aggiorna",
+          "thresholdUpdatedSuccess": "Soglia Aggiornata",
+          "thresholdUpdatedMessage": "La soglia di fatturazione è stata aggiornata",
+          "recentMovements": "Movimenti Recenti",
+          "noMovements": "Nessun movimento",
+          "tableHeaders": {
+            "type": "Tipo",
+            "date": "Data",
+            "description": "Descrizione",
+            "amount": "Importo"
+          }
+        },
+        "invoiceList": {
+          "title": "Fatture",
+          "subtitle": "Elenco fatture generate",
+          "tableHeaders": {
+            "number": "Numero",
+            "period": "Periodo",
+            "dueDate": "Scadenza",
+            "status": "Stato",
+            "amount": "Importo"
+          }
+        }
+      },
+      "plans": {
+        "title": "Piani Billing",
+        "subtitle": "Gestisci i piani di abbonamento per gli organizzatori",
+        "newPlan": "Nuovo Piano",
+        "createPlan": "Crea Nuovo Piano",
+        "createPlanDescription": "Inserisci i dettagli del nuovo piano di abbonamento",
+        "editPlan": "Modifica Piano",
+        "editPlanDescription": "Modifica i dettagli del piano di abbonamento",
+        "form": {
+          "planName": "Nome Piano",
+          "planNamePlaceholder": "es. Piano Base",
+          "name": "Nome Piano",
+          "type": "Tipo",
+          "selectType": "Seleziona tipo",
+          "price": "Prezzo (€)",
+          "duration": "Durata (giorni)",
+          "eventsIncluded": "Eventi Inclusi",
+          "description": "Descrizione",
+          "descriptionPlaceholder": "Descrizione del piano..."
+        },
+        "listTitle": "Piani Disponibili",
+        "listSubtitle": "Elenco di tutti i piani di abbonamento configurati",
+        "tableHeaders": {
+          "name": "Nome",
+          "type": "Tipo",
+          "price": "Prezzo",
+          "details": "Dettagli",
+          "status": "Stato"
+        },
+        "noPlans": "Nessun piano configurato. Crea il primo piano.",
+        "createButton": "Crea Piano",
+        "saveChanges": "Salva Modifiche",
+        "deactivatePlan": "Disattivare Piano?",
+        "deactivatePlanTitle": "Disattivare Piano?",
+        "deactivatePlanMessage": "Sei sicuro di voler disattivare il piano \"{{planName}}\"? Gli abbonamenti esistenti non saranno influenzati.",
+        "deactivatePlanConfirm": "Sei sicuro di voler disattivare il piano",
+        "deactivatePlanWarning": "Non sarà più disponibile per nuovi abbonamenti.",
+        "deactivate": "Disattiva",
+        "createdSuccess": "Piano Creato",
+        "createdSuccessMessage": "Il nuovo piano è stato creato con successo",
+        "updatedSuccess": "Piano Aggiornato",
+        "updatedSuccessMessage": "Il piano è stato aggiornato con successo",
+        "deactivatedSuccess": "Piano Disattivato",
+        "deactivatedSuccessMessage": "Il piano è stato disattivato"
+      },
+      "reports": {
+        "title": "Report Billing",
+        "subtitle": "Analisi vendite e commissioni per tutti gli organizzatori",
+        "exportCSV": "Esporta CSV",
+        "exportCsv": "Esporta CSV",
+        "filters": "Filtri",
+        "dateFrom": "Da",
+        "dateTo": "A",
+        "company": "Azienda",
+        "allCompanies": "Tutte le aziende",
+        "resetFilters": "Azzera Filtri",
+        "summary": {
+          "ticketsSold": "Biglietti Venduti",
+          "grossRevenue": "Ricavo Lordo",
+          "totalCommissions": "Commissioni Totali",
+          "netToOrganizers": "Netto Organizzatori",
+          "netOrganizers": "Netto Organizzatori",
+          "ticketsOnline": "Biglietti Online",
+          "ticketsPrinted": "Biglietti Biglietteria",
+          "ticketsPr": "Biglietti PR",
+          "onlineTickets": "Biglietti Online",
+          "boxOfficeTickets": "Biglietti Biglietteria",
+          "prTickets": "Biglietti PR",
+          "commissions": "Commissioni",
+          "invoicesIssued": "Fatture Emesse",
+          "invoicesPaid": "Fatture Pagate",
+          "walletDebt": "Debito Wallet Totale",
+          "totalWalletDebt": "Debito Wallet Totale"
+        },
+        "salesByChannel": "Vendite per Canale",
+        "salesByEvent": "Vendite per Evento",
+        "salesByEventDescription": "Dettaglio vendite e commissioni per ogni evento",
+        "tableHeaders": {
+          "channel": "Canale",
+          "tickets": "Biglietti",
+          "grossRevenue": "Ricavo Lordo",
+          "commissions": "Commissioni",
+          "event": "Evento",
+          "date": "Data",
+          "netRevenue": "Ricavo Netto"
+        },
+        "noData": "Nessun dato disponibile per il periodo selezionato"
       }
     }
   },

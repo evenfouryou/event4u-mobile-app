@@ -583,17 +583,17 @@ export default function AccountNameChange() {
                     name="newDocumentType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tipo Documento</FormLabel>
+                        <FormLabel>{t("account.nameChangePage.documentType")}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-document-type">
-                              <SelectValue placeholder="Seleziona..." />
+                              <SelectValue placeholder={t("account.nameChangePage.documentTypePlaceholder")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="carta_identita">Carta d'Identità</SelectItem>
-                            <SelectItem value="passaporto">Passaporto</SelectItem>
-                            <SelectItem value="patente">Patente di Guida</SelectItem>
+                            <SelectItem value="carta_identita">{t("account.nameChangePage.idCard")}</SelectItem>
+                            <SelectItem value="passaporto">{t("account.nameChangePage.passport")}</SelectItem>
+                            <SelectItem value="patente">{t("account.nameChangePage.drivingLicense")}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -606,10 +606,10 @@ export default function AccountNameChange() {
                     name="newDocumentNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Numero Documento</FormLabel>
+                        <FormLabel>{t("account.nameChangePage.documentNumber")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="AB1234567"
+                            placeholder={t("account.nameChangePage.documentNumberPlaceholder")}
                             {...field}
                             data-testid="input-document-number"
                           />
@@ -622,15 +622,14 @@ export default function AccountNameChange() {
 
                 <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
                   <p className="text-xs text-amber-700 dark:text-amber-300">
-                    Secondo le normative SIAE, tutti i dati sono obbligatori per il cambio nominativo.
-                    I dati saranno utilizzati esclusivamente per la gestione del biglietto.
+                    {t("account.nameChangePage.siaeNote")}
                   </p>
                 </div>
 
                 <div className="pt-4 flex justify-end gap-3">
                   <Link href={`/account/tickets/${id}`}>
                     <Button type="button" variant="outline" data-testid="button-cancel">
-                      Annulla
+                      {t("account.nameChangePage.cancel")}
                     </Button>
                   </Link>
                   <Button
@@ -641,10 +640,10 @@ export default function AccountNameChange() {
                     {nameChangeMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Invio in corso...
+                        {t("account.nameChangePage.submitting")}
                       </>
                     ) : (
-                      "Richiedi Cambio Nominativo"
+                      t("account.nameChangePage.submit")
                     )}
                   </Button>
                 </div>
@@ -652,7 +651,7 @@ export default function AccountNameChange() {
             </Form>
 
             <p className="text-xs text-muted-foreground text-center">
-              La richiesta sarà processata entro 24 ore. Riceverai una conferma via email.
+              {t("account.nameChangePage.processingNote")}
             </p>
           </CardContent>
         </Card>
@@ -662,7 +661,7 @@ export default function AccountNameChange() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
-                Pagamento Commissione
+                {t("account.nameChangePage.paymentDialogTitle")}
               </DialogTitle>
             </DialogHeader>
             {stripeInstance && clientSecret ? (
@@ -711,10 +710,10 @@ export default function AccountNameChange() {
       <MobileAppLayout>
         <div className="text-center py-16">
           <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Biglietto non trovato</p>
+          <p className="text-muted-foreground">{t("account.nameChangePage.ticketNotFound")}</p>
           <Link href="/account/tickets">
             <Button variant="ghost" className="mt-4 text-primary" data-testid="button-back-to-tickets">
-              Torna ai biglietti
+              {t("account.nameChangePage.backToTickets")}
             </Button>
           </Link>
         </div>
@@ -726,7 +725,7 @@ export default function AccountNameChange() {
     return (
       <MobileAppLayout>
         <MobileHeader
-          title="Cambio Nominativo"
+          title={t("account.nameChangePage.title")}
           showBackButton
           onBack={() => window.history.back()}
         />
@@ -735,12 +734,12 @@ export default function AccountNameChange() {
             <CardContent className="p-6 text-center">
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-foreground mb-2">
-                Cambio nominativo non disponibile
+                {t("account.nameChangePage.notAvailable")}
               </h2>
               <p className="text-muted-foreground">
                 {ticket.hoursToEvent < 24
-                  ? "Il cambio nominativo non è più disponibile (scadenza: 24h prima dell'evento)."
-                  : "Il cambio nominativo non è consentito per questo evento."}
+                  ? t("account.nameChangePage.notAvailableDeadline")
+                  : t("account.nameChangePage.notAllowed")}
               </p>
             </CardContent>
           </Card>
@@ -752,7 +751,7 @@ export default function AccountNameChange() {
   return (
     <MobileAppLayout>
       <MobileHeader
-        title="Cambio Nominativo"
+        title={t("account.nameChangePage.title")}
         showBackButton
         onBack={() => window.history.back()}
       />
@@ -774,7 +773,7 @@ export default function AccountNameChange() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="w-4 h-4 text-primary" />
-              <span>Attuale: {currentHolder}</span>
+              <span>{t("account.nameChangePage.currentHolder")}: {currentHolder}</span>
             </div>
           </div>
         </div>
@@ -785,10 +784,10 @@ export default function AccountNameChange() {
               <Euro className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Commissione: €{fee.toFixed(2)}
+                  {t("account.nameChangePage.feeLabel")}: €{fee.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Il pagamento sarà richiesto dopo l'invio della richiesta.
+                  {t("account.nameChangePage.feeNote")}
                 </p>
               </div>
             </div>
@@ -798,9 +797,9 @@ export default function AccountNameChange() {
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-foreground">Cambio gratuito</p>
+                <p className="text-sm font-medium text-foreground">{t("account.nameChangePage.freeChange")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Nessun costo aggiuntivo per il cambio nominativo di questo biglietto.
+                  {t("account.nameChangePage.freeChangeNote")}
                 </p>
               </div>
             </div>
@@ -814,10 +813,10 @@ export default function AccountNameChange() {
               name="newFirstName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nuovo Nome</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.newFirstName")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Inserisci il nome"
+                      placeholder={t("account.nameChangePage.newFirstNamePlaceholder")}
                       {...field}
                       data-testid="input-first-name"
                     />
@@ -832,10 +831,10 @@ export default function AccountNameChange() {
               name="newLastName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nuovo Cognome</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.newLastName")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Inserisci il cognome"
+                      placeholder={t("account.nameChangePage.newLastNamePlaceholder")}
                       {...field}
                       data-testid="input-last-name"
                     />
@@ -850,11 +849,11 @@ export default function AccountNameChange() {
               name="newEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email del Nuovo Intestatario</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.newEmail")}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="email@esempio.com"
+                      placeholder={t("account.nameChangePage.emailPlaceholder")}
                       {...field}
                       data-testid="input-new-email"
                     />
@@ -869,10 +868,10 @@ export default function AccountNameChange() {
               name="newFiscalCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Codice Fiscale</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.fiscalCode")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="RSSMRA85M01H501Z"
+                      placeholder={t("account.nameChangePage.fiscalCodePlaceholder")}
                       maxLength={16}
                       {...field}
                       onChange={(e) => field.onChange(e.target.value.toUpperCase())}
@@ -889,7 +888,7 @@ export default function AccountNameChange() {
               name="newDateOfBirth"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Data di Nascita</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.dateOfBirth")}</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
@@ -907,17 +906,17 @@ export default function AccountNameChange() {
               name="newDocumentType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tipo Documento</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.documentType")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-document-type">
-                        <SelectValue placeholder="Seleziona..." />
+                        <SelectValue placeholder={t("account.nameChangePage.documentTypePlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="carta_identita">Carta d'Identità</SelectItem>
-                      <SelectItem value="passaporto">Passaporto</SelectItem>
-                      <SelectItem value="patente">Patente di Guida</SelectItem>
+                      <SelectItem value="carta_identita">{t("account.nameChangePage.idCard")}</SelectItem>
+                      <SelectItem value="passaporto">{t("account.nameChangePage.passport")}</SelectItem>
+                      <SelectItem value="patente">{t("account.nameChangePage.drivingLicense")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -930,10 +929,10 @@ export default function AccountNameChange() {
               name="newDocumentNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Numero Documento</FormLabel>
+                  <FormLabel>{t("account.nameChangePage.documentNumber")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="AB1234567"
+                      placeholder={t("account.nameChangePage.documentNumberPlaceholder")}
                       {...field}
                       data-testid="input-document-number"
                     />
@@ -945,7 +944,7 @@ export default function AccountNameChange() {
 
             <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                Secondo le normative SIAE, tutti i dati sono obbligatori per il cambio nominativo.
+                {t("account.nameChangePage.siaeNote")}
               </p>
             </div>
 
@@ -959,15 +958,15 @@ export default function AccountNameChange() {
                 {nameChangeMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Invio in corso...
+                    {t("account.nameChangePage.submitting")}
                   </>
                 ) : (
-                  "Richiedi Cambio Nominativo"
+                  t("account.nameChangePage.submit")
                 )}
               </Button>
               <Link href={`/account/tickets/${id}`}>
                 <Button type="button" variant="outline" className="w-full" data-testid="button-cancel">
-                  Annulla
+                  {t("account.nameChangePage.cancel")}
                 </Button>
               </Link>
             </div>
@@ -975,7 +974,7 @@ export default function AccountNameChange() {
         </Form>
 
         <p className="text-xs text-muted-foreground text-center pb-4">
-          La richiesta sarà processata entro 24 ore. Riceverai una conferma via email.
+          {t("account.nameChangePage.processingNote")}
         </p>
       </div>
 
@@ -984,7 +983,7 @@ export default function AccountNameChange() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              Pagamento Commissione
+              {t("account.nameChangePage.paymentDialogTitle")}
             </DialogTitle>
           </DialogHeader>
           {stripeInstance && clientSecret ? (

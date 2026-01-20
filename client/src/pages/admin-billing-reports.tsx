@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ interface SalesReportData {
 }
 
 export default function AdminBillingReports() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [dateFrom, setDateFrom] = useState(() => {
     const date = new Date();
@@ -114,9 +116,9 @@ export default function AdminBillingReports() {
 
   const getChannelLabel = (channel: string) => {
     switch (channel) {
-      case "online": return "Online";
-      case "printed": return "Biglietteria";
-      case "pr": return "PR";
+      case "online": return t('admin.billing.channels.online');
+      case "printed": return t('admin.billing.channels.printed');
+      case "pr": return t('admin.billing.channels.pr');
       default: return channel;
     }
   };
@@ -133,14 +135,14 @@ export default function AdminBillingReports() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-admin-billing-reports">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Report Billing</h1>
+            <h1 className="text-3xl font-bold">{t('admin.billing.reports.title')}</h1>
             <p className="text-muted-foreground">
-              Analisi vendite e commissioni per tutti gli organizzatori
+              {t('admin.billing.reports.subtitle')}
             </p>
           </div>
           <Button onClick={handleExportCSV} className="gap-2" data-testid="button-export-csv">
             <Download className="w-4 h-4" />
-            Esporta CSV
+            {t('admin.billing.reports.exportCSV')}
           </Button>
         </div>
 
@@ -148,13 +150,13 @@ export default function AdminBillingReports() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="w-5 h-5" />
-              Filtri
+              {t('admin.billing.reports.filters')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="dateFrom-desktop">Da</Label>
+                <Label htmlFor="dateFrom-desktop">{t('admin.billing.reports.dateFrom')}</Label>
                 <Input
                   id="dateFrom-desktop"
                   type="date"
@@ -164,7 +166,7 @@ export default function AdminBillingReports() {
                 />
               </div>
               <div>
-                <Label htmlFor="dateTo-desktop">A</Label>
+                <Label htmlFor="dateTo-desktop">{t('admin.billing.reports.dateTo')}</Label>
                 <Input
                   id="dateTo-desktop"
                   type="date"
@@ -174,13 +176,13 @@ export default function AdminBillingReports() {
                 />
               </div>
               <div>
-                <Label htmlFor="company-desktop">Azienda</Label>
+                <Label htmlFor="company-desktop">{t('admin.billing.reports.company')}</Label>
                 <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
                   <SelectTrigger id="company-desktop" data-testid="select-company">
-                    <SelectValue placeholder="Tutte le aziende" />
+                    <SelectValue placeholder={t('admin.billing.reports.allCompanies')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutte le aziende</SelectItem>
+                    <SelectItem value="all">{t('admin.billing.reports.allCompanies')}</SelectItem>
                     {companies?.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
@@ -201,7 +203,7 @@ export default function AdminBillingReports() {
                   }}
                   data-testid="button-reset-filters"
                 >
-                  Azzera Filtri
+                  {t('admin.billing.reports.resetFilters')}
                 </Button>
               </div>
             </div>
@@ -220,7 +222,7 @@ export default function AdminBillingReports() {
                       <Ticket className="w-5 h-5 text-yellow-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Biglietti Venduti</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.ticketsSold')}</p>
                       <p className="text-2xl font-bold" data-testid="text-tickets-total">
                         {reportData.summary.ticketsSoldTotal}
                       </p>
@@ -236,7 +238,7 @@ export default function AdminBillingReports() {
                       <Euro className="w-5 h-5 text-green-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Ricavo Lordo</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.grossRevenue')}</p>
                       <p className="text-2xl font-bold" data-testid="text-gross-revenue">
                         {formatCurrency(reportData.summary.grossRevenueTotal)}
                       </p>
@@ -252,7 +254,7 @@ export default function AdminBillingReports() {
                       <Percent className="w-5 h-5 text-blue-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Commissioni Totali</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.totalCommissions')}</p>
                       <p className="text-2xl font-bold" data-testid="text-commissions-total">
                         {formatCurrency(reportData.summary.commissionTotal)}
                       </p>
@@ -268,7 +270,7 @@ export default function AdminBillingReports() {
                       <Building2 className="w-5 h-5 text-teal-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Netto Organizzatori</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.netToOrganizers')}</p>
                       <p className="text-2xl font-bold" data-testid="text-net-organizer">
                         {formatCurrency(reportData.summary.netToOrganizer)}
                       </p>
@@ -281,34 +283,34 @@ export default function AdminBillingReports() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card data-testid="card-tickets-online">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Biglietti Online</p>
+                  <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.ticketsOnline')}</p>
                   <p className="text-xl font-semibold" data-testid="text-tickets-online">
                     {reportData.summary.ticketsSoldOnline}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Commissioni: {formatCurrency(reportData.summary.commissionOnline)}
+                    {t('admin.billing.reports.summary.commissions')}: {formatCurrency(reportData.summary.commissionOnline)}
                   </p>
                 </CardContent>
               </Card>
               <Card data-testid="card-tickets-printed">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Biglietti Biglietteria</p>
+                  <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.ticketsPrinted')}</p>
                   <p className="text-xl font-semibold" data-testid="text-tickets-printed">
                     {reportData.summary.ticketsSoldPrinted}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Commissioni: {formatCurrency(reportData.summary.commissionPrinted)}
+                    {t('admin.billing.reports.summary.commissions')}: {formatCurrency(reportData.summary.commissionPrinted)}
                   </p>
                 </CardContent>
               </Card>
               <Card data-testid="card-tickets-pr">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Biglietti PR</p>
+                  <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.ticketsPr')}</p>
                   <p className="text-xl font-semibold" data-testid="text-tickets-pr">
                     {reportData.summary.ticketsSoldPr}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Commissioni: {formatCurrency(reportData.summary.commissionPr)}
+                    {t('admin.billing.reports.summary.commissions')}: {formatCurrency(reportData.summary.commissionPr)}
                   </p>
                 </CardContent>
               </Card>
@@ -319,13 +321,13 @@ export default function AdminBillingReports() {
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-6">
                     <div>
-                      <p className="text-sm text-muted-foreground">Fatture Emesse</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.invoicesIssued')}</p>
                       <p className="text-xl font-semibold" data-testid="text-invoices-issued">
                         {reportData.summary.invoicesIssued}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Fatture Pagate</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.invoicesPaid')}</p>
                       <p className="text-xl font-semibold text-green-500" data-testid="text-invoices-paid">
                         {reportData.summary.invoicesPaid}
                       </p>
@@ -335,7 +337,7 @@ export default function AdminBillingReports() {
               </Card>
               <Card data-testid="card-wallet-debt">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Debito Wallet Totale</p>
+                  <p className="text-sm text-muted-foreground">{t('admin.billing.reports.summary.walletDebt')}</p>
                   <p className={`text-xl font-semibold ${reportData.summary.walletDebt > 0 ? "text-destructive" : ""}`} data-testid="text-wallet-debt">
                     {formatCurrency(reportData.summary.walletDebt)}
                   </p>
@@ -346,16 +348,16 @@ export default function AdminBillingReports() {
             {reportData.byChannel.length > 0 && (
               <Card data-testid="card-by-channel">
                 <CardHeader>
-                  <CardTitle>Vendite per Canale</CardTitle>
+                  <CardTitle>{t('admin.billing.reports.salesByChannel')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Canale</TableHead>
-                        <TableHead className="text-right">Biglietti</TableHead>
-                        <TableHead className="text-right">Ricavo Lordo</TableHead>
-                        <TableHead className="text-right">Commissioni</TableHead>
+                        <TableHead>{t('admin.billing.reports.tableHeaders.channel')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.tickets')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.grossRevenue')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.commissions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -380,22 +382,22 @@ export default function AdminBillingReports() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
-                    Vendite per Evento
+                    {t('admin.billing.reports.salesByEvent')}
                   </CardTitle>
                   <CardDescription>
-                    Dettaglio vendite e commissioni per ogni evento
+                    {t('admin.billing.reports.salesByEventDescription')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Evento</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead className="text-right">Biglietti</TableHead>
-                        <TableHead className="text-right">Ricavo Lordo</TableHead>
-                        <TableHead className="text-right">Commissioni</TableHead>
-                        <TableHead className="text-right">Ricavo Netto</TableHead>
+                        <TableHead>{t('admin.billing.reports.tableHeaders.event')}</TableHead>
+                        <TableHead>{t('admin.billing.reports.tableHeaders.date')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.tickets')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.grossRevenue')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.commissions')}</TableHead>
+                        <TableHead className="text-right">{t('admin.billing.reports.tableHeaders.netRevenue')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -420,7 +422,7 @@ export default function AdminBillingReports() {
                 <CardContent className="py-12 text-center">
                   <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Nessun dato disponibile per il periodo selezionato
+                    {t('admin.billing.reports.noData')}
                   </p>
                 </CardContent>
               </Card>
@@ -433,19 +435,19 @@ export default function AdminBillingReports() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Report Billing" showBackButton showMenuButton />}
+      header={<MobileHeader title={t('admin.billing.reports.title')} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-reports">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
           <div>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Analisi vendite e commissioni per tutti gli organizzatori
+              {t('admin.billing.reports.subtitle')}
             </p>
           </div>
           <Button onClick={handleExportCSV} className="gap-2" data-testid="button-export-csv">
           <Download className="w-4 h-4" />
-          Esporta CSV
+          {t('admin.billing.reports.exportCSV')}
         </Button>
       </div>
 
@@ -453,13 +455,13 @@ export default function AdminBillingReports() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Filtri
+            {t('admin.billing.reports.filters')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div>
-              <Label htmlFor="dateFrom">Da</Label>
+              <Label htmlFor="dateFrom">{t('admin.billing.reports.dateFrom')}</Label>
               <Input
                 id="dateFrom"
                 type="date"
@@ -469,7 +471,7 @@ export default function AdminBillingReports() {
               />
             </div>
             <div>
-              <Label htmlFor="dateTo">A</Label>
+              <Label htmlFor="dateTo">{t('admin.billing.reports.dateTo')}</Label>
               <Input
                 id="dateTo"
                 type="date"
@@ -479,13 +481,13 @@ export default function AdminBillingReports() {
               />
             </div>
             <div>
-              <Label htmlFor="company">Azienda</Label>
+              <Label htmlFor="company">{t('admin.billing.reports.company')}</Label>
               <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
                 <SelectTrigger id="company" data-testid="select-company">
-                  <SelectValue placeholder="Tutte le aziende" />
+                  <SelectValue placeholder={t('admin.billing.reports.allCompanies')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutte le aziende</SelectItem>
+                  <SelectItem value="all">{t('admin.billing.reports.allCompanies')}</SelectItem>
                   {companies?.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
@@ -506,7 +508,7 @@ export default function AdminBillingReports() {
                 }}
                 data-testid="button-reset-filters"
               >
-                Azzera Filtri
+                {t('admin.billing.reports.resetFilters')}
               </Button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -41,6 +42,7 @@ interface InvoiceWithCompany extends OrganizerInvoice {
 }
 
 export default function AdminBillingInvoices() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,10 +63,10 @@ export default function AdminBillingInvoices() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/invoices"] });
-      toast({ title: "Fattura Pagata", description: "La fattura è stata segnata come pagata." });
+      toast({ title: t('admin.billing.invoices.paidSuccess'), description: t('admin.billing.invoices.paidSuccessMessage') });
     },
     onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('admin.billing.common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -79,7 +81,7 @@ export default function AdminBillingInvoices() {
 
   const getCompanyName = (companyId: string) => {
     const org = organizers?.find((o) => o.company.id === companyId);
-    return org?.company.name || "Sconosciuto";
+    return org?.company.name || t('admin.billing.common.unknown');
   };
 
   const getStatusBadge = (status: string) => {
@@ -88,25 +90,25 @@ export default function AdminBillingInvoices() {
         return (
           <Badge className="bg-green-500/20 text-green-500 hover:bg-green-500/30">
             <CheckCircle className="w-3 h-3 mr-1" />
-            Pagata
+            {t('admin.billing.status.paid')}
           </Badge>
         );
       case "issued":
         return (
           <Badge variant="secondary">
             <Clock className="w-3 h-3 mr-1" />
-            Emessa
+            {t('admin.billing.status.issued')}
           </Badge>
         );
       case "void":
         return (
           <Badge variant="destructive">
             <XCircle className="w-3 h-3 mr-1" />
-            Annullata
+            {t('admin.billing.status.void')}
           </Badge>
         );
       default:
-        return <Badge variant="outline">Bozza</Badge>;
+        return <Badge variant="outline">{t('admin.billing.status.draft')}</Badge>;
     }
   };
 
@@ -136,8 +138,8 @@ export default function AdminBillingInvoices() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-admin-billing-invoices">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Fatture</h1>
-            <p className="text-muted-foreground">Gestisci tutte le fatture degli organizzatori</p>
+            <h1 className="text-3xl font-bold">{t('admin.billing.invoices.title')}</h1>
+            <p className="text-muted-foreground">{t('admin.billing.invoices.subtitle')}</p>
           </div>
         </div>
 
@@ -145,16 +147,16 @@ export default function AdminBillingInvoices() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle>Elenco Fatture</CardTitle>
+                <CardTitle>{t('admin.billing.invoices.listTitle')}</CardTitle>
                 <CardDescription>
-                  {filteredInvoices?.length || 0} fatture trovate
+                  {filteredInvoices?.length || 0} {t('admin.billing.invoices.found')}
                 </CardDescription>
               </div>
               <div className="flex gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca per numero o azienda..."
+                    placeholder={t('admin.billing.invoices.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9 w-64"
@@ -163,14 +165,14 @@ export default function AdminBillingInvoices() {
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-48" data-testid="select-invoice-status">
-                    <SelectValue placeholder="Filtra per stato" />
+                    <SelectValue placeholder={t('admin.billing.invoices.filterByStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutti</SelectItem>
-                    <SelectItem value="draft">Bozza</SelectItem>
-                    <SelectItem value="issued">Emessa</SelectItem>
-                    <SelectItem value="paid">Pagata</SelectItem>
-                    <SelectItem value="void">Annullata</SelectItem>
+                    <SelectItem value="all">{t('admin.billing.common.all')}</SelectItem>
+                    <SelectItem value="draft">{t('admin.billing.status.draft')}</SelectItem>
+                    <SelectItem value="issued">{t('admin.billing.status.issued')}</SelectItem>
+                    <SelectItem value="paid">{t('admin.billing.status.paid')}</SelectItem>
+                    <SelectItem value="void">{t('admin.billing.status.void')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -180,13 +182,13 @@ export default function AdminBillingInvoices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Numero</TableHead>
-                  <TableHead>Azienda</TableHead>
-                  <TableHead>Importo</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead>Data Emissione</TableHead>
-                  <TableHead>Scadenza</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
+                  <TableHead>{t('admin.billing.invoices.tableHeaders.number')}</TableHead>
+                  <TableHead>{t('admin.billing.invoices.tableHeaders.company')}</TableHead>
+                  <TableHead>{t('admin.billing.invoices.tableHeaders.amount')}</TableHead>
+                  <TableHead>{t('admin.billing.invoices.tableHeaders.status')}</TableHead>
+                  <TableHead>{t('admin.billing.invoices.tableHeaders.issueDate')}</TableHead>
+                  <TableHead>{t('admin.billing.invoices.tableHeaders.dueDate')}</TableHead>
+                  <TableHead className="text-right">{t('admin.billing.common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,7 +223,7 @@ export default function AdminBillingInvoices() {
                             ) : (
                               <>
                                 <CheckCircle className="w-4 h-4 mr-2" />
-                                Pagata
+                                {t('admin.billing.invoices.markPaid')}
                               </>
                             )}
                           </Button>
@@ -233,7 +235,7 @@ export default function AdminBillingInvoices() {
                 {(!filteredInvoices || filteredInvoices.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      Nessuna fattura trovata
+                      {t('admin.billing.invoices.noInvoices')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -245,7 +247,7 @@ export default function AdminBillingInvoices() {
         <Dialog open={!!viewingInvoice} onOpenChange={(open) => !open && setViewingInvoice(null)}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Dettaglio Fattura</DialogTitle>
+              <DialogTitle>{t('admin.billing.invoices.detail.title')}</DialogTitle>
               <DialogDescription>
                 {viewingInvoice?.invoiceNumber}
               </DialogDescription>
@@ -254,41 +256,41 @@ export default function AdminBillingInvoices() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Azienda</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.tableHeaders.company')}</p>
                     <p className="font-medium">{getCompanyName(viewingInvoice.companyId)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Stato</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.tableHeaders.status')}</p>
                     <div className="mt-1">{getStatusBadge(viewingInvoice.status)}</div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Periodo</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.detail.period')}</p>
                     <p className="font-medium">
                       {formatDate(viewingInvoice.periodStart)} - {formatDate(viewingInvoice.periodEnd)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Importo</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.tableHeaders.amount')}</p>
                     <p className="font-medium text-lg">{formatCurrency(viewingInvoice.amount)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Data Emissione</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.tableHeaders.issueDate')}</p>
                     <p className="font-medium">{formatDate(viewingInvoice.issuedAt)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Scadenza</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.tableHeaders.dueDate')}</p>
                     <p className="font-medium">{formatDate(viewingInvoice.dueDate)}</p>
                   </div>
                   {viewingInvoice.paidAt && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Data Pagamento</p>
+                      <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.detail.paymentDate')}</p>
                       <p className="font-medium">{formatDate(viewingInvoice.paidAt)}</p>
                     </div>
                   )}
                 </div>
                 {viewingInvoice.notes && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Note</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.billing.invoices.detail.notes')}</p>
                     <p className="text-sm">{viewingInvoice.notes}</p>
                   </div>
                 )}
@@ -304,7 +306,7 @@ export default function AdminBillingInvoices() {
                   >
                     {markPaidMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Segna come Pagata
+                    {t('admin.billing.invoices.markAsPaid')}
                   </Button>
                 )}
               </div>
@@ -317,13 +319,13 @@ export default function AdminBillingInvoices() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Fatture" showBackButton showMenuButton />}
+      header={<MobileHeader title={t('admin.billing.invoices.title')} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-invoices">
         <div>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Gestisci tutte le fatture degli organizzatori
+            {t('admin.billing.invoices.subtitle')}
           </p>
         </div>
 
@@ -331,16 +333,16 @@ export default function AdminBillingInvoices() {
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <CardTitle>Elenco Fatture</CardTitle>
+              <CardTitle>{t('admin.billing.invoices.listTitle')}</CardTitle>
               <CardDescription>
-                {filteredInvoices?.length || 0} fatture trovate
+                {filteredInvoices?.length || 0} {t('admin.billing.invoices.found')}
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca per numero o azienda..."
+                  placeholder={t('admin.billing.invoices.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 w-full sm:w-64"
@@ -349,14 +351,14 @@ export default function AdminBillingInvoices() {
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-48" data-testid="select-invoice-status">
-                  <SelectValue placeholder="Filtra per stato" />
+                  <SelectValue placeholder={t('admin.billing.invoices.filterByStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  <SelectItem value="draft">Bozza</SelectItem>
-                  <SelectItem value="issued">Emessa</SelectItem>
-                  <SelectItem value="paid">Pagata</SelectItem>
-                  <SelectItem value="void">Annullata</SelectItem>
+                  <SelectItem value="all">{t('admin.billing.common.all')}</SelectItem>
+                  <SelectItem value="draft">{t('admin.billing.status.draft')}</SelectItem>
+                  <SelectItem value="issued">{t('admin.billing.status.issued')}</SelectItem>
+                  <SelectItem value="paid">{t('admin.billing.status.paid')}</SelectItem>
+                  <SelectItem value="void">{t('admin.billing.status.void')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -367,13 +369,13 @@ export default function AdminBillingInvoices() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Numero</TableHead>
-                <TableHead>Azienda</TableHead>
-                <TableHead>Importo</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead>Data Emissione</TableHead>
-                <TableHead>Scadenza</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
+                <TableHead>{t('admin.billing.invoices.tableHeaders.number')}</TableHead>
+                <TableHead>{t('admin.billing.invoices.tableHeaders.company')}</TableHead>
+                <TableHead>{t('admin.billing.invoices.tableHeaders.amount')}</TableHead>
+                <TableHead>{t('admin.billing.invoices.tableHeaders.status')}</TableHead>
+                <TableHead>{t('admin.billing.invoices.tableHeaders.issueDate')}</TableHead>
+                <TableHead>{t('admin.billing.invoices.tableHeaders.dueDate')}</TableHead>
+                <TableHead className="text-right">{t('admin.billing.common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
