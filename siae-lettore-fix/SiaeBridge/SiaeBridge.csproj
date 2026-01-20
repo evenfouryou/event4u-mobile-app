@@ -16,6 +16,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.0" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
   </ItemGroup>
 
   <!-- Native DLLs for SIAE Smart Card -->
@@ -28,11 +29,6 @@
     <!-- libSIAEp7.dll is in project root -->
     <None Include="libSIAEp7.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <!-- Newtonsoft.Json from prebuilt as fallback -->
-    <None Include="prebuilt\Newtonsoft.Json.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>Newtonsoft.Json.dll</Link>
     </None>
   </ItemGroup>
 
