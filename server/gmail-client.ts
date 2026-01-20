@@ -194,32 +194,46 @@ async function extractAttachments(
 }
 
 // Extract transmission reference from filename
-// Supports both formats:
-// 1. Our format: RCA_yyyyMMdd_SSSSSSSS_nnn.xsi (e.g., RCA_20260115_P0004010_001.xsi)
-// 2. Legacy/SIAE format: RCA_YYYY_MM_DD_nnn (e.g., RCA_2025_12_17_001.xsi)
+// Supports both current Allegato C formats and legacy format:
+// 1. Current format daily: RMG_AAAA_MM_GG_NNN.xsi.p7m
+// 2. Current format monthly: RPM_AAAA_MM_NNN.xsi.p7m
+// 3. Current format event: RCA_AAAA_MM_GG_NNN.xsi.p7m
+// 4. Legacy format: XXX_YYYYMMDD_SSSSSSSS_NNN.xsi (contiguous date with system code)
 function extractTransmissionRefFromFilename(filename: string): { reportType: string; reportDate: string; progressivo: string; systemCode?: string } | null {
-  // Pattern 1: Our format with contiguous date and system code
+  // Pattern 1: Current Allegato C format - daily/event with day (RMG/RCA/LTA)
+  // RMG_YYYY_MM_DD_NNN or RCA_YYYY_MM_DD_NNN or LTA_YYYY_MM_DD_NNN
+  const allegatoCWithDayMatch = filename.match(/^(RMG|RCA|LTA)_(\d{4})_(\d{2})_(\d{2})_(\d{3})/);
+  if (allegatoCWithDayMatch) {
+    const [, type, year, month, day, prog] = allegatoCWithDayMatch;
+    return {
+      reportType: type.toLowerCase() === 'lta' ? 'rca' : type.toLowerCase(),
+      reportDate: `${year}-${month}-${day}`,
+      progressivo: prog
+    };
+  }
+  
+  // Pattern 2: Current Allegato C format - monthly without day (RPM)
+  // RPM_YYYY_MM_NNN
+  const allegatoCMonthlyMatch = filename.match(/^(RPM)_(\d{4})_(\d{2})_(\d{3})/);
+  if (allegatoCMonthlyMatch) {
+    const [, type, year, month, prog] = allegatoCMonthlyMatch;
+    return {
+      reportType: type.toLowerCase(),
+      reportDate: `${year}-${month}`,
+      progressivo: prog
+    };
+  }
+  
+  // Pattern 3: Legacy format with contiguous date and system code (pre-2026)
   // RCA_yyyyMMdd_SSSSSSSS_nnn or RMG_yyyyMMdd_SSSSSSSS_nnn or RPM_yyyyMM_SSSSSSSS_nnn
-  const ourFormatMatch = filename.match(/^(RCA|RMG|RPM)_(\d{4})(\d{2})(\d{2})?_([A-Z0-9]{8})_(\d{3})/);
-  if (ourFormatMatch) {
-    const [, type, year, month, day, sysCode, prog] = ourFormatMatch;
+  const legacyMatch = filename.match(/^(RCA|RMG|RPM)_(\d{4})(\d{2})(\d{2})?_([A-Z0-9]{8})_(\d{3})/);
+  if (legacyMatch) {
+    const [, type, year, month, day, sysCode, prog] = legacyMatch;
     return {
       reportType: type.toLowerCase(),
       reportDate: day ? `${year}-${month}-${day}` : `${year}-${month}`,
       progressivo: prog,
       systemCode: sysCode
-    };
-  }
-  
-  // Pattern 2: Legacy format with underscore-separated dates (no system code)
-  // RCA_YYYY_MM_DD_NNN or RMG_YYYY_MM_DD_NNN or RPM_YYYY_MM_NNN
-  const legacyMatch = filename.match(/^(RCA|RMG|RPM)_(\d{4})_(\d{2})_(\d{2})?_?(\d{3})/);
-  if (legacyMatch) {
-    const [, type, year, month, day, prog] = legacyMatch;
-    return {
-      reportType: type.toLowerCase(),
-      reportDate: day ? `${year}-${month}-${day}` : `${year}-${month}`,
-      progressivo: prog
     };
   }
   

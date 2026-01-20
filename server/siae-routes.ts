@@ -6517,7 +6517,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
         fileName: generatedFileName,
         errors: fileNameValidation.errors,
         warnings: fileNameValidation.warnings,
-        suggestion: 'Il nome file SIAE deve seguire il formato esatto: RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (data contigua senza underscore)'
+        suggestion: 'Il nome file SIAE deve seguire il formato Allegato C: RMG_AAAA_MM_GG_NNN.xsi.p7m (giornaliero), RPM_AAAA_MM_NNN.xsi.p7m (mensile), RCA_AAAA_MM_GG_NNN.xsi.p7m (evento)'
       }
     };
   }

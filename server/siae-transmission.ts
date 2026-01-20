@@ -1,19 +1,26 @@
 /**
- * SIAE Transmission Module - Sistema Completo Invio Report
+ * @deprecated MODULO OBSOLETO - NON USARE!
  * 
- * Questo modulo gestisce l'INTERO flusso di trasmissione SIAE:
- * 1. Generazione XML conforme DTD v0039
- * 2. Generazione nome file conforme Allegato C
- * 3. Preparazione email
- * 4. Firma S/MIME con carta di attivazione
- * 5. Invio e tracking
+ * ============================================================
+ * DEPRECATION NOTICE - 2026-01-20
+ * ============================================================
  * 
- * CONFORMITA' SIAE:
- * - DTD: RiepilogoGiornaliero_v0039_20040209.dtd
- * - DTD: RiepilogoMensile_v0039_20040209.dtd  
- * - DTD: ControlloAccessi_v0001_20080626.dtd
- * - Allegato C sezione 1.4.1 per naming file
- * - S/MIME v2 per firma email
+ * Questo modulo contiene funzioni OBSOLETE che NON sono conformi
+ * alle specifiche SIAE Allegato C e DTD ufficiali.
+ * 
+ * USARE INVECE:
+ * - server/siae-utils.ts: generateRCAXml(), generateC1Xml(), generateC1LogXml()
+ * - server/siae-filename.ts: generateSiaeFileName(), generateSiaeEmailSubject()
+ * - server/email-service.ts: sendSiaeTransmissionEmail()
+ * 
+ * PROBLEMI DI QUESTO MODULO:
+ * - generateRMGXml/generateRPMXml usano strutture XML errate
+ * - RPM usa "Periodo" invece di "Mese" (errore DTD)
+ * - Formato nome file non conforme ad Allegato C sezione 1.4.1
+ * - Mancano validazioni codice sistema
+ * 
+ * Mantenuto solo per compatibilità legacy. Sarà rimosso in futuro.
+ * ============================================================
  */
 
 import { isBridgeConnected, requestSmimeSignature, getCardSignerEmail } from './bridge-relay';
@@ -225,10 +232,12 @@ function formatTime(date: Date): string {
 }
 
 /**
+ * @deprecated NON USARE - Usa generateC1Xml da siae-utils.ts
  * Genera XML RiepilogoGiornaliero (RMG)
- * DTD: RiepilogoGiornaliero_v0039_20040209.dtd
+ * ATTENZIONE: Questa funzione genera XML NON conforme al DTD ufficiale
  */
 export function generateRMGXml(data: SiaeReportData): string {
+  console.warn('[SIAE-TRANSMISSION] DEPRECATION WARNING: generateRMGXml è obsoleto! Usare generateC1Xml da siae-utils.ts');
   const now = new Date();
   const reportDate = formatDate(data.dataReport);
   const generationDate = formatDate(now);
@@ -259,10 +268,12 @@ export function generateRMGXml(data: SiaeReportData): string {
 }
 
 /**
+ * @deprecated NON USARE - Usa generateC1Xml da siae-utils.ts
  * Genera XML RiepilogoMensile (RPM)
- * DTD: RiepilogoMensile_v0039_20040209.dtd
+ * ATTENZIONE: Questa funzione usa "Periodo" invece di "Mese" - NON conforme al DTD!
  */
 export function generateRPMXml(data: SiaeReportData): string {
+  console.warn('[SIAE-TRANSMISSION] DEPRECATION WARNING: generateRPMXml è obsoleto e usa "Periodo" invece di "Mese"! Usare generateC1Xml da siae-utils.ts');
   const now = new Date();
   const year = data.dataReport.getFullYear();
   const month = String(data.dataReport.getMonth() + 1).padStart(2, '0');
@@ -295,10 +306,13 @@ export function generateRPMXml(data: SiaeReportData): string {
 }
 
 /**
+ * @deprecated NON USARE - Usa generateRCAXml da siae-utils.ts (con parametri diversi)
  * Genera XML RiepilogoControlloAccessi (RCA)
- * DTD: ControlloAccessi_v0001_20080626.dtd
+ * ATTENZIONE: Questa funzione genera struttura XML semplificata NON conforme al DTD!
+ * Manca la struttura completa: Evento, SistemaEmissione, Titoli, TotaleTipoTitolo
  */
 export function generateRCAXml(data: SiaeReportData): string {
+  console.warn('[SIAE-TRANSMISSION] DEPRECATION WARNING: generateRCAXml di siae-transmission.ts è obsoleto! Usare generateRCAXml da siae-utils.ts');
   const now = new Date();
   const reportDate = formatDate(data.dataReport);
   const generationDate = formatDate(now);
