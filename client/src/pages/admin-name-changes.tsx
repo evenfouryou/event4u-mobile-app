@@ -39,6 +39,7 @@ import {
   Loader2,
   AlertTriangle,
   Stamp,
+  ArrowLeft,
 } from "lucide-react";
 import {
   Dialog,
@@ -669,7 +670,7 @@ export default function AdminNameChanges() {
   if (isMobile) {
     return (
       <MobileAppLayout>
-        <MobileHeader title="Cambi Nominativo" showBack onBack={() => setLocation("/admin")} />
+        <MobileHeader title="Cambi Nominativo" leftAction={<Button variant="ghost" size="icon" onClick={() => setLocation("/admin")}><ArrowLeft className="h-5 w-5" /></Button>} />
         {content}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogContent>

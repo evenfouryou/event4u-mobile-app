@@ -695,7 +695,7 @@ export default function AdminEventDetail() {
             <Filter className="h-10 w-10 mx-auto mb-2 opacity-50" />
             Nessun biglietto corrisponde ai filtri selezionati
             <Button
-              variant="link"
+              variant="ghost"
               onClick={clearFilters}
               className="block mx-auto mt-2"
               data-testid="button-clear-filters-empty"
