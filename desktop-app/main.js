@@ -1627,10 +1627,18 @@ async function handleRelayCommand(msg) {
         
         const isNewFormat = smimeFrom && smimeTo;
         log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, format=${isNewFormat ? 'SMIMESignML' : 'legacy'}, from=${smimeFrom}, to=${smimeTo}`);
-        // v3.50 FIX: Log esplicito nome file allegato per debug errore SIAE 0600
-        log.info(`[S/MIME] v3.50 ATTACHMENT NAME RECEIVED: "${attachmentName}" (length=${attachmentName.length})`);
-        if (attachmentName && !attachmentName.match(/^(RMG|RPM|RCA)_\d{8}_[A-Z0-9]+_\d{3}\.xsi(\.p7m)?$/i)) {
-          log.warn(`[S/MIME] v3.50 WARNING: Attachment name does not match expected SIAE format!`);
+        // v3.55 FIX: Log esplicito nome file allegato per debug errore SIAE 0600
+        // Formato Allegato C sezione 1.4.1: XXX_AAAA_MM_GG_###.xsi (SENZA codice sistema)
+        // - RMG/RCA: RMG_2026_01_20_016.xsi (con giorno)
+        // - RPM: RPM_2026_01_016.xsi (mensile, senza giorno)
+        log.info(`[S/MIME] v3.55 ATTACHMENT NAME RECEIVED: "${attachmentName}" (length=${attachmentName.length})`);
+        // Pattern corretto: XXX_AAAA_MM_GG_###.xsi (giornaliero/evento) o XXX_AAAA_MM_###.xsi (mensile)
+        const siaeFilePattern = /^(RMG|RCA|LTA)_\d{4}_\d{2}_\d{2}_\d{3}\.xsi(\.p7m)?$|^RPM_\d{4}_\d{2}_\d{3}\.xsi(\.p7m)?$/i;
+        if (attachmentName && !attachmentName.match(siaeFilePattern)) {
+          log.warn(`[S/MIME] v3.55 WARNING: Attachment name "${attachmentName}" does not match Allegato C format!`);
+          log.warn(`[S/MIME] v3.55 Expected: RMG_AAAA_MM_GG_###.xsi or RPM_AAAA_MM_###.xsi`);
+        } else if (attachmentName) {
+          log.info(`[S/MIME] v3.55 OK: Attachment name matches Allegato C format`);
         }
         
         // Check if bridge is ready
