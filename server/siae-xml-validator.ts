@@ -325,9 +325,15 @@ function getRootAttributes(xml: string): Record<string, string> {
   const attributes: Record<string, string> = {};
   // Remove newlines for simpler matching
   const xmlClean = xml.replace(/[\r\n]+/g, ' ');
-  const rootMatch = xmlClean.match(/^<\?xml[^?]*\?>\s*<(\w+)([^>]*)>/);
+  
+  // FIX 2026-01-20: Gestione DOCTYPE opzionale tra dichiarazione XML e root element
+  // Pattern: <?xml...?> [<!DOCTYPE...>] <RootElement attrs>
+  // Il DOCTYPE è ora obbligatorio per conformità SIAE Allegato C
+  const rootMatch = xmlClean.match(/^<\?xml[^?]*\?>\s*(?:<!DOCTYPE[^>]*>)?\s*<(\w+)([^>]*)>/);
+  
   if (!rootMatch) {
-    const altMatch = xml.match(/^<(\w+)([^>]*)>/);
+    // Fallback: cerca direttamente il root element senza dichiarazione XML
+    const altMatch = xml.match(/<(Riepilogo\w+|LogTransazione)([^>]*)>/);
     if (altMatch) {
       const attrString = altMatch[2];
       const attrRegex = /(\w+)="([^"]*)"/g;

@@ -4045,13 +4045,18 @@ export async function validatePreTransmission(
     const encoder = new TextEncoder();
     const encoded = encoder.encode(xml);
     
-    // Verifica dichiarazione encoding
-    if (!xml.includes('encoding="UTF-8"') && !xml.includes("encoding='UTF-8'")) {
+    // Verifica dichiarazione encoding (SIAE accetta ISO-8859-1 o UTF-8)
+    // FIX 2026-01-20: SIAE Allegato C richiede ISO-8859-1 per report RMG/RPM/RCA
+    const hasValidEncoding = xml.includes('encoding="UTF-8"') || 
+                             xml.includes("encoding='UTF-8'") ||
+                             xml.includes('encoding="ISO-8859-1"') || 
+                             xml.includes("encoding='ISO-8859-1'");
+    if (!hasValidEncoding) {
       warnings.push({
         code: 'ENCODING_NOT_DECLARED',
         field: 'encoding',
-        message: 'Encoding UTF-8 non dichiarato esplicitamente nell\'XML',
-        suggestion: 'Aggiungere encoding="UTF-8" nella dichiarazione XML'
+        message: 'Encoding non dichiarato esplicitamente nell\'XML',
+        suggestion: 'Aggiungere encoding="ISO-8859-1" nella dichiarazione XML (richiesto da SIAE Allegato C)'
       });
     }
     
