@@ -45,6 +45,23 @@ export interface CreateSiaeTransmissionParams {
     events: C1EventContext[];
     subscriptions?: C1SubscriptionData[];
   };
+  /** Campi aggiuntivi opzionali per la trasmissione (usati in contesti specifici) */
+  additionalTransmissionFields?: {
+    scheduleType?: string;
+    ticketsCount?: number;
+    ticketsCancelled?: number;
+    totalAmount?: string;
+    totalIva?: string;
+    totalEsenti?: string;
+    totalImpostaIntrattenimento?: string;
+    cfOrganizzatore?: string;
+    ticketsChanged?: number;
+    ticketsResold?: number;
+    signatureFormat?: 'cades' | 'xmldsig' | null;
+    p7mContent?: string | null;
+    signedAt?: Date | null;
+    fileExtension?: string;
+  };
 }
 
 export interface CreateSiaeTransmissionResult {
@@ -259,12 +276,15 @@ export async function createSiaeTransmissionWithXml(
 
   const fileHash = calculateFileHash(xml);
 
+  const additionalFields = params.additionalTransmissionFields || {};
+  
   const transmissionData: InsertSiaeTransmission = {
     companyId,
     ticketedEventId: ticketedEventId || null,
     transmissionType,
     periodDate: reportDate,
-    fileName,
+    fileName: additionalFields.fileExtension ? fileName.replace(/\.xsi$/, '') : fileName,
+    fileExtension: additionalFields.fileExtension || '.xsi',
     fileContent: xml,
     fileHash,
     systemCode,
@@ -272,6 +292,21 @@ export async function createSiaeTransmissionWithXml(
     progressivoInvio: progressivo,
     codiceIntervento: isSubstitution ? 'COR' : 'ORD',
     riferimentoTrasmissioneOriginale: originalTransmissionId || null,
+    isSubstitution: isSubstitution || false,
+    originalTransmissionId: originalTransmissionId || null,
+    scheduleType: additionalFields.scheduleType,
+    ticketsCount: additionalFields.ticketsCount ?? stats.ticketCount,
+    ticketsCancelled: additionalFields.ticketsCancelled ?? stats.cancelledCount,
+    totalAmount: additionalFields.totalAmount ?? stats.totalRevenue.toFixed(2),
+    totalIva: additionalFields.totalIva,
+    totalEsenti: additionalFields.totalEsenti,
+    totalImpostaIntrattenimento: additionalFields.totalImpostaIntrattenimento,
+    cfOrganizzatore: additionalFields.cfOrganizzatore,
+    ticketsChanged: additionalFields.ticketsChanged,
+    ticketsResold: additionalFields.ticketsResold,
+    signatureFormat: additionalFields.signatureFormat,
+    p7mContent: additionalFields.p7mContent,
+    signedAt: additionalFields.signedAt,
   };
 
   let transmission: SiaeTransmission;

@@ -1,6 +1,7 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
 import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode, validateSiaeFileName } from './siae-utils';
+import { createSiaeTransmissionWithXml, type CreateSiaeTransmissionParams } from './siae-transmission-service';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5160,6 +5161,10 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         cancellationDate: ticket.cancellationDate || null,
       }));
       
+      // TODO: CONSOLIDATION CANDIDATE - usare createSiaeTransmissionWithXml da ./siae-transmission-service
+      // La consolidazione richiede: calcolare stats separatamente, gestire isSubstitution, 
+      // e passare additionalTransmissionFields per scheduleType, totalIva, totalEsenti, ecc.
+      // Per ora mantenuto generateRCAXml diretto per compatibilità con flusso resend esistente
       const rcaResult = generateRCAXml({
         companyId: original.companyId,
         eventId: ticketedEvent.eventId,
@@ -5220,6 +5225,10 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         resendResolvedSystemCode
       );
       
+      // TODO: CONSOLIDATION CANDIDATE - usare createSiaeTransmissionWithXml da ./siae-transmission-service
+      // La consolidazione richiede: gestire isSubstitution, originalTransmissionId,
+      // e passare additionalTransmissionFields per scheduleType, totalIva, ecc.
+      // Per ora mantenuto generateC1Xml diretto per compatibilità con flusso resend esistente
       const c1Result = generateC1Xml({
         reportKind: resendReportType,
         companyId: original.companyId,
@@ -5647,6 +5656,9 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           
           // Generate RCA XML (RiepilogoControlloAccessi format) con Sostituzione="S"
           // Usa resolvedSystemCodeForEmail già calcolato all'inizio della funzione
+          // TODO: NON APPLICABILE per consolidation - questo flusso aggiorna una trasmissione ESISTENTE 
+          // (siaeStorage.updateSiaeTransmission) invece di crearne una nuova.
+          // La funzione createSiaeTransmissionWithXml crea NUOVE trasmissioni.
           const rcaResult = generateRCAXml({
             companyId: transmission.companyId,
             eventId: ticketedEvent.id,
@@ -6209,6 +6221,10 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // Generate RCA XML (RiepilogoControlloAccessi format - Allegato B Provvedimento 04/03/2008)
     // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
     // FIX 2026-01-15: Usa preResolvedSystemCode per coerenza con nome file allegato (errori SIAE 0600/0603)
+    // TODO: CONSOLIDATION CANDIDATE - usare createSiaeTransmissionWithXml da ./siae-transmission-service
+    // Questa funzione è parte di generateAndSendC1 helper che ritorna XML senza creare trasmissione.
+    // La trasmissione viene creata più avanti nel flusso con campi aggiuntivi.
+    // Per consolidare: spostare la creazione trasmissione qui e usare il risultato nel resto del flusso.
     const rcaResult = generateRCAXml({
       companyId,
       eventId,
@@ -6321,6 +6337,10 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       console.warn('[SIAE-ROUTES] Report giornaliero senza eventi/abbonamenti - generazione consentita');
     }
     
+    // TODO: CONSOLIDATION CANDIDATE - usare createSiaeTransmissionWithXml da ./siae-transmission-service
+    // Questa funzione è parte di generateAndSendC1 helper che ritorna XML senza creare trasmissione.
+    // La trasmissione viene creata più avanti nel flusso con campi aggiuntivi.
+    // Per consolidare: spostare la creazione trasmissione qui e usare il risultato nel resto del flusso.
     const c1Params: C1XmlParams = {
       reportKind: isMonthly ? 'mensile' : 'giornaliero',
       companyId,
@@ -8501,6 +8521,11 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     // Generate RiepilogoGiornaliero XML using unified generateC1Xml
     const hydratedDailyData = await hydrateC1EventContextFromTickets(dayTickets, companyId, reportDate, false);
     
+    // TODO: CONSOLIDATION CANDIDATE - usare createSiaeTransmissionWithXml da ./siae-transmission-service
+    // Questa è una buona opportunità di consolidazione. Richiede:
+    // 1. Calcolare dailyStats PRIMA della chiamata
+    // 2. Usare createSiaeTransmissionWithXml con additionalTransmissionFields per totalIva, ecc.
+    // 3. Rimuovere siaeStorage.createSiaeTransmission e usare il risultato della funzione centralizzata
     const dailyC1Params: C1XmlParams = {
       reportKind: 'giornaliero',
       companyId,
@@ -9783,6 +9808,11 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     };
     
     // Genera XML RiepilogoControlloAccessi usando generateRCAXml
+    // TODO: CONSOLIDATION CANDIDATE - usare createSiaeTransmissionWithXml da ./siae-transmission-service
+    // Questa è la route principale per invio RCA evento. Per consolidare:
+    // 1. Usare createSiaeTransmissionWithXml con rcaParams convertiti al formato del service
+    // 2. Passare additionalTransmissionFields per signature, p7mContent, ecc.
+    // 3. Il flusso di firma digitale rende complessa la consolidazione (signedXmlContent, p7mBase64)
     const rcaResult = generateRCAXml(rcaParams);
     
     if (!rcaResult.success) {
