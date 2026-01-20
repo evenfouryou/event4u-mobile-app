@@ -54,7 +54,7 @@ interface FileUpdate {
 }
 
 const filesToUpdate: FileUpdate[] = [
-  // SiaeBridge .NET project files
+  // SiaeBridge .NET project files (root)
   {
     localPath: 'siae-lettore-fix/SiaeBridge/Program.cs',
     repoPath: 'SiaeBridge/Program.cs'
@@ -72,7 +72,25 @@ const filesToUpdate: FileUpdate[] = [
     repoPath: 'SiaeBridge/libSIAEp7.dll',
     binary: true
   },
-  // Electron app files
+  // SiaeBridge .NET project files (desktop-app folder for workflow)
+  {
+    localPath: 'siae-lettore-fix/SiaeBridge/Program.cs',
+    repoPath: 'desktop-app/SiaeBridge/Program.cs'
+  },
+  {
+    localPath: 'siae-lettore-fix/SiaeBridge/LibSiae.cs',
+    repoPath: 'desktop-app/SiaeBridge/LibSiae.cs'
+  },
+  {
+    localPath: 'siae-lettore-fix/SiaeBridge/SiaeBridge.csproj',
+    repoPath: 'desktop-app/SiaeBridge/SiaeBridge.csproj'
+  },
+  {
+    localPath: 'siae-lettore-fix/SiaeBridge/libSIAEp7.dll',
+    repoPath: 'desktop-app/SiaeBridge/libSIAEp7.dll',
+    binary: true
+  },
+  // Electron app files (root)
   {
     localPath: 'siae-lettore-fix/main.js',
     repoPath: 'main.js'
@@ -105,6 +123,40 @@ const filesToUpdate: FileUpdate[] = [
     localPath: 'siae-lettore-fix/BUILD_INSTRUCTIONS.md',
     repoPath: 'BUILD_INSTRUCTIONS.md'
   },
+  // Electron app files (desktop-app folder for workflow)
+  {
+    localPath: 'siae-lettore-fix/main.js',
+    repoPath: 'desktop-app/main.js'
+  },
+  {
+    localPath: 'siae-lettore-fix/preload.js',
+    repoPath: 'desktop-app/preload.js'
+  },
+  {
+    localPath: 'siae-lettore-fix/renderer.js',
+    repoPath: 'desktop-app/renderer.js'
+  },
+  {
+    localPath: 'siae-lettore-fix/index.html',
+    repoPath: 'desktop-app/index.html'
+  },
+  {
+    localPath: 'siae-lettore-fix/styles.css',
+    repoPath: 'desktop-app/styles.css'
+  },
+  {
+    localPath: 'siae-lettore-fix/package.json',
+    repoPath: 'desktop-app/package.json'
+  },
+  {
+    localPath: 'siae-lettore-fix/build-local.ps1',
+    repoPath: 'desktop-app/build-local.ps1'
+  },
+  {
+    localPath: 'siae-lettore-fix/icon.png',
+    repoPath: 'desktop-app/icon.png',
+    binary: true
+  },
   // Root files
   {
     localPath: 'siae-lettore-fix/README.md',
@@ -114,11 +166,6 @@ const filesToUpdate: FileUpdate[] = [
     localPath: 'siae-lettore-fix/icon.png',
     repoPath: 'icon.png',
     binary: true
-  },
-  // GitHub Actions workflow (update existing)
-  {
-    localPath: 'siae-lettore-fix/.github/workflows/build.yml',
-    repoPath: '.github/workflows/build.yml'
   }
 ];
 
