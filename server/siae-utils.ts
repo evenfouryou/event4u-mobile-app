@@ -4590,6 +4590,18 @@ export interface C1XmlParams {
   subscriptions?: C1SubscriptionData[];
   /** Nome file per allegato email (NON inserito nell'XML per conformità DTD SIAE) */
   nomeFile?: string;
+  /** 
+   * FIX 2026-01-21: Forza Sostituzione="S" SOLO per reinvio di file già accettati.
+   * DEFAULT: false → Sostituzione="N" (file nuovo)
+   * 
+   * IMPORTANTE: L'errore SIAE 0600 si verifica quando:
+   * - Sostituzione="S" ma non esiste un file precedente accettato da sostituire
+   * - Il progressivo > 1 NON implica automaticamente una sostituzione!
+   * 
+   * Usare forceSubstitution=true SOLO quando si sta reinviando un file
+   * per sostituire una versione precedente già elaborata con codice 0000.
+   */
+  forceSubstitution?: boolean;
 }
 
 /**
@@ -4707,7 +4719,8 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     businessName,
     events,
     subscriptions = [],
-    nomeFile
+    nomeFile,
+    forceSubstitution = false
   } = params;
 
   const isMonthly = reportKind === 'mensile';
@@ -4726,7 +4739,23 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     periodAttrValue = formatSiaeDateCompact(reportDate);
   }
 
-  const sostituzione = progressivo > 1 ? 'S' : 'N';
+  // FIX 2026-01-21: Sostituzione="S" SOLO quando forceSubstitution=true
+  // 
+  // PROBLEMA PRECEDENTE: Il codice usava (progressivo > 1) per determinare Sostituzione,
+  // ma SIAE interpreta Sostituzione="S" come "sostituisci un file GIÀ ACCETTATO".
+  // Se non esiste un file precedente accettato, SIAE restituisce errore 0600!
+  //
+  // SOLUZIONE: Usare sempre Sostituzione="N" per file nuovi (qualsiasi progressivo).
+  // Usare Sostituzione="S" SOLO quando si sta effettivamente reinviando per sostituire
+  // un file precedente già elaborato con successo (codice 0000).
+  //
+  // Il progressivo alto (005) indica solo che sono stati generati più file nello stesso
+  // giorno, NON che si sta sostituendo un file precedente!
+  const sostituzione = forceSubstitution ? 'S' : 'N';
+  
+  if (forceSubstitution) {
+    console.warn('[generateC1Xml] Sostituzione forzata: il report sostituirà quello precedentemente elaborato');
+  }
   const progressivePadded = String(progressivo).padStart(3, '0');
 
   // FIX 2026-01-18: Per report giornaliero (RMG), 0 biglietti è permesso
