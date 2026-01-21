@@ -4998,13 +4998,16 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   // FIX 2026-01-20: Aggiunto encoding UTF-8 e DOCTYPE come da esempi ufficiali SIAE
   // Vedi RMG_2015_09_00_001.xml e RCA_2015_09_22_001.xml che usano UTF-8
   // La DTD RiepilogoGiornaliero_v0039_20040209.dtd e RiepilogoMensile_v0039_20040209.dtd
-  // richiedono DOCTYPE per conformità
-  // Il nome file corretto viene usato SOLO per l'allegato email (parametro nomeFile ignorato nell'XML)
+  // richiedono DOCTYPE per conformita
   
-  // NomeFile RIMOSSO - NON è nel DTD ufficiale v0039, causa errore SIAE 0600
+  // FIX 2026-01-21: Attributo NomeFile RIPRISTINATO - SIAE lo richiede per verificare coerenza con allegato
+  // Anche se NON è nel DTD ufficiale v0039, i file che hanno funzionato (codice 0000) lo avevano:
+  // Esempio: RMG_2026_01_13_004.xsi con NomeFile="RMG_2026_01_13_004.xsi" -> codice 0000 (successo)
+  // Senza NomeFile si ottiene errore 0600 "Nome del file contenente il riepilogo sbagliato"
+  const nomeFileAttr = nomeFile ? ` NomeFile="${escapeXml(nomeFile)}"` : '';
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ${rootElement} SYSTEM "${dtdFile}">
-<${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
+<${rootElement}${nomeFileAttr} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
