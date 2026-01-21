@@ -249,10 +249,10 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   const parts = nameWithoutExt.split('_');
   const prefix = parts[0];
   
-  // FIX 2026-01-21 v2: ALLEGATO in formato BREVE (Allegato C 1.4.1)
-  // - RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN.xsi (5 parti)
-  // - RPM: RPM_AAAA_MM_NNN.xsi (4 parti)
-  // Il formato ESTESO va SOLO nel Subject email
+  // FIX 2026-01-21 v4: FORMATO CORRETTO per evitare errore 0600
+  // - RMG: RMG_YYYY_SSSSSSSS_NNN.xsi (4 parti - SOLO ANNO!)
+  // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (4 parti - anno+mese concatenati)
+  // - RCA/LTA: RCA_YYYY_MM_DD_NNN.xsi (5 parti - data completa)
   
   // Verifica prefisso valido
   if (!['RMG', 'RPM', 'RCA', 'LTA'].includes(prefix)) {
@@ -263,14 +263,26 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  // Numero parti: formato BREVE per allegato
-  const isMonthly = prefix === 'RPM';
-  const expectedParts = isMonthly ? 4 : 5;
+  // Numero parti dipende dal tipo
+  const isRMG = prefix === 'RMG';
+  const isRPM = prefix === 'RPM';
+  const isRCA = prefix === 'RCA' || prefix === 'LTA';
+  
+  let expectedParts: number;
+  let formatExample: string;
+  
+  if (isRMG) {
+    expectedParts = 4; // RMG_YYYY_SSSSSSSS_NNN
+    formatExample = 'RMG_YYYY_SSSSSSSS_NNN.xsi (4 parti)';
+  } else if (isRPM) {
+    expectedParts = 4; // RPM_YYYYMM_SSSSSSSS_NNN
+    formatExample = 'RPM_YYYYMM_SSSSSSSS_NNN.xsi (4 parti)';
+  } else {
+    expectedParts = 5; // RCA_YYYY_MM_DD_NNN
+    formatExample = `${prefix}_YYYY_MM_DD_NNN.xsi (5 parti)`;
+  }
   
   if (parts.length !== expectedParts) {
-    const formatExample = isMonthly 
-      ? 'RPM_AAAA_MM_NNN.xsi (4 parti)'
-      : `${prefix}_AAAA_MM_GG_NNN.xsi (5 parti)`;
     errors.push(
       `FORMATO NOME FILE NON VALIDO: Servono ${expectedParts} parti. ` +
       `Trovate ${parts.length} parti in "${fileName}". Formato corretto: ${formatExample}`
@@ -278,19 +290,25 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  // Formato sempre breve per allegato
-  const isExtendedFormat = false;
+  let year: string, month: string, day: string, progressivo: string, systemCode: string;
   
-  let year: string, month: string, day: string, progressivo: string;
-  
-  // Formato breve per allegato
-  if (isMonthly) {
-    // RPM: XXX_AAAA_MM_NNN (4 parti)
-    [, year, month, progressivo] = parts;
+  if (isRMG) {
+    // RMG: RMG_YYYY_SSSSSSSS_NNN (4 parti - solo anno)
+    [, year, systemCode, progressivo] = parts;
+    month = '01';
+    day = '01';
+  } else if (isRPM) {
+    // RPM: RPM_YYYYMM_SSSSSSSS_NNN (4 parti - anno+mese)
+    const yearMonth = parts[1];
+    year = yearMonth.substring(0, 4);
+    month = yearMonth.substring(4, 6);
+    systemCode = parts[2];
+    progressivo = parts[3];
     day = '01';
   } else {
-    // RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN (5 parti)
+    // RCA/LTA: RCA_YYYY_MM_DD_NNN (5 parti)
     [, year, month, day, progressivo] = parts;
+    systemCode = '';
   }
   
   // Verifica anno (4 cifre)
@@ -313,8 +331,8 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     }
   }
   
-  // Verifica giorno (2 cifre) - solo per report non mensili
-  if (!isMonthly) {
+  // Verifica giorno (2 cifre) - solo per RCA/LTA (hanno data completa)
+  if (isRCA) {
     if (!/^\d{2}$/.test(day)) {
       errors.push(`GIORNO NON VALIDO: Il giorno deve essere 2 cifre. Trovato: "${day}"`);
     } else {
@@ -637,36 +655,36 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // FIX 2026-01-21 v2: ALLEGATO in formato BREVE come da Allegato C sezione 1.4.1
-  // Il formato ESTESO va SOLO nel Subject email (sezione 1.5.3)
+  // FIX 2026-01-21 v4: FORMATO CORRETTO per evitare errore 0600
   // 
-  // ALLEGATO (Allegato C 1.4.1):
-  //   - RMG/RCA: XXX_AAAA_MM_GG_NNN.xsi (5 parti)
-  //   - RPM: RPM_AAAA_MM_NNN.xsi (4 parti)
+  // REGOLA CRITICA SCOPERTA da analisi risposte SIAE:
+  // - RMG usa SOLO ANNO: RMG_YYYY_SSSSSSSS_NNN.xsi (4 parti)
+  // - RPM usa ANNO+MESE: RPM_YYYYMM_SSSSSSSS_NNN.xsi (4 parti)
+  // - RCA usa data completa: RCA_YYYY_MM_DD_NNN.xsi (5 parti)
   //
-  // SUBJECT (Allegato C 1.5.3):
-  //   - RMG/RCA: XXX_AAAA_MM_GG_SSSSSSSS_NNN_XSI_V.XX.YY
-  //   - RPM: RPM_AAAA_MM_SSSSSSSS_NNN_XSI_V.XX.YY
-  //
-  // L'errore 0600 si verifica quando SIAE non riconosce il formato dell'allegato
+  // ERRORE 0600 si verifica quando RMG contiene mese/giorno nel nome!
+  // Il sistema SIAE vede "2026_01_21" e considera nome non valido
   
   // Estensione: .xsi.p7m per file firmati CAdES
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
+  // System code DEVE essere presente per RMG/RPM
+  const sysCode = systemCode || 'P0004010';
+  
   let result: string;
   switch (reportType) {
     case 'giornaliero':
-      // RMG_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
-      result = `RMG_${year}_${month}_${day}_${prog}${extension}`;
+      // RMG_YYYY_SSSSSSSS_NNN.xsi (SOLO ANNO! No mese/giorno!)
+      result = `RMG_${year}_${sysCode}_${prog}${extension}`;
       break;
     case 'mensile':
-      // RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)
-      result = `RPM_${year}_${month}_${prog}${extension}`;
+      // RPM_YYYYMM_SSSSSSSS_NNN.xsi (anno+mese concatenati!)
+      result = `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
       break;
     case 'log':
     case 'rca':
     default:
-      // RCA_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
+      // RCA_YYYY_MM_DD_NNN.xsi (data completa)
       result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
       break;
   }
@@ -5019,15 +5037,13 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
   const dtdFile = isMonthly ? 'RiepilogoMensile_v0039_20040209.dtd' : 'RiepilogoGiornaliero_v0039_20040209.dtd';
 
-  // FIX 2026-01-21 v3: RIPRISTINO NomeFile per compatibilità parser SIAE
-  // NOTA CRITICA: Il DTD v0039 NON include NomeFile, MA il parser SIAE di produzione
-  // lo RICHIEDE per generare risposte. Senza NomeFile, SIAE accetta email
-  // ma non genera MAI una risposta (né OK né errore).
-  // NomeFile deve essere il nome allegato in formato BREVE (Allegato C 1.4.1)
-  const nomeFileAttr = nomeFile ? ` NomeFile="${escapeXml(nomeFile)}"` : '';
+  // FIX 2026-01-21 v4: NESSUN NomeFile nell'XML (come esempi ufficiali SIAE)
+  // Gli esempi ufficiali SIAE NON hanno NomeFile
+  // Il DTD v0039 NON include NomeFile come attributo valido
+  // L'errore 0600 e causato dal NOME FILE allegato sbagliato, non dall'XML
   
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement}${nomeFileAttr} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
+<${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
