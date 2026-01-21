@@ -4842,22 +4842,23 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     const incidenzaGenere = ticketedEvent.genreIncidence ?? 100;
     const eventName = eventRecord.name || 'Evento';
 
-    // FIX 2026-01-20: Autore/Esecutore opzionali in DTD ma SEMPRE inclusi per conformità
-    // Vedi esempio ufficiale RMG_2015_09_00_001.xml che li include sempre:
-    //   <TitoliOpere>
-    //     <Titolo>Rainbow Magicland</Titolo>
-    //     <Autore>Rainbow Magicland</Autore>
-    //     <Esecutore>Rainbow Magicland Spa</Esecutore>
-    //   </TitoliOpere>
-    // Anche se la DTD li definisce opzionali (Autore?, Esecutore?), SIAE li richiede
-    // per evitare errore 40605 "riepilogo illeggibile"
-    // FIX 2026-01-20: Indentazione corretta come da esempio RMG_2015_09_00_001.xml
-    const autore = escapeXml(ticketedEvent.author || eventName);
-    const esecutore = escapeXml(ticketedEvent.performer || businessName);
-    const autoreXml = `
+    // FIX 2026-01-21: Autore/Esecutore sono CONDIZIONALI in base al tipo genere
+    // Errori SIAE 2108/2110: "Autore/Esecutore non previsto per il Tipo Evento"
+    // Per generi 60-69 (Ballo/Discoteca), 30-40 (Giochi), 70-89 (Fiere/Luna park) NON servono
+    // Solo generi 45-59 (Teatro/Concerti) e 01-04 (Cinema) li richiedono
+    const genreCodeNum = parseInt(genreCode, 10) || 0;
+    const needsAutoreEsecutore = (genreCodeNum >= 45 && genreCodeNum <= 59) || (genreCodeNum >= 1 && genreCodeNum <= 4);
+    
+    let autoreXml = '';
+    let esecutoreXml = '';
+    if (needsAutoreEsecutore) {
+      const autore = escapeXml(ticketedEvent.author || eventName);
+      const esecutore = escapeXml(ticketedEvent.performer || businessName);
+      autoreXml = `
                     <Autore>${autore}</Autore>`;
-    const esecutoreXml = `
+      esecutoreXml = `
                     <Esecutore>${esecutore}</Esecutore>`;
+    }
 
     let intrattenimentoXml: string;
     if (isMonthly) {

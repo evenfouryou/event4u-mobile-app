@@ -249,22 +249,25 @@ router.post("/api/public/test-siae-send", async (req, res) => {
     console.log(`[TEST] ${reportType.toUpperCase()}: file=${fileName}, systemCode=${systemCode}`);
     
     // Generate test event data for SIAE testing
+    // FIX 2026-01-21: grossAmount required for ERROR 2006
     const testEvents = [{
       ticketedEvent: { id: 1, siaeLocationCode: '0000000000001', siaeGenreCode: '61' },
       eventRecord: { id: 1, name: 'Evento Test SIAE', startDatetime: reportDate, endDatetime: reportDate },
       location: { id: 1, name: 'Locale Test', siaeLocationCode: '0000000000001' },
       sectors: [{ id: 'A0', name: 'Platea', capacity: 100 }],
       tickets: [{
-        id: 'T001', sectorId: 'A0', price: '10.00', taxableAmount: '8.20',
+        id: 'T001', sectorId: 'A0', price: '10.00', grossAmount: '10.00', taxableAmount: '8.20',
         vatAmount: '1.80', ticketNumber: '00000001', emissionDate: reportDate,
         customerName: 'Test Cliente', customerFiscalCode: 'TSTCLN80A01H501X'
       }]
     }];
     
+    // FIX 2026-01-21: Use HURAEX SRL (smart card registered name) instead of Event4U Demo
+    const businessName = 'HURAEX SRL';
     const result = generateC1Xml({
       reportKind: reportType, companyId: card.companyId!, reportDate,
       resolvedSystemCode: systemCode, progressivo, taxId: '02120820432',
-      businessName: company?.name || 'Test', events: testEvents, subscriptions: [],
+      businessName, events: testEvents, subscriptions: [],
       nomeFile: fileName, forceSubstitution: false
     });
     console.log(`[TEST] XML preview:\n${result.xml.substring(0, 800)}`);

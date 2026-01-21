@@ -1,0 +1,40 @@
+SIAE rejected the report with these specific errors. Fix each one:                                                                                                                                  
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  ERROR 2006 (CRITICAL - BLOCKING)                                                                                                                                                                    
+                                                                                                                                                                                                      
+  Message: "Non risulta valorizzato il corrispettivo per emissione di titoli a pagamento"                                                                                                             
+  Translation: Payment amount not set for paid ticket issuance                                                                                                                                        
+  Context: Org:02120820432, Locale:0000000000001, Date:21/01/2026, Time:1745                                                                                                                          
+                                                                                                                                                                                                      
+  Problem: The XML is missing or has empty/zero value for the ticket price field (corrispettivo/payment amount) for paid tickets.                                                                     
+                                                                                                                                                                                                      
+  Fix:                                                                                                                                                                                                
+  1. Search for: corrispettivo, prezzo, importo, price, amount in SIAE XML generation code                                                                                                            
+  2. Find where ticket price is added to the XML for each ticket                                                                                                                                      
+  3. Ensure paid tickets have the corrispettivo field populated with the actual ticket price (non-zero)                                                                                               
+  4. Verify the field is in the correct format (check SIAE spec for decimal format, e.g., 10.00 vs 1000 cents)                                                                                        
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  WARNING 2606 (CONFIGURATION)                                                                                                                                                                        
+                                                                                                                                                                                                      
+  Message: Organization name mismatch                                                                                                                                                                 
+  Detail: Report shows "EVENT4U DEMO" but smart-card is registered to "HURAEX SRL"                                                                                                                    
+                                                                                                                                                                                                      
+  Fix:                                                                                                                                                                                                
+  1. Search for: EVENT4U DEMO, Denominazione, organization name configuration                                                                                                                         
+  2. Find where the <Denominazione> value is set in the XML                                                                                                                                           
+  3. Change the organization name from "EVENT4U DEMO" to "HURAEX SRL" to match the SIAE smart-card registration                                                                                       
+  4. This may be in: database config, environment variable, or hardcoded value                                                                                                                        
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  WARNING 2108 & 2110 (OPTIONAL FIELDS)                                                                                                                                                               
+                                                                                                                                                                                                      
+  Message: "Autore/Esecutore non previsto per il Tipo Evento"                                                                                                                                         
+  Translation: Author/Performer fields are not expected for this event type                                                                                                                           
+                                                                                                                                                                                                      
+  Fix:                                                                                                                                                                                                
+  1. Search for: Autore, Esecutore, author, performer in XML generation                                                                                                                               
+  2. For certain event types, these fields should be OMITTED entirely (not just empty)                                                                                                                
+  3. Add conditional logic: only include <Autore> and <Esecutore> elements when the event type requires them                                                                                          
+  4. Check SIAE documentation for which event types (TipoEvento) require these fields 
