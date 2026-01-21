@@ -5028,9 +5028,8 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   // Vedi attached_assets/siae_master/.../RMG_2015_09_00_001.xml:
   // 1. NESSUN DOCTYPE (esempio ufficiale NON lo ha!)
   // 2. NESSUN attributo NomeFile (non esiste nel DTD v0039!)
-  // 3. Riga vuota dopo <?xml?> come esempio
+  // 3. NESSUNA riga vuota dopo <?xml?> (come file RPM funzionante)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-
 <${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
