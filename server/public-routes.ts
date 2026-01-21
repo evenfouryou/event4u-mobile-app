@@ -242,8 +242,10 @@ router.post("/api/public/test-siae-send", async (req, res) => {
     const card = cards[0];
     const systemCode = card.systemCode || 'P0004010';
     const [company] = await db.select().from(companies).where(eq(companies.id, card.companyId!));
-    const reportDate = new Date();
-    // FIX 40604: Use current timestamp-based progressivo to avoid "already processed" error
+    // FIX 40604: Allow testDate param to use unused dates; default to 18 Jan 2026 (unused)
+    const testDateStr = req.body.testDate || '2026-01-18';
+    const reportDate = new Date(testDateStr + 'T20:00:00');
+    // FIX 40604: Use timestamp-based progressivo to avoid "already processed" error
     const progressivo = req.body.progressivo || Math.floor(Date.now() / 1000) % 1000;
     const reportType = req.body.reportType === 'mensile' ? 'mensile' : 'giornaliero';
     const fileName = generateSiaeFileName(reportType, reportDate, progressivo, null, systemCode);
