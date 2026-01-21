@@ -668,23 +668,16 @@ export function generateSiaeAttachmentName(
 }
 
 /**
- * Genera SUBJECT EMAIL conforme Allegato C SIAE sezione 1.5.3
+ * Genera SUBJECT EMAIL conforme agli esempi reali SIAE
  * 
- * FIX 2026-01-20: Formato Subject diverso dal nome file allegato!
+ * FIX 2026-01-21 v8: L'oggetto email è IDENTICO al nome file allegato!
  * 
- * FORMATO SUBJECT EMAIL (Allegato C sezione 1.5.3):
- *   RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
+ * ESEMPI REALI UTENTE (da file .eml salvati):
+ *   - RPG_2025_06_17_001.eml → Subject: RPG_2025_06_17_001.xsi
+ *   - RPM_2025_06_00_001.eml → Subject: RPM_2025_06_00_001.xsi
  * 
- * Dove:
- *   AAAA = Anno (4 cifre)
- *   MM = Mese (2 cifre)
- *   GG = Giorno (2 cifre)
- *   SSSSSSSS = Codice sistema (8 caratteri, con zeri iniziali se necessario)
- *   ### = Progressivo (001-999)
- *   TTT = Tipo file (XSI per XML, TXT per testo)
- *   V.XX.YY = Versione formato (es: V.01.00)
- * 
- * Esempio: RCA_2026_01_20_P0004010_001_XSI_V.01.00
+ * L'oggetto email è semplicemente il nome del file allegato.
+ * NON usa formato RCA_..._V.01.00
  */
 export function generateSiaeSubject(
   reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
@@ -692,45 +685,11 @@ export function generateSiaeSubject(
   progressivo: number,
   systemCode?: string
 ): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const prog = String(progressivo).padStart(3, '0');
+  // FIX 2026-01-21 v8: Subject = nome file allegato
+  // Usa la stessa funzione che genera il nome file
+  const subject = generateSiaeAttachmentName(reportType, date, progressivo, null, systemCode);
   
-  // Codice sistema OBBLIGATORIO nel subject (8 caratteri)
-  if (!systemCode || systemCode.length !== 8) {
-    throw new Error(`Codice sistema SIAE obbligatorio per il Subject email. Ricevuto: "${systemCode || 'undefined'}"`);
-  }
-  
-  // Versione formato - usiamo V.01.00 come da documentazione
-  const formatVersion = 'V.01.00';
-  
-  // FIX 2026-01-21 v7: FORMATO CORRETTO basato su esempio risposta SIAE!
-  // 
-  // ESEMPIO RISPOSTA SIAE (da Allegato C 1.5.5):
-  //   Subject: 0000:Re:RCA_2008_02_01_00001234_001.xsi_V.01.00
-  // 
-  // Quindi il formato corretto è:
-  //   RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>.xsi_V.<XX>.<YY>
-  // 
-  // ATTENZIONE: usa ".xsi" (punto xsi) NON "_XSI_" (underscore)!
-  // Il ".xsi" è l'estensione file, non una parte separata!
-  let subject: string;
-  switch (reportType) {
-    case 'mensile':
-      // RPM: Subject con giorno 00
-      subject = `RCA_${year}_${month}_00_${systemCode}_${prog}.xsi_${formatVersion}`;
-      break;
-    case 'giornaliero':
-    case 'log':
-    case 'rca':
-    default:
-      // Tutti gli altri: Subject con data completa
-      subject = `RCA_${year}_${month}_${day}_${systemCode}_${prog}.xsi_${formatVersion}`;
-      break;
-  }
-  
-  console.log(`[SIAE-UTILS] generateSiaeSubject (FIX Allegato C 1.5.3): type=${reportType}, result=${subject}`);
+  console.log(`[SIAE-UTILS] generateSiaeSubject (FIX v8 - identico a fileName): type=${reportType}, result=${subject}`);
   return subject;
 }
 
