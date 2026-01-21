@@ -231,6 +231,38 @@ router.get("/api/public/bridge-status", async (req, res) => {
   }
 });
 
+// ==================== TEST SIAE (TEMP) ====================
+router.post("/api/public/test-siae-send", async (req, res) => {
+  try {
+    const { generateC1Xml, generateSiaeFileName } = await import('./siae-utils');
+    const { sendSiaeTransmissionEmail } = await import('./email-service');
+    const { randomUUID } = await import('crypto');
+    const cards = await db.select().from(siaeActivationCards).where(eq(siaeActivationCards.status, 'active')).limit(1);
+    if (!cards.length) return res.status(400).json({ error: 'No active card' });
+    const card = cards[0];
+    const systemCode = card.systemCode || 'P0004010';
+    const [company] = await db.select().from(companies).where(eq(companies.id, card.companyId!));
+    const reportDate = new Date();
+    const progressivo = req.body.progressivo || 106;
+    const fileName = generateSiaeFileName('giornaliero', reportDate, progressivo, null, systemCode);
+    console.log(`[TEST] RMG: file=${fileName}, systemCode=${systemCode}`);
+    const result = generateC1Xml({
+      reportKind: 'giornaliero', companyId: card.companyId!, reportDate,
+      resolvedSystemCode: systemCode, progressivo, taxId: '02120820432',
+      businessName: company?.name || 'Test', events: [], subscriptions: [],
+      nomeFile: fileName, forceSubstitution: false
+    });
+    console.log(`[TEST] XML preview:\n${result.xml.substring(0, 500)}`);
+    const emailResult = await sendSiaeTransmissionEmail({
+      to: 'servertest2@batest.siae.it', companyName: company?.name || 'Test',
+      transmissionType: 'daily', periodDate: reportDate, ticketsCount: 0, totalAmount: '0.00',
+      xmlContent: result.xml, transmissionId: randomUUID(), systemCode, sequenceNumber: progressivo,
+      signWithSmime: true, requireSignature: false, explicitFileName: fileName,
+    });
+    res.json({ success: emailResult.success, fileName, systemCode, smimeSigned: emailResult.smimeSigned, xml: result.xml });
+  } catch (error: any) { res.status(500).json({ error: error.message }); }
+});
+
 // ==================== CATEGORIE EVENTI ====================
 
 // Lista categorie eventi attive
