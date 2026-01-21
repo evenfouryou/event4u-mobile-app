@@ -249,13 +249,17 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   const parts = nameWithoutExt.split('_');
   const prefix = parts[0];
   
-  // FIX 2026-01-21 v4: FORMATO CORRETTO per evitare errore 0600
-  // - RMG: RMG_YYYY_SSSSSSSS_NNN.xsi (4 parti - SOLO ANNO!)
-  // - RPM: RPM_YYYYMM_SSSSSSSS_NNN.xsi (4 parti - anno+mese concatenati)
-  // - RCA/LTA: RCA_YYYY_MM_DD_NNN.xsi (5 parti - data completa)
+  // FIX 2026-01-21 v5: FORMATO CONFORME agli esempi ufficiali SIAE!
+  // 
+  // TUTTI i report usano 5 parti: XXX_AAAA_MM_GG_###.xsi
+  // La differenza è nel valore di GG:
+  // - RMG: RMG_AAAA_MM_00_###.xsi (giorno=00 per riepilogo)
+  // - RPM: RPM_AAAA_MM_00_###.xsi (giorno=00 per riepilogo)
+  // - RCA: RCA_AAAA_MM_GG_###.xsi (giorno reale)
+  // - LTA: LTA_AAAA_MM_GG_###.xsi (giorno reale)
   
   // Verifica prefisso valido
-  if (!['RMG', 'RPM', 'RCA', 'LTA'].includes(prefix)) {
+  if (!['RMG', 'RPM', 'RCA', 'LTA', 'LOG'].includes(prefix)) {
     errors.push(
       `PREFISSO NON VALIDO: Il prefisso "${prefix}" non è valido. ` +
       `Prefissi validi: RMG (giornaliero), RPM (mensile), RCA (eventi), LTA (lista accessi).`
@@ -263,24 +267,9 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  // Numero parti dipende dal tipo
-  const isRMG = prefix === 'RMG';
-  const isRPM = prefix === 'RPM';
-  const isRCA = prefix === 'RCA' || prefix === 'LTA';
-  
-  let expectedParts: number;
-  let formatExample: string;
-  
-  if (isRMG) {
-    expectedParts = 4; // RMG_YYYY_SSSSSSSS_NNN
-    formatExample = 'RMG_YYYY_SSSSSSSS_NNN.xsi (4 parti)';
-  } else if (isRPM) {
-    expectedParts = 4; // RPM_YYYYMM_SSSSSSSS_NNN
-    formatExample = 'RPM_YYYYMM_SSSSSSSS_NNN.xsi (4 parti)';
-  } else {
-    expectedParts = 5; // RCA_YYYY_MM_DD_NNN
-    formatExample = `${prefix}_YYYY_MM_DD_NNN.xsi (5 parti)`;
-  }
+  // TUTTI i report: 5 parti!
+  const expectedParts = 5;
+  const formatExample = `${prefix}_AAAA_MM_GG_###.xsi (5 parti)`;
   
   if (parts.length !== expectedParts) {
     errors.push(
@@ -290,26 +279,13 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  let year: string, month: string, day: string, progressivo: string, systemCode: string;
+  // Tutti usano lo stesso parsing: XXX_AAAA_MM_GG_###
+  let year: string, month: string, day: string, progressivo: string;
+  [, year, month, day, progressivo] = parts;
   
-  if (isRMG) {
-    // RMG: RMG_YYYY_SSSSSSSS_NNN (4 parti - solo anno)
-    [, year, systemCode, progressivo] = parts;
-    month = '01';
-    day = '01';
-  } else if (isRPM) {
-    // RPM: RPM_YYYYMM_SSSSSSSS_NNN (4 parti - anno+mese)
-    const yearMonth = parts[1];
-    year = yearMonth.substring(0, 4);
-    month = yearMonth.substring(4, 6);
-    systemCode = parts[2];
-    progressivo = parts[3];
-    day = '01';
-  } else {
-    // RCA/LTA: RCA_YYYY_MM_DD_NNN (5 parti)
-    [, year, month, day, progressivo] = parts;
-    systemCode = '';
-  }
+  const isRMG = prefix === 'RMG';
+  const isRPM = prefix === 'RPM';
+  const isRCA = prefix === 'RCA' || prefix === 'LTA' || prefix === 'LOG';
   
   // Verifica anno (4 cifre)
   if (!/^\d{4}$/.test(year)) {
@@ -655,36 +631,34 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // FIX 2026-01-21 v4: FORMATO CORRETTO per evitare errore 0600
+  // FIX 2026-01-21 v5: FORMATO CONFORME agli esempi ufficiali SIAE!
   // 
-  // REGOLA CRITICA SCOPERTA da analisi risposte SIAE:
-  // - RMG usa SOLO ANNO: RMG_YYYY_SSSSSSSS_NNN.xsi (4 parti)
-  // - RPM usa ANNO+MESE: RPM_YYYYMM_SSSSSSSS_NNN.xsi (4 parti)
-  // - RCA usa data completa: RCA_YYYY_MM_DD_NNN.xsi (5 parti)
+  // ESEMPI UFFICIALI dalla documentazione SIAE:
+  // - RMG_2015_09_00_001.xml → RMG_AAAA_MM_00_###.xsi (giorno=00!)
+  // - RPM_2015_09_00_001.xml → RPM_AAAA_MM_00_###.xsi (giorno=00!)
+  // - RCA_2015_09_22_001.xml → RCA_AAAA_MM_GG_###.xsi (giorno reale)
+  // - LTA_2015_09_22_001.xml → LTA_AAAA_MM_GG_###.xsi (giorno reale)
   //
-  // ERRORE 0600 si verifica quando RMG contiene mese/giorno nel nome!
-  // Il sistema SIAE vede "2026_01_21" e considera nome non valido
+  // NOTA: RMG e RPM usano giorno="00" per indicare riepilogo (non giorno specifico)
+  // Il system code va SOLO nel Subject, NON nel nome file!
   
   // Estensione: .xsi.p7m per file firmati CAdES
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
-  // System code DEVE essere presente per RMG/RPM
-  const sysCode = systemCode || 'P0004010';
-  
   let result: string;
   switch (reportType) {
     case 'giornaliero':
-      // RMG_YYYY_SSSSSSSS_NNN.xsi (SOLO ANNO! No mese/giorno!)
-      result = `RMG_${year}_${sysCode}_${prog}${extension}`;
+      // RMG_AAAA_MM_00_###.xsi (giorno=00 per riepilogo giornaliero!)
+      result = `RMG_${year}_${month}_00_${prog}${extension}`;
       break;
     case 'mensile':
-      // RPM_YYYYMM_SSSSSSSS_NNN.xsi (anno+mese concatenati!)
-      result = `RPM_${year}${month}_${sysCode}_${prog}${extension}`;
+      // RPM_AAAA_MM_00_###.xsi (giorno=00 per riepilogo mensile!)
+      result = `RPM_${year}_${month}_00_${prog}${extension}`;
       break;
     case 'log':
     case 'rca':
     default:
-      // RCA_YYYY_MM_DD_NNN.xsi (data completa)
+      // RCA_AAAA_MM_GG_###.xsi (giorno reale per eventi!)
       result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
       break;
   }
