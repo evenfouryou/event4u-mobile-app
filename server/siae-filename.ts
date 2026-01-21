@@ -103,9 +103,9 @@ export function generateSiaeFileName(params: SiaeFileNameParams): SiaeFileNameRe
   switch (reportType) {
     case 'giornaliero':
       prefix = 'RMG';
-      // FIX 2026-01-21: RMG usa giorno "00" (non giorno specifico!)
-      // Esempio UFFICIALE SIAE: RMG_2015_09_00_001.xml
-      dateComponent = `${year}_${month}_00`;
+      // RMG usa giorno specifico del report
+      // Confermato da file funzionante: RMG_2026_01_13_004.xsi (codice 0000)
+      dateComponent = `${year}_${month}_${day}`;
       break;
     case 'mensile':
       prefix = 'RPM';
@@ -254,9 +254,8 @@ export function generateSiaeEmailSubject(params: SiaeFileNameParams): string {
       // RPM: formato SENZA giorno - RPM_AAAA_MM_SSSSSSSS_###_XSI_V.XX.YY
       return `RPM_${year}_${month}_${systemCode}_${prog}_XSI_${formatVersion}`;
     case 'giornaliero':
-      // FIX 2026-01-21: RMG usa giorno "00" nel Subject come nel nome file
-      // Esempio UFFICIALE SIAE: RMG_2015_09_00_001.xml
-      return `RMG_${year}_${month}_00_${systemCode}_${prog}_XSI_${formatVersion}`;
+      // RMG: formato CON giorno specifico - RMG_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
+      return `RMG_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
     case 'rca':
     default:
       // RCA: formato CON giorno - RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY

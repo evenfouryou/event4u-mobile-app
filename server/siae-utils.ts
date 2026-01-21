@@ -659,10 +659,10 @@ export function generateSiaeAttachmentName(
   let result: string;
   switch (reportType) {
     case 'giornaliero':
-      // FIX 2026-01-21: RMG usa giorno "00" (non giorno specifico!)
-      // Esempio UFFICIALE SIAE: RMG_2015_09_00_001.xml
-      // Il RiepilogoGiornaliero copre tutto il periodo, quindi GG = 00
-      result = `RMG_${year}_${month}_00_${prog}${extension}`;
+      // RMG_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
+      // Il giorno è quello specifico del report (non 00!)
+      // Confermato da file funzionante: RMG_2026_01_13_004.xsi
+      result = `RMG_${year}_${month}_${day}_${prog}${extension}`;
       break;
     case 'mensile':
       // RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)
@@ -719,14 +719,13 @@ export function generateSiaeSubject(
   // Versione formato - usiamo V.01.00 come da documentazione
   const formatVersion = 'V.01.00';
   
-  // FIX 2026-01-21: Prefisso Subject dipende dal tipo di report
-  // Esempio UFFICIALE: RMG_2015_09_00_001.xml -> Subject usa anche giorno "00"
+  // Prefisso Subject dipende dal tipo di report (Allegato C 1.5.3)
   let subject: string;
   switch (reportType) {
     case 'giornaliero':
       // RMG = Riepilogo Musica Generale (giornaliero)
-      // FIX 2026-01-21: Usa giorno "00" nel Subject come nel nome file
-      subject = `RMG_${year}_${month}_00_${systemCode}_${prog}_XSI_${formatVersion}`;
+      // Usa giorno specifico del report
+      subject = `RMG_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
       break;
     case 'mensile':
       // RPM = Riepilogo Programmi Musicali (mensile) - senza giorno
