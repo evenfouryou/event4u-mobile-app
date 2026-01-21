@@ -8,6 +8,7 @@ import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
 import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, resolveSystemCodeForSmime, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, validateSiaeFileName, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
 import { calculateTransmissionStats, calculateFileHash } from './siae-routes';
+import { createSiaeTransmissionWithXml } from './siae-transmission-service';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -305,6 +306,15 @@ function generateXMLContent(reportData: any): string {
       nomeFile: nomeFile || undefined,
     };
     
+    // TODO [CONSOLIDAMENTO XML]: Questa chiamata a generateC1Xml non può usare createSiaeTransmissionWithXml
+    // perché generateXMLContent restituisce solo XML, non crea trasmissioni.
+    // La creazione effettiva della trasmissione avviene nei caller (sendDailyReports linea ~615,
+    // sendMonthlyReports linea ~905) che gestiscono anche:
+    // - Auto-correzione XML (autoCorrectSiaeXml)
+    // - Validazione DTD pre-trasmissione (validatePreTransmission)
+    // - Firma digitale CAdES-BES (requestXmlSignature)
+    // Per consolidare occorrerebbe refactoring del flusso scheduler per spostare
+    // la generazione XML dentro createSiaeTransmissionWithXml con hook per pre/post processing.
     const result = generateC1Xml(c1Params);
     return result.xml;
   }
@@ -327,6 +337,12 @@ function generateXMLContent(reportData: any): string {
     capienzaTotale = 100;
   }
 
+  // TODO [CONSOLIDAMENTO XML]: Questo codice inline è un fallback legacy per RCA.
+  // Attualmente tutti i caller di generateXMLContent passano xmlReportType='giornaliero' o 'mensile',
+  // quindi questo codice viene eseguito solo se xmlReportType non è specificato (fallback RCA).
+  // La logica RCA centralizzata è in generateRCAXml (siae-utils.ts), usata da sendRCAReports().
+  // Valutare se questo fallback può essere rimosso o sostituito con chiamata a generateRCAXml.
+  // Al momento lo manteniamo per retrocompatibilità con eventuali caller non aggiornati.
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
@@ -1225,6 +1241,17 @@ async function sendRCAReports() {
           venueName: location?.name || 'Locale',
         };
         
+        // TODO [CONSOLIDAMENTO XML]: Valutare uso di createSiaeTransmissionWithXml per unificare
+        // la generazione XML e creazione trasmissione. Attualmente non fattibile perché il flusso
+        // richiede passaggi intermedi non supportati dalla funzione centralizzata:
+        // 1. Auto-correzione XML (autoCorrectSiaeXml) DOPO generazione ma PRIMA della trasmissione
+        // 2. Validazione nome file (validateSiaeFileName) con logica di skip evento
+        // 3. Firma digitale (requestXmlSignature) con UPDATE della trasmissione già creata
+        // 4. Validazione coerenza codice sistema (validateSystemCodeConsistency) post-firma
+        // Per consolidare servirebbe refactoring di createSiaeTransmissionWithXml con:
+        // - Callback/hook per auto-correzione pre-salvataggio
+        // - Gestione firma separata (la firma avviene DOPO salvataggio pending)
+        // - Ritorno dell'oggetto transmission per update successivi
         // Genera XML RCA
         const rcaResult = generateRCAXml(rcaParams);
         
