@@ -244,18 +244,20 @@ router.post("/api/public/test-siae-send", async (req, res) => {
     const [company] = await db.select().from(companies).where(eq(companies.id, card.companyId!));
     const reportDate = new Date();
     const progressivo = req.body.progressivo || 106;
-    const fileName = generateSiaeFileName('giornaliero', reportDate, progressivo, null, systemCode);
-    console.log(`[TEST] RMG: file=${fileName}, systemCode=${systemCode}`);
+    const reportType = req.body.reportType === 'mensile' ? 'mensile' : 'giornaliero';
+    const fileName = generateSiaeFileName(reportType, reportDate, progressivo, null, systemCode);
+    console.log(`[TEST] ${reportType.toUpperCase()}: file=${fileName}, systemCode=${systemCode}`);
     const result = generateC1Xml({
-      reportKind: 'giornaliero', companyId: card.companyId!, reportDate,
+      reportKind: reportType, companyId: card.companyId!, reportDate,
       resolvedSystemCode: systemCode, progressivo, taxId: '02120820432',
       businessName: company?.name || 'Test', events: [], subscriptions: [],
       nomeFile: fileName, forceSubstitution: false
     });
     console.log(`[TEST] XML preview:\n${result.xml.substring(0, 500)}`);
+    const transmissionType = reportType === 'mensile' ? 'monthly' : 'daily';
     const emailResult = await sendSiaeTransmissionEmail({
       to: 'servertest2@batest.siae.it', companyName: company?.name || 'Test',
-      transmissionType: 'daily', periodDate: reportDate, ticketsCount: 0, totalAmount: '0.00',
+      transmissionType, periodDate: reportDate, ticketsCount: 0, totalAmount: '0.00',
       xmlContent: result.xml, transmissionId: randomUUID(), systemCode, sequenceNumber: progressivo,
       signWithSmime: true, requireSignature: false, explicitFileName: fileName,
     });
