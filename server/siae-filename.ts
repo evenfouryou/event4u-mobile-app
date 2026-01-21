@@ -8,9 +8,9 @@
  * 
  * FORMATO NOME FILE ALLEGATO (sezione 1.4.1):
  *   
- *   Giornaliero: RMG_AAAA_MM_GG_###.xsi.p7m
+ *   Giornaliero: RMG_AAAA_MM_00_###.xsi.p7m (giorno = 00)
  *   Mensile:     RPM_AAAA_MM_###.xsi.p7m (senza giorno)
- *   Evento:      RCA_AAAA_MM_GG_###.xsi.p7m
+ *   Evento:      RCA_AAAA_MM_GG_###.xsi.p7m (giorno specifico)
  * 
  * Dove:
  *   RMG = Riepilogo Musica Generale (giornaliero)
@@ -23,9 +23,9 @@
  *   .p7m = firma digitale
  * 
  * Esempi:
- *   RMG_2026_01_20_001.xsi.p7m (giornaliero)
- *   RPM_2026_01_001.xsi.p7m (mensile)
- *   RCA_2026_01_20_001.xsi.p7m (evento)
+ *   RMG_2026_01_00_001.xsi.p7m (giornaliero - giorno = 00)
+ *   RPM_2026_01_001.xsi.p7m (mensile - senza giorno)
+ *   RCA_2026_01_20_001.xsi.p7m (evento - giorno specifico)
  * 
  * FORMATO SUBJECT EMAIL (sezione 1.5.3):
  *   XXX_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
@@ -34,9 +34,9 @@
  *   V.XX.YY = versione formato
  * 
  * Esempi:
- *   RMG_2026_01_20_P0004010_001_XSI_V.01.00 (giornaliero)
- *   RPM_2026_01_P0004010_001_XSI_V.01.00 (mensile)
- *   RCA_2026_01_20_P0004010_001_XSI_V.01.00 (evento)
+ *   RMG_2026_01_00_P0004010_001_XSI_V.01.00 (giornaliero - giorno = 00)
+ *   RPM_2026_01_P0004010_001_XSI_V.01.00 (mensile - senza giorno)
+ *   RCA_2026_01_20_P0004010_001_XSI_V.01.00 (evento - giorno specifico)
  * 
  * REGOLE CRITICHE:
  * 1. NO timestamp nel nome file
@@ -103,7 +103,9 @@ export function generateSiaeFileName(params: SiaeFileNameParams): SiaeFileNameRe
   switch (reportType) {
     case 'giornaliero':
       prefix = 'RMG';
-      dateComponent = `${year}_${month}_${day}`;
+      // FIX 2026-01-21: RMG usa giorno "00" (non giorno specifico!)
+      // Esempio UFFICIALE SIAE: RMG_2015_09_00_001.xml
+      dateComponent = `${year}_${month}_00`;
       break;
     case 'mensile':
       prefix = 'RPM';
@@ -252,8 +254,9 @@ export function generateSiaeEmailSubject(params: SiaeFileNameParams): string {
       // RPM: formato SENZA giorno - RPM_AAAA_MM_SSSSSSSS_###_XSI_V.XX.YY
       return `RPM_${year}_${month}_${systemCode}_${prog}_XSI_${formatVersion}`;
     case 'giornaliero':
-      // RMG: formato CON giorno - RMG_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
-      return `RMG_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
+      // FIX 2026-01-21: RMG usa giorno "00" nel Subject come nel nome file
+      // Esempio UFFICIALE SIAE: RMG_2015_09_00_001.xml
+      return `RMG_${year}_${month}_00_${systemCode}_${prog}_XSI_${formatVersion}`;
     case 'rca':
     default:
       // RCA: formato CON giorno - RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
