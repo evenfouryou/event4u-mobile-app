@@ -1,0 +1,53 @@
+You must fix 3 bugs causing error 0600 when sending sales reports (RPG/RPM) to SIAE. Follow these exact steps.                                                                                      
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  BUG 1: ENCODING MISMATCH (CRITICAL)                                                                                                                                                                 
+                                                                                                                                                                                                      
+  Problem: XML header declares encoding="UTF-8" but file is sent as latin1/ISO-8859-1.                                                                                                                
+                                                                                                                                                                                                      
+  Steps:                                                                                                                                                                                              
+  1. Search codebase for: latin1, ISO-8859-1, encoding, charset                                                                                                                                       
+  2. Find the email service or file attachment code that sets encoding                                                                                                                                
+  3. Locate the line similar to: Using latin1 encoding for ISO-8859-1 XML attachment                                                                                                                  
+  4. Change the file encoding to UTF-8 to match the XML declaration                                                                                                                                   
+  5. Ensure Content-Type header includes charset=utf-8 if sending via HTTP                                                                                                                            
+                                                                                                                                                                                                      
+  Verification: After fix, log the actual bytes of the generated file and confirm first line is <?xml version="1.0" encoding="UTF-8"?> and file is saved/sent with UTF-8 encoding.                    
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  BUG 2: EMPTY REPORTS (CRITICAL)                                                                                                                                                                     
+                                                                                                                                                                                                      
+  Problem: Reports are sent containing only <Organizzatore> with zero <Evento> elements. SIAE rejects empty reports.                                                                                  
+                                                                                                                                                                                                      
+  Steps:                                                                                                                                                                                              
+  1. Search for: <Evento, RPG, RPM, Organizzatore, report generation function                                                                                                                         
+  2. Find where XML report is built/generated                                                                                                                                                         
+  3. Add validation BEFORE sending that checks: if (events.length === 0 || !hasEventData)                                                                                                             
+  4. If no events exist for the reporting period:                                                                                                                                                     
+    - Do NOT send the report                                                                                                                                                                          
+    - Return error message to user: "Cannot send report: no events found for this period"                                                                                                             
+    - Log: "Report generation blocked - no events for period [date range]"                                                                                                                            
+                                                                                                                                                                                                      
+  Verification: Test by triggering a report for a date range with no events. Confirm it blocks with user-friendly message instead of sending empty XML.                                               
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  BUG 3: LINE ENDINGS (REQUIRES INVESTIGATION)                                                                                                                                                        
+                                                                                                                                                                                                      
+  Problem: Unknown if SIAE requires specific line endings (CRLF \r\n vs LF \n).                                                                                                                       
+                                                                                                                                                                                                      
+  DO NOT GUESS. Follow these exact steps:                                                                                                                                                             
+                                                                                                                                                                                                      
+  1. Find the official spec: Search project for: SIAE, specification, spec, documentation, .pdf, README, docs/. Look for any SIAE technical documentation file.                                       
+  2. Check existing working examples: Search for any example XML files in the project (.xsi, .xml files related to SIAE). Open them in hex view or check with:                                        
+  const fs = require('fs');                                                                                                                                                                           
+  const content = fs.readFileSync('path/to/example.xsi');                                                                                                                                             
+  console.log('Contains CRLF:', content.includes('\r\n'));                                                                                                                                            
+  console.log('Contains LF only:', content.includes('\n') && !content.includes('\r\n'));                                                                                                              
+  3. Check current output: Add temporary debug logging to the report generation:                                                                                                                      
+  console.log('Line ending check:', JSON.stringify(xmlString.substring(0, 100)));                                                                                                                     
+  // This will show \r\n or \n explicitly                                                                                                                                                             
+  4. If spec found: Implement exactly what spec says                                                                                                                                                  
+  5. If spec NOT found but example exists: Match the example file's line endings                                                                                                                      
+  6. If neither found: Log this finding: "SIAE line ending requirement not found in codebase - needs manual verification with SIAE documentation" and leave current behavior, do not change blindly   
+                                                                                                                                                                                                      
+  Report back: State clearly what you found (spec requirement, example file analysis, or nothing) and what action you took.  
