@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE RiepilogoGiornaliero SYSTEM "RiepilogoGiornaliero_v0039_20040209.dtd">
+<RiepilogoGiornaliero Data="20260121" DataGenerazione="20260121" OraGenerazione="102435" ProgressivoGenerazione="004" Sostituzione="S">
+    <Titolare>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+    </Organizzatore>
+</RiepilogoGiornaliero>

@@ -345,7 +345,7 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     parsedData: {
       reportType: prefix as 'RMG' | 'RPM' | 'RCA' | 'LTA',
       date: `${year}_${month}_${day}`,
-      systemCode: undefined, // Non presente nel nome file (solo nel Subject)
+      systemCode: null, // Non presente nel nome file (solo nel Subject)
       progressivo: progressivo,
       extension: extension,
     }
