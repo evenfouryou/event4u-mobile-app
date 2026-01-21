@@ -1,0 +1,25 @@
+I need to verify if the SIAE test transmission was successful. Find and show me:                                                                                                                    
+                                                                                                                                                                                                      
+  1. Check for SIAE Response                                                                                                                                                                          
+  - Search the email inbox/mailbox configured for SIAE communications                                                                                                                                 
+  - Look for any new emails from servertest2@batest.siae.it or SIAE domain                                                                                                                            
+  - If a response file exists, read and display its contents                                                                                                                                          
+                                                                                                                                                                                                      
+  2. Check Application Logs                                                                                                                                                                           
+  - Search logs for: SIAE, response, REPLY, CODICE, 0000, 0010, 2006                                                                                                                                  
+  - Show the last 50 lines of logs related to SIAE transmission                                                                                                                                       
+  - Display timestamp of most recent transmission attempt                                                                                                                                             
+                                                                                                                                                                                                      
+  3. Check Database/Storage                                                                                                                                                                           
+  - Search for any table or storage that tracks SIAE transmission history                                                                                                                             
+  - Look for: transmission_log, siae_response, report_status, or similar                                                                                                                              
+  - Show the status of the most recent transmission (sent date, response code, response message)                                                                                                      
+                                                                                                                                                                                                      
+  4. Check if Response Handler Exists                                                                                                                                                                 
+  - Search codebase for: email polling, IMAP, POP3, incoming email handler                                                                                                                            
+  - Determine if the app automatically processes SIAE responses or if manual check is needed                                                                                                          
+                                                                                                                                                                                                      
+  Report back:                                                                                                                                                                                        
+  - Response code received (0000 = success, other = error)                                                                                                                                            
+  - Full response content if available                                                                                                                                                                
+  - If no response yet, tell me where/how to manually check 

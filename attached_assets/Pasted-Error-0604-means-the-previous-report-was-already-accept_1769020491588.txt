@@ -1,0 +1,41 @@
+Error 0604 means the previous report was already accepted. To properly test the fixes, we need to send a report for a NEW date that hasn't been submitted yet.                                      
+                                                                                                                                                                                                      
+  Steps:                                                                                                                                                                                              
+                                                                                                                                                                                                      
+  1. Create New Test Event                                                                                                                                                                            
+  Create a test event for a date that has NOT been submitted to SIAE yet:                                                                                                                             
+  - Event date: tomorrow or any future date, OR a past date with no previous submission                                                                                                               
+  - Event name: "Test SIAE Verification"                                                                                                                                                              
+  - Include all required fields: Locale, Intrattenimento, MultiGenere, OrdineDiPosto                                                                                                                  
+  - Genre: 61 (or any valid genre)                                                                                                                                                                    
+                                                                                                                                                                                                      
+  2. Create Test Tickets                                                                                                                                                                              
+  Add 2-3 test tickets for this event:                                                                                                                                                                
+  - Ticket price: non-zero (e.g., €15.00)                                                                                                                                                             
+  - Ensure CorrispettivoLordo will be populated                                                                                                                                                       
+                                                                                                                                                                                                      
+  3. Generate and Send Report                                                                                                                                                                         
+  - Generate a daily report (RPG) for the NEW date only                                                                                                                                               
+  - Save the generated XML to a test file: test_siae_output.xml in the project root                                                                                                                   
+  - Log the full XML before sending to verify:                                                                                                                                                        
+    - encoding="UTF-8" and file is UTF-8 encoded                                                                                                                                                      
+    - <Denominazione>HURAEX SRL</Denominazione>                                                                                                                                                       
+    - <CorrispettivoLordo> has actual value (not 0)                                                                                                                                                   
+    - No <Autore> or <Esecutore> for genre 61                                                                                                                                                         
+    - Sostituzione="N" (new submission, not replacement)                                                                                                                                              
+                                                                                                                                                                                                      
+  4. Show Me the Test File                                                                                                                                                                            
+  - Display the contents of test_siae_output.xml                                                                                                                                                      
+  - OR print the full XML in the console log                                                                                                                                                          
+                                                                                                                                                                                                      
+  5. Send to SIAE                                                                                                                                                                                     
+  - Send the report to servertest2@batest.siae.it                                                                                                                                                     
+  - Log the transmission timestamp                                                                                                                                                                    
+  - Expected attachment filename format: RPG_YYYY_MM_DD_XXX.xsi (where XXX is the system code)                                                                                                        
+                                                                                                                                                                                                      
+  6. Report Back                                                                                                                                                                                      
+  Tell me:                                                                                                                                                                                            
+  - The date used for the test                                                                                                                                                                        
+  - The filename of the attachment sent                                                                                                                                                               
+  - Full XML content or confirm test_siae_output.xml was created                                                                                                                                      
+  - That email was sent successfully

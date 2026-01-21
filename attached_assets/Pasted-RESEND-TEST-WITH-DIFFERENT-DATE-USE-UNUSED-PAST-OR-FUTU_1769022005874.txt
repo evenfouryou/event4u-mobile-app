@@ -1,0 +1,29 @@
+RESEND TEST WITH DIFFERENT DATE - USE UNUSED PAST OR FUTURE DATE                                                                                                                                    
+                                                                                                                                                                                                      
+  The last test used date 20260121 (Jan 21) which already has an accepted report (error 0604).                                                                                                        
+                                                                                                                                                                                                      
+  Fix and resend:                                                                                                                                                                                     
+                                                                                                                                                                                                      
+  1. Choose a date with NO previous submission:                                                                                                                                                       
+    - Past date examples: 20260115, 20260118, 20260119, 20260120 (any date not yet submitted)                                                                                                         
+    - Future date examples: 20260122, 20260123                                                                                                                                                        
+  2. Check which dates have already been submitted:                                                                                                                                                   
+    - Search logs/database for previous SIAE transmissions                                                                                                                                            
+    - List all dates that have been submitted                                                                                                                                                         
+    - Pick a date NOT in that list                                                                                                                                                                    
+  3. Create test event/tickets for the chosen date                                                                                                                                                    
+    - Event date must match the report date                                                                                                                                                           
+    - Include tickets with non-zero price                                                                                                                                                             
+  4. Generate new RPG report with:                                                                                                                                                                    
+    - Data="YYYYMMDD" (chosen unused date)                                                                                                                                                            
+    - ProgressivoGenerazione="001"                                                                                                                                                                    
+    - Sostituzione="N"                                                                                                                                                                                
+  5. Filename must match the new date:                                                                                                                                                                
+    - Example: RPG_2026_01_18_XXX.xsi for January 18                                                                                                                                                  
+  6. Send to SIAE and show:                                                                                                                                                                           
+    - Which date was used (confirm it's not previously submitted)                                                                                                                                     
+    - The new XML content                                                                                                                                                                             
+    - The attachment filename                                                                                                                                                                         
+    - Transmission confirmation                                                                                                                                                                       
+                                                                                                                                                                                                      
+  Note: Past dates are valid as long as they're within SIAE's allowed submission window and haven't been submitted before. 
