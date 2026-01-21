@@ -287,6 +287,145 @@ router.post("/api/public/test-siae-send", async (req, res) => {
   } catch (error: any) { res.status(500).json({ error: error.message }); }
 });
 
+// Test SIAE con TUTTI i generi e abbonamenti
+router.post("/api/public/test-siae-full", async (req, res) => {
+  try {
+    const { generateC1Xml, generateSiaeFileName } = await import('./siae-utils');
+    const { sendSiaeTransmissionEmail } = await import('./email-service');
+    const { randomUUID } = await import('crypto');
+    const cards = await db.select().from(siaeActivationCards).where(eq(siaeActivationCards.status, 'active')).limit(1);
+    if (!cards.length) return res.status(400).json({ error: 'No active card' });
+    const card = cards[0];
+    const systemCode = card.systemCode || 'P0004010';
+    const [company] = await db.select().from(companies).where(eq(companies.id, card.companyId!));
+    
+    const testDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
+    const reportDate = new Date(testDateStr + 'T20:00:00');
+    const progressivo = req.body.progressivo || Math.floor(Date.now() / 1000) % 1000;
+    const reportType = req.body.reportType === 'mensile' ? 'mensile' : 'giornaliero';
+    const forceSubstitution = req.body.forceSubstitution === true;
+    const fileName = generateSiaeFileName(reportType, reportDate, progressivo, null, systemCode);
+    
+    // GENERI SIAE COMPLETI:
+    // 1-4: Cinema (richiede Autore/Esecutore)
+    // 45-59: Teatro/Concerti (richiede Autore/Esecutore)
+    // 60-69: Ballo/Discoteca (NON richiede Autore/Esecutore)
+    const testEvents = [
+      // Evento 1: Discoteca (genere 61) - NO autore/esecutore
+      {
+        ticketedEvent: { id: 1, siaeLocationCode: '0000000000001', siaeGenreCode: '61' },
+        eventRecord: { id: 1, name: 'Serata Discoteca Test', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 1, name: 'Club Test', siaeLocationCode: '0000000000001' },
+        sectors: [{ id: 'A0', name: 'Generale', capacity: 500 }],
+        tickets: [
+          { id: 'T001', sectorId: 'A0', price: '15.00', grossAmount: '15.00', taxableAmount: '12.30', vatAmount: '2.70', ticketNumber: '00000001', emissionDate: reportDate, customerName: 'Mario Rossi', customerFiscalCode: 'RSSMRA80A01H501X' },
+          { id: 'T002', sectorId: 'A0', price: '20.00', grossAmount: '20.00', taxableAmount: '16.39', vatAmount: '3.61', ticketNumber: '00000002', emissionDate: reportDate, customerName: 'Luigi Verdi', customerFiscalCode: 'VRDLGU85B02F205Y' },
+        ]
+      },
+      // Evento 2: Concerto (genere 50) - RICHIEDE autore/esecutore
+      {
+        ticketedEvent: { id: 2, siaeLocationCode: '0000000000002', siaeGenreCode: '50', siaeAuthor: 'Vasco Rossi', siaePerformer: 'Vasco Rossi Band' },
+        eventRecord: { id: 2, name: 'Concerto Rock Test', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 2, name: 'Teatro Test', siaeLocationCode: '0000000000002' },
+        sectors: [
+          { id: 'P1', name: 'Platea', capacity: 200 },
+          { id: 'G1', name: 'Galleria', capacity: 100 }
+        ],
+        tickets: [
+          { id: 'T003', sectorId: 'P1', price: '50.00', grossAmount: '50.00', taxableAmount: '40.98', vatAmount: '9.02', ticketNumber: '00000003', emissionDate: reportDate, customerName: 'Anna Bianchi', customerFiscalCode: 'BNCNNA90C03L219Z' },
+          { id: 'T004', sectorId: 'G1', price: '30.00', grossAmount: '30.00', taxableAmount: '24.59', vatAmount: '5.41', ticketNumber: '00000004', emissionDate: reportDate, customerName: 'Paolo Neri', customerFiscalCode: 'NREPLA75D04A944W' },
+        ]
+      },
+      // Evento 3: Cinema (genere 1) - RICHIEDE autore/esecutore
+      {
+        ticketedEvent: { id: 3, siaeLocationCode: '0000000000003', siaeGenreCode: '1', siaeAuthor: 'Martin Scorsese', siaePerformer: 'Leonardo DiCaprio' },
+        eventRecord: { id: 3, name: 'Film Premiere Test', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 3, name: 'Cinema Test', siaeLocationCode: '0000000000003' },
+        sectors: [{ id: 'S1', name: 'Sala 1', capacity: 150 }],
+        tickets: [
+          { id: 'T005', sectorId: 'S1', price: '12.00', grossAmount: '12.00', taxableAmount: '9.84', vatAmount: '2.16', ticketNumber: '00000005', emissionDate: reportDate, customerName: 'Giulia Rosa', customerFiscalCode: 'RSOGLU88E05H501A' },
+        ]
+      },
+      // Evento 4: Ballo liscio (genere 65) - NO autore/esecutore
+      {
+        ticketedEvent: { id: 4, siaeLocationCode: '0000000000004', siaeGenreCode: '65' },
+        eventRecord: { id: 4, name: 'Serata Liscio Test', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 4, name: 'Balera Test', siaeLocationCode: '0000000000004' },
+        sectors: [{ id: 'B1', name: 'Pista', capacity: 300 }],
+        tickets: [
+          { id: 'T006', sectorId: 'B1', price: '8.00', grossAmount: '8.00', taxableAmount: '6.56', vatAmount: '1.44', ticketNumber: '00000006', emissionDate: reportDate, customerName: 'Franco Blu', customerFiscalCode: 'BLUFNC60F06G273B' },
+        ]
+      },
+    ];
+    
+    // ABBONAMENTI di test
+    const testSubscriptions = [
+      {
+        id: 'SUB001',
+        subscriptionNumber: '0000001',
+        customerName: 'Abbonato Premium',
+        customerFiscalCode: 'PRMABB70G07H501C',
+        price: '100.00',
+        grossAmount: '100.00',
+        taxableAmount: '81.97',
+        vatAmount: '18.03',
+        validFrom: reportDate,
+        validTo: new Date(reportDate.getTime() + 365 * 24 * 60 * 60 * 1000), // +1 anno
+        eventsIncluded: 12,
+        sectorId: 'A0',
+        emissionDate: reportDate,
+      },
+      {
+        id: 'SUB002',
+        subscriptionNumber: '0000002',
+        customerName: 'Abbonato Base',
+        customerFiscalCode: 'BSEABB75H08L219D',
+        price: '50.00',
+        grossAmount: '50.00',
+        taxableAmount: '40.98',
+        vatAmount: '9.02',
+        validFrom: reportDate,
+        validTo: new Date(reportDate.getTime() + 180 * 24 * 60 * 60 * 1000), // +6 mesi
+        eventsIncluded: 6,
+        sectorId: 'P1',
+        emissionDate: reportDate,
+      },
+    ];
+    
+    console.log(`[TEST-FULL] Generando ${reportType} con ${testEvents.length} eventi e ${testSubscriptions.length} abbonamenti`);
+    
+    const result = generateC1Xml({
+      reportKind: reportType, companyId: card.companyId!, reportDate,
+      resolvedSystemCode: systemCode, progressivo, taxId: '02120820432',
+      businessName: 'HURAEX SRL', events: testEvents, subscriptions: testSubscriptions,
+      nomeFile: fileName, forceSubstitution
+    });
+    
+    console.log(`[TEST-FULL] XML generato (${result.xml.length} bytes)`);
+    
+    // Invia solo se richiesto
+    if (req.body.send === true) {
+      const emailResult = await sendSiaeTransmissionEmail({
+        to: 'servertest2@batest.siae.it', companyName: company?.name || 'Test',
+        transmissionType: reportType === 'mensile' ? 'monthly' : 'daily',
+        periodDate: reportDate, ticketsCount: testEvents.reduce((acc, e) => acc + e.tickets.length, 0),
+        totalAmount: testEvents.reduce((acc, e) => acc + e.tickets.reduce((a, t) => a + parseFloat(t.price), 0), 0).toFixed(2),
+        xmlContent: result.xml, transmissionId: randomUUID(), systemCode, sequenceNumber: progressivo,
+        signWithSmime: true, requireSignature: false, explicitFileName: fileName,
+      });
+      res.json({ success: emailResult.success, sent: true, fileName, systemCode, smimeSigned: emailResult.smimeSigned, 
+        eventsCount: testEvents.length, subscriptionsCount: testSubscriptions.length, xml: result.xml });
+    } else {
+      // Solo preview XML senza invio
+      res.json({ success: true, sent: false, fileName, systemCode, 
+        eventsCount: testEvents.length, subscriptionsCount: testSubscriptions.length, xml: result.xml });
+    }
+  } catch (error: any) { 
+    console.error('[TEST-FULL] Error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack }); 
+  }
+});
+
 // ==================== CATEGORIE EVENTI ====================
 
 // Lista categorie eventi attive
