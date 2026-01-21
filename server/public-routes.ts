@@ -247,17 +247,31 @@ router.post("/api/public/test-siae-send", async (req, res) => {
     const reportType = req.body.reportType === 'mensile' ? 'mensile' : 'giornaliero';
     const fileName = generateSiaeFileName(reportType, reportDate, progressivo, null, systemCode);
     console.log(`[TEST] ${reportType.toUpperCase()}: file=${fileName}, systemCode=${systemCode}`);
+    
+    // Generate test event data for SIAE testing
+    const testEvents = [{
+      ticketedEvent: { id: 1, siaeLocationCode: '0000000000001', siaeGenreCode: '61' },
+      eventRecord: { id: 1, name: 'Evento Test SIAE', startDatetime: reportDate, endDatetime: reportDate },
+      location: { id: 1, name: 'Locale Test', siaeLocationCode: '0000000000001' },
+      sectors: [{ id: 'A0', name: 'Platea', capacity: 100 }],
+      tickets: [{
+        id: 'T001', sectorId: 'A0', price: '10.00', taxableAmount: '8.20',
+        vatAmount: '1.80', ticketNumber: '00000001', emissionDate: reportDate,
+        customerName: 'Test Cliente', customerFiscalCode: 'TSTCLN80A01H501X'
+      }]
+    }];
+    
     const result = generateC1Xml({
       reportKind: reportType, companyId: card.companyId!, reportDate,
       resolvedSystemCode: systemCode, progressivo, taxId: '02120820432',
-      businessName: company?.name || 'Test', events: [], subscriptions: [],
+      businessName: company?.name || 'Test', events: testEvents, subscriptions: [],
       nomeFile: fileName, forceSubstitution: false
     });
-    console.log(`[TEST] XML preview:\n${result.xml.substring(0, 500)}`);
+    console.log(`[TEST] XML preview:\n${result.xml.substring(0, 800)}`);
     const transmissionType = reportType === 'mensile' ? 'monthly' : 'daily';
     const emailResult = await sendSiaeTransmissionEmail({
       to: 'servertest2@batest.siae.it', companyName: company?.name || 'Test',
-      transmissionType, periodDate: reportDate, ticketsCount: 0, totalAmount: '0.00',
+      transmissionType, periodDate: reportDate, ticketsCount: 1, totalAmount: '10.00',
       xmlContent: result.xml, transmissionId: randomUUID(), systemCode, sequenceNumber: progressivo,
       signWithSmime: true, requireSignature: false, explicitFileName: fileName,
     });
