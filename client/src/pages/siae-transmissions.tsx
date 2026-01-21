@@ -1388,7 +1388,12 @@ export default function SiaeTransmissionsPage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isSendDailyDialogOpen} onOpenChange={setIsSendDailyDialogOpen}>
+        <Dialog open={isSendDailyDialogOpen} onOpenChange={(open) => {
+          setIsSendDailyDialogOpen(open);
+          if (!open) {
+            setForceSubstitution(false); // Reset checkbox quando si chiude il dialog
+          }
+        }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Trasmissione Report SIAE</DialogTitle>
