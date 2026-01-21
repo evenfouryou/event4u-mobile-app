@@ -5019,13 +5019,15 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
   const dtdFile = isMonthly ? 'RiepilogoMensile_v0039_20040209.dtd' : 'RiepilogoGiornaliero_v0039_20040209.dtd';
 
-  // FIX 2026-01-21 v2: Formato ESATTO come ESEMPIO UFFICIALE SIAE
-  // Vedi attached_assets/siae_master/.../RMG_2015_09_00_001.xml:
-  // 1. NESSUN DOCTYPE (esempio ufficiale NON lo ha!)
-  // 2. NESSUN attributo NomeFile (non esiste nel DTD v0039!)
-  // 3. NESSUNA riga vuota dopo <?xml?> (come file RPM funzionante)
+  // FIX 2026-01-21 v3: RIPRISTINO NomeFile per compatibilità parser SIAE
+  // NOTA CRITICA: Il DTD v0039 NON include NomeFile, MA il parser SIAE di produzione
+  // lo RICHIEDE per generare risposte. Senza NomeFile, SIAE accetta email
+  // ma non genera MAI una risposta (né OK né errore).
+  // NomeFile deve essere il nome allegato in formato BREVE (Allegato C 1.4.1)
+  const nomeFileAttr = nomeFile ? ` NomeFile="${escapeXml(nomeFile)}"` : '';
+  
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
+<${rootElement}${nomeFileAttr} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
