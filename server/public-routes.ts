@@ -59,7 +59,7 @@ import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
-import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles } from "@shared/schema";
+import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles, siaeCustomers } from "@shared/schema";
 import svgCaptcha from "svg-captcha";
 import QRCode from "qrcode";
 
@@ -458,6 +458,190 @@ router.post("/api/public/test-siae-full", async (req, res) => {
   } catch (error: any) { 
     console.error('[TEST-FULL] Error:', error);
     res.status(500).json({ error: error.message, stack: error.stack }); 
+  }
+});
+
+// Crea eventi REALI nel database per ogni genere SIAE
+router.post("/api/public/test-siae-create-events", async (req, res) => {
+  try {
+    const { randomUUID } = await import('crypto');
+    const cards = await db.select().from(siaeActivationCards).where(eq(siaeActivationCards.status, 'active')).limit(1);
+    if (!cards.length) return res.status(400).json({ error: 'No active card' });
+    const card = cards[0];
+    const companyId = card.companyId!;
+    
+    // Trova o crea una location
+    let [location] = await db.select().from(locations).where(eq(locations.companyId, companyId)).limit(1);
+    if (!location) {
+      const locId = randomUUID();
+      await db.insert(locations).values({
+        id: locId, companyId, name: 'Locale Test SIAE', address: 'Via Test 1', city: 'Roma', province: 'RM', postalCode: '00100', country: 'IT',
+        siaeLocationCode: '0000000000001'
+      });
+      [location] = await db.select().from(locations).where(eq(locations.id, locId));
+    }
+    
+    const testDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
+    const reportDate = new Date(testDateStr + 'T20:00:00');
+    const endDate = new Date(reportDate.getTime() + 4 * 60 * 60 * 1000); // +4 ore
+    
+    // Definizione eventi per ogni genere SIAE principale
+    const genreDefinitions = [
+      { genre: '1', name: 'Cinema Prima Visione', author: 'Martin Scorsese', performer: 'Leonardo DiCaprio', price: 12.00, taxType: 'S' },
+      { genre: '2', name: 'Cinema Seconda Visione', author: 'Christopher Nolan', performer: 'Cast Film', price: 8.00, taxType: 'S' },
+      { genre: '3', name: 'Cinema Terza Visione', author: 'Steven Spielberg', performer: 'Attori Vari', price: 5.00, taxType: 'S' },
+      { genre: '5', name: 'Circo Nazionale', author: null, performer: null, price: 25.00, taxType: 'S' },
+      { genre: '6', name: 'Luna Park Attrazioni', author: null, performer: null, price: 15.00, taxType: 'I' },
+      { genre: '8', name: 'Partita Calcio Serie A', author: null, performer: null, price: 35.00, taxType: 'S' },
+      { genre: '10', name: 'Tennis ATP Finals', author: null, performer: null, price: 45.00, taxType: 'S' },
+      { genre: '45', name: 'Teatro - Romeo e Giulietta', author: 'William Shakespeare', performer: 'Compagnia Nazionale', price: 40.00, taxType: 'S' },
+      { genre: '46', name: 'Teatro Dialettale', author: 'Eduardo De Filippo', performer: 'Compagnia Locale', price: 25.00, taxType: 'S' },
+      { genre: '50', name: 'Concerto Rock - Vasco Rossi', author: 'Vasco Rossi', performer: 'Vasco Rossi', price: 60.00, taxType: 'S' },
+      { genre: '51', name: 'Concerto Pop', author: 'Artista Pop', performer: 'Artista Pop Band', price: 50.00, taxType: 'S' },
+      { genre: '55', name: 'Concerto Classico Sinfonica', author: 'Orchestra Sinfonica', performer: 'Direttore Maestro', price: 55.00, taxType: 'S' },
+      { genre: '61', name: 'Serata Discoteca', author: null, performer: null, price: 20.00, taxType: 'I' },
+      { genre: '62', name: 'Discoteca con Musica dal Vivo', author: null, performer: null, price: 25.00, taxType: 'I' },
+      { genre: '65', name: 'Ballo Liscio Romagna', author: null, performer: null, price: 10.00, taxType: 'I' },
+      { genre: '68', name: 'Festa Latina Salsa', author: null, performer: null, price: 18.00, taxType: 'I' },
+    ];
+    
+    const createdEvents: any[] = [];
+    const createdTickets: any[] = [];
+    let ticketCounter = 1;
+    
+    for (const gd of genreDefinitions) {
+      // 1. Crea evento base
+      const eventId = randomUUID();
+      await db.insert(events).values({
+        id: eventId, companyId, locationId: location.id, name: `${gd.name} - Test SIAE`,
+        startDatetime: reportDate, endDatetime: endDate, status: 'scheduled', isPublic: false,
+      });
+      
+      // 2. Crea evento ticketed
+      const ticketedEventId = randomUUID();
+      await db.insert(siaeTicketedEvents).values({
+        id: ticketedEventId, eventId, companyId,
+        siaeLocationCode: location.siaeLocationCode || '0000000000001',
+        genreCode: gd.genre,
+        author: gd.author,
+        performer: gd.performer,
+        taxType: gd.taxType,
+        totalCapacity: 500,
+        requiresNominative: true,
+        ticketingStatus: 'active',
+        approvalStatus: 'approved',
+      });
+      
+      // 3. Crea settore
+      const sectorId = randomUUID();
+      const vatRate = 22;
+      const netPrice = gd.price / (1 + vatRate / 100);
+      await db.insert(siaeEventSectors).values({
+        id: sectorId, ticketedEventId,
+        sectorCode: 'A0', name: 'Ingresso Generale',
+        capacity: 500, availableSeats: 498,
+        priceIntero: gd.price.toFixed(2),
+        priceRidotto: (gd.price * 0.7).toFixed(2),
+        ivaRate: vatRate.toString(),
+      });
+      
+      // 4. Crea 2 biglietti per evento
+      for (let i = 0; i < 2; i++) {
+        const ticketId = randomUUID();
+        const isRidotto = i === 1;
+        const ticketPrice = isRidotto ? gd.price * 0.7 : gd.price;
+        const ticketNet = ticketPrice / (1 + vatRate / 100);
+        const ticketVat = ticketPrice - ticketNet;
+        
+        await db.insert(siaeTickets).values({
+          id: ticketId, ticketedEventId, sectorId,
+          progressiveNumber: ticketCounter++,
+          ticketTypeCode: isRidotto ? 'R1' : 'I1',
+          sectorCode: 'A0',
+          grossAmount: ticketPrice.toFixed(2),
+          netAmount: ticketNet.toFixed(2),
+          vatAmount: ticketVat.toFixed(2),
+          emissionDate: reportDate,
+          emissionDateStr: testDateStr.replace(/-/g, ''),
+          emissionTimeStr: '2000',
+          participantFirstName: isRidotto ? 'Mario' : 'Anna',
+          participantLastName: isRidotto ? 'Rossi' : 'Bianchi',
+          status: 'valid',
+        });
+        createdTickets.push({ ticketId, genre: gd.genre, price: ticketPrice });
+      }
+      
+      createdEvents.push({ eventId, ticketedEventId, genre: gd.genre, name: gd.name });
+    }
+    
+    // 5. Crea abbonamenti (legati al primo evento ticketed)
+    const firstTicketedEvent = createdEvents[0];
+    const firstSector = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.ticketedEventId, firstTicketedEvent.ticketedEventId)).limit(1);
+    
+    const subscriptionDefs = [
+      { name: 'Abbonamento Annuale Cinema', price: 120, events: 24, firstName: 'Marco', lastName: 'Abbonato', fiscalCode: 'BBNMRC80A01H501A' },
+      { name: 'Abbonamento Stagione Teatro', price: 200, events: 10, firstName: 'Laura', lastName: 'Teatrale', fiscalCode: 'TTRLRA85B02F205B' },
+      { name: 'Abbonamento Stadio', price: 350, events: 19, firstName: 'Giovanni', lastName: 'Tifoso', fiscalCode: 'TFSGNN75C03L219C' },
+      { name: 'Tessera Discoteca VIP', price: 500, events: 52, firstName: 'Valentina', lastName: 'Dancer', fiscalCode: 'DNCVLN90D04A944D' },
+    ];
+    
+    const createdSubscriptions: any[] = [];
+    let subCounter = 1;
+    for (const sd of subscriptionDefs) {
+      const vatRate = 22;
+      const netPrice = sd.price / (1 + vatRate / 100);
+      const vatAmount = sd.price - netPrice;
+      const timestamp = Date.now();
+      
+      // Crea customer per l'abbonamento
+      const customerId = randomUUID();
+      await db.insert(siaeCustomers).values({
+        id: customerId,
+        uniqueCode: `TEST-SUB-${timestamp}-${subCounter}`,
+        email: `testsub${timestamp}${subCounter}@test.it`,
+        phone: `+3933${String(timestamp).slice(-7)}${subCounter}`,
+        firstName: sd.firstName,
+        lastName: sd.lastName,
+        fiscalCode: sd.fiscalCode,
+      });
+      
+      // Crea abbonamento
+      const subId = randomUUID();
+      const subNum = String(subCounter).padStart(7, '0');
+      await db.insert(siaeSubscriptions).values({
+        companyId,
+        customerId,
+        ticketedEventId: firstTicketedEvent.ticketedEventId,
+        sectorId: firstSector[0]?.id,
+        subscriptionCode: `SUB-${timestamp}-${subNum}`,
+        progressiveNumber: subCounter,
+        eventsCount: sd.events,
+        totalAmount: sd.price.toFixed(2),
+        validFrom: reportDate,
+        validTo: new Date(reportDate.getTime() + 365 * 24 * 60 * 60 * 1000),
+        emissionDate: reportDate,
+        status: 'active',
+        holderFirstName: sd.firstName,
+        holderLastName: sd.lastName,
+      });
+      subCounter++;
+      createdSubscriptions.push({ id: subId, name: sd.name, price: sd.price });
+    }
+    
+    console.log(`[CREATE-EVENTS] Creati ${createdEvents.length} eventi, ${createdTickets.length} biglietti, ${createdSubscriptions.length} abbonamenti`);
+    
+    res.json({
+      success: true,
+      eventsCreated: createdEvents.length,
+      ticketsCreated: createdTickets.length,
+      subscriptionsCreated: createdSubscriptions.length,
+      events: createdEvents,
+      subscriptions: createdSubscriptions,
+      testDate: testDateStr,
+    });
+  } catch (error: any) {
+    console.error('[CREATE-EVENTS] Error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 
