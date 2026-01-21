@@ -5234,13 +5234,15 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         companyId: original.companyId,
         reportDate,
         resolvedSystemCode: resendResolvedSystemCode,
-        progressivo: nextProgressivo, // progressivo > 1 forces Sostituzione="S"
+        progressivo: nextProgressivo,
         taxId,
         businessName: company?.name || 'N/D',
         events: hydratedData.events,
         subscriptions: hydratedData.subscriptions,
         // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
         nomeFile: resendPreGeneratedFileName,
+        // FIX 2026-01-21: Resend = Sostituzione="S" perché stiamo sostituendo un file precedente
+        forceSubstitution: true,
       });
       
       generatedXml = c1Result.xml;
@@ -6353,6 +6355,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       subscriptions: hydratedData.subscriptions,
       // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
       nomeFile: preGeneratedFileName,
+      // FIX 2026-01-21: forceSubstitution viene passato dal chiamante per gestire reinvii
+      forceSubstitution,
     };
     
     const c1Result = generateC1Xml(c1Params);

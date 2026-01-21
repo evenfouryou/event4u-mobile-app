@@ -253,6 +253,8 @@ export async function createSiaeTransmissionWithXml(
         subscriptions: c1Params.subscriptions,
         // FIX 2026-01-21: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
         nomeFile: preGeneratedFileName,
+        // FIX 2026-01-21: Passa isSubstitution per gestire reinvii con Sostituzione="S"
+        forceSubstitution: isSubstitution,
       };
 
       const c1Result: C1XmlResult = generateC1Xml(c1XmlParams);
