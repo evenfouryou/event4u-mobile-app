@@ -155,9 +155,10 @@ async function extractAttachments(
       await extractAttachments(gmail, messageId, part.parts, attachments);
     }
     
-    // Check for attachment
+    // Check for attachment - SIAE sends .LOG files, not .txt
     const filename = part.filename;
-    if (filename && filename.endsWith('.txt') && part.body?.attachmentId) {
+    const lowerFilename = filename?.toLowerCase() || '';
+    if (filename && (lowerFilename.endsWith('.txt') || lowerFilename.endsWith('.log')) && part.body?.attachmentId) {
       try {
         const attachmentResponse = await gmail.users.messages.attachments.get({
           userId: 'me',
