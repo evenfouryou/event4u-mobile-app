@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE RiepilogoGiornaliero SYSTEM "RiepilogoGiornaliero_v0039_20040209.dtd">
+<RiepilogoGiornaliero NomeFile="RMG_2026_01_21_104.xsi" Data="20260121" DataGenerazione="20260121" OraGenerazione="134035" ProgressivoGenerazione="104" Sostituzione="N">
+    <Titolare>
+        <Denominazione>Event4U Demo</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>BRIDGE01</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>Event4U Demo</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+    </Organizzatore>
+</RiepilogoGiornaliero>
