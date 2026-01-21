@@ -1,0 +1,54 @@
+APPLY 2 FIXES FOR SIAE ERROR 0600                                                                                                                                                                   
+                                                                                                                                                                                                      
+  Both bugs have been identified with exact locations. Apply these fixes precisely:                                                                                                                   
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  FIX 1: ENCODING MISMATCH                                                                                                                                                                            
+                                                                                                                                                                                                      
+  File: server/email-service.ts Line: 665                                                                                                                                                             
+                                                                                                                                                                                                      
+  Current code:                                                                                                                                                                                       
+  // FIX 2026-01-15: Usa 'latin1' invece di 'utf-8' per encoding ISO-8859-1                                                                                                                           
+  // L'XML dichiara encoding="ISO-8859-1" quindi i byte devono corrispondere.                                                                                                                         
+  const attachmentBase64Content = Buffer.from(xmlContent, 'latin1').toString('base64');                                                                                                               
+                                                                                                                                                                                                      
+  Change to:                                                                                                                                                                                          
+  // FIX: XML declares encoding="UTF-8", so encoding must match                                                                                                                                       
+  const attachmentBase64Content = Buffer.from(xmlContent, 'utf-8').toString('base64');                                                                                                                
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  FIX 2: BLOCK EMPTY REPORTS                                                                                                                                                                          
+                                                                                                                                                                                                      
+  File: server/siae-utils.ts Line: 4717-4718                                                                                                                                                          
+                                                                                                                                                                                                      
+  Current behavior: Generates and sends empty XML with only a console warning.                                                                                                                        
+                                                                                                                                                                                                      
+  Required change: Do NOT generate empty reports. Instead:                                                                                                                                            
+                                                                                                                                                                                                      
+  1. Find the function containing this code (around line 4717)                                                                                                                                        
+  2. When no events/subscriptions exist, instead of generating empty XML:                                                                                                                             
+    - Return null or throw an error                                                                                                                                                                   
+    - The calling function must handle this and return a user-friendly error message: "Impossibile inviare il report: nessun evento trovato per il periodo selezionato"                               
+                                                                                                                                                                                                      
+  Example implementation:                                                                                                                                                                             
+  // Instead of:                                                                                                                                                                                      
+  console.warn('[generateC1Xml] Report giornaliero senza eventi/abbonamenti - generazione report vuoto');                                                                                             
+  // ... continues to generate empty XML                                                                                                                                                              
+                                                                                                                                                                                                      
+  // Change to:                                                                                                                                                                                       
+  if (noEventsOrSubscriptions) {                                                                                                                                                                      
+    throw new Error('EMPTY_REPORT: Nessun evento trovato per il periodo selezionato. Report non inviato.');                                                                                           
+    // OR return null and handle in caller                                                                                                                                                            
+  }                                                                                                                                                                                                   
+                                                                                                                                                                                                      
+  3. Find all callers of this function and ensure they handle the error/null case gracefully, displaying the message to the user instead of attempting transmission.                                  
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  VERIFICATION AFTER FIXES                                                                                                                                                                            
+                                                                                                                                                                                                      
+  1. Test report generation for a period WITH events → should succeed and send                                                                                                                        
+  2. Test report generation for a period WITHOUT events → should fail with user message, NOT send empty XML                                                                                           
+  3. Check the email attachment encoding by logging: console.log('Encoding test:', Buffer.from(xmlContent, 'utf-8').slice(0, 50).toString())                                                          
+                                                                                                                                                                                                      
+  ---                                                                                                                                                                                                 
+  BUG 3 (LINE ENDINGS): No fix needed - verified that SIAE uses LF and JavaScript outputs LF by default. 

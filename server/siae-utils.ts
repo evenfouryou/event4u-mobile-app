@@ -4708,14 +4708,11 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   }
   const progressivePadded = String(progressivo).padStart(3, '0');
 
-  // FIX 2026-01-18: Per report giornaliero (RMG), 0 biglietti è permesso
-  // Per report mensile (RPM), rimane un errore bloccante
+  // FIX 2026-01-21: SIAE rejects empty reports (error 0600)
+  // Both daily (RPG) and monthly (RPM) require at least one event with data
   if (events.length === 0 && subscriptions.length === 0) {
-    if (isMonthly) {
-      throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto. Il report C1 mensile richiede almeno un evento con biglietti emessi.');
-    }
-    // Per giornaliero, genera un report vuoto con warning nel log
-    console.warn('[generateC1Xml] Report giornaliero senza eventi/abbonamenti - generazione report vuoto');
+    const reportType = isMonthly ? 'mensile (RPM)' : 'giornaliero (RPG)';
+    throw new Error(`EMPTY_REPORT: Impossibile inviare il report ${reportType}: nessun evento trovato per il periodo selezionato. SIAE rifiuta report vuoti.`);
   }
 
   let eventsXml = '';
