@@ -1,0 +1,18 @@
+ The system returns error 0600 (file format/structure not recognized) when sending daily, monthly, or any report type.                                                                               
+                                                                                                                                                                                                      
+  Investigate and fix the following:                                                                                                                                                                  
+                                                                                                                                                                                                      
+  1. File Structure & Schema: Verify the generated report file matches the official tax authority XML/JSON schema exactly (element order, nesting, required vs optional fields)                       
+  2. Encoding: Ensure file is UTF-8 encoded without BOM; check Content-Type headers include charset=utf-8                                                                                             
+  3. Headers: Verify all required HTTP headers (Content-Type, Authorization, any custom headers the API expects)                                                                                      
+  4. Mandatory Fields: Check that all required fields are present and non-empty for each report type (daily, monthly, etc.)                                                                           
+  5. Data Formatting: Validate date formats (ISO 8601?), number formats (decimal separators), currency codes, and tax ID formats match the specification                                              
+  6. Line Endings: Ensure consistent line endings (CRLF vs LF) per spec requirements                                                                                                                  
+  7. File Naming: Check if the API requires specific filename patterns or extensions                                                                                                                  
+  8. Request Body: Verify whether the file should be sent as raw body, multipart/form-data, or base64 encoded                                                                                         
+                                                                                                                                                                                                      
+  Steps:                                                                                                                                                                                              
+  - Find the transmission/report generation code                                                                                                                                                      
+  - Log the exact payload being sent before transmission                                                                                                                                              
+  - Compare against the official API documentation/specification                                                                                                                                      
+  - Fix any discrepancies and test each report type 
