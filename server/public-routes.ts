@@ -267,11 +267,13 @@ router.post("/api/public/test-siae-send", async (req, res) => {
     
     // FIX 2026-01-21: Use HURAEX SRL (smart card registered name) instead of Event4U Demo
     const businessName = 'HURAEX SRL';
+    // FIX 0604: Allow forceSubstitution param to override with Sostituzione="S"
+    const forceSubstitution = req.body.forceSubstitution === true;
     const result = generateC1Xml({
       reportKind: reportType, companyId: card.companyId!, reportDate,
       resolvedSystemCode: systemCode, progressivo, taxId: '02120820432',
       businessName, events: testEvents, subscriptions: [],
-      nomeFile: fileName, forceSubstitution: false
+      nomeFile: fileName, forceSubstitution
     });
     console.log(`[TEST] XML preview:\n${result.xml.substring(0, 800)}`);
     const transmissionType = reportType === 'mensile' ? 'monthly' : 'daily';
