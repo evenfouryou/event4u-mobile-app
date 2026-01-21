@@ -249,12 +249,10 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   const parts = nameWithoutExt.split('_');
   const prefix = parts[0];
   
-  // FIX 2026-01-20: Formato UFFICIALE secondo Allegato C sezione 1.4.1
-  // FORMATO NOME FILE ALLEGATO (SIAE UFFICIALE):
-  //   - RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN (5 parti con underscore)
-  //   - RPM: RPM_AAAA_MM_NNN (4 parti, senza giorno)
-  // 
-  // IMPORTANTE: Il codice sistema NON va nel nome file, solo nel Subject email!
+  // FIX 2026-01-21: Supporta ENTRAMBI i formati:
+  // 1. Formato breve (legacy): RMG_AAAA_MM_GG_NNN.xsi (5 parti) / RPM_AAAA_MM_NNN.xsi (4 parti)
+  // 2. Formato esteso (nuovo): RMG_AAAA_MM_GG_SSSSSSSS_NNN_XSI_V.XX.YY.xsi (8 parti)
+  //                           RPM_AAAA_MM_SSSSSSSS_NNN_XSI_V.XX.YY.xsi (7 parti)
   
   // Verifica prefisso valido
   if (!['RMG', 'RPM', 'RCA', 'LTA'].includes(prefix)) {
@@ -265,30 +263,51 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  // Numero parti dipende dal tipo di report
+  // Numero parti dipende dal tipo di report e formato (breve o esteso)
   const isMonthly = prefix === 'RPM';
-  const expectedParts = isMonthly ? 4 : 5;
+  const expectedPartsShort = isMonthly ? 4 : 5;
+  const expectedPartsLong = isMonthly ? 7 : 8;
   
-  if (parts.length !== expectedParts) {
-    const formatExample = isMonthly 
-      ? 'RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)'
-      : `${prefix}_AAAA_MM_GG_NNN.xsi (5 parti con underscore)`;
+  // Accetta sia formato breve che esteso
+  if (parts.length !== expectedPartsShort && parts.length !== expectedPartsLong) {
+    const formatExampleShort = isMonthly 
+      ? 'RPM_AAAA_MM_NNN.xsi (4 parti)'
+      : `${prefix}_AAAA_MM_GG_NNN.xsi (5 parti)`;
+    const formatExampleLong = isMonthly
+      ? 'RPM_AAAA_MM_SSSSSSSS_NNN_XSI_V.01.00.xsi (7 parti)'
+      : `${prefix}_AAAA_MM_GG_SSSSSSSS_NNN_XSI_V.01.00.xsi (8 parti)`;
     errors.push(
-      `FORMATO NOME FILE NON VALIDO: Servono ${expectedParts} parti. ` +
-      `Trovate ${parts.length} parti in "${fileName}". Formato corretto: ${formatExample}`
+      `FORMATO NOME FILE NON VALIDO: Servono ${expectedPartsShort} o ${expectedPartsLong} parti. ` +
+      `Trovate ${parts.length} parti in "${fileName}". Formati validi: ${formatExampleShort} oppure ${formatExampleLong}`
     );
     return { valid: false, errors, warnings };
   }
   
+  // Determina se formato esteso (con codice sistema)
+  const isExtendedFormat = parts.length === expectedPartsLong;
+  
   let year: string, month: string, day: string, progressivo: string;
   
-  if (isMonthly) {
-    // RPM: XXX_AAAA_MM_NNN (4 parti)
-    [, year, month, progressivo] = parts;
-    day = '01';
+  if (isExtendedFormat) {
+    // Formato esteso con codice sistema
+    if (isMonthly) {
+      // RPM: XXX_AAAA_MM_SSSSSSSS_NNN_XSI_V.XX.YY (7 parti)
+      [, year, month, , progressivo] = parts; // skip systemCode
+      day = '01';
+    } else {
+      // RMG/RCA/LTA: XXX_AAAA_MM_GG_SSSSSSSS_NNN_XSI_V.XX.YY (8 parti)
+      [, year, month, day, , progressivo] = parts; // skip systemCode
+    }
   } else {
-    // RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN (5 parti)
-    [, year, month, day, progressivo] = parts;
+    // Formato breve (legacy)
+    if (isMonthly) {
+      // RPM: XXX_AAAA_MM_NNN (4 parti)
+      [, year, month, progressivo] = parts;
+      day = '01';
+    } else {
+      // RMG/RCA/LTA: XXX_AAAA_MM_GG_NNN (5 parti)
+      [, year, month, day, progressivo] = parts;
+    }
   }
   
   // Verifica anno (4 cifre)
@@ -635,48 +654,54 @@ export function generateSiaeAttachmentName(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // FIX 2026-01-20: Formato UFFICIALE secondo Allegato C sezione 1.4.1
+  // FIX 2026-01-21: NOME FILE = SUBJECT per coerenza SIAE
+  // L'errore 0600 potrebbe essere causato da nome file diverso dal subject
+  // Proviamo a usare lo STESSO formato del Subject per il nome file
   // 
-  // FORMATO NOME FILE ALLEGATO (Allegato C SIAE):
-  //   XXX_AAAA_MM_GG_NNN.xsi(.p7m)
-  // Dove:
-  //   XXX = Prefisso tipo report (RMG, RPM, RCA)
-  //   AAAA_MM_GG = Data con UNDERSCORE separati
-  //   NNN = Progressivo (001-999)
-  //   .xsi = XML SIAE
-  //   .p7m = firma CAdES-BES
-  //
-  // IMPORTANTE: Il codice sistema va SOLO nel Subject email, NON nel nome file!
-  //
-  // Esempi corretti:
-  //   RMG_2026_01_20_001.xsi (giornaliero)
-  //   RPM_2026_01_001.xsi (mensile - senza giorno)
-  //   RCA_2026_01_20_001.xsi (evento)
+  // Formato: RMG_AAAA_MM_GG_SSSSSSSS_NNN_XSI_V.XX.YY.xsi
+  // (identico al subject ma con estensione .xsi)
   
   // Estensione: .xsi.p7m per file firmati CAdES
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
+  // Se abbiamo il codice sistema, usiamo formato completo (uguale al subject)
+  // Altrimenti fallback al formato semplice
+  const formatVersion = 'V.01.00';
+  
   let result: string;
-  switch (reportType) {
-    case 'giornaliero':
-      // RMG_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
-      // Il giorno è quello specifico del report (non 00!)
-      // Confermato da file funzionante: RMG_2026_01_13_004.xsi
-      result = `RMG_${year}_${month}_${day}_${prog}${extension}`;
-      break;
-    case 'mensile':
-      // RPM_AAAA_MM_NNN.xsi (4 parti, senza giorno)
-      result = `RPM_${year}_${month}_${prog}${extension}`;
-      break;
-    case 'log':
-    case 'rca':
-    default:
-      // RCA_AAAA_MM_GG_NNN.xsi (5 parti con underscore)
-      result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
-      break;
+  if (systemCode && systemCode.length === 8) {
+    // NUOVO: Formato identico al Subject + estensione
+    switch (reportType) {
+      case 'giornaliero':
+        result = `RMG_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}${extension}`;
+        break;
+      case 'mensile':
+        result = `RPM_${year}_${month}_${systemCode}_${prog}_XSI_${formatVersion}${extension}`;
+        break;
+      case 'log':
+      case 'rca':
+      default:
+        result = `RCA_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}${extension}`;
+        break;
+    }
+  } else {
+    // Fallback: formato semplice senza codice sistema (legacy)
+    switch (reportType) {
+      case 'giornaliero':
+        result = `RMG_${year}_${month}_${day}_${prog}${extension}`;
+        break;
+      case 'mensile':
+        result = `RPM_${year}_${month}_${prog}${extension}`;
+        break;
+      case 'log':
+      case 'rca':
+      default:
+        result = `RCA_${year}_${month}_${day}_${prog}${extension}`;
+        break;
+    }
   }
   
-  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, date=${date.toISOString()}, result=${result}`);
+  console.log(`[SIAE-UTILS] generateSiaeAttachmentName: type=${reportType}, systemCode=${systemCode || 'none'}, result=${result}`);
   
   return result;
 }
