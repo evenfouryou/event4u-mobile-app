@@ -306,90 +306,125 @@ router.post("/api/public/test-siae-full", async (req, res) => {
     const forceSubstitution = req.body.forceSubstitution === true;
     const fileName = generateSiaeFileName(reportType, reportDate, progressivo, null, systemCode);
     
-    // GENERI SIAE COMPLETI:
+    // GENERI SIAE COMPLETI - UN EVENTO PER OGNI CATEGORIA PRINCIPALE
     // 1-4: Cinema (richiede Autore/Esecutore)
-    // 45-59: Teatro/Concerti (richiede Autore/Esecutore)
+    // 5-14: Spettacoli vari (circo, sport, attrazioni)
+    // 45-59: Teatro/Concerti/Musica (richiede Autore/Esecutore)
     // 60-69: Ballo/Discoteca (NON richiede Autore/Esecutore)
     const testEvents = [
-      // Evento 1: Discoteca (genere 61) - NO autore/esecutore
-      {
-        ticketedEvent: { id: 1, siaeLocationCode: '0000000000001', siaeGenreCode: '61' },
-        eventRecord: { id: 1, name: 'Serata Discoteca Test', startDatetime: reportDate, endDatetime: reportDate },
-        location: { id: 1, name: 'Club Test', siaeLocationCode: '0000000000001' },
-        sectors: [{ id: 'A0', name: 'Generale', capacity: 500 }],
+      // === CINEMA (1-4) - Richiede Autore/Esecutore ===
+      { ticketedEvent: { id: 1, siaeLocationCode: '0000000000001', siaeGenreCode: '1', siaeAuthor: 'Martin Scorsese', siaePerformer: 'Leonardo DiCaprio' },
+        eventRecord: { id: 1, name: 'Film Prima Visione', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 1, name: 'Cinema Centrale', siaeLocationCode: '0000000000001' },
+        sectors: [{ id: 'S1', name: 'Sala 1', capacity: 200 }],
         tickets: [
-          { id: 'T001', sectorId: 'A0', price: '15.00', grossAmount: '15.00', taxableAmount: '12.30', vatAmount: '2.70', ticketNumber: '00000001', emissionDate: reportDate, customerName: 'Mario Rossi', customerFiscalCode: 'RSSMRA80A01H501X' },
-          { id: 'T002', sectorId: 'A0', price: '20.00', grossAmount: '20.00', taxableAmount: '16.39', vatAmount: '3.61', ticketNumber: '00000002', emissionDate: reportDate, customerName: 'Luigi Verdi', customerFiscalCode: 'VRDLGU85B02F205Y' },
+          { id: 'T001', sectorId: 'S1', price: '12.00', grossAmount: '12.00', taxableAmount: '9.84', vatAmount: '2.16', ticketNumber: '00000001', emissionDate: reportDate, customerName: 'Mario Rossi', customerFiscalCode: 'RSSMRA80A01H501X', tipoTitolo: 'I1' },
+          { id: 'T002', sectorId: 'S1', price: '8.00', grossAmount: '8.00', taxableAmount: '6.56', vatAmount: '1.44', ticketNumber: '00000002', emissionDate: reportDate, customerName: 'Anna Verdi', customerFiscalCode: 'VRDNNA85B02F205Y', tipoTitolo: 'I2' },
         ]
       },
-      // Evento 2: Concerto (genere 50) - RICHIEDE autore/esecutore
-      {
-        ticketedEvent: { id: 2, siaeLocationCode: '0000000000002', siaeGenreCode: '50', siaeAuthor: 'Vasco Rossi', siaePerformer: 'Vasco Rossi Band' },
-        eventRecord: { id: 2, name: 'Concerto Rock Test', startDatetime: reportDate, endDatetime: reportDate },
-        location: { id: 2, name: 'Teatro Test', siaeLocationCode: '0000000000002' },
-        sectors: [
-          { id: 'P1', name: 'Platea', capacity: 200 },
-          { id: 'G1', name: 'Galleria', capacity: 100 }
-        ],
+      { ticketedEvent: { id: 2, siaeLocationCode: '0000000000001', siaeGenreCode: '2', siaeAuthor: 'Christopher Nolan', siaePerformer: 'Cast Film' },
+        eventRecord: { id: 2, name: 'Film Seconda Visione', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 1, name: 'Cinema Centrale', siaeLocationCode: '0000000000001' },
+        sectors: [{ id: 'S2', name: 'Sala 2', capacity: 150 }],
         tickets: [
-          { id: 'T003', sectorId: 'P1', price: '50.00', grossAmount: '50.00', taxableAmount: '40.98', vatAmount: '9.02', ticketNumber: '00000003', emissionDate: reportDate, customerName: 'Anna Bianchi', customerFiscalCode: 'BNCNNA90C03L219Z' },
-          { id: 'T004', sectorId: 'G1', price: '30.00', grossAmount: '30.00', taxableAmount: '24.59', vatAmount: '5.41', ticketNumber: '00000004', emissionDate: reportDate, customerName: 'Paolo Neri', customerFiscalCode: 'NREPLA75D04A944W' },
+          { id: 'T003', sectorId: 'S2', price: '7.00', grossAmount: '7.00', taxableAmount: '5.74', vatAmount: '1.26', ticketNumber: '00000003', emissionDate: reportDate, customerName: 'Luigi Bianchi', customerFiscalCode: 'BNCLGU90C03L219Z', tipoTitolo: 'I1' },
         ]
       },
-      // Evento 3: Cinema (genere 1) - RICHIEDE autore/esecutore
-      {
-        ticketedEvent: { id: 3, siaeLocationCode: '0000000000003', siaeGenreCode: '1', siaeAuthor: 'Martin Scorsese', siaePerformer: 'Leonardo DiCaprio' },
-        eventRecord: { id: 3, name: 'Film Premiere Test', startDatetime: reportDate, endDatetime: reportDate },
-        location: { id: 3, name: 'Cinema Test', siaeLocationCode: '0000000000003' },
-        sectors: [{ id: 'S1', name: 'Sala 1', capacity: 150 }],
+      
+      // === SPETTACOLI VARI (5-14) ===
+      { ticketedEvent: { id: 3, siaeLocationCode: '0000000000002', siaeGenreCode: '5' },
+        eventRecord: { id: 3, name: 'Circo Nazionale', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 2, name: 'Tendone Circo', siaeLocationCode: '0000000000002' },
+        sectors: [{ id: 'TR', name: 'Tribuna', capacity: 500 }, { id: 'PL', name: 'Platea', capacity: 200 }],
         tickets: [
-          { id: 'T005', sectorId: 'S1', price: '12.00', grossAmount: '12.00', taxableAmount: '9.84', vatAmount: '2.16', ticketNumber: '00000005', emissionDate: reportDate, customerName: 'Giulia Rosa', customerFiscalCode: 'RSOGLU88E05H501A' },
+          { id: 'T004', sectorId: 'TR', price: '25.00', grossAmount: '25.00', taxableAmount: '20.49', vatAmount: '4.51', ticketNumber: '00000004', emissionDate: reportDate, customerName: 'Paolo Neri', customerFiscalCode: 'NREPLA75D04A944W', tipoTitolo: 'I1' },
+          { id: 'T005', sectorId: 'PL', price: '35.00', grossAmount: '35.00', taxableAmount: '28.69', vatAmount: '6.31', ticketNumber: '00000005', emissionDate: reportDate, customerName: 'Giulia Rosa', customerFiscalCode: 'RSOGLU88E05H501A', tipoTitolo: 'I1' },
         ]
       },
-      // Evento 4: Ballo liscio (genere 65) - NO autore/esecutore
-      {
-        ticketedEvent: { id: 4, siaeLocationCode: '0000000000004', siaeGenreCode: '65' },
-        eventRecord: { id: 4, name: 'Serata Liscio Test', startDatetime: reportDate, endDatetime: reportDate },
-        location: { id: 4, name: 'Balera Test', siaeLocationCode: '0000000000004' },
-        sectors: [{ id: 'B1', name: 'Pista', capacity: 300 }],
+      { ticketedEvent: { id: 4, siaeLocationCode: '0000000000003', siaeGenreCode: '8' },
+        eventRecord: { id: 4, name: 'Partita Calcio Serie A', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 3, name: 'Stadio Comunale', siaeLocationCode: '0000000000003' },
+        sectors: [{ id: 'CU', name: 'Curva', capacity: 5000 }, { id: 'TR', name: 'Tribuna', capacity: 2000 }, { id: 'DH', name: 'Distinti', capacity: 1500 }],
         tickets: [
-          { id: 'T006', sectorId: 'B1', price: '8.00', grossAmount: '8.00', taxableAmount: '6.56', vatAmount: '1.44', ticketNumber: '00000006', emissionDate: reportDate, customerName: 'Franco Blu', customerFiscalCode: 'BLUFNC60F06G273B' },
+          { id: 'T006', sectorId: 'CU', price: '15.00', grossAmount: '15.00', taxableAmount: '12.30', vatAmount: '2.70', ticketNumber: '00000006', emissionDate: reportDate, customerName: 'Franco Blu', customerFiscalCode: 'BLUFNC60F06G273B', tipoTitolo: 'I1' },
+          { id: 'T007', sectorId: 'TR', price: '45.00', grossAmount: '45.00', taxableAmount: '36.89', vatAmount: '8.11', ticketNumber: '00000007', emissionDate: reportDate, customerName: 'Marco Gialli', customerFiscalCode: 'GLLMRC82G07H501D', tipoTitolo: 'I1' },
+          { id: 'T008', sectorId: 'DH', price: '30.00', grossAmount: '30.00', taxableAmount: '24.59', vatAmount: '5.41', ticketNumber: '00000008', emissionDate: reportDate, customerName: 'Sara Viola', customerFiscalCode: 'VLASRA92H08L219E', tipoTitolo: 'I2' },
+        ]
+      },
+      
+      // === TEATRO/CONCERTI/MUSICA (45-59) - Richiede Autore/Esecutore ===
+      { ticketedEvent: { id: 5, siaeLocationCode: '0000000000004', siaeGenreCode: '45', siaeAuthor: 'William Shakespeare', siaePerformer: 'Compagnia Teatrale Nazionale' },
+        eventRecord: { id: 5, name: 'Romeo e Giulietta', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 4, name: 'Teatro Comunale', siaeLocationCode: '0000000000004' },
+        sectors: [{ id: 'PL', name: 'Platea', capacity: 300 }, { id: 'GA', name: 'Galleria', capacity: 150 }],
+        tickets: [
+          { id: 'T009', sectorId: 'PL', price: '40.00', grossAmount: '40.00', taxableAmount: '32.79', vatAmount: '7.21', ticketNumber: '00000009', emissionDate: reportDate, customerName: 'Elena Arancio', customerFiscalCode: 'RNCELN78I09A944F', tipoTitolo: 'I1' },
+          { id: 'T010', sectorId: 'GA', price: '25.00', grossAmount: '25.00', taxableAmount: '20.49', vatAmount: '4.51', ticketNumber: '00000010', emissionDate: reportDate, customerName: 'Roberto Verde', customerFiscalCode: 'VRDRRT65L10H501G', tipoTitolo: 'I1' },
+        ]
+      },
+      { ticketedEvent: { id: 6, siaeLocationCode: '0000000000005', siaeGenreCode: '50', siaeAuthor: 'Vasco Rossi', siaePerformer: 'Vasco Rossi' },
+        eventRecord: { id: 6, name: 'Concerto Rock', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 5, name: 'Palazzetto Sport', siaeLocationCode: '0000000000005' },
+        sectors: [{ id: 'PT', name: 'Parterre', capacity: 3000 }, { id: 'AN', name: 'Anello', capacity: 5000 }],
+        tickets: [
+          { id: 'T011', sectorId: 'PT', price: '60.00', grossAmount: '60.00', taxableAmount: '49.18', vatAmount: '10.82', ticketNumber: '00000011', emissionDate: reportDate, customerName: 'Chiara Marrone', customerFiscalCode: 'MRRCHR70M11F205H', tipoTitolo: 'I1' },
+          { id: 'T012', sectorId: 'AN', price: '45.00', grossAmount: '45.00', taxableAmount: '36.89', vatAmount: '8.11', ticketNumber: '00000012', emissionDate: reportDate, customerName: 'Davide Grigio', customerFiscalCode: 'GRGDVD85N12L219I', tipoTitolo: 'I1' },
+          { id: 'T013', sectorId: 'PT', price: '60.00', grossAmount: '60.00', taxableAmount: '49.18', vatAmount: '10.82', ticketNumber: '00000013', emissionDate: reportDate, customerName: 'Silvia Celeste', customerFiscalCode: 'CLSSLV75O13H501J', tipoTitolo: 'I2' },
+        ]
+      },
+      { ticketedEvent: { id: 7, siaeLocationCode: '0000000000006', siaeGenreCode: '55', siaeAuthor: 'Orchestra Sinfonica', siaePerformer: 'Direttore Maestro' },
+        eventRecord: { id: 7, name: 'Concerto Classico', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 6, name: 'Auditorium', siaeLocationCode: '0000000000006' },
+        sectors: [{ id: 'OR', name: 'Orchestra', capacity: 200 }],
+        tickets: [
+          { id: 'T014', sectorId: 'OR', price: '50.00', grossAmount: '50.00', taxableAmount: '40.98', vatAmount: '9.02', ticketNumber: '00000014', emissionDate: reportDate, customerName: 'Massimo Turchese', customerFiscalCode: 'TRCMSM68P14A944K', tipoTitolo: 'I1' },
+        ]
+      },
+      
+      // === BALLO/DISCOTECA (60-69) - NON richiede Autore/Esecutore ===
+      { ticketedEvent: { id: 8, siaeLocationCode: '0000000000007', siaeGenreCode: '61' },
+        eventRecord: { id: 8, name: 'Serata Discoteca', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 7, name: 'Club Notturno', siaeLocationCode: '0000000000007' },
+        sectors: [{ id: 'GE', name: 'Generale', capacity: 800 }, { id: 'VIP', name: 'VIP Area', capacity: 100 }],
+        tickets: [
+          { id: 'T015', sectorId: 'GE', price: '20.00', grossAmount: '20.00', taxableAmount: '16.39', vatAmount: '3.61', ticketNumber: '00000015', emissionDate: reportDate, customerName: 'Luca Indaco', customerFiscalCode: 'NDCLCU90Q15F205L', tipoTitolo: 'I1' },
+          { id: 'T016', sectorId: 'VIP', price: '50.00', grossAmount: '50.00', taxableAmount: '40.98', vatAmount: '9.02', ticketNumber: '00000016', emissionDate: reportDate, customerName: 'Valentina Cremisi', customerFiscalCode: 'CRMVLN88R16L219M', tipoTitolo: 'I1' },
+          { id: 'T017', sectorId: 'GE', price: '15.00', grossAmount: '15.00', taxableAmount: '12.30', vatAmount: '2.70', ticketNumber: '00000017', emissionDate: reportDate, customerName: 'Federica Ocra', customerFiscalCode: 'CRFFDR92S17H501N', tipoTitolo: 'I3' },
+        ]
+      },
+      { ticketedEvent: { id: 9, siaeLocationCode: '0000000000008', siaeGenreCode: '65' },
+        eventRecord: { id: 9, name: 'Serata Ballo Liscio', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 8, name: 'Balera Romagna', siaeLocationCode: '0000000000008' },
+        sectors: [{ id: 'PS', name: 'Pista', capacity: 400 }],
+        tickets: [
+          { id: 'T018', sectorId: 'PS', price: '10.00', grossAmount: '10.00', taxableAmount: '8.20', vatAmount: '1.80', ticketNumber: '00000018', emissionDate: reportDate, customerName: 'Giovanni Ambra', customerFiscalCode: 'MBRGVN55T18A944O', tipoTitolo: 'I1' },
+          { id: 'T019', sectorId: 'PS', price: '10.00', grossAmount: '10.00', taxableAmount: '8.20', vatAmount: '1.80', ticketNumber: '00000019', emissionDate: reportDate, customerName: 'Maria Corallo', customerFiscalCode: 'CRLMRA60U19F205P', tipoTitolo: 'I1' },
+        ]
+      },
+      { ticketedEvent: { id: 10, siaeLocationCode: '0000000000009', siaeGenreCode: '68' },
+        eventRecord: { id: 10, name: 'Festa Latina', startDatetime: reportDate, endDatetime: reportDate },
+        location: { id: 9, name: 'Locale Latino', siaeLocationCode: '0000000000009' },
+        sectors: [{ id: 'SA', name: 'Sala', capacity: 250 }],
+        tickets: [
+          { id: 'T020', sectorId: 'SA', price: '18.00', grossAmount: '18.00', taxableAmount: '14.75', vatAmount: '3.25', ticketNumber: '00000020', emissionDate: reportDate, customerName: 'Carmen Smeraldo', customerFiscalCode: 'SMRCMN78V20L219Q', tipoTitolo: 'I1' },
         ]
       },
     ];
     
-    // ABBONAMENTI di test
+    // ABBONAMENTI di test - diversi tipi
     const testSubscriptions = [
-      {
-        id: 'SUB001',
-        subscriptionNumber: '0000001',
-        customerName: 'Abbonato Premium',
-        customerFiscalCode: 'PRMABB70G07H501C',
-        price: '100.00',
-        grossAmount: '100.00',
-        taxableAmount: '81.97',
-        vatAmount: '18.03',
-        validFrom: reportDate,
-        validTo: new Date(reportDate.getTime() + 365 * 24 * 60 * 60 * 1000), // +1 anno
-        eventsIncluded: 12,
-        sectorId: 'A0',
-        emissionDate: reportDate,
-      },
-      {
-        id: 'SUB002',
-        subscriptionNumber: '0000002',
-        customerName: 'Abbonato Base',
-        customerFiscalCode: 'BSEABB75H08L219D',
-        price: '50.00',
-        grossAmount: '50.00',
-        taxableAmount: '40.98',
-        vatAmount: '9.02',
-        validFrom: reportDate,
-        validTo: new Date(reportDate.getTime() + 180 * 24 * 60 * 60 * 1000), // +6 mesi
-        eventsIncluded: 6,
-        sectorId: 'P1',
-        emissionDate: reportDate,
-      },
+      { id: 'SUB001', subscriptionNumber: '0000001', customerName: 'Abbonato Annuale Cinema', customerFiscalCode: 'PRMABB70G07H501C',
+        price: '120.00', grossAmount: '120.00', taxableAmount: '98.36', vatAmount: '21.64',
+        validFrom: reportDate, validTo: new Date(reportDate.getTime() + 365*24*60*60*1000), eventsIncluded: 24, sectorId: 'S1', emissionDate: reportDate },
+      { id: 'SUB002', subscriptionNumber: '0000002', customerName: 'Abbonato Stagione Teatro', customerFiscalCode: 'BSEABB75H08L219D',
+        price: '200.00', grossAmount: '200.00', taxableAmount: '163.93', vatAmount: '36.07',
+        validFrom: reportDate, validTo: new Date(reportDate.getTime() + 180*24*60*60*1000), eventsIncluded: 10, sectorId: 'PL', emissionDate: reportDate },
+      { id: 'SUB003', subscriptionNumber: '0000003', customerName: 'Abbonato Stadio', customerFiscalCode: 'STDABB80I09A944E',
+        price: '350.00', grossAmount: '350.00', taxableAmount: '286.89', vatAmount: '63.11',
+        validFrom: reportDate, validTo: new Date(reportDate.getTime() + 365*24*60*60*1000), eventsIncluded: 19, sectorId: 'TR', emissionDate: reportDate },
+      { id: 'SUB004', subscriptionNumber: '0000004', customerName: 'Tessera Discoteca VIP', customerFiscalCode: 'VIPABB85J10F205F',
+        price: '500.00', grossAmount: '500.00', taxableAmount: '409.84', vatAmount: '90.16',
+        validFrom: reportDate, validTo: new Date(reportDate.getTime() + 365*24*60*60*1000), eventsIncluded: 52, sectorId: 'VIP', emissionDate: reportDate },
     ];
     
     console.log(`[TEST-FULL] Generando ${reportType} con ${testEvents.length} eventi e ${testSubscriptions.length} abbonamenti`);
