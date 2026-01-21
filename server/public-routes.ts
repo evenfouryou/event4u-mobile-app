@@ -243,7 +243,8 @@ router.post("/api/public/test-siae-send", async (req, res) => {
     const systemCode = card.systemCode || 'P0004010';
     const [company] = await db.select().from(companies).where(eq(companies.id, card.companyId!));
     const reportDate = new Date();
-    const progressivo = req.body.progressivo || 106;
+    // FIX 40604: Use current timestamp-based progressivo to avoid "already processed" error
+    const progressivo = req.body.progressivo || Math.floor(Date.now() / 1000) % 1000;
     const reportType = req.body.reportType === 'mensile' ? 'mensile' : 'giornaliero';
     const fileName = generateSiaeFileName(reportType, reportDate, progressivo, null, systemCode);
     console.log(`[TEST] ${reportType.toUpperCase()}: file=${fileName}, systemCode=${systemCode}`);
