@@ -5001,9 +5001,14 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   // richiedono DOCTYPE per conformità
   // Il nome file corretto viene usato SOLO per l'allegato email (parametro nomeFile ignorato nell'XML)
   
+  // FIX 2026-01-21: Aggiunto attributo NomeFile come richiesto da SIAE
+  // Il file RMG_2026_01_13_004.xsi che ha funzionato (codice 0000) aveva NomeFile nell'XML
+  // Il file RMG_2026_01_21_001.xsi che ha dato errore 0600 NON aveva NomeFile
+  const nomeFileAttr = nomeFile ? ` NomeFile="${nomeFile}"` : '';
+  
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ${rootElement} SYSTEM "${dtdFile}">
-<${rootElement} Sostituzione="${sostituzione}" ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}">
+<${rootElement}${nomeFileAttr} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>

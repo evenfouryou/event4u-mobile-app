@@ -171,6 +171,23 @@ export async function createSiaeTransmissionWithXml(
     subscriptionsCount: 0,
   };
 
+  // FIX 2026-01-21: Genera nome file PRIMA di generateC1Xml per passarlo come attributo NomeFile
+  // Il file RMG_2026_01_13_004.xsi che ha funzionato (codice 0000) aveva NomeFile nell'XML
+  let preGeneratedFileName: string;
+  try {
+    preGeneratedFileName = generateSiaeFileName(normalizedType, reportDate, progressivo, null);
+  } catch (error: any) {
+    errors.push(`Errore generazione nome file: ${error.message}`);
+    return {
+      success: false,
+      xml: '',
+      fileName: '',
+      stats,
+      errors,
+      warnings,
+    };
+  }
+
   try {
     if (normalizedType === 'rca') {
       if (!rcaParams) {
@@ -234,6 +251,8 @@ export async function createSiaeTransmissionWithXml(
         businessName: companyName,
         events: c1Params.events,
         subscriptions: c1Params.subscriptions,
+        // FIX 2026-01-21: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
+        nomeFile: preGeneratedFileName,
       };
 
       const c1Result: C1XmlResult = generateC1Xml(c1XmlParams);
@@ -259,20 +278,8 @@ export async function createSiaeTransmissionWithXml(
     };
   }
 
-  let fileName: string;
-  try {
-    fileName = generateSiaeFileName(normalizedType, reportDate, progressivo, null);
-  } catch (error: any) {
-    errors.push(`Errore generazione nome file: ${error.message}`);
-    return {
-      success: false,
-      xml,
-      fileName: '',
-      stats,
-      errors,
-      warnings,
-    };
-  }
+  // FIX 2026-01-21: Usa nome file già generato (preGeneratedFileName)
+  const fileName = preGeneratedFileName;
 
   const fileHash = calculateFileHash(xml);
 
