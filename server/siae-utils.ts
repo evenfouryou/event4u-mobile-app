@@ -706,22 +706,28 @@ export function generateSiaeSubject(
   // Versione formato - usiamo V.01.00 come da documentazione
   const formatVersion = 'V.01.00';
   
-  // Prefisso Subject dipende dal tipo di report (Allegato C 1.5.3)
+  // FIX 2026-01-21 v6: Il Subject DEVE SEMPRE iniziare con RCA_ secondo Allegato C 1.5.3!
+  // 
+  // ALLEGATO C 1.5.3 dice testualmente:
+  //   "RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>"
+  // 
+  // Il prefisso nel NOME FILE può essere diverso (RMG, RPM, RCA, LTA),
+  // ma il Subject email DEVE SEMPRE essere RCA_ per conformità!
+  // 
+  // Per RMG (giornaliero): usa la data del report
+  // Per RPM (mensile): usa giorno=00 o primo del mese
+  // Per RCA (eventi): usa la data dell'evento
   let subject: string;
   switch (reportType) {
-    case 'giornaliero':
-      // RMG = Riepilogo Musica Generale (giornaliero)
-      // Usa giorno specifico del report
-      subject = `RMG_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
-      break;
     case 'mensile':
-      // RPM = Riepilogo Programmi Musicali (mensile) - senza giorno
-      subject = `RPM_${year}_${month}_${systemCode}_${prog}_XSI_${formatVersion}`;
+      // RPM: Subject con giorno 00 (o primo del mese)
+      subject = `RCA_${year}_${month}_00_${systemCode}_${prog}_XSI_${formatVersion}`;
       break;
+    case 'giornaliero':
     case 'log':
     case 'rca':
     default:
-      // RCA = Riepilogo Controllo Accessi (eventi)
+      // Tutti gli altri: Subject con data completa
       subject = `RCA_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
       break;
   }
