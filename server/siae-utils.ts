@@ -706,29 +706,28 @@ export function generateSiaeSubject(
   // Versione formato - usiamo V.01.00 come da documentazione
   const formatVersion = 'V.01.00';
   
-  // FIX 2026-01-21 v6: Il Subject DEVE SEMPRE iniziare con RCA_ secondo Allegato C 1.5.3!
+  // FIX 2026-01-21 v7: FORMATO CORRETTO basato su esempio risposta SIAE!
   // 
-  // ALLEGATO C 1.5.3 dice testualmente:
-  //   "RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>"
+  // ESEMPIO RISPOSTA SIAE (da Allegato C 1.5.5):
+  //   Subject: 0000:Re:RCA_2008_02_01_00001234_001.xsi_V.01.00
   // 
-  // Il prefisso nel NOME FILE può essere diverso (RMG, RPM, RCA, LTA),
-  // ma il Subject email DEVE SEMPRE essere RCA_ per conformità!
+  // Quindi il formato corretto è:
+  //   RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>.xsi_V.<XX>.<YY>
   // 
-  // Per RMG (giornaliero): usa la data del report
-  // Per RPM (mensile): usa giorno=00 o primo del mese
-  // Per RCA (eventi): usa la data dell'evento
+  // ATTENZIONE: usa ".xsi" (punto xsi) NON "_XSI_" (underscore)!
+  // Il ".xsi" è l'estensione file, non una parte separata!
   let subject: string;
   switch (reportType) {
     case 'mensile':
-      // RPM: Subject con giorno 00 (o primo del mese)
-      subject = `RCA_${year}_${month}_00_${systemCode}_${prog}_XSI_${formatVersion}`;
+      // RPM: Subject con giorno 00
+      subject = `RCA_${year}_${month}_00_${systemCode}_${prog}.xsi_${formatVersion}`;
       break;
     case 'giornaliero':
     case 'log':
     case 'rca':
     default:
       // Tutti gli altri: Subject con data completa
-      subject = `RCA_${year}_${month}_${day}_${systemCode}_${prog}_XSI_${formatVersion}`;
+      subject = `RCA_${year}_${month}_${day}_${systemCode}_${prog}.xsi_${formatVersion}`;
       break;
   }
   
