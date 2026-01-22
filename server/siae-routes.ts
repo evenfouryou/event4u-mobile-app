@@ -577,6 +577,46 @@ router.get("/api/siae/debug/send-rpm-signed", async (req: Request, res: Response
   }
 });
 
+// ==================== DEBUG ENDPOINT - Send Signed RMG Report (Daily) ====================
+router.get("/api/siae/debug/send-rmg-signed", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.query.companyId as string || '6946a466-733a-47bd-bbb8-31f4fbe11fc2';
+    const testEmail = req.query.to as string || 'servertest2@batest.siae.it';
+    const dateParam = req.query.date as string || new Date().toISOString().split('T')[0];
+    
+    console.log(`[SIAE-DEBUG] Sending signed RMG for date ${dateParam} to ${testEmail}`);
+    
+    // Use the shared C1 handler with type=daily
+    const result = await handleSendC1Transmission({
+      companyId,
+      type: 'daily',
+      date: dateParam,
+      signWithSmartCard: true,
+      toEmail: testEmail,
+    });
+    
+    if (result.success) {
+      console.log(`[SIAE-DEBUG] ✅ RMG firmato inviato con successo a ${testEmail}`);
+      res.json({
+        success: true,
+        message: `Report RMG giornaliero firmato S/MIME inviato a ${testEmail}`,
+        transmission: result.data?.transmission,
+        fileName: result.data?.transmission?.fileName,
+      });
+    } else {
+      console.error(`[SIAE-DEBUG] ❌ RMG failed:`, result.error);
+      res.status(result.statusCode).json({ 
+        success: false, 
+        error: result.error,
+        ...result.data 
+      });
+    }
+  } catch (error: any) {
+    console.error('[SIAE-DEBUG] send-rmg-signed error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== DEBUG ENDPOINT - Validate Fiscal Code / P.IVA ====================
 router.get("/api/siae/debug/validate-fiscal", async (req: Request, res: Response) => {
   try {
