@@ -368,11 +368,21 @@ router.delete("/api/pr/bookings/:id", requireAuth, requireGestore, async (req: R
 // ==================== Guest Lists ====================
 
 // Get guest lists for an event
+// FIX 2026-01-22: PR vede solo le proprie liste, Gestore vede tutte
 router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
-    const lists = await prStorage.getGuestListsByEvent(eventId);
-    res.json(lists);
+    const user = req.user as any;
+    const allLists = await prStorage.getGuestListsByEvent(eventId);
+    
+    // Gestore/Super Admin vedono tutte le liste
+    if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+      return res.json(allLists);
+    }
+    
+    // PR/Capo Staff vedono solo le proprie liste
+    const userLists = allLists.filter(list => list.createdByUserId === user.id);
+    res.json(userLists);
   } catch (error: any) {
     console.error("Error getting guest lists:", error);
     res.status(500).json({ error: error.message });
@@ -414,13 +424,23 @@ router.post("/api/pr/events/:eventId/guest-lists", requireAuth, requirePr, async
 });
 
 // Update guest list
+// FIX 2026-01-22: Controllo ownership - PR può modificare solo le proprie liste
 router.patch("/api/pr/guest-lists/:id", requireAuth, requirePr, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updated = await prStorage.updateGuestList(id, req.body);
-    if (!updated) {
+    const user = req.user as any;
+    
+    // Verifica ownership (Gestore può modificare tutte, PR solo le proprie)
+    const list = await prStorage.getGuestList(id);
+    if (!list) {
       return res.status(404).json({ error: "Lista non trovata" });
     }
+    
+    if (!['gestore', 'super_admin', 'gestore_covisione'].includes(user.role) && list.createdByUserId !== user.id) {
+      return res.status(403).json({ error: "Non puoi modificare liste di altri PR" });
+    }
+    
+    const updated = await prStorage.updateGuestList(id, req.body);
     res.json(updated);
   } catch (error: any) {
     console.error("Error updating guest list:", error);
@@ -461,11 +481,21 @@ router.delete("/api/pr/guest-lists/:id", requireAuth, requireGestore, async (req
 // ==================== Guest List Entries ====================
 
 // Get entries for a guest list
+// FIX 2026-01-22: PR vede solo i propri ospiti nella lista, Gestore vede tutti
 router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Request, res: Response) => {
   try {
     const { listId } = req.params;
-    const entries = await prStorage.getGuestListEntriesByList(listId);
-    res.json(entries);
+    const user = req.user as any;
+    const allEntries = await prStorage.getGuestListEntriesByList(listId);
+    
+    // Gestore/Super Admin vedono tutti gli ospiti
+    if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+      return res.json(allEntries);
+    }
+    
+    // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
+    const userEntries = allEntries.filter(entry => entry.addedByUserId === user.id);
+    res.json(userEntries);
   } catch (error: any) {
     console.error("Error getting guest list entries:", error);
     res.status(500).json({ error: error.message });
@@ -473,11 +503,21 @@ router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Reque
 });
 
 // Get entries for an event (all lists)
+// FIX 2026-01-22: PR vede solo i propri ospiti, Gestore vede tutti
 router.get("/api/pr/events/:eventId/guest-entries", requireAuth, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
-    const entries = await prStorage.getGuestListEntriesByEvent(eventId);
-    res.json(entries);
+    const user = req.user as any;
+    const allEntries = await prStorage.getGuestListEntriesByEvent(eventId);
+    
+    // Gestore/Super Admin vedono tutti gli ospiti
+    if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+      return res.json(allEntries);
+    }
+    
+    // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
+    const userEntries = allEntries.filter(entry => entry.addedByUserId === user.id);
+    res.json(userEntries);
   } catch (error: any) {
     console.error("Error getting event guest entries:", error);
     res.status(500).json({ error: error.message });
@@ -526,13 +566,23 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
 });
 
 // Update guest list entry
+// FIX 2026-01-22: Controllo ownership - PR può modificare solo i propri ospiti
 router.patch("/api/pr/guest-entries/:id", requireAuth, requirePr, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updated = await prStorage.updateGuestListEntry(id, req.body);
-    if (!updated) {
+    const user = req.user as any;
+    
+    // Verifica ownership
+    const entry = await prStorage.getGuestListEntry(id);
+    if (!entry) {
       return res.status(404).json({ error: "Ospite non trovato" });
     }
+    
+    if (!['gestore', 'super_admin', 'gestore_covisione'].includes(user.role) && entry.addedByUserId !== user.id) {
+      return res.status(403).json({ error: "Non puoi modificare ospiti aggiunti da altri PR" });
+    }
+    
+    const updated = await prStorage.updateGuestListEntry(id, req.body);
     res.json(updated);
   } catch (error: any) {
     console.error("Error updating guest list entry:", error);
@@ -541,13 +591,23 @@ router.patch("/api/pr/guest-entries/:id", requireAuth, requirePr, async (req: Re
 });
 
 // Delete guest list entry
+// FIX 2026-01-22: Controllo ownership - PR può eliminare solo i propri ospiti
 router.delete("/api/pr/guest-entries/:id", requireAuth, requirePr, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deleted = await prStorage.deleteGuestListEntry(id);
-    if (!deleted) {
+    const user = req.user as any;
+    
+    // Verifica ownership
+    const entry = await prStorage.getGuestListEntry(id);
+    if (!entry) {
       return res.status(404).json({ error: "Ospite non trovato" });
     }
+    
+    if (!['gestore', 'super_admin', 'gestore_covisione'].includes(user.role) && entry.addedByUserId !== user.id) {
+      return res.status(403).json({ error: "Non puoi eliminare ospiti aggiunti da altri PR" });
+    }
+    
+    const deleted = await prStorage.deleteGuestListEntry(id);
     res.status(204).send();
   } catch (error: any) {
     console.error("Error deleting guest list entry:", error);

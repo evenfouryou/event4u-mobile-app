@@ -92,10 +92,11 @@ const guestEntryFormSchema = z.object({
   firstName: z.string().min(1, "Nome obbligatorio"),
   lastName: z.string().min(1, "Cognome obbligatorio"),
   email: z.string().email("Email non valida").optional().or(z.literal("")),
-  phone: z.string().optional(),
-  gender: z.enum(["M", "F"]).optional(),
+  phone: z.string().min(1, "Telefono obbligatorio"),
+  gender: z.enum(["M", "F"], { required_error: "Sesso obbligatorio" }),
   plusOnes: z.coerce.number().min(0, "Non può essere negativo").default(0),
   notes: z.string().optional(),
+  customerId: z.string().optional(),
 });
 
 function GenderToggle({ value, onChange }: { value?: 'M' | 'F'; onChange: (v: 'M' | 'F') => void }) {
@@ -168,6 +169,8 @@ export default function PrGuestListsPage() {
   const [isAddGuestDialogOpen, setIsAddGuestDialogOpen] = useState(false);
   const [isCreateListDialogOpen, setIsCreateListDialogOpen] = useState(false);
   const [isGuestDetailDialogOpen, setIsGuestDetailDialogOpen] = useState(false);
+  const [foundCustomer, setFoundCustomer] = useState<any>(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
 
   const { data: events = [], isLoading } = useQuery<MyEvent[]>({
     queryKey: ["/api/e4u/my-events"],
@@ -222,8 +225,43 @@ export default function PrGuestListsPage() {
       gender: undefined,
       plusOnes: 0,
       notes: "",
+      customerId: undefined,
     },
   });
+
+  const searchCustomerByPhone = async (phone: string) => {
+    if (!phone || phone.length < 8) {
+      setFoundCustomer(null);
+      return;
+    }
+    setIsSearchingCustomer(true);
+    try {
+      const response = await fetch(`/api/pr/customers/search?phone=${encodeURIComponent(phone)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.found && data.customer) {
+          const customer = data.customer;
+          setFoundCustomer(customer);
+          guestForm.setValue("firstName", customer.firstName || "");
+          guestForm.setValue("lastName", customer.lastName || "");
+          if (customer.gender) {
+            guestForm.setValue("gender", customer.gender as "M" | "F");
+          }
+          guestForm.setValue("customerId", customer.id);
+          toast({
+            title: "Cliente trovato",
+            description: `${customer.firstName} ${customer.lastName}`,
+          });
+        } else {
+          setFoundCustomer(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error searching customer:", error);
+    } finally {
+      setIsSearchingCustomer(false);
+    }
+  };
 
   const listForm = useForm<GuestListFormData>({
     resolver: zodResolver(guestListFormSchema),
@@ -522,7 +560,11 @@ export default function PrGuestListsPage() {
                   />
                 </div>
                 {selectedList?.isActive && (
-                  <Button onClick={() => setIsAddGuestDialogOpen(true)} data-testid="button-add-guest">
+                  <Button onClick={() => {
+                    guestForm.reset();
+                    setFoundCustomer(null);
+                    setIsAddGuestDialogOpen(true);
+                  }} data-testid="button-add-guest">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Aggiungi Ospite
                   </Button>
@@ -756,10 +798,29 @@ export default function PrGuestListsPage() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefono (opzionale)</FormLabel>
+                      <FormLabel>Telefono *</FormLabel>
                       <FormControl>
-                        <Input placeholder="+39 333 1234567" {...field} data-testid="input-guest-phone" />
+                        <div className="relative">
+                          <Input 
+                            placeholder="+39 333 1234567" 
+                            {...field} 
+                            onBlur={(e) => {
+                              field.onBlur();
+                              searchCustomerByPhone(e.target.value);
+                            }}
+                            data-testid="input-guest-phone" 
+                          />
+                          {isSearchingCustomer && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          {foundCustomer && (
+                            <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                          )}
+                        </div>
                       </FormControl>
+                      {foundCustomer && (
+                        <p className="text-xs text-green-600">Cliente registrato: {foundCustomer.firstName} {foundCustomer.lastName}</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -769,7 +830,7 @@ export default function PrGuestListsPage() {
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sesso</FormLabel>
+                      <FormLabel>Sesso *</FormLabel>
                       <FormControl>
                         <GenderToggle
                           value={field.value}
@@ -1288,7 +1349,11 @@ export default function PrGuestListsPage() {
 
       {selectedListId && selectedList?.isActive && (
         <FloatingActionButton
-          onClick={() => setIsAddGuestOpen(true)}
+          onClick={() => {
+            guestForm.reset();
+            setFoundCustomer(null);
+            setIsAddGuestOpen(true);
+          }}
           data-testid="fab-add-guest"
         >
           <Plus className="h-7 w-7" />
@@ -1363,15 +1428,30 @@ export default function PrGuestListsPage() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Telefono (opzionale)</FormLabel>
+                    <FormLabel className="text-base">Telefono *</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="+39 333 1234567" 
-                        className="h-14 rounded-2xl text-base" 
-                        {...field} 
-                        data-testid="input-guest-phone" 
-                      />
+                      <div className="relative">
+                        <Input 
+                          placeholder="+39 333 1234567" 
+                          className="h-14 rounded-2xl text-base" 
+                          {...field} 
+                          onBlur={(e) => {
+                            field.onBlur();
+                            searchCustomerByPhone(e.target.value);
+                          }}
+                          data-testid="input-guest-phone" 
+                        />
+                        {isSearchingCustomer && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
+                        )}
+                        {foundCustomer && (
+                          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+                        )}
+                      </div>
                     </FormControl>
+                    {foundCustomer && (
+                      <p className="text-sm text-green-600">Cliente registrato: {foundCustomer.firstName} {foundCustomer.lastName}</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1381,7 +1461,7 @@ export default function PrGuestListsPage() {
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Sesso</FormLabel>
+                    <FormLabel className="text-base">Sesso *</FormLabel>
                     <FormControl>
                       <GenderToggle
                         value={field.value}
