@@ -20,6 +20,7 @@ import {
   Settings,
   Menu,
   Eye,
+  Play,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { motion } from "framer-motion";
@@ -260,7 +261,34 @@ export default function Home() {
     enabled: isGestore,
   });
 
-  const recentEvents = events.slice(0, 3);
+  // Filtra solo eventi in corso (oggi) e prossimi (futuri), escludi passati
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const ongoingAndUpcomingEvents = events
+    .filter(event => {
+      const eventDate = new Date(event.startDatetime);
+      const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      return eventDay >= today; // Oggi o futuro
+    })
+    .sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime());
+  
+  // Eventi in corso (oggi)
+  const ongoingEvents = ongoingAndUpcomingEvents.filter(event => {
+    const eventDate = new Date(event.startDatetime);
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    return eventDay.getTime() === today.getTime();
+  });
+  
+  // Eventi prossimi (futuri, non oggi)
+  const upcomingEvents = ongoingAndUpcomingEvents.filter(event => {
+    const eventDate = new Date(event.startDatetime);
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    return eventDay > today;
+  }).slice(0, 3); // Max 3 prossimi
+  
+  // Per compatibilità con il resto del codice
+  const recentEvents = ongoingAndUpcomingEvents.slice(0, 3);
 
   useEffect(() => {
     if (isBartender || isWarehouse) {
@@ -717,29 +745,76 @@ export default function Home() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/beverage">
-            <Card className="hover-elevate cursor-pointer">
-              <CardContent className="pt-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Wine className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold">{t('dashboard.beverage')}</p>
-                  <p className="text-sm text-muted-foreground">{t('dashboard.beverageManagement')}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {(userFeatures?.beverageEnabled !== false) && (
+            <Link href="/beverage">
+              <Card className="hover-elevate cursor-pointer">
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                    <Wine className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{t('dashboard.beverage')}</p>
+                    <p className="text-sm text-muted-foreground">{t('dashboard.beverageManagement')}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
 
+        {/* Eventi In Corso (oggi) */}
+        {ongoingEvents.length > 0 && (
+          <Card className="border-emerald-500/30">
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5 text-emerald-500" />
+                  {t('dashboard.ongoingEvents') || 'Eventi In Corso'}
+                </CardTitle>
+                <CardDescription>{t('dashboard.eventsToday') || 'Eventi di oggi'}</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {ongoingEvents.map((event) => {
+                  const eventDate = new Date(event.startDatetime);
+                  return (
+                    <Link href={`/events/${event.id}/hub`} key={event.id}>
+                      <Card className="hover-elevate cursor-pointer h-full border-emerald-500/20" data-testid={`event-card-ongoing-${event.id}`}>
+                        <CardContent className="pt-6 space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center shrink-0">
+                              <Play className="h-6 w-6 text-emerald-500" />
+                            </div>
+                            <Badge className="bg-emerald-500 text-white">
+                              {t('dashboard.eventOngoing') || 'In Corso'}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg line-clamp-1">{event.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {eventDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Eventi Prossimi */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                {t('dashboard.recentEvents')}
+                {t('dashboard.upcomingEvents') || 'Prossimi Eventi'}
               </CardTitle>
-              <CardDescription>{t('dashboard.yourRecentEvents')}</CardDescription>
+              <CardDescription>{t('dashboard.yourUpcomingEvents') || 'I tuoi prossimi eventi'}</CardDescription>
             </div>
             <Link href="/events">
               <Button variant="outline" data-testid="link-view-all-events">
@@ -755,21 +830,20 @@ export default function Home() {
                 <Skeleton className="h-32 rounded-xl" />
                 <Skeleton className="h-32 rounded-xl" />
               </div>
-            ) : recentEvents.length > 0 ? (
+            ) : upcomingEvents.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {recentEvents.map((event) => {
+                {upcomingEvents.map((event) => {
                   const eventDate = new Date(event.startDatetime);
-                  const isUpcoming = eventDate >= new Date();
                   return (
                     <Link href={`/events/${event.id}/hub`} key={event.id}>
-                      <Card className="hover-elevate cursor-pointer h-full" data-testid={`event-card-${event.id}`}>
+                      <Card className="hover-elevate cursor-pointer h-full" data-testid={`event-card-upcoming-${event.id}`}>
                         <CardContent className="pt-6 space-y-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
                               <Calendar className="h-6 w-6 text-primary" />
                             </div>
-                            <Badge variant={isUpcoming ? "default" : "secondary"}>
-                              {isUpcoming ? t('dashboard.eventUpcoming') : t('dashboard.eventPast')}
+                            <Badge variant="default">
+                              {t('dashboard.eventUpcoming') || 'Prossimo'}
                             </Badge>
                           </div>
                           <div>
@@ -784,16 +858,20 @@ export default function Home() {
                   );
                 })}
               </div>
-            ) : (
+            ) : ongoingEvents.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg text-muted-foreground mb-4">{t('dashboard.noRecentEvents')}</p>
+                <p className="text-lg text-muted-foreground mb-4">{t('dashboard.noUpcomingEvents') || 'Nessun evento in programma'}</p>
                 <Link href="/event-wizard">
                   <Button data-testid="button-create-first-event">
                     <Plus className="h-4 w-4 mr-2" />
                     {t('dashboard.createFirstEvent')}
                   </Button>
                 </Link>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground">{t('dashboard.noMoreUpcoming') || 'Nessun altro evento in programma'}</p>
               </div>
             )}
           </CardContent>
