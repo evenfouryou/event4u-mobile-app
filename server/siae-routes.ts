@@ -5835,7 +5835,10 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     const eventTickets = allTickets.filter(t => t.ticketedEventId === original.ticketedEventId);
     const systemConfig = await siaeStorage.getSiaeSystemConfig(original.companyId);
     const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(original.companyId);
-    const activeCard = activationCards.find(c => c.status === 'active');
+    let activeCard = activationCards.find(c => c.status === 'active');
+    if (!activeCard) {
+      activeCard = await siaeStorage.getSystemActiveCard();
+    }
     const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
     
     // FIX 2026-01-17: Per reinvio RCA (S/MIME), il codice DEVE provenire dalla Smart Card
@@ -6342,7 +6345,10 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           const eventTickets = allTickets.filter(t => t.ticketedEventId === transmission.ticketedEventId);
           // systemConfig già recuperato sopra
           const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(transmission.companyId);
-          const activeCard = activationCards.find(c => c.status === 'active');
+          let activeCard = activationCards.find(c => c.status === 'active');
+          if (!activeCard) {
+            activeCard = await siaeStorage.getSystemActiveCard();
+          }
           const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
           
           // Prepare SiaeEventForLog with correct interface fields
@@ -6673,9 +6679,17 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const reportDate = date ? new Date(date) : new Date();
   reportDate.setHours(0, 0, 0, 0);
   
-  // Get activation card for company
+  // Get activation card for company or fallback to system card
   const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(companyId);
-  const activeCard = activationCards.find(c => c.status === 'active');
+  let activeCard = activationCards.find(c => c.status === 'active');
+  
+  // Fallback to system-wide active card if no company-specific card found
+  if (!activeCard) {
+    activeCard = await siaeStorage.getSystemActiveCard();
+    if (activeCard) {
+      console.log(`[SIAE-ROUTES] Using system-wide active card for company ${companyId}`);
+    }
+  }
   
   if (!activeCard) {
     return { success: false, statusCode: 400, error: "Nessuna carta di attivazione attiva trovata" };
@@ -9355,9 +9369,12 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
       return res.status(404).json({ message: "Evento con biglietteria non trovato" });
     }
     
-    // Get activation card
+    // Get activation card (with system fallback)
     const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(ticketedEvent.companyId);
-    const activeCard = activationCards.find(c => c.status === 'active');
+    let activeCard = activationCards.find(c => c.status === 'active');
+    if (!activeCard) {
+      activeCard = await siaeStorage.getSystemActiveCard();
+    }
     
     if (!activeCard) {
       return res.status(400).json({ message: "Nessuna carta di attivazione attiva trovata" });
@@ -9460,9 +9477,12 @@ router.get("/api/siae/companies/:companyId/reports/xml/cancellations", requireAu
     const endDate = new Date(dateTo as string);
     endDate.setHours(23, 59, 59, 999);
     
-    // Get activation card
+    // Get activation card (with system fallback)
     const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(companyId);
-    const activeCard = activationCards.find(c => c.status === 'active');
+    let activeCard = activationCards.find(c => c.status === 'active');
+    if (!activeCard) {
+      activeCard = await siaeStorage.getSystemActiveCard();
+    }
     
     if (!activeCard) {
       return res.status(400).json({ message: "Nessuna carta di attivazione attiva trovata" });

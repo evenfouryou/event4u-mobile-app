@@ -133,6 +133,7 @@ export interface ISiaeStorage {
   
   getSiaeActivationCards(): Promise<SiaeActivationCard[]>;
   getSiaeActivationCardsByCompany(companyId: string): Promise<SiaeActivationCard[]>;
+  getSystemActiveCard(): Promise<SiaeActivationCard | undefined>;
   getSiaeActivationCard(id: string): Promise<SiaeActivationCard | undefined>;
   getSiaeActivationCardByCode(cardCode: string): Promise<SiaeActivationCard | undefined>;
   createSiaeActivationCard(card: InsertSiaeActivationCard): Promise<SiaeActivationCard>;
@@ -516,6 +517,14 @@ export class SiaeStorage implements ISiaeStorage {
     return await db.select().from(siaeActivationCards)
       .where(eq(siaeActivationCards.companyId, companyId))
       .orderBy(desc(siaeActivationCards.activationDate));
+  }
+
+  async getSystemActiveCard(): Promise<SiaeActivationCard | undefined> {
+    const [card] = await db.select().from(siaeActivationCards)
+      .where(eq(siaeActivationCards.status, 'active'))
+      .orderBy(desc(siaeActivationCards.activationDate))
+      .limit(1);
+    return card;
   }
   
   async getSiaeActivationCard(id: string): Promise<SiaeActivationCard | undefined> {
