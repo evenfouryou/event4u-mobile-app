@@ -536,6 +536,47 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
   }
 });
 
+// ==================== DEBUG ENDPOINT - Send Signed RPM Report ====================
+// Endpoint pubblico per testare invio report RPM firmato con smart card
+router.get("/api/siae/debug/send-rpm-signed", async (req: Request, res: Response) => {
+  try {
+    const eventId = req.query.eventId as string || 'b6cfac14-8b2f-47fe-9aee-7a4aef275d4f';
+    const companyId = req.query.companyId as string || '6946a466-733a-47bd-bbb8-31f4fbe11fc2';
+    const testEmail = req.query.to as string || 'servertest2@batest.siae.it';
+    
+    console.log(`[SIAE-DEBUG] Sending signed RPM for event ${eventId} to ${testEmail}`);
+    
+    // Use the shared C1 handler with type=monthly
+    const result = await handleSendC1Transmission({
+      companyId,
+      type: 'monthly',
+      eventId,
+      signWithSmartCard: true,
+      toEmail: testEmail,
+    });
+    
+    if (result.success) {
+      console.log(`[SIAE-DEBUG] ✅ RPM firmato inviato con successo a ${testEmail}`);
+      res.json({
+        success: true,
+        message: `Report RPM firmato S/MIME inviato a ${testEmail}`,
+        transmission: result.data?.transmission,
+        fileName: result.data?.transmission?.fileName,
+      });
+    } else {
+      console.error(`[SIAE-DEBUG] ❌ RPM failed:`, result.error);
+      res.status(result.statusCode).json({ 
+        success: false, 
+        error: result.error,
+        ...result.data 
+      });
+    }
+  } catch (error: any) {
+    console.error('[SIAE-DEBUG] send-rpm-signed error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== DEBUG ENDPOINT - Validate Fiscal Code / P.IVA ====================
 router.get("/api/siae/debug/validate-fiscal", async (req: Request, res: Response) => {
   try {
