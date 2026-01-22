@@ -617,6 +617,164 @@ router.get("/api/siae/debug/send-rmg-signed", async (req: Request, res: Response
   }
 });
 
+// ==================== DEBUG ENDPOINT - Create Fresh RMG (tutto nuovo) ====================
+router.get("/api/siae/debug/send-fresh-rmg", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.query.companyId as string || '6946a466-733a-47bd-bbb8-31f4fbe11fc2';
+    const testEmail = req.query.to as string || 'servertest2@batest.siae.it';
+    
+    const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 30) + 1);
+    const eventDateStr = futureDate.toISOString().split('T')[0];
+    
+    console.log(`[SIAE-DEBUG-FRESH] Creating fresh event and tickets with uniqueId=${uniqueId}, date=${eventDateStr}`);
+    
+    const company = await storage.getCompany(companyId);
+    if (!company) {
+      return res.status(400).json({ error: "Company not found" });
+    }
+    
+    const locations = await storage.getLocationsByCompany(companyId);
+    let locationId = locations[0]?.id;
+    
+    if (!locationId) {
+      const newLocation = await storage.createLocation({
+        companyId,
+        name: `Test Venue ${uniqueId}`,
+        address: "Via Roma 1",
+        city: "Milano",
+        province: "MI",
+        postalCode: "20100",
+        capacity: 500,
+      });
+      locationId = newLocation.id;
+      console.log(`[SIAE-DEBUG-FRESH] Created new location: ${locationId}`);
+    }
+    
+    const startDatetime = new Date(futureDate);
+    startDatetime.setHours(21, 0, 0, 0);
+    const endDatetime = new Date(startDatetime);
+    endDatetime.setHours(4, 0, 0, 0);
+    endDatetime.setDate(endDatetime.getDate() + 1);
+    
+    const newEvent = await storage.createEvent({
+      companyId,
+      locationId,
+      name: `Test Event SIAE ${uniqueId}`,
+      startDatetime: startDatetime,
+      endDatetime: endDatetime,
+      status: 'closed',
+    });
+    console.log(`[SIAE-DEBUG-FRESH] Created base event: ${newEvent.id}`);
+    
+    const ticketedEvent = await siaeStorage.createSiaeTicketedEvent({
+      companyId,
+      eventId: newEvent.id,
+      genreCode: "61",
+      genreIncidence: 100,
+      entertainmentIncidence: 100,
+      taxType: "I",
+      ticketingStatus: "closed",
+      totalCapacity: 500,
+      requiresNominative: false,
+    });
+    console.log(`[SIAE-DEBUG-FRESH] Created ticketed event: ${ticketedEvent.id}`);
+    
+    const sector = await siaeStorage.createSiaeEventSector({
+      ticketedEventId: ticketedEvent.id,
+      sectorCode: "01",
+      name: "Platea",
+      capacity: 500,
+      availableSeats: 500,
+      isNumbered: false,
+      priceIntero: "15.00",
+    });
+    console.log(`[SIAE-DEBUG-FRESH] Created sector: ${sector.id}`);
+    
+    const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(companyId);
+    const activeCard = activationCards.find(c => c.status === 'active');
+    
+    if (!activeCard) {
+      return res.status(400).json({ error: "No active SIAE card found" });
+    }
+    
+    const ticketTypes = [
+      { name: "Ingresso Standard", price: "15.00", netPrice: "12.30", tax: "2.70" },
+      { name: "Ingresso VIP", price: "20.00", netPrice: "16.39", tax: "3.61" },
+      { name: "Ridotto", price: "10.00", netPrice: "8.20", tax: "1.80" },
+    ];
+    
+    const createdTickets = [];
+    const now = new Date();
+    const emissionDateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const emissionTimeStr = now.toTimeString().slice(0, 5).replace(':', '');
+    
+    for (let i = 0; i < ticketTypes.length; i++) {
+      const tt = ticketTypes[i];
+      const ticketTypeCode = i === 0 ? "001" : (i === 1 ? "002" : "003");
+      
+      const ticket = await siaeStorage.createSiaeTicket({
+        ticketedEventId: ticketedEvent.id,
+        sectorId: sector.id,
+        progressiveNumber: i + 1,
+        ticketTypeCode,
+        sectorCode: "01",
+        emissionDate: now,
+        emissionDateStr,
+        emissionTimeStr,
+        grossAmount: tt.price,
+        netAmount: tt.netPrice,
+        vatAmount: tt.tax,
+        vatRate: "22",
+        isiAmount: "0.00",
+        status: "sold",
+        cardCode: activeCard.serialNumber || "TESTCARD",
+        emissionChannelCode: "01",
+      });
+      createdTickets.push(ticket);
+      console.log(`[SIAE-DEBUG-FRESH] Created ticket: ${ticket.id} (prog ${i + 1})`);
+    }
+    
+    console.log(`[SIAE-DEBUG-FRESH] Sending RMG for date ${eventDateStr}...`);
+    
+    const result = await handleSendC1Transmission({
+      companyId,
+      type: 'daily',
+      date: eventDateStr,
+      signWithSmartCard: true,
+      toEmail: testEmail,
+    });
+    
+    if (result.success) {
+      console.log(`[SIAE-DEBUG-FRESH] ✅ Fresh RMG sent successfully to ${testEmail}`);
+      res.json({
+        success: true,
+        message: `Report RMG NUOVO creato e inviato a ${testEmail}`,
+        uniqueId,
+        eventDate: eventDateStr,
+        eventId: newEvent.id,
+        ticketedEventId: ticketedEvent.id,
+        ticketsCreated: createdTickets.length,
+        transmission: result.data?.transmission,
+        fileName: result.data?.transmission?.fileName,
+      });
+    } else {
+      console.error(`[SIAE-DEBUG-FRESH] ❌ RMG failed:`, result.error);
+      res.status(result.statusCode).json({ 
+        success: false, 
+        error: result.error,
+        uniqueId,
+        eventDate: eventDateStr,
+        ...result.data 
+      });
+    }
+  } catch (error: any) {
+    console.error('[SIAE-DEBUG-FRESH] error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== DEBUG ENDPOINT - Validate Fiscal Code / P.IVA ====================
 router.get("/api/siae/debug/validate-fiscal", async (req: Request, res: Response) => {
   try {
