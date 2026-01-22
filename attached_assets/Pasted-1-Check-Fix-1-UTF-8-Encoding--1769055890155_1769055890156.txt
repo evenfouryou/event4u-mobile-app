@@ -1,0 +1,47 @@
+1. Check Fix 1 - UTF-8 Encoding                                                                                                                                                                     
+  - Open file: server/email-service.ts                                                                                                                                                                
+  - Go to line ~665                                                                                                                                                                                   
+  - Verify it says: Buffer.from(xmlContent, 'utf-8')                                                                                                                                                  
+  - It should NOT say: latin1 or ISO-8859-1                                                                                                                                                           
+  - Show me the exact line                                                                                                                                                                            
+                                                                                                                                                                                                      
+  2. Check Fix 2 - Empty Report Blocking                                                                                                                                                              
+  - Open file: server/siae-utils.ts                                                                                                                                                                   
+  - Search for: EMPTY_REPORT or report vuoto                                                                                                                                                          
+  - Around line ~4717                                                                                                                                                                                 
+  - Verify there's code that throws an error when no events exist                                                                                                                                     
+  - It should NOT generate empty XML                                                                                                                                                                  
+  - Show me the relevant code                                                                                                                                                                         
+                                                                                                                                                                                                      
+  3. Check Fix 3 - Organization Name                                                                                                                                                                  
+  - Search the entire server/ directory for: Event4U Demo or EVENT4U                                                                                                                                  
+  - Verify it's been replaced with: HURAEX SRL                                                                                                                                                        
+  - Show me any remaining instances of old name                                                                                                                                                       
+                                                                                                                                                                                                      
+  4. Check Fix 4 - RPM Error Display                                                                                                                                                                  
+  - Open file: server/siae-utils.ts                                                                                                                                                                   
+  - Search for the RPM generation function (around line ~7167-7177)                                                                                                                                   
+  - Verify the error field is at the top level: return { success: false, error: "..." }                                                                                                               
+  - It should NOT be nested: return { success: false, data: { error: "..." } }                                                                                                                        
+  - Show me the exact return statement                                                                                                                                                                
+                                                                                                                                                                                                      
+  5. Check Production Environment                                                                                                                                                                     
+  - Is this running on Replit production deployment?                                                                                                                                                  
+  - Check environment variables: NODE_ENV, REPL_SLUG                                                                                                                                                  
+  - Was the server restarted after the fixes?                                                                                                                                                         
+  - Show deployment/environment status                                                                                                                                                                
+                                                                                                                                                                                                      
+  6. Summary Report                                                                                                                                                                                   
+  Create a table showing:                                                                                                                                                                             
+  ┌─────────────────────┬──────────────────┬───────┬──────────┬─────────────────────┐                                                                                                                 
+  │         Fix         │       File       │ Line  │  Status  │        Notes        │                                                                                                                 
+  ├─────────────────────┼──────────────────┼───────┼──────────┼─────────────────────┤                                                                                                                 
+  │ UTF-8 encoding      │ email-service.ts │ ~665  │ ✅ or ❌ │ Current value       │                                                                                                                 
+  ├─────────────────────┼──────────────────┼───────┼──────────┼─────────────────────┤                                                                                                                 
+  │ Block empty reports │ siae-utils.ts    │ ~4717 │ ✅ or ❌ │ Has validation?     │                                                                                                                 
+  ├─────────────────────┼──────────────────┼───────┼──────────┼─────────────────────┤                                                                                                                 
+  │ Organization name   │ multiple         │       │ ✅ or ❌ │ Any old names left? │                                                                                                                 
+  ├─────────────────────┼──────────────────┼───────┼──────────┼─────────────────────┤                                                                                                                 
+  │ RPM error display   │ siae-utils.ts    │ ~7167 │ ✅ or ❌ │ Error at top level? │                                                                                                                 
+  └─────────────────────┴──────────────────┴───────┴──────────┴─────────────────────┘                                                                                                                 
+  If ANY fix is missing or incorrect, show me the problematic code and I'll tell you how to fix it again.
