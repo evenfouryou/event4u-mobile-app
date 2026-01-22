@@ -1,0 +1,566 @@
+ [Coframe] Replit Enterprise watcher loaded
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Event-Four-You-2026:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Event-Four-You-2026:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Event-Four-You-2026:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+ 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+ Download the Apollo DevTools for a better development experience: https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm
+Event-Four-You-2026:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+ [LaunchDarkly] LaunchDarkly client initialized
+ [ai-chat] Creating connection with chat proxy enabled
+overrideMethod @ installHook.js:1
+ Cache data may be lost when replacing the dealContext field of a Org object.
+
+This could cause additional (usually avoidable) network requests to fetch data that were otherwise cached.
+
+To address this problem (which is not a bug in Apollo Client), either ensure all objects of type OrgDealContext have an ID or a custom merge function, or define a custom merge function for the Org.dealContext field, so InMemoryCache can safely merge these objects:
+
+  existing: {"__typename":"OrgDealContext","dealType":"default","salesContactEmail":null}
+  incoming: {"__typename":"OrgDealContext","dealType":"default"}
+
+For more information about these options, please refer to the documentation:
+
+  * Ensuring entity objects have IDs: https://go.apollo.dev/c/generating-unique-identifiers
+  * Defining custom merge functions: https://go.apollo.dev/c/merging-non-normalized-objects
+
+overrideMethod @ installHook.js:1
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+ Unrecognized feature: 'ambient-light-sensor'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'battery'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'execution-while-not-rendered'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'execution-while-out-of-viewport'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'layout-animations'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'legacy-image-formats'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'navigation-override'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'oversized-images'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'publickey-credentials'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'speaker-selection'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'unoptimized-images'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'unsized-media'.
+z @ ed1e693c96a75807.js:2
+ Unrecognized feature: 'pointer-lock'.
+z @ ed1e693c96a75807.js:2
+ Allow attribute will take precedence over 'allowfullscreen'.
+z @ ed1e693c96a75807.js:2
+ Allow attribute will take precedence over 'allowpaymentrequest'.
+z @ ed1e693c96a75807.js:2
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2F&id=%3Arbf%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+ SW registered: https://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/
+1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/api/auth/user:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/api/public/customers/me:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+ SW registered: https://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/
+ [DEBUG SC] Fetching initial status via HTTP...
+ [DEBUG SC] ====== SMART CARD CONNECTION START ======
+ [DEBUG SC] URL: wss://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/ws/bridge
+ [DEBUG SC] Cookies present: NO
+ [DEBUG SC] Cookie value: ...
+ [DEBUG SC] WebSocket created, state: 0
+ [DEBUG SC] HTTP status received: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 356,
+  "cardBalance": 452861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] HTTP - cardSerial: 4130313238343837
+ [DEBUG SC] HTTP - cardCounter: 356
+ [DEBUG SC] HTTP - cardBalance: 452861
+ [DEBUG SC] HTTP - cardKeyId: 129
+ [DEBUG SC] HTTP - cardInserted: true
+ [DEBUG SC] WebSocket OPEN! State: 1
+ [DEBUG SC] Sending get_status request...
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Parsed message type: connection_status
+ [DEBUG SC] Handling bridge/connection status: connection_status Object
+ [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+ [DEBUG SC] Message type: connection_status
+smart-card-service.ts:313 [DEBUG SC] msg.connected: true
+smart-card-service.ts:314 [DEBUG SC] msg.bridgeConnected: true
+smart-card-service.ts:315 [DEBUG SC] isConnected (final): true
+smart-card-service.ts:316 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+smart-card-service.ts:319 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+smart-card-service.ts:339 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":true,"cardInserted":true,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":356,"cardBalance":452861,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-22T11:00:35.485Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false,"pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false}
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":356,"cardBalance":452861,"cardKeyId":129,"car
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: status
+smart-card-service.ts:245 [DEBUG SC] Handling status message
+smart-card-service.ts:343 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+smart-card-service.ts:344 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 356,
+  "cardBalance": 452861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+smart-card-service.ts:345 [DEBUG SC] data.cardSerial: 4130313238343837
+smart-card-service.ts:346 [DEBUG SC] data.cardCounter: 356
+smart-card-service.ts:347 [DEBUG SC] data.cardBalance: 452861
+smart-card-service.ts:348 [DEBUG SC] data.cardKeyId: 129
+smart-card-service.ts:349 [DEBUG SC] data.cardInserted: true
+smart-card-service.ts:350 [DEBUG SC] data.readerDetected: undefined
+smart-card-service.ts:351 [DEBUG SC] data.readerConnected: true
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"super_admin","toUserId":"b037bc7b-cf68-4ed0-9d79-190a58d9dcd4","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: status
+smart-card-service.ts:245 [DEBUG SC] Handling status message
+smart-card-service.ts:343 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+smart-card-service.ts:344 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 356,
+  "cardBalance": 452861,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+smart-card-service.ts:345 [DEBUG SC] data.cardSerial: 4130313238343837
+smart-card-service.ts:346 [DEBUG SC] data.cardCounter: 356
+smart-card-service.ts:347 [DEBUG SC] data.cardBalance: 452861
+smart-card-service.ts:348 [DEBUG SC] data.cardKeyId: 129
+smart-card-service.ts:349 [DEBUG SC] data.cardInserted: true
+smart-card-service.ts:350 [DEBUG SC] data.readerDetected: undefined
+smart-card-service.ts:351 [DEBUG SC] data.readerConnected: true
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
+1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/api/siae/companies/67952894-0d84-4e62-81bf-bfec9a282c1e/transmissions/send-c1:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/api/siae/companies/67952894-0d84-4e62-81bf-bfec9a282c1e/transmissions/send-c1:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: pong
+smart-card-service.ts:251 [DEBUG SC] Pong received
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/api/siae/companies/67952894-0d84-4e62-81bf-bfec9a282c1e/transmissions/send-c1:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: pong
+smart-card-service.ts:251 [DEBUG SC] Pong received
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev/api/siae/companies/67952894-0d84-4e62-81bf-bfec9a282c1e/transmissions/send-c1:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
+The deferred DOM Node could not be resolved to a valid node.
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+iH @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+iH @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+iH @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: pong
+smart-card-service.ts:251 [DEBUG SC] Pong received
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+installHook.js:1 If you do not provide children, you must specify an aria-label for accessibility
+overrideMethod @ installHook.js:1
+(anonymous) @ 59fb6d7fa855a74d.js:2
+d @ 0d29bc7a257ca5a8.js:2
+(anonymous) @ 0d29bc7a257ca5a8.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+smart-card-service.ts:238 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+smart-card-service.ts:241 [DEBUG SC] Parsed message type: ping
+smart-card-service.ts:253 [DEBUG SC] Ping received, sending pong
