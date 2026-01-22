@@ -483,9 +483,10 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
     
     const testDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
     const reportDate = new Date(testDateStr + 'T20:00:00');
-    const endDate = new Date(reportDate.getTime() + 4 * 60 * 60 * 1000); // +4 ore
+    const endDate = new Date(reportDate.getTime() + 4 * 60 * 60 * 1000);
+    const timestamp = Date.now();
     
-    // Definizione eventi per ogni genere SIAE principale
+    // Definizione eventi - UN EVENTO PER OGNI GENERE SIAE
     const genreDefinitions = [
       { genre: '1', name: 'Cinema Prima Visione', author: 'Martin Scorsese', performer: 'Leonardo DiCaprio', price: 12.00, taxType: 'S' },
       { genre: '2', name: 'Cinema Seconda Visione', author: 'Christopher Nolan', performer: 'Cast Film', price: 8.00, taxType: 'S' },
@@ -507,17 +508,22 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
     
     const createdEvents: any[] = [];
     const createdTickets: any[] = [];
+    const createdCancelledTickets: any[] = [];
+    const createdSubscriptions: any[] = [];
+    const createdCancelledSubscriptions: any[] = [];
     let ticketCounter = 1;
+    let subCounter = 1;
+    const vatRate = 22;
     
     for (const gd of genreDefinitions) {
-      // 1. Crea evento base
+      // 1. Crea evento base (MAI INVIATO)
       const eventId = randomUUID();
       await db.insert(events).values({
         id: eventId, companyId, locationId: location.id, name: `${gd.name} - Test SIAE`,
-        startDatetime: reportDate, endDatetime: endDate, status: 'scheduled', isPublic: false,
+        startDatetime: reportDate, endDatetime: endDate, status: 'completed', isPublic: false,
       });
       
-      // 2. Crea evento ticketed
+      // 2. Crea evento ticketed (MAI INVIATO - senza transmissionStatus)
       const ticketedEventId = randomUUID();
       await db.insert(siaeTicketedEvents).values({
         id: ticketedEventId, eventId, companyId,
@@ -528,24 +534,23 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
         taxType: gd.taxType,
         totalCapacity: 500,
         requiresNominative: true,
-        ticketingStatus: 'active',
+        ticketingStatus: 'closed',
         approvalStatus: 'approved',
       });
       
       // 3. Crea settore
       const sectorId = randomUUID();
-      const vatRate = 22;
       const netPrice = gd.price / (1 + vatRate / 100);
       await db.insert(siaeEventSectors).values({
         id: sectorId, ticketedEventId,
         sectorCode: 'A0', name: 'Ingresso Generale',
-        capacity: 500, availableSeats: 498,
+        capacity: 500, availableSeats: 495,
         priceIntero: gd.price.toFixed(2),
         priceRidotto: (gd.price * 0.7).toFixed(2),
         ivaRate: vatRate.toString(),
       });
       
-      // 4. Crea 2 biglietti per evento
+      // 4. Crea BIGLIETTI VALIDI (2 per evento: intero + ridotto)
       for (let i = 0; i < 2; i++) {
         const ticketId = randomUUID();
         const isRidotto = i === 1;
@@ -568,76 +573,106 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
           participantLastName: isRidotto ? 'Rossi' : 'Bianchi',
           status: 'valid',
         });
-        createdTickets.push({ ticketId, genre: gd.genre, price: ticketPrice });
+        createdTickets.push({ ticketId, genre: gd.genre, price: ticketPrice, status: 'valid' });
       }
       
-      createdEvents.push({ eventId, ticketedEventId, genre: gd.genre, name: gd.name });
-    }
-    
-    // 5. Crea abbonamenti (legati al primo evento ticketed)
-    const firstTicketedEvent = createdEvents[0];
-    const firstSector = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.ticketedEventId, firstTicketedEvent.ticketedEventId)).limit(1);
-    
-    const subscriptionDefs = [
-      { name: 'Abbonamento Annuale Cinema', price: 120, events: 24, firstName: 'Marco', lastName: 'Abbonato', fiscalCode: 'BBNMRC80A01H501A' },
-      { name: 'Abbonamento Stagione Teatro', price: 200, events: 10, firstName: 'Laura', lastName: 'Teatrale', fiscalCode: 'TTRLRA85B02F205B' },
-      { name: 'Abbonamento Stadio', price: 350, events: 19, firstName: 'Giovanni', lastName: 'Tifoso', fiscalCode: 'TFSGNN75C03L219C' },
-      { name: 'Tessera Discoteca VIP', price: 500, events: 52, firstName: 'Valentina', lastName: 'Dancer', fiscalCode: 'DNCVLN90D04A944D' },
-    ];
-    
-    const createdSubscriptions: any[] = [];
-    let subCounter = 1;
-    for (const sd of subscriptionDefs) {
-      const vatRate = 22;
-      const netPrice = sd.price / (1 + vatRate / 100);
-      const vatAmount = sd.price - netPrice;
-      const timestamp = Date.now();
+      // 5. Crea BIGLIETTO ANNULLATO (1 per evento)
+      const cancelledTicketId = randomUUID();
+      const cancelledPrice = gd.price;
+      const cancelledNet = cancelledPrice / (1 + vatRate / 100);
+      const cancelledVat = cancelledPrice - cancelledNet;
+      await db.insert(siaeTickets).values({
+        id: cancelledTicketId, ticketedEventId, sectorId,
+        progressiveNumber: ticketCounter++,
+        ticketTypeCode: 'I1',
+        sectorCode: 'A0',
+        grossAmount: cancelledPrice.toFixed(2),
+        netAmount: cancelledNet.toFixed(2),
+        vatAmount: cancelledVat.toFixed(2),
+        emissionDate: reportDate,
+        emissionDateStr: testDateStr.replace(/-/g, ''),
+        emissionTimeStr: '2000',
+        participantFirstName: 'Paolo',
+        participantLastName: 'Annullato',
+        status: 'cancelled',
+        cancellationReasonCode: '001',
+        cancellationDate: reportDate,
+      });
+      createdCancelledTickets.push({ ticketId: cancelledTicketId, genre: gd.genre, status: 'cancelled' });
       
-      // Crea customer per l'abbonamento
+      // 6. Crea ABBONAMENTO VALIDO per questo evento
       const customerId = randomUUID();
       await db.insert(siaeCustomers).values({
         id: customerId,
-        uniqueCode: `TEST-SUB-${timestamp}-${subCounter}`,
-        email: `testsub${timestamp}${subCounter}@test.it`,
-        phone: `+3933${String(timestamp).slice(-7)}${subCounter}`,
-        firstName: sd.firstName,
-        lastName: sd.lastName,
-        fiscalCode: sd.fiscalCode,
+        uniqueCode: `TEST-${timestamp}-${gd.genre}-VALID`,
+        email: `testsub${gd.genre}valid@test.it`,
+        phone: `+393300000${gd.genre.padStart(3, '0')}`,
+        firstName: 'Cliente',
+        lastName: `Genere${gd.genre}`,
+        fiscalCode: `GNRCLN80A01H501${gd.genre.charAt(0)}`,
       });
       
-      // Crea abbonamento
-      const subId = randomUUID();
       const subNum = String(subCounter).padStart(7, '0');
       await db.insert(siaeSubscriptions).values({
-        companyId,
-        customerId,
-        ticketedEventId: firstTicketedEvent.ticketedEventId,
-        sectorId: firstSector[0]?.id,
+        companyId, customerId, ticketedEventId, sectorId,
         subscriptionCode: `SUB-${timestamp}-${subNum}`,
-        progressiveNumber: subCounter,
-        eventsCount: sd.events,
-        totalAmount: sd.price.toFixed(2),
+        progressiveNumber: subCounter++,
+        eventsCount: 10,
+        totalAmount: (gd.price * 5).toFixed(2),
         validFrom: reportDate,
         validTo: new Date(reportDate.getTime() + 365 * 24 * 60 * 60 * 1000),
         emissionDate: reportDate,
         status: 'active',
-        holderFirstName: sd.firstName,
-        holderLastName: sd.lastName,
+        holderFirstName: 'Cliente',
+        holderLastName: `Genere${gd.genre}`,
       });
-      subCounter++;
-      createdSubscriptions.push({ id: subId, name: sd.name, price: sd.price });
+      createdSubscriptions.push({ genre: gd.genre, status: 'active' });
+      
+      // 7. Crea ABBONAMENTO ANNULLATO per questo evento
+      const cancelledCustomerId = randomUUID();
+      await db.insert(siaeCustomers).values({
+        id: cancelledCustomerId,
+        uniqueCode: `TEST-${timestamp}-${gd.genre}-CANCELLED`,
+        email: `testsub${gd.genre}cancelled@test.it`,
+        phone: `+393311111${gd.genre.padStart(3, '0')}`,
+        firstName: 'Annullato',
+        lastName: `Genere${gd.genre}`,
+        fiscalCode: `NNLGN80A01H501${gd.genre.charAt(0)}`,
+      });
+      
+      const cancelledSubNum = String(subCounter).padStart(7, '0');
+      await db.insert(siaeSubscriptions).values({
+        companyId, customerId: cancelledCustomerId, ticketedEventId, sectorId,
+        subscriptionCode: `SUB-${timestamp}-${cancelledSubNum}`,
+        progressiveNumber: subCounter++,
+        eventsCount: 10,
+        totalAmount: (gd.price * 5).toFixed(2),
+        validFrom: reportDate,
+        validTo: new Date(reportDate.getTime() + 365 * 24 * 60 * 60 * 1000),
+        emissionDate: reportDate,
+        status: 'cancelled',
+        cancellationReasonCode: '002',
+        cancellationDate: reportDate,
+        holderFirstName: 'Annullato',
+        holderLastName: `Genere${gd.genre}`,
+      });
+      createdCancelledSubscriptions.push({ genre: gd.genre, status: 'cancelled' });
+      
+      createdEvents.push({ eventId, ticketedEventId, genre: gd.genre, name: gd.name });
     }
     
-    console.log(`[CREATE-EVENTS] Creati ${createdEvents.length} eventi, ${createdTickets.length} biglietti, ${createdSubscriptions.length} abbonamenti`);
+    console.log(`[CREATE-EVENTS] Creati ${createdEvents.length} eventi (mai inviati), ${createdTickets.length} biglietti validi, ${createdCancelledTickets.length} biglietti annullati, ${createdSubscriptions.length} abbonamenti validi, ${createdCancelledSubscriptions.length} abbonamenti annullati`);
     
     res.json({
       success: true,
       eventsCreated: createdEvents.length,
       ticketsCreated: createdTickets.length,
+      cancelledTicketsCreated: createdCancelledTickets.length,
       subscriptionsCreated: createdSubscriptions.length,
+      cancelledSubscriptionsCreated: createdCancelledSubscriptions.length,
       events: createdEvents,
-      subscriptions: createdSubscriptions,
       testDate: testDateStr,
+      summary: `${createdEvents.length} eventi (1 per genere), ${createdTickets.length + createdCancelledTickets.length} biglietti (${createdTickets.length} validi + ${createdCancelledTickets.length} annullati), ${createdSubscriptions.length + createdCancelledSubscriptions.length} abbonamenti (${createdSubscriptions.length} validi + ${createdCancelledSubscriptions.length} annullati)`,
     });
   } catch (error: any) {
     console.error('[CREATE-EVENTS] Error:', error);
