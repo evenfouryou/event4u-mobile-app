@@ -54,6 +54,12 @@ A comprehensive SIAE-compliant ticketing and fiscal management system for Italia
 -   Cassa interface shows deadline reminder with days remaining
 -   API: `checkCancellationDeadline()` utility in siae-utils.ts
 
+**Blocco Emissione Eventi Terminati:**
+-   Biglietti non emettibili dopo 4 ore dall'inizio evento (tolleranza per ritardatari)
+-   Backend blocca con errore 400 e codice `EVENT_ENDED`
+-   Super_admin può bypassare il blocco (con audit log)
+-   Audit log traccia tutti i tentativi bloccati e gli override
+
 ### International Operating Mode
 The system supports international ticket sales with SIAE exemption through a flexible operating mode system:
 -   **Operating Modes**: Gestori can choose between `italy_only` (default), `international_only`, or `hybrid` mode during registration or via admin settings.

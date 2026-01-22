@@ -11347,6 +11347,53 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
       });
     }
     
+    // CONTROLLO EVENTO TERMINATO: Blocca emissione dopo fine evento (tolleranza 4 ore dall'inizio)
+    const baseEvent = await storage.getEvent(event.eventId);
+    if (baseEvent && baseEvent.startDatetime) {
+      const eventStart = new Date(baseEvent.startDatetime);
+      const now = new Date();
+      const toleranceHours = 4; // Tolleranza per ritardatari
+      const emissionDeadline = new Date(eventStart.getTime() + toleranceHours * 60 * 60 * 1000);
+      
+      if (now > emissionDeadline) {
+        // Solo super_admin può bypassare
+        if (user.role !== 'super_admin') {
+          // Log tentativo di emissione su evento terminato
+          await siaeStorage.createSiaeAuditLog({
+            companyId: event.companyId,
+            action: 'ticket_emission_blocked',
+            entityType: 'ticketed_event',
+            entityId: event.id,
+            userId: user.id,
+            description: `Tentativo emissione biglietto bloccato: evento terminato il ${eventStart.toISOString()}`,
+            oldValue: null,
+            newValue: JSON.stringify({ eventStart: eventStart.toISOString(), attemptTime: now.toISOString() }),
+            ipAddress: req.ip || null
+          });
+          
+          return res.status(400).json({ 
+            message: `Non è possibile emettere biglietti per un evento già terminato. L'evento è iniziato il ${eventStart.toLocaleDateString('it-IT')} alle ${eventStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}. La finestra di emissione (${toleranceHours} ore) è scaduta.`,
+            errorCode: "EVENT_ENDED",
+            eventStart: eventStart.toISOString(),
+            emissionDeadline: emissionDeadline.toISOString()
+          });
+        } else {
+          // Log override super_admin
+          await siaeStorage.createSiaeAuditLog({
+            companyId: event.companyId,
+            action: 'ticket_emission_override',
+            entityType: 'ticketed_event',
+            entityId: event.id,
+            userId: user.id,
+            description: `Super Admin ha bypassato il blocco emissione per evento terminato`,
+            oldValue: null,
+            newValue: JSON.stringify({ eventStart: eventStart.toISOString(), overrideTime: now.toISOString() }),
+            ipAddress: req.ip || null
+          });
+        }
+      }
+    }
+    
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente configurato
     const systemConfig = await siaeStorage.getSiaeSystemConfig(event.companyId);
     const company = await storage.getCompany(event.companyId);
@@ -12594,6 +12641,49 @@ router.post("/api/cashier/events/:eventId/emit-ticket", requireAuth, requireCash
     const event = await siaeStorage.getSiaeTicketedEvent(eventId);
     if (!event) {
       return res.status(404).json({ message: "Evento non trovato" });
+    }
+    
+    // CONTROLLO EVENTO TERMINATO: Blocca emissione dopo fine evento (tolleranza 4 ore dall'inizio)
+    const baseEvent = await storage.getEvent(event.eventId);
+    if (baseEvent && baseEvent.startDatetime) {
+      const eventStart = new Date(baseEvent.startDatetime);
+      const now = new Date();
+      const toleranceHours = 4;
+      const emissionDeadline = new Date(eventStart.getTime() + toleranceHours * 60 * 60 * 1000);
+      
+      if (now > emissionDeadline) {
+        if (user.role !== 'super_admin') {
+          await siaeStorage.createSiaeAuditLog({
+            companyId: event.companyId,
+            action: 'ticket_emission_blocked',
+            entityType: 'ticketed_event',
+            entityId: event.id,
+            userId: user.id,
+            description: `Tentativo emissione cassa bloccato: evento terminato`,
+            oldValue: null,
+            newValue: JSON.stringify({ eventStart: eventStart.toISOString(), attemptTime: now.toISOString() }),
+            ipAddress: req.ip || null
+          });
+          
+          return res.status(400).json({ 
+            message: `Evento terminato. L'emissione è consentita solo fino a ${toleranceHours} ore dopo l'inizio.`,
+            errorCode: "EVENT_ENDED"
+          });
+        } else {
+          // Log override super_admin
+          await siaeStorage.createSiaeAuditLog({
+            companyId: event.companyId,
+            action: 'ticket_emission_override',
+            entityType: 'ticketed_event',
+            entityId: event.id,
+            userId: user.id,
+            description: `Super Admin ha bypassato il blocco emissione cassa per evento terminato`,
+            oldValue: null,
+            newValue: JSON.stringify({ eventStart: eventStart.toISOString(), overrideTime: now.toISOString() }),
+            ipAddress: req.ip || null
+          });
+        }
+      }
     }
     
     const sector = await siaeStorage.getSiaeEventSector(sectorId);
