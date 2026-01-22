@@ -1,0 +1,19 @@
+SEND TEST REPORT FOR UNUSED DATE AND VERIFY 0000 RESPONSE                                                                                                
+                                                                                                                                                           
+  Send a fresh RMG report for date 2026-01-18 (or 2026-01-17 if 18 is already used).                                                                       
+                                                                                                                                                           
+  Check the database first to confirm the date has zero prior transmissions.                                                                               
+                                                                                                                                                           
+  Send the report using the debug endpoint.                                                                                                                
+                                                                                                                                                           
+  Monitor the database for 10 minutes checking every minute for the SIAE response.                                                                         
+                                                                                                                                                           
+  Expected result: responseCode should be 0000 (success) since this is a clean first submission with correct date coherence and fixed response handler.    
+                                                                                                                                                           
+  Report back:                                                                                                                                             
+  - The filename sent                                                                                                                                      
+  - Progressivo and Sostituzione values                                                                                                                    
+  - The SIAE response code received                                                                                                                        
+  - Time taken to receive response                                                                                                                         
+                                                                                                                                                           
+  If you get 0000, all systems are working correctly and both the date coherence fix (0603) and response handler fix are confirmed successful.  

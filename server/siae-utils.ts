@@ -4380,21 +4380,43 @@ export async function validatePreTransmission(
   } else {
     // ==================== VALIDAZIONE DATE RMG/RPM (ATTRIBUTI) ====================
     
-    // Estrai DataGenerazione dall'XML (attributo)
+    // Estrai DataGenerazione e Data dall'XML (attributi)
     const dataGenerazioneMatch = xml.match(/DataGenerazione="([^"]+)"/);
+    const dataAttrMatch = xml.match(/(RiepilogoGiornaliero|RiepilogoMensile)[^>]*Data="([^"]+)"/);
+    
     if (dataGenerazioneMatch) {
-      const xmlDate = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
+      const xmlDataGenerazione = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
       
-      // DataGenerazione deve essere la data odierna (quando è stato generato il file)
-      if (xmlDate !== actualToday && xmlDate !== yesterdayStr) {
-        datesCoherent = false;
-        errors.push({
-          code: 'DATE_MISMATCH',
-          field: 'dates',
-          message: `DataGenerazione (${xmlDate}) non corrisponde alla data odierna (${actualToday})`,
-          resolution: 'Rigenerare il report per aggiornare DataGenerazione alla data corrente',
-          siaeErrorCode: '0603'
-        });
+      // Per RMG (RiepilogoGiornaliero): DataGenerazione DEVE essere uguale a Data (attributo)
+      // Per RPM (RiepilogoMensile): DataGenerazione deve essere del mese successivo al periodo
+      // Secondo specifica SIAE: DataGenerazione = Data (la data del report, non data odierna)
+      if (reportType === 'daily' || reportType === 'rmg' || reportType === 'giornaliero') {
+        // RMG: DataGenerazione deve corrispondere all'attributo Data (data del report)
+        if (dataAttrMatch) {
+          const xmlData = dataAttrMatch[2]; // Formato: YYYYMMDD
+          if (xmlDataGenerazione !== xmlData) {
+            datesCoherent = false;
+            errors.push({
+              code: 'DATE_MISMATCH',
+              field: 'dates',
+              message: `DataGenerazione (${xmlDataGenerazione}) non corrisponde a Data (${xmlData}). Devono essere uguali per RMG.`,
+              resolution: 'Assicurarsi che DataGenerazione e Data siano identici nel RiepilogoGiornaliero',
+              siaeErrorCode: '0603'
+            });
+          }
+        }
+      } else {
+        // RPM: DataGenerazione deve essere la data odierna (quando è stato generato il file)
+        if (xmlDataGenerazione !== actualToday && xmlDataGenerazione !== yesterdayStr) {
+          datesCoherent = false;
+          errors.push({
+            code: 'DATE_MISMATCH',
+            field: 'dates',
+            message: `DataGenerazione (${xmlDataGenerazione}) non corrisponde alla data odierna (${actualToday})`,
+            resolution: 'Rigenerare il report per aggiornare DataGenerazione alla data corrente',
+            siaeErrorCode: '0603'
+          });
+        }
       }
     }
     

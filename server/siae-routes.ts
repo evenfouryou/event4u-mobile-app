@@ -622,12 +622,18 @@ router.get("/api/siae/debug/send-fresh-rmg", async (req: Request, res: Response)
   try {
     const companyId = req.query.companyId as string || '6946a466-733a-47bd-bbb8-31f4fbe11fc2';
     const testEmail = req.query.to as string || 'servertest2@batest.siae.it';
+    const customDate = req.query.reportDate as string;
     
     const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     // FIX 0603: SIAE richiede che la data sia PASSATA (evento già avvenuto)
-    // Usa IERI come data evento per report giornaliero
-    const pastDate = new Date();
-    pastDate.setDate(pastDate.getDate() - 1); // Ieri
+    // Usa data personalizzata se fornita, altrimenti IERI
+    let pastDate: Date;
+    if (customDate && /^\d{4}-\d{2}-\d{2}$/.test(customDate)) {
+      pastDate = new Date(customDate + 'T12:00:00Z'); // Use noon UTC to avoid timezone issues
+    } else {
+      pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1); // Ieri
+    }
     const eventDateStr = pastDate.toISOString().split('T')[0];
     
     console.log(`[SIAE-DEBUG-FRESH] Creating fresh event and tickets with uniqueId=${uniqueId}, date=${eventDateStr}`);
@@ -7784,9 +7790,12 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
     
     const updates: Array<{transmissionId: string; status: string; protocolNumber?: string; errorCode?: string}> = [];
     
-    // Get all transmissions for matching (filter by status 'sent' in memory)
+    // Get all transmissions for matching (filter by status 'sent' or 'error' in memory)
+    // Include 'error' to allow re-processing when SIAE sends corrected responses
     const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
-    const pendingTransmissions = allTransmissions.filter(t => t.status === 'sent');
+    const pendingTransmissions = allTransmissions.filter(t => t.status === 'sent' || t.status === 'error');
+    
+    console.log(`[SIAE-ROUTES] Found ${responses.length} email responses, ${pendingTransmissions.length} pending/error transmissions`);
     
     for (const response of responses) {
       // Skip if we don't have useful data
@@ -7813,7 +7822,9 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
           if (response.attachments && response.attachments.length > 0) {
             for (const att of response.attachments) {
               // Attachment filenames often contain date patterns like RCA_YYYY_MM_DD
-              if (t.fileName && att.filename.includes(t.fileName.replace('.xsi', ''))) {
+              const baseFileName = t.fileName?.replace('.xsi', '') || '';
+              if (baseFileName && att.filename.includes(baseFileName)) {
+                console.log(`[SIAE-ROUTES] MATCHED: ${att.filename} contains ${baseFileName} (status: ${t.status}, response: ${response.status})`);
                 matchedTransmission = t;
                 break;
               }
@@ -7835,8 +7846,14 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
         }
       }
       
-      // If we found a matching transmission and it hasn't been updated yet
-      if (matchedTransmission && matchedTransmission.status === 'sent' && !matchedTransmission.responseEmailId) {
+      // If we found a matching transmission
+      // Allow update if status is 'sent', 'error', or if new response is better (0000 success)
+      const canUpdate = matchedTransmission && (
+        matchedTransmission.status === 'sent' || 
+        // Allow re-processing 'error' status if we have a better response (success code 0000)
+        (matchedTransmission.status === 'error' && response.status === 'accepted')
+      );
+      if (canUpdate) {
         // Determine new status
         const newStatus = response.status === 'accepted' ? 'received' : 
                          response.status === 'rejected' ? 'rejected' : 

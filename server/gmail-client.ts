@@ -173,20 +173,34 @@ async function extractAttachments(
         const content = Buffer.from(base64Data, 'base64').toString('utf-8');
         const parsed = parseSiaeResponseFile(content);
         
+        // FIX: Extract error code from filename - this is the PRIMARY response code!
+        // Format: {ORIGINAL_FILENAME}_{RESPONSE_DATE}_{SIAE_ID}_{ERROR_CODE}.txt
+        // Example: RPG_2026_01_16_001.xsi_2026_01_22_0800008258_0000.txt
+        let filenameCode: string | null = null;
+        const filenameCodeMatch = filename.match(/_(\d{4})\.txt$/i);
+        if (filenameCodeMatch) {
+          filenameCode = filenameCodeMatch[1];
+        }
+        
+        // Use filename code as primary, content code as fallback
+        const finalCode = filenameCode || parsed.code;
+        const finalSuccess = filenameCode === '0000' || parsed.success;
+        const finalType = filenameCode === '0000' ? 'OK' : parsed.type;
+        
         attachments.push({
           filename,
           content,
           mimeType: part.mimeType || 'text/plain',
           parsed: {
-            success: parsed.success,
-            type: parsed.type,
-            code: parsed.code,
+            success: finalSuccess,
+            type: finalType as 'OK' | 'ERRORE' | 'UNKNOWN',
+            code: finalCode,
             description: parsed.description,
             protocolNumber: parsed.protocolNumber
           }
         });
         
-        console.log(`[Gmail] Extracted attachment: ${filename}, type: ${parsed.type}, code: ${parsed.code}`);
+        console.log(`[Gmail] Extracted attachment: ${filename}, type: ${finalType}, code: ${finalCode}${filenameCode ? ' (from filename)' : ''}`);
       } catch (err: any) {
         console.error(`[Gmail] Failed to get attachment ${filename}:`, err.message);
       }
@@ -311,20 +325,31 @@ export async function fetchSiaeResponses(companyId?: string, sinceDate?: Date): 
     
     for (const att of attachments) {
       if (att.parsed) {
-        if (att.parsed.type === 'ERRORE' && att.parsed.code) {
-          errorCode = att.parsed.code;
-          errorMessage = att.parsed.description || errorMessage;
-          status = 'rejected';
-        } else if (att.parsed.type === 'OK' && att.parsed.protocolNumber) {
-          protocolNumber = att.parsed.protocolNumber;
-          status = 'accepted';
-        } else if (att.parsed.code === '0000') {
-          // FIX: Handle success response when type is UNKNOWN but code is 0000
-          // SIAE returns code 0000 for successful submissions
+        // FIX: Success codes (0000) should NEVER be overwritten by warnings (2606, etc.)
+        // Process in priority order: 0000 (success) > ERRORE > UNKNOWN
+        if (att.parsed.code === '0000') {
+          // Success response - highest priority, don't let warnings override
           errorCode = '0000';
           protocolNumber = att.parsed.protocolNumber || undefined;
           status = 'accepted';
           console.log(`[Gmail] Response 0000 detected for ${att.filename} - marking as accepted`);
+        } else if (att.parsed.type === 'OK' && att.parsed.protocolNumber) {
+          protocolNumber = att.parsed.protocolNumber;
+          status = 'accepted';
+        } else if (status !== 'accepted') {
+          // Only set error/warning if we haven't already seen a success
+          if (att.parsed.type === 'ERRORE' && att.parsed.code) {
+            errorCode = att.parsed.code;
+            errorMessage = att.parsed.description || errorMessage;
+            status = 'rejected';
+          } else if (att.parsed.type === 'UNKNOWN' && att.parsed.code) {
+            // Unknown codes like 2606 are warnings, not fatal errors
+            // Store as warning but don't override success
+            errorCode = att.parsed.code;
+            errorMessage = att.parsed.description || `Codice warning: ${att.parsed.code}`;
+            status = 'rejected';
+            console.log(`[Gmail] Warning code ${att.parsed.code} detected for ${att.filename}`);
+          }
         }
         
         // Try to extract transmission reference from attachment filename

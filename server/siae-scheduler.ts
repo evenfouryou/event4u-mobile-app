@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { siaeTicketedEvents, siaeTransmissions, siaeTransmissionSettings, events, companies, siaeEventSectors, siaeTickets, siaeResales, companyFeatures } from "@shared/schema";
-import { eq, and, sql, gte, lt, desc, lte, isNull } from "drizzle-orm";
+import { eq, and, or, sql, gte, lt, desc, lte, isNull } from "drizzle-orm";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
@@ -1607,15 +1607,18 @@ async function checkSiaeEmailResponses() {
         
         for (const response of responses) {
           // Trova la trasmissione corrispondente basandosi sul subject/nome file
+          // Include status 'error' per permettere ricorrezione quando SIAE invia risposta corretta
           const transmissions = await db.select()
             .from(siaeTransmissions)
             .where(and(
               eq(siaeTransmissions.companyId, companyId),
-              eq(siaeTransmissions.status, 'sent'),
-              isNull(siaeTransmissions.receivedAt)
+              or(
+                eq(siaeTransmissions.status, 'sent'),
+                eq(siaeTransmissions.status, 'error')
+              )
             ))
             .orderBy(desc(siaeTransmissions.sentAt))
-            .limit(10);
+            .limit(50);
           
           // Match trasmissione con risposta (per subject email o attachment filename)
           for (const transmission of transmissions) {
@@ -1647,6 +1650,15 @@ async function checkSiaeEmailResponses() {
             }
             
             if (matched) {
+              // Only update if: 1) status is 'sent', or 2) status is 'error' and new response is success (0000)
+              const canUpdate = transmission.status === 'sent' || 
+                (transmission.status === 'error' && response.status === 'accepted');
+              
+              if (!canUpdate) {
+                // Skip - don't overwrite error with another error
+                continue;
+              }
+              
               const newStatus = response.status === 'accepted' ? 'received' : 'error';
               
               await db.update(siaeTransmissions)

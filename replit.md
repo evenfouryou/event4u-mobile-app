@@ -77,6 +77,14 @@ The public event detail page (`/public/event/:id`) features an interactive floor
 ### Desktop Bridge Relay System
 A WebSocket relay system enabling remote smart card reader access from a desktop Electron application to the web application. It supports token-based authentication and company-scoped message routing, facilitating digital signatures for SIAE C1 reports using PKI functionality, managing signature error handling, and handling SIAE report transmission via email with an audit trail. It supports CAdES-BES digital signatures for SIAE report compliance and S/MIME email signatures for RCA transmissions.
 
+### SIAE Response Monitoring
+Automatic detection and processing of SIAE email responses with intelligent error code extraction:
+-   **Filename Code Priority**: The PRIMARY error code is extracted from the response filename suffix (e.g., `RPG_2026_01_16_001.xsi_2026_01_22_0800008258_0000.txt` → code `0000`)
+-   **Content Fallback**: If no filename code exists, the system parses the file content for `CODICE: XXXX` patterns
+-   **Re-correction Support**: Transmissions with status `error` can be automatically updated to `received` when SIAE sends a subsequent success response (code `0000`)
+-   **Scheduler Automation**: Runs every 15 minutes via `siae-scheduler.ts`, checking Gmail for SIAE responses
+-   **Error Code Meanings**: `0000`=success, `0604`=duplicate, `0603`=date mismatch, `0605`=invalid signature, `0601`=missing data, `2606`=organization name warning
+
 ### Additional Modules
 -   **Italian Fiscal Validation**: Server-side validation for Italian fiscal identifiers.
 -   **Name Change Management (Cambio Nominativo)**: SIAE-compliant ticket holder name change workflow.
