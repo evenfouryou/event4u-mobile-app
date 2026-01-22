@@ -680,6 +680,195 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
   }
 });
 
+// Invia UN REPORT PER OGNI EVENTO creato (16 eventi = 16 report separati)
+router.post("/api/public/test-siae-send-all-events", async (req, res) => {
+  try {
+    const { generateC1Xml, generateSiaeFileName } = await import('./siae-utils');
+    const { sendSiaeTransmissionEmail } = await import('./email-service');
+    const { randomUUID } = await import('crypto');
+    
+    const cards = await db.select().from(siaeActivationCards).where(eq(siaeActivationCards.status, 'active')).limit(1);
+    if (!cards.length) return res.status(400).json({ error: 'No active card' });
+    const card = cards[0];
+    const companyId = card.companyId!;
+    const systemCode = card.systemCode || 'P0004010';
+    const [company] = await db.select().from(companies).where(eq(companies.id, companyId));
+    
+    const testDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
+    const reportDate = new Date(testDateStr + 'T20:00:00');
+    
+    // Recupera tutti gli eventi ticketed per questa data
+    const ticketedEvents = await db.select()
+      .from(siaeTicketedEvents)
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(eq(siaeTicketedEvents.companyId, companyId));
+    
+    console.log(`[SEND-ALL] Trovati ${ticketedEvents.length} eventi ticketed`);
+    
+    const results: any[] = [];
+    let progressivo = Math.floor(Date.now() / 1000) % 1000;
+    
+    for (const row of ticketedEvents) {
+      const te = row.siae_ticketed_events;
+      const ev = row.events;
+      const loc = row.locations;
+      
+      // Filtra per data evento
+      const eventDate = new Date(ev.startDatetime!);
+      const eventDateStr = eventDate.toISOString().split('T')[0];
+      if (eventDateStr !== testDateStr) continue;
+      
+      // Recupera biglietti per questo evento
+      const tickets = await db.select().from(siaeTickets).where(eq(siaeTickets.ticketedEventId, te.id));
+      const validTickets = tickets.filter(t => t.status === 'valid');
+      const cancelledTickets = tickets.filter(t => t.status === 'cancelled');
+      
+      // Recupera abbonamenti per questo evento
+      const subs = await db.select().from(siaeSubscriptions).where(eq(siaeSubscriptions.ticketedEventId, te.id));
+      const validSubs = subs.filter(s => s.status === 'active');
+      const cancelledSubs = subs.filter(s => s.status === 'cancelled');
+      
+      // Recupera settori
+      const sectors = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.ticketedEventId, te.id));
+      
+      // Costruisci struttura evento per XML
+      const eventData = {
+        ticketedEvent: {
+          id: te.id,
+          siaeLocationCode: loc.siaeLocationCode || '0000000000001',
+          siaeGenreCode: te.genreCode || '61',
+          siaeAuthor: te.author,
+          siaePerformer: te.performer,
+        },
+        eventRecord: {
+          id: ev.id,
+          name: ev.name,
+          startDatetime: ev.startDatetime,
+          endDatetime: ev.endDatetime,
+        },
+        location: {
+          id: loc.id,
+          name: loc.name,
+          siaeLocationCode: loc.siaeLocationCode || '0000000000001',
+        },
+        sectors: sectors.map(s => ({ id: s.id, name: s.name, capacity: s.capacity })),
+        tickets: validTickets.map((t, idx) => ({
+          id: t.id,
+          sectorId: t.sectorId,
+          price: t.grossAmount,
+          grossAmount: t.grossAmount,
+          taxableAmount: t.netAmount,
+          vatAmount: t.vatAmount,
+          ticketNumber: String(t.progressiveNumber).padStart(8, '0'),
+          emissionDate: t.emissionDate,
+          customerName: `${t.participantFirstName} ${t.participantLastName}`,
+          customerFiscalCode: 'TSTCLN80A01H501X',
+          tipoTitolo: t.ticketTypeCode || 'I1',
+        })),
+        cancelledTickets: cancelledTickets.map(t => ({
+          id: t.id,
+          sectorId: t.sectorId,
+          ticketNumber: String(t.progressiveNumber).padStart(8, '0'),
+          grossAmount: t.grossAmount,
+          cancellationReasonCode: t.cancellationReasonCode || '001',
+          cancellationDate: t.cancellationDate,
+        })),
+      };
+      
+      // Abbonamenti per XML
+      const subscriptionData = validSubs.map((s, idx) => ({
+        id: s.id,
+        subscriptionNumber: String(s.progressiveNumber).padStart(7, '0'),
+        customerName: `${s.holderFirstName} ${s.holderLastName}`,
+        customerFiscalCode: 'ABBCLN80A01H501X',
+        price: s.totalAmount,
+        grossAmount: s.totalAmount,
+        taxableAmount: (parseFloat(s.totalAmount || '0') / 1.22).toFixed(2),
+        vatAmount: (parseFloat(s.totalAmount || '0') - parseFloat(s.totalAmount || '0') / 1.22).toFixed(2),
+        validFrom: s.validFrom,
+        validTo: s.validTo,
+        eventsIncluded: s.eventsCount,
+        sectorId: s.sectorId,
+        emissionDate: s.emissionDate,
+      }));
+      
+      const cancelledSubData = cancelledSubs.map(s => ({
+        id: s.id,
+        subscriptionNumber: String(s.progressiveNumber).padStart(7, '0'),
+        grossAmount: s.totalAmount,
+        cancellationReasonCode: s.cancellationReasonCode || '002',
+        cancellationDate: s.cancellationDate,
+      }));
+      
+      // Genera nome file unico per questo evento
+      progressivo++;
+      const fileName = generateSiaeFileName('giornaliero', reportDate, progressivo, null, systemCode);
+      
+      console.log(`[SEND-ALL] Evento ${ev.name} (genere ${te.genreCode}): ${validTickets.length} biglietti, ${cancelledTickets.length} annullati, ${validSubs.length} abbonamenti, ${cancelledSubs.length} abb. annullati`);
+      
+      // Genera XML per questo singolo evento
+      const result = generateC1Xml({
+        reportKind: 'giornaliero',
+        companyId,
+        reportDate,
+        resolvedSystemCode: systemCode,
+        progressivo,
+        taxId: '02120820432',
+        businessName: 'HURAEX SRL',
+        events: [eventData],
+        subscriptions: subscriptionData,
+        cancelledSubscriptions: cancelledSubData,
+        nomeFile: fileName,
+        forceSubstitution: false,
+      });
+      
+      // Invia email S/MIME
+      const emailResult = await sendSiaeTransmissionEmail({
+        to: 'servertest2@batest.siae.it',
+        companyName: company?.name || 'Test',
+        transmissionType: 'daily',
+        periodDate: reportDate,
+        ticketsCount: validTickets.length,
+        totalAmount: validTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toFixed(2),
+        xmlContent: result.xml,
+        transmissionId: randomUUID(),
+        systemCode,
+        sequenceNumber: progressivo,
+        signWithSmime: true,
+        requireSignature: false,
+        explicitFileName: fileName,
+      });
+      
+      results.push({
+        eventName: ev.name,
+        genre: te.genreCode,
+        fileName,
+        tickets: validTickets.length,
+        cancelledTickets: cancelledTickets.length,
+        subscriptions: validSubs.length,
+        cancelledSubscriptions: cancelledSubs.length,
+        sent: emailResult.success,
+        smimeSigned: emailResult.smimeSigned,
+      });
+      
+      // Pausa breve tra invii per non sovraccaricare
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    
+    console.log(`[SEND-ALL] Completati ${results.length} report`);
+    
+    res.json({
+      success: true,
+      reportsSent: results.length,
+      results,
+    });
+  } catch (error: any) {
+    console.error('[SEND-ALL] Error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 // ==================== CATEGORIE EVENTI ====================
 
 // Lista categorie eventi attive
