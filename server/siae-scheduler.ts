@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { siaeTicketedEvents, siaeTransmissions, siaeTransmissionSettings, events, companies, siaeEventSectors, siaeTickets, siaeResales, companyFeatures } from "@shared/schema";
-import { eq, and, sql, gte, lt, desc, lte } from "drizzle-orm";
+import { eq, and, sql, gte, lt, desc, lte, isNull } from "drizzle-orm";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
@@ -9,6 +9,7 @@ import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bri
 import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, generateSiaeSubject, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, resolveSystemCodeForSmime, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, generateC1Xml, validateSiaeSystemCode, validateSiaeFileName, type RCAParams, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData } from './siae-utils';
 import { calculateTransmissionStats, calculateFileHash } from './siae-routes';
 import { createSiaeTransmissionWithXml } from './siae-transmission-service';
+import { checkForSiaeResponses } from './gmail-client';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -1573,6 +1574,90 @@ async function autoExpireResales() {
   }
 }
 
+// Job per controllare automaticamente le risposte SIAE via email
+let responseCheckIntervalId: NodeJS.Timeout | null = null;
+
+async function checkSiaeEmailResponses() {
+  try {
+    log('Controllo automatico risposte SIAE via email...');
+    
+    // Trova tutte le company con trasmissioni inviate ma senza risposta
+    const pendingTransmissions = await db.select({
+      companyId: siaeTransmissions.companyId
+    })
+    .from(siaeTransmissions)
+    .where(and(
+      eq(siaeTransmissions.status, 'sent'),
+      isNull(siaeTransmissions.receivedAt)
+    ))
+    .groupBy(siaeTransmissions.companyId);
+    
+    if (pendingTransmissions.length === 0) {
+      log('Nessuna trasmissione in attesa di risposta');
+      return;
+    }
+    
+    log(`Trovate trasmissioni pendenti per ${pendingTransmissions.length} aziende`);
+    
+    for (const { companyId } of pendingTransmissions) {
+      if (!companyId) continue;
+      
+      try {
+        const responses = await checkForSiaeResponses(companyId);
+        
+        for (const response of responses) {
+          // Trova la trasmissione corrispondente basandosi sul subject/nome file
+          const transmissions = await db.select()
+            .from(siaeTransmissions)
+            .where(and(
+              eq(siaeTransmissions.companyId, companyId),
+              eq(siaeTransmissions.status, 'sent'),
+              isNull(siaeTransmissions.receivedAt)
+            ))
+            .orderBy(desc(siaeTransmissions.sentAt))
+            .limit(10);
+          
+          // Match trasmissione con risposta (per subject email)
+          for (const transmission of transmissions) {
+            if (!transmission.fileName) continue;
+            
+            // Verifica se il subject della risposta contiene riferimenti alla trasmissione
+            const fileBaseName = transmission.fileName.replace(/\.(xml|p7m)$/i, '');
+            if (response.subject?.includes(fileBaseName) || 
+                response.body?.includes(fileBaseName) ||
+                response.body?.includes(transmission.id)) {
+              
+              const newStatus = response.status === 'accepted' ? 'received' : 'error';
+              
+              await db.update(siaeTransmissions)
+                .set({
+                  status: newStatus,
+                  receivedAt: new Date(),
+                  receiptProtocol: response.protocolNumber || null,
+                  receiptContent: response.body?.substring(0, 1000) || null,
+                  errorCode: response.errorCode || null,
+                  errorMessage: response.errorMessage || null,
+                  responseEmailId: response.messageId,
+                  updatedAt: new Date()
+                })
+                .where(eq(siaeTransmissions.id, transmission.id));
+              
+              log(`Risposta SIAE processata per trasmissione ${transmission.id}: ${newStatus}`);
+              break;
+            }
+          }
+        }
+      } catch (companyError: any) {
+        log(`Errore controllo risposte per company ${companyId}: ${companyError.message}`);
+      }
+    }
+    
+    log('Controllo risposte SIAE completato');
+  } catch (error: any) {
+    log(`ERRORE job controllo risposte SIAE: ${error.message}`);
+  }
+}
+
 function checkAndRunDailyJob() {
   const now = new Date();
   const hour = now.getHours();
@@ -1602,6 +1687,7 @@ export function initSiaeScheduler() {
   if (eventCloseIntervalId) clearInterval(eventCloseIntervalId);
   if (resaleExpirationIntervalId) clearInterval(resaleExpirationIntervalId);
   if (rcaIntervalId) clearInterval(rcaIntervalId);
+  if (responseCheckIntervalId) clearInterval(responseCheckIntervalId);
 
   dailyIntervalId = setInterval(checkAndRunDailyJob, 60 * 1000);
   monthlyIntervalId = setInterval(checkAndRunMonthlyJob, 60 * 1000);
@@ -1618,10 +1704,16 @@ export function initSiaeScheduler() {
   // Job per invio automatico RCA 24 ore dopo chiusura eventi - ogni ora
   rcaIntervalId = setInterval(sendRCAReports, 60 * 60 * 1000);
   
+  // Job per controllo automatico risposte SIAE via email - ogni 15 minuti
+  responseCheckIntervalId = setInterval(checkSiaeEmailResponses, 15 * 60 * 1000);
+  
   // Esegui subito al primo avvio per chiudere eventi già scaduti e scadere rivendite
   autoCloseExpiredEvents();
   autoExpireResales();
   releaseExpiredReservations();
+  
+  // Controlla le risposte SIAE all'avvio (dopo 1 minuto per dare tempo al sistema di avviarsi)
+  setTimeout(checkSiaeEmailResponses, 60 * 1000);
 
   log('Scheduler SIAE inizializzato:');
   log('  - Job RMG giornaliero: ogni notte alle 02:00');
@@ -1630,6 +1722,7 @@ export function initSiaeScheduler() {
   log('  - Job chiusura eventi: ogni 5 minuti');
   log('  - Job scadenza rivendite: ogni 5 minuti (1h prima evento)');
   log('  - Job rilascio riservazioni: ogni minuto');
+  log('  - Job controllo risposte SIAE: ogni 15 minuti');
   log(`  - System Code Default: ${SIAE_SYSTEM_CODE_DEFAULT} (usa resolveSystemCode per coerenza)`);
   log(`  - Test Mode: ${SIAE_TEST_MODE}`);
 }
@@ -1654,6 +1747,10 @@ export function stopSiaeScheduler() {
   if (rcaIntervalId) {
     clearInterval(rcaIntervalId);
     rcaIntervalId = null;
+  }
+  if (responseCheckIntervalId) {
+    clearInterval(responseCheckIntervalId);
+    responseCheckIntervalId = null;
   }
   log('Scheduler SIAE fermato');
 }
