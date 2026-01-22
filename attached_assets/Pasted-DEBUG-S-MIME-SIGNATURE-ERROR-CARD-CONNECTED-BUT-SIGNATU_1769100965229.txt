@@ -1,0 +1,34 @@
+DEBUG S/MIME SIGNATURE ERROR - CARD CONNECTED BUT SIGNATURE FAILING                                                                                              
+                                                                                                                                                                   
+  User gets error "Firma S/MIME Richiesta" even though the smart card IS physically connected.                                                                     
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  Investigate All Possible Causes                                                                                                                                  
+                                                                                                                                                                   
+  1. Is the desktop app (Event4U) running?                                                                                                                         
+    - Check if the Electron bridge app is launched                                                                                                                 
+    - Check if it appears in system tray/taskbar                                                                                                                   
+  2. Is the web app connected to the desktop bridge?                                                                                                               
+    - Check WebSocket connection status in browser console                                                                                                         
+    - Check for connection errors in server logs                                                                                                                   
+    - What triggers this specific error message?                                                                                                                   
+  3. Can the desktop app detect the card?                                                                                                                          
+    - Check desktop app logs for card detection                                                                                                                    
+    - Is the card reader recognized?                                                                                                                               
+    - Can the app read the certificate from the card?                                                                                                              
+  4. Where does this error originate in code?                                                                                                                      
+    - Search for "Firma S/MIME Richiesta" in codebase                                                                                                              
+    - What condition triggers this message?                                                                                                                        
+    - Is it checking bridge connection, card presence, or both?                                                                                                    
+  5. Check the signature request timeout                                                                                                                           
+    - Is the request timing out before bridge responds?                                                                                                            
+    - What are the current timeout values?                                                                                                                         
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  Report Back                                                                                                                                                      
+                                                                                                                                                                   
+  - Where is the error message defined in code?                                                                                                                    
+  - What condition triggers it?                                                                                                                                    
+  - Server/bridge connection status                                                                                                                                
+  - Any relevant error logs                                                                                                                                        
+                                
