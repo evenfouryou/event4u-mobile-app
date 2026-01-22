@@ -59,7 +59,7 @@ import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
-import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles, siaeCustomers } from "@shared/schema";
+import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles, siaeCustomers, siaeEventGenres } from "@shared/schema";
 import svgCaptcha from "svg-captcha";
 import QRCode from "qrcode";
 
@@ -461,8 +461,203 @@ router.post("/api/public/test-siae-full", async (req, res) => {
   }
 });
 
-// Crea eventi REALI nel database per ogni genere SIAE
+// Crea eventi REALI nel database per TUTTI i generi SIAE (99 generi, date diverse, con biglietti+abbonamenti)
 router.post("/api/public/test-siae-create-events", async (req, res) => {
+  try {
+    const { randomUUID } = await import('crypto');
+    const cards = await db.select().from(siaeActivationCards).where(eq(siaeActivationCards.status, 'active')).limit(1);
+    if (!cards.length) return res.status(400).json({ error: 'No active card' });
+    const card = cards[0];
+    const companyId = card.companyId!;
+    
+    // Trova o crea una location
+    let [location] = await db.select().from(locations).where(eq(locations.companyId, companyId)).limit(1);
+    if (!location) {
+      const locId = randomUUID();
+      await db.insert(locations).values({
+        id: locId, companyId, name: 'Locale Test SIAE', address: 'Via Test 1', city: 'Roma', province: 'RM', postalCode: '00100', country: 'IT',
+        siaeLocationCode: '0000000000001'
+      });
+      [location] = await db.select().from(locations).where(eq(locations.id, locId));
+    }
+    
+    // Recupera TUTTI i generi SIAE dal database
+    const allGenres = await db.select().from(siaeEventGenres).orderBy(siaeEventGenres.code);
+    if (!allGenres.length) return res.status(400).json({ error: 'No SIAE genres found in database' });
+    
+    console.log(`[CREATE-EVENTS] Trovati ${allGenres.length} generi SIAE nel database`);
+    
+    // Data base: ogni evento avrà una data diversa (distribuiti su più giorni)
+    const baseDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
+    const baseDate = new Date(baseDateStr + 'T20:00:00');
+    const timestamp = Date.now();
+    
+    // Prezzi variabili per genere
+    const getPriceForGenre = (code: string): number => {
+      const c = parseInt(code);
+      if (c <= 4) return 10 + c * 2; // Cinema: 12-18€
+      if (c <= 30) return 15 + c; // Sport: 20-45€
+      if (c <= 40) return 20 + c; // Giochi: 50-60€
+      if (c <= 59) return 25 + c; // Teatro/Concerti: 65-84€
+      if (c <= 69) return 15 + c * 0.5; // Ballo: 45-50€
+      if (c <= 89) return 20 + c * 0.3; // Parchi/Attrazioni: 44-47€
+      return 30 + c * 0.2; // Altri: 48-50€
+    };
+    
+    // Autori/Esecutori per generi che li richiedono
+    const getAuthorPerformer = (code: string, name: string) => {
+      const c = parseInt(code);
+      if (c <= 4) return { author: 'Regista ' + name, performer: 'Cast ' + name };
+      if (c >= 45 && c <= 59) return { author: 'Compositore ' + name, performer: 'Artista ' + name };
+      if (c >= 60 && c <= 69) return { author: null, performer: null }; // Ballo non richiede
+      return { author: null, performer: null };
+    };
+    
+    const createdEvents: any[] = [];
+    const createdTickets: any[] = [];
+    const createdSubscriptions: any[] = [];
+    let ticketCounter = 1;
+    let subCounter = 1;
+    const vatRate = 22;
+    let dayOffset = 0;
+    
+    for (const genre of allGenres) {
+      // Data unica per ogni evento (ogni 3 generi = nuovo giorno)
+      const eventDate = new Date(baseDate.getTime() + Math.floor(dayOffset / 3) * 24 * 60 * 60 * 1000);
+      const endDate = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000);
+      const eventDateStr = eventDate.toISOString().split('T')[0];
+      dayOffset++;
+      
+      const price = getPriceForGenre(genre.code);
+      const { author, performer } = getAuthorPerformer(genre.code, genre.name);
+      
+      // 1. Crea evento base
+      const eventId = randomUUID();
+      await db.insert(events).values({
+        id: eventId, companyId, locationId: location.id, 
+        name: `${genre.name} - Evento ${genre.code}`,
+        startDatetime: eventDate, endDatetime: endDate, status: 'completed', isPublic: false,
+      });
+      
+      // 2. Crea evento ticketed
+      const ticketedEventId = randomUUID();
+      await db.insert(siaeTicketedEvents).values({
+        id: ticketedEventId, eventId, companyId,
+        siaeLocationCode: location.siaeLocationCode || '0000000000001',
+        genreCode: genre.code,
+        author, performer,
+        taxType: parseInt(genre.code) >= 60 && parseInt(genre.code) <= 69 ? 'I' : 'S',
+        totalCapacity: 500,
+        requiresNominative: true,
+        ticketingStatus: 'closed',
+        approvalStatus: 'approved',
+      });
+      
+      // 3. Crea settore
+      const sectorId = randomUUID();
+      await db.insert(siaeEventSectors).values({
+        id: sectorId, ticketedEventId,
+        sectorCode: 'A0', name: 'Ingresso Generale',
+        capacity: 500, availableSeats: 495,
+        priceIntero: price.toFixed(2),
+        priceRidotto: (price * 0.7).toFixed(2),
+        ivaRate: vatRate.toString(),
+      });
+      
+      // 4. Crea 3 BIGLIETTI per evento (intero, ridotto, omaggio)
+      const ticketTypes = [
+        { code: 'I1', name: 'Intero', priceMult: 1, firstName: 'Mario', lastName: 'Rossi' },
+        { code: 'R1', name: 'Ridotto', priceMult: 0.7, firstName: 'Anna', lastName: 'Bianchi' },
+        { code: 'O1', name: 'Omaggio', priceMult: 0, firstName: 'Luigi', lastName: 'Verdi' },
+      ];
+      for (const tt of ticketTypes) {
+        const ticketId = randomUUID();
+        const ticketPrice = price * tt.priceMult;
+        const ticketNet = ticketPrice / (1 + vatRate / 100);
+        const ticketVat = ticketPrice - ticketNet;
+        
+        await db.insert(siaeTickets).values({
+          id: ticketId, ticketedEventId, sectorId,
+          progressiveNumber: ticketCounter++,
+          ticketTypeCode: tt.code,
+          sectorCode: 'A0',
+          grossAmount: ticketPrice.toFixed(2),
+          netAmount: ticketNet.toFixed(2),
+          vatAmount: ticketVat.toFixed(2),
+          emissionDate: eventDate,
+          emissionDateStr: eventDateStr.replace(/-/g, ''),
+          emissionTimeStr: '2000',
+          participantFirstName: tt.firstName,
+          participantLastName: tt.lastName,
+          status: 'valid',
+        });
+        createdTickets.push({ ticketId, genre: genre.code, type: tt.code });
+      }
+      
+      // 5. Crea 2 ABBONAMENTI per evento (annuale e stagionale)
+      const subTypes = [
+        { name: 'Abbonamento Annuale', events: 24, priceMult: 10, firstName: 'Cliente', lastName: 'Annuale' },
+        { name: 'Tessera Stagionale', events: 12, priceMult: 6, firstName: 'Cliente', lastName: 'Stagionale' },
+      ];
+      for (const st of subTypes) {
+        const customerId = randomUUID();
+        await db.insert(siaeCustomers).values({
+          id: customerId,
+          uniqueCode: `CUST-${timestamp}-${genre.code}-${subCounter}`,
+          email: `sub${genre.code}${subCounter}@test.it`,
+          phone: `+39330${genre.code.padStart(3,'0')}${subCounter}`,
+          firstName: st.firstName,
+          lastName: `${st.lastName} G${genre.code}`,
+          fiscalCode: `TSTCLN80A01H50${genre.code.charAt(0)}${String.fromCharCode(65 + (subCounter % 26))}`,
+        });
+        
+        const subPrice = price * st.priceMult;
+        const subNum = String(subCounter).padStart(7, '0');
+        await db.insert(siaeSubscriptions).values({
+          companyId, customerId, ticketedEventId, sectorId,
+          subscriptionCode: `SUB-${timestamp}-${subNum}`,
+          progressiveNumber: subCounter++,
+          eventsCount: st.events,
+          totalAmount: subPrice.toFixed(2),
+          validFrom: eventDate,
+          validTo: new Date(eventDate.getTime() + 365 * 24 * 60 * 60 * 1000),
+          emissionDate: eventDate,
+          status: 'active',
+          holderFirstName: st.firstName,
+          holderLastName: `${st.lastName} G${genre.code}`,
+        });
+        createdSubscriptions.push({ genre: genre.code, type: st.name });
+      }
+      
+      createdEvents.push({ 
+        eventId, ticketedEventId, 
+        genre: genre.code, 
+        name: genre.name,
+        date: eventDateStr,
+        tickets: 3,
+        subscriptions: 2,
+      });
+    }
+    
+    console.log(`[CREATE-EVENTS] Creati ${createdEvents.length} eventi (tutti i generi SIAE), ${createdTickets.length} biglietti, ${createdSubscriptions.length} abbonamenti`);
+    
+    res.json({
+      success: true,
+      eventsCreated: createdEvents.length,
+      ticketsCreated: createdTickets.length,
+      subscriptionsCreated: createdSubscriptions.length,
+      genres: allGenres.length,
+      events: createdEvents,
+      summary: `${createdEvents.length} eventi (1 per genere SIAE), ${createdTickets.length} biglietti (3 per evento), ${createdSubscriptions.length} abbonamenti (2 per evento)`,
+    });
+  } catch (error: any) {
+    console.error('[CREATE-EVENTS] Error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
+// VECCHIO ENDPOINT - Crea eventi solo per generi selezionati
+router.post("/api/public/test-siae-create-events-legacy", async (req, res) => {
   try {
     const { randomUUID } = await import('crypto');
     const cards = await db.select().from(siaeActivationCards).where(eq(siaeActivationCards.status, 'active')).limit(1);
@@ -694,17 +889,18 @@ router.post("/api/public/test-siae-send-all-events", async (req, res) => {
     const systemCode = card.systemCode || 'P0004010';
     const [company] = await db.select().from(companies).where(eq(companies.id, companyId));
     
-    const testDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
-    const reportDate = new Date(testDateStr + 'T20:00:00');
+    // Se filterDate è specificato, filtra solo quella data; altrimenti invia TUTTI gli eventi
+    const filterDateStr = req.body.testDate;
+    const sendAll = req.body.sendAll === true;
     
-    // Recupera tutti gli eventi ticketed per questa data
+    // Recupera tutti gli eventi ticketed
     const ticketedEvents = await db.select()
       .from(siaeTicketedEvents)
       .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
       .innerJoin(locations, eq(events.locationId, locations.id))
       .where(eq(siaeTicketedEvents.companyId, companyId));
     
-    console.log(`[SEND-ALL] Trovati ${ticketedEvents.length} eventi ticketed`);
+    console.log(`[SEND-ALL] Trovati ${ticketedEvents.length} eventi ticketed totali`);
     
     const results: any[] = [];
     let progressivo = Math.floor(Date.now() / 1000) % 1000;
@@ -714,10 +910,10 @@ router.post("/api/public/test-siae-send-all-events", async (req, res) => {
       const ev = row.events;
       const loc = row.locations;
       
-      // Filtra per data evento
+      // Filtra per data evento solo se richiesto
       const eventDate = new Date(ev.startDatetime!);
       const eventDateStr = eventDate.toISOString().split('T')[0];
-      if (eventDateStr !== testDateStr) continue;
+      if (!sendAll && filterDateStr && eventDateStr !== filterDateStr) continue;
       
       // Recupera biglietti per questo evento
       const tickets = await db.select().from(siaeTickets).where(eq(siaeTickets.ticketedEventId, te.id));
@@ -801,8 +997,9 @@ router.post("/api/public/test-siae-send-all-events", async (req, res) => {
         cancellationDate: s.cancellationDate,
       }));
       
-      // Genera nome file unico per questo evento
+      // Genera nome file unico per questo evento - usa la data dell'evento stesso
       progressivo++;
+      const reportDate = eventDate; // Usa la data dell'evento per il nome file
       const fileName = generateSiaeFileName('giornaliero', reportDate, progressivo, null, systemCode);
       
       console.log(`[SEND-ALL] Evento ${ev.name} (genere ${te.genreCode}): ${validTickets.length} biglietti, ${cancelledTickets.length} annullati, ${validSubs.length} abbonamenti, ${cancelledSubs.length} abb. annullati`);
