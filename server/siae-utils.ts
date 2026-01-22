@@ -4708,13 +4708,9 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   }
   const progressivePadded = String(progressivo).padStart(3, '0');
 
-  // FIX 2026-01-21: SIAE rejects empty reports (error 0600)
-  // Both daily (RPG) and monthly (RPM) require at least one event with data
-  if (events.length === 0 && subscriptions.length === 0) {
-    const reportType = isMonthly ? 'mensile (RPM)' : 'giornaliero (RPG)';
-    throw new Error(`EMPTY_REPORT: Impossibile inviare il report ${reportType}: nessun evento trovato per il periodo selezionato. SIAE rifiuta report vuoti.`);
-  }
-
+  // RPG/RPM possono essere vuoti (0 biglietti/abbonamenti venduti nel periodo)
+  // SIAE accetta report vuoti - indicano semplicemente nessuna attività
+  
   let eventsXml = '';
   const DEFAULT_SECTOR_KEY = '__DEFAULT__';
   let totalTicketsCount = 0;
