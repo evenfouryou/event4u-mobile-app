@@ -1,0 +1,59 @@
+STEP 1: Mark One Transmission as Accepted                                                                                                                
+                                                                                                                                                           
+  Update the database to simulate SIAE accepted one report:                                                                                                
+                                                                                                                                                           
+  UPDATE siaeTransmissions                                                                                                                                 
+  SET responseCode = '0000',                                                                                                                               
+      status = 'received'                                                                                                                                  
+  WHERE reportDate = '2026-01-22'                                                                                                                          
+    AND progressivoInvio = 1                                                                                                                               
+  LIMIT 1;                                                                                                                                                 
+                                                                                                                                                           
+  Verify it was updated:                                                                                                                                   
+  SELECT id, reportDate, progressivoInvio, sostituzione, responseCode, status                                                                              
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE reportDate = '2026-01-22'                                                                                                                          
+    AND responseCode = '0000';                                                                                                                             
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 2: Send Report Again (Should Auto-Detect)                                                                                                           
+                                                                                                                                                           
+  Send RMG/RPG for 2026-01-22 again.                                                                                                                       
+                                                                                                                                                           
+  Expected logs:                                                                                                                                           
+  [SIAE-ROUTES] Checking for existing accepted transmissions for 2026-01-22                                                                                
+  [SIAE-ROUTES] AUTO-SUBSTITUTION: Rilevata trasmissione precedente accettata (progressivo: 1)                                                             
+  [SIAE-ROUTES] Setting effectiveForceSubstitution=true                                                                                                    
+  Sostituzione="S"                                                                                                                                         
+  ProgressivoGenerazione="013" (or next available)                                                                                                         
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 3: Verify XML Generation                                                                                                                            
+                                                                                                                                                           
+  Check the logs show:                                                                                                                                     
+  === VALIDATION ===                                                                                                                                       
+  ✅ ALL DATES MATCH                                                                                                                                       
+  Sostituzione="S"  ← Should be "S" this time                                                                                                              
+  ProgressivoGenerazione="013"                                                                                                                             
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 4: Query Final Database State                                                                                                                       
+                                                                                                                                                           
+  SELECT reportDate, progressivoInvio, sostituzione, responseCode, status, createdAt                                                                       
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE reportDate = '2026-01-22'                                                                                                                          
+  ORDER BY progressivoInvio DESC                                                                                                                           
+  LIMIT 3;                                                                                                                                                 
+                                                                                                                                                           
+  Expected result:                                                                                                                                         
+  - Progressivo 1: sostituzione='N', responseCode='0000', status='received'                                                                                
+  - Progressivo 13: sostituzione='S', status='pending' or 'sent'                                                                                           
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  REPORT BACK                                                                                                                                              
+                                                                                                                                                           
+  Show me:                                                                                                                                                 
+  1. ✅ Database update confirmation (progressivo 1 marked as accepted)                                                                                    
+  2. ✅ Console logs showing "AUTO-SUBSTITUTION detected"                                                                                                  
+  3. ✅ Sostituzione="S" in the new XML                                                                                                                    
+  4. ✅ Final database query showing both records  
