@@ -240,6 +240,10 @@ export default function SiaeTicketedEventsPage() {
   
   const ticketedEvents = sortEvents(ticketedEventsRaw);
 
+  // Filter pending vs approved events for manager view (not super_admin)
+  const pendingEvents = !isSuperAdmin ? ticketedEvents?.filter(e => (e as any).approvalStatus === 'pending') : [];
+  const approvedEvents = !isSuperAdmin ? ticketedEvents?.filter(e => (e as any).approvalStatus !== 'pending') : ticketedEvents;
+
   const eventsGroupedByCompany = isSuperAdmin && ticketedEvents
     ? ticketedEvents.reduce((groups, event) => {
         const companyName = event.companyName || 'Organizzatore sconosciuto';
@@ -946,11 +950,92 @@ export default function SiaeTicketedEventsPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Elenco Eventi</CardTitle>
-              <CardDescription>Tutti gli eventi con biglietteria SIAE attiva</CardDescription>
-            </CardHeader>
+          <>
+            {/* Sezione Eventi In Approvazione */}
+            {pendingEvents && pendingEvents.length > 0 && (
+              <Card className="mb-6 border-amber-500/30" data-testid="card-pending-events">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-500" />
+                    Eventi in Approvazione
+                  </CardTitle>
+                  <CardDescription>Questi eventi sono in attesa di approvazione e non possono essere modificati</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Evento</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>IVA</TableHead>
+                        <TableHead>ISI</TableHead>
+                        <TableHead>Capienza</TableHead>
+                        <TableHead className="text-right">Stato</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingEvents.map((ticketedEvent) => {
+                        const eventInfo = getEventInfo(ticketedEvent.eventId);
+                        const eventGenre = genres?.find(g => g.code === ticketedEvent.genreCode);
+                        const vatRate = eventGenre?.vatRate ?? (ticketedEvent.taxType === 'S' ? 10 : 22);
+                        return (
+                          <TableRow 
+                            key={ticketedEvent.id} 
+                            className="opacity-75"
+                            data-testid={`row-pending-event-${ticketedEvent.id}`}
+                          >
+                            <TableCell>
+                              <div>
+                                <div className="font-medium" data-testid={`title-pending-event-${ticketedEvent.id}`}>
+                                  {eventInfo?.name || "Evento"}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {genres?.find((g) => g.code === ticketedEvent.genreCode)?.description || ticketedEvent.genreCode}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {eventInfo?.startDatetime && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  {format(new Date(eventInfo.startDatetime), "d MMM yyyy", { locale: it })}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{vatRate}%</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant="outline"
+                                className={ticketedEvent.taxType === 'I' 
+                                  ? 'border-amber-500 text-amber-600 dark:text-amber-400' 
+                                  : 'border-green-500 text-green-600 dark:text-green-400'}
+                              >
+                                {ticketedEvent.taxType === 'I' ? 'ISI 16%' : 'Esente'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{ticketedEvent.totalCapacity}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">
+                                <Clock className="w-3 h-3 mr-1" />
+                                In attesa di approvazione
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Elenco Eventi</CardTitle>
+                <CardDescription>Tutti gli eventi con biglietteria SIAE attiva</CardDescription>
+              </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -969,7 +1054,7 @@ export default function SiaeTicketedEventsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ticketedEvents?.map((ticketedEvent) => {
+                  {approvedEvents?.map((ticketedEvent) => {
                     const eventInfo = getEventInfo(ticketedEvent.eventId);
                     const isExpanded = expandedEventId === ticketedEvent.id;
                     const eventGenre = genres?.find(g => g.code === ticketedEvent.genreCode);
@@ -1125,6 +1210,7 @@ export default function SiaeTicketedEventsPage() {
               </Table>
             </CardContent>
           </Card>
+          </>
         )}
 
         {/* Event Detail Dialog for Desktop */}
