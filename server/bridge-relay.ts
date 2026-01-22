@@ -1130,7 +1130,7 @@ export interface XmlSignatureData {
 
 const pendingSignatureRequests = new Map<string, PendingSignatureRequest>();
 
-const SIGNATURE_REQUEST_TIMEOUT = 30000; // 30 seconds for XML signature
+const SIGNATURE_REQUEST_TIMEOUT = 90000; // 90 seconds for XML signature (increased for bridge latency)
 
 // Generate UUID for signature request tracking
 function generateSignatureRequestId(): string {
@@ -1352,7 +1352,7 @@ interface PendingSmimeRequest {
 }
 
 const pendingSmimeRequests = new Map<string, PendingSmimeRequest>();
-const SMIME_REQUEST_TIMEOUT = 60000; // 60 seconds for S/MIME signature (larger emails)
+const SMIME_REQUEST_TIMEOUT = 120000; // 120 seconds for S/MIME signature (increased for bridge latency)
 
 function generateSmimeRequestId(): string {
   return `smime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
