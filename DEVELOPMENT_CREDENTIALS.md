@@ -15,7 +15,8 @@ npx tsx server/seed.ts
 ## Credenziali Account di Test
 
 ### 🔑 Super Admin
-- **Email**: `admin@event4u.com`
+- **Email**: `
+`
 - **Password**: `admin123`
 - **Accesso**: Completo a tutto il sistema
 - **Company**: Nessuna (gestisce tutte le company)
