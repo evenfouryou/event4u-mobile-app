@@ -4401,7 +4401,7 @@ export async function validatePreTransmission(
       // Per RMG (RiepilogoGiornaliero): DataGenerazione DEVE essere uguale a Data (attributo)
       // Per RPM (RiepilogoMensile): DataGenerazione deve essere del mese successivo al periodo
       // Secondo specifica SIAE: DataGenerazione = Data (la data del report, non data odierna)
-      if (reportType === 'daily' || reportType === 'rmg' || reportType === 'giornaliero') {
+      if (reportType === 'giornaliero') {
         // RMG: DataGenerazione deve corrispondere all'attributo Data (data del report)
         if (dataAttrMatch) {
           const xmlData = dataAttrMatch[2]; // Formato: YYYYMMDD
@@ -4454,84 +4454,72 @@ export async function validatePreTransmission(
         // Manteniamo solo le validazioni critiche: date future ed eventi incoerenti
       }
       
-      // FIX 2026-01-18: Verifica che non ci siano eventi futuri nel riepilogo
-      // La SIAE non accetta riepiloghi con DataEvento nel futuro
+      // FIX 2026-01-22: Convertito in WARNING (non bloccante) per flessibilità operativa
+      // La SIAE potrebbe rifiutare riepiloghi con DataEvento nel futuro, ma lasciamo decidere all'operatore
       const dataEventoMatches = Array.from(xml.matchAll(/<DataEvento>(\d{8})<\/DataEvento>/g));
       for (const match of dataEventoMatches) {
         const eventDate = match[1]; // YYYYMMDD
         if (eventDate > actualToday) {
-          datesCoherent = false;
-          errors.push({
+          warnings.push({
             code: 'FUTURE_EVENT_DATE',
             field: 'DataEvento',
-            message: `Il riepilogo contiene un evento con data futura: ${eventDate} (oggi è ${actualToday})`,
-            resolution: `Rimuovere gli eventi futuri dal riepilogo o attendere che l'evento si sia svolto`,
-            siaeErrorCode: '0603'
+            message: `Attenzione: il riepilogo contiene un evento con data futura: ${eventDate} (oggi è ${actualToday}). La SIAE potrebbe rifiutare il report.`,
+            suggestion: `Considerare di attendere che l'evento si sia svolto prima dell'invio`
           });
         }
       }
       
-      // FIX 2026-01-18: Verifica coerenza date interne al riepilogo RPM
-      // TUTTE le date nel contenuto XML devono appartenere al mese dichiarato
-      // Errore 0603: "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
+      // FIX 2026-01-22: Convertite in WARNING (non bloccanti) per flessibilità operativa
+      // Le verifiche di coerenza date sono utili ma non devono bloccare l'invio
       const meseMatchForContent = xml.match(/Mese="([^"]+)"/);
       if (meseMatchForContent) {
         const reportMese = meseMatchForContent[1]; // YYYYMM
         
-        // Validazione <Validita> - date di validità biglietti/abbonamenti
+        // Validazione <Validita> - date di validità biglietti/abbonamenti (WARNING)
         const validitaMatches = Array.from(xml.matchAll(/<Validita>(\d{8})<\/Validita>/g));
         for (const match of validitaMatches) {
           const validitaDate = match[1]; // YYYYMMDD
           const validitaMese = validitaDate.substring(0, 6); // YYYYMM
           
-          // La Validita DEVE appartenere al mese del report
           if (validitaMese !== reportMese) {
-            datesCoherent = false;
-            errors.push({
+            warnings.push({
               code: 'VALIDITA_DATE_MISMATCH',
               field: 'Validita',
-              message: `Data Validita (${validitaDate}) non appartiene al mese del riepilogo (${reportMese})`,
-              resolution: `Tutte le date <Validita> devono essere nel mese ${reportMese}. Verificare la logica di generazione abbonamenti.`,
-              siaeErrorCode: '0603'
+              message: `Attenzione: Data Validita (${validitaDate}) non appartiene al mese del riepilogo (${reportMese}). La SIAE potrebbe rifiutare.`,
+              suggestion: `Verificare la logica di generazione abbonamenti`
             });
           }
         }
         
-        // Validazione <DataInizioValidita> per abbonamenti
+        // Validazione <DataInizioValidita> per abbonamenti (WARNING)
         const dataInizioMatches = Array.from(xml.matchAll(/<DataInizioValidita>(\d{8})<\/DataInizioValidita>/g));
         for (const match of dataInizioMatches) {
           const inizioDate = match[1]; // YYYYMMDD
           const inizioMese = inizioDate.substring(0, 6); // YYYYMM
           
           if (inizioMese !== reportMese) {
-            datesCoherent = false;
-            errors.push({
+            warnings.push({
               code: 'DATA_INIZIO_VALIDITA_MISMATCH',
               field: 'DataInizioValidita',
-              message: `Data inizio validità (${inizioDate}) non appartiene al mese del riepilogo (${reportMese})`,
-              resolution: `Tutte le date <DataInizioValidita> devono essere nel mese ${reportMese}`,
-              siaeErrorCode: '0603'
+              message: `Attenzione: Data inizio validità (${inizioDate}) non appartiene al mese del riepilogo (${reportMese})`,
+              suggestion: `Verificare se è corretto includere abbonamenti iniziati in altri mesi`
             });
           }
         }
         
-        // Validazione <DataFineValidita> per abbonamenti
-        // NOTA: DataFineValidita può essere FUTURA rispetto al mese del report (es. abbonamento annuale)
-        // MA se è PASSATA deve comunque appartenere almeno al mese del report o successivo
+        // Validazione <DataFineValidita> per abbonamenti (WARNING)
         const dataFineMatches = Array.from(xml.matchAll(/<DataFineValidita>(\d{8})<\/DataFineValidita>/g));
         for (const match of dataFineMatches) {
           const fineDate = match[1]; // YYYYMMDD
           const fineMese = fineDate.substring(0, 6); // YYYYMM
           
-          // DataFineValidita deve essere >= al mese del report (può essere futura)
+          // DataFineValidita può essere futura (abbonamenti annuali)
           if (fineMese < reportMese) {
-            datesCoherent = false;
-            errors.push({
+            warnings.push({
               code: 'DATA_FINE_VALIDITA_EXPIRED',
               field: 'DataFineValidita',
-              message: `Data fine validità (${fineDate}) è precedente al mese del riepilogo (${reportMese})`,
-              resolution: `Le date <DataFineValidita> devono essere nel mese ${reportMese} o successivo`,
-              siaeErrorCode: '0603'
+              message: `Attenzione: Data fine validità (${fineDate}) è precedente al mese del riepilogo (${reportMese})`,
+              suggestion: `Verificare se è corretto includere abbonamenti già scaduti`
             });
           }
         }
