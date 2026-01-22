@@ -487,10 +487,9 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
     
     console.log(`[CREATE-EVENTS] Trovati ${allGenres.length} generi SIAE nel database`);
     
-    // Data base: ogni evento avrà una data PASSATA diversa (distribuiti su più giorni NEL PASSATO)
-    // SIAE richiede che gli eventi siano già avvenuti, quindi usiamo date passate
-    const today = new Date();
-    const baseDateStr = req.body.testDate || new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Default: 30 giorni fa
+    // Data base: ogni evento avrà una data diversa (distribuiti su più giorni)
+    // L'utente può specificare la data base, altrimenti usiamo oggi
+    const baseDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
     const baseDate = new Date(baseDateStr + 'T20:00:00');
     const timestamp = Date.now();
     
