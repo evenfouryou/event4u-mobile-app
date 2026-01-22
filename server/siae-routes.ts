@@ -2479,6 +2479,11 @@ router.post("/api/siae/ticketed-events/:id/postpone", requireAuth, requireOrgani
       return res.status(404).json({ message: "Evento biglietteria non trovato" });
     }
     
+    // Validate event status - cannot postpone cancelled events
+    if (ticketedEvent.eventStatus === 'cancelled') {
+      return res.status(400).json({ message: "Impossibile posticipare un evento già annullato" });
+    }
+    
     // Get the base event to check current date
     const [baseEvent] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
     if (!baseEvent) {
@@ -2496,9 +2501,21 @@ router.post("/api/siae/ticketed-events/:id/postpone", requireAuth, requireOrgani
     const isEntertainment = genreCode >= 60 && genreCode <= 69;
     const maxDays = isEntertainment ? 90 : 365;
     
+    // Enforce limit unless forceOverride is provided
+    const { forceOverride } = req.body;
+    if (daysDiff > maxDays && !forceOverride) {
+      return res.status(400).json({ 
+        message: `Il rinvio supera ${maxDays} giorni (${isEntertainment ? 'intrattenimento' : 'spettacolo'}). I biglietti venduti dovranno essere rimborsati o riemessi con nuovo sigillo. Usare forceOverride per procedere comunque.`,
+        exceedsLimit: true,
+        daysDifference: daysDiff,
+        maxAllowedDays: maxDays,
+        requiresReissue: true
+      });
+    }
+    
     let warning = null;
-    if (daysDiff > maxDays) {
-      warning = `Attenzione: il rinvio supera ${maxDays} giorni. I biglietti venduti dovranno essere rimborsati o riemessi con nuovo sigillo.`;
+    if (daysDiff > maxDays && forceOverride) {
+      warning = `Rinvio forzato oltre ${maxDays} giorni. I biglietti venduti dovranno essere rimborsati o riemessi con nuovo sigillo.`;
     }
     
     // Update the base event date
@@ -2576,6 +2593,11 @@ router.post("/api/siae/ticketed-events/:id/cancel", requireAuth, requireOrganize
     const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
     if (!ticketedEvent) {
       return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    // Validate event status - cannot cancel already cancelled events
+    if (ticketedEvent.eventStatus === 'cancelled') {
+      return res.status(400).json({ message: "Evento già annullato" });
     }
     
     // Calculate refund deadline
@@ -2834,7 +2856,20 @@ router.post("/api/siae/ticketed-events/:id/refund-batch", requireAuth, requireOr
         successCount++;
       } catch (ticketError: any) {
         failCount++;
-        errors.push(`Biglietto ${ticket.ticketCode}: ${ticketError.message}`);
+        const errorMsg = `Biglietto ${ticket.ticketCode}: ${ticketError.message}`;
+        errors.push(errorMsg);
+        
+        // Log individual refund failures for retry tracking
+        await siaeStorage.createAuditLog({
+          companyId: ticketedEvent.companyId,
+          userId: user.id,
+          action: 'refund_failed',
+          entityType: 'ticket',
+          entityId: ticket.id,
+          description: `Rimborso fallito: ${errorMsg}`,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
       }
     }
     

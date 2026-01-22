@@ -114,6 +114,11 @@ import {
   Palette,
   CreditCard,
   Package,
+  CalendarX2,
+  Ban,
+  RefreshCw,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -190,6 +195,13 @@ export default function SiaeTicketedEventsPage() {
   const [newSubTypeTurnType, setNewSubTypeTurnType] = useState("F");
   const [newSubTypeEventsCount, setNewSubTypeEventsCount] = useState(1);
   const [newSubTypePrice, setNewSubTypePrice] = useState("");
+  const [postponeDialogOpen, setPostponeDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [selectedEventForAction, setSelectedEventForAction] = useState<string | null>(null);
+  const [postponeDate, setPostponeDate] = useState("");
+  const [postponeReason, setPostponeReason] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
 
   const companyId = user?.companyId;
   const isSuperAdmin = user?.role === 'super_admin';
@@ -607,6 +619,70 @@ export default function SiaeTicketedEventsPage() {
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
+  });
+
+  const postponeEventMutation = useMutation({
+    mutationFn: async (data: { id: string; newEventDate: string; reason?: string }) => {
+      const res = await apiRequest("POST", `/api/siae/ticketed-events/${data.id}/postpone`, {
+        newEventDate: data.newEventDate,
+        reason: data.reason
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Evento Posticipato",
+        description: data.message,
+        variant: data.warning ? "default" : "default"
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events'] });
+      setPostponeDialogOpen(false);
+      setSelectedEventForAction(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const cancelEventMutation = useMutation({
+    mutationFn: async (data: { id: string; reason: string }) => {
+      const res = await apiRequest("POST", `/api/siae/ticketed-events/${data.id}/cancel`, {
+        reason: data.reason
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Evento Annullato",
+        description: data.message
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events'] });
+      setCancelDialogOpen(false);
+      setSelectedEventForAction(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const batchRefundMutation = useMutation({
+    mutationFn: async (data: { id: string }) => {
+      const res = await apiRequest("POST", `/api/siae/ticketed-events/${data.id}/refund-batch`, {
+        refundMethod: 'original'
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Rimborsi Elaborati",
+        description: data.message
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events'] });
+      setRefundDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
   });
 
   const onSubmit = (data: FormData) => {
@@ -2744,6 +2820,44 @@ export default function SiaeTicketedEventsPage() {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
+                          {ticketedEvent.eventStatus !== 'cancelled' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedEventForAction(ticketedEvent.id);
+                                  setPostponeDialogOpen(true);
+                                }}
+                                data-testid={`menu-postpone-${ticketedEvent.id}`}
+                              >
+                                <CalendarX2 className="w-4 h-4 mr-2" />
+                                Posticipa Evento
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedEventForAction(ticketedEvent.id);
+                                  setCancelDialogOpen(true);
+                                }}
+                                className="text-destructive"
+                                data-testid={`menu-cancel-${ticketedEvent.id}`}
+                              >
+                                <Ban className="w-4 h-4 mr-2" />
+                                Annulla Evento
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {ticketedEvent.eventStatus === 'cancelled' && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedEventForAction(ticketedEvent.id);
+                                setRefundDialogOpen(true);
+                              }}
+                              data-testid={`menu-refund-${ticketedEvent.id}`}
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Gestisci Rimborsi
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
                           <Link href={`/siae/ticketed-events/${ticketedEvent.id}/page-editor`}>
                             <DropdownMenuItem data-testid={`menu-page-editor-${ticketedEvent.id}`}>
                               <Palette className="w-4 h-4 mr-2" />
@@ -3738,6 +3852,140 @@ export default function SiaeTicketedEventsPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={postponeDialogOpen} onOpenChange={setPostponeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Posticipa Evento</DialogTitle>
+            <DialogDescription>
+              I biglietti già venduti resteranno validi con il sigillo fiscale originale se il rinvio non supera 90 giorni (intrattenimento) o 12 mesi (spettacolo).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nuova Data Evento</Label>
+              <Input
+                type="datetime-local"
+                value={postponeDate}
+                onChange={(e) => setPostponeDate(e.target.value)}
+                data-testid="input-postpone-date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo Posticipo (opzionale)</Label>
+              <Textarea
+                value={postponeReason}
+                onChange={(e) => setPostponeReason(e.target.value)}
+                placeholder="Es: Condizioni meteo avverse"
+                data-testid="input-postpone-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPostponeDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedEventForAction && postponeDate) {
+                  postponeEventMutation.mutate({
+                    id: selectedEventForAction,
+                    newEventDate: new Date(postponeDate).toISOString(),
+                    reason: postponeReason || undefined
+                  });
+                }
+              }}
+              disabled={!postponeDate || postponeEventMutation.isPending}
+              data-testid="button-confirm-postpone"
+            >
+              {postponeEventMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Posticipa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Annulla Evento</DialogTitle>
+            <DialogDescription>
+              Questa azione chiuderà le vendite e tutti i biglietti dovranno essere rimborsati.
+            </DialogDescription>
+          </DialogHeader>
+          <Alert variant="destructive" className="my-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Attenzione</AlertTitle>
+            <AlertDescription>
+              L'annullamento è irreversibile. Tutti i biglietti venduti dovranno essere rimborsati.
+            </AlertDescription>
+          </Alert>
+          <div className="space-y-2">
+            <Label>Motivo Annullamento (obbligatorio)</Label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Es: Artista indisponibile, emergenza sanitaria..."
+              data-testid="input-cancel-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              Indietro
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedEventForAction && cancelReason) {
+                  cancelEventMutation.mutate({
+                    id: selectedEventForAction,
+                    reason: cancelReason
+                  });
+                }
+              }}
+              disabled={!cancelReason || cancelEventMutation.isPending}
+              data-testid="button-confirm-cancel"
+            >
+              {cancelEventMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Conferma Annullamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gestione Rimborsi</DialogTitle>
+            <DialogDescription>
+              Elabora i rimborsi per tutti i biglietti dell'evento annullato.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              I rimborsi verranno elaborati automaticamente tramite Stripe per i pagamenti online.
+              I pagamenti in contanti dovranno essere gestiti manualmente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialogOpen(false)}>
+              Chiudi
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedEventForAction) {
+                  batchRefundMutation.mutate({ id: selectedEventForAction });
+                }
+              }}
+              disabled={batchRefundMutation.isPending}
+              data-testid="button-batch-refund"
+            >
+              {batchRefundMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Elabora Tutti i Rimborsi
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>
