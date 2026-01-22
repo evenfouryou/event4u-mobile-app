@@ -731,7 +731,7 @@ router.get("/api/siae/debug/send-fresh-rmg", async (req: Request, res: Response)
         vatRate: "22",
         isiAmount: "0.00",
         status: "sold",
-        cardCode: activeCard.serialNumber || "TESTCARD",
+        cardCode: activeCard.cardCode || "TESTCARD",
         emissionChannelCode: "01",
       });
       createdTickets.push(ticket);
