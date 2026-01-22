@@ -28,6 +28,24 @@ A comprehensive SIAE-compliant ticketing and fiscal management system for Italia
 -   Other genres: Default 0% entertainment incidence + tax type 'S' (spectacle, IVA only)
 -   Users can override these defaults if their event has different characteristics (e.g., disco with >50% live music = 0% incidence)
 
+**Event Postponement & Cancellation Workflow (SIAE Compliance):**
+-   **Postponement**: Events can be postponed with automatic enforcement of SIAE time limits:
+    -   Entertainment genres (60-69): Max 90 days from original date
+    -   Spectacle genres: Max 12 months from original date
+    -   Already-sold tickets maintain their original fiscal seal (no re-emission required)
+    -   `forceOverride` flag required to proceed if exceeding limits
+-   **Cancellation**: Full event cancellation with automatic refund workflow:
+    -   Closes ticket sales immediately
+    -   Tracks refund deadline (configurable, default 30 days)
+    -   Batch refund processing with Stripe integration
+    -   Individual ticket refund failures logged for retry tracking
+-   **API Endpoints**:
+    -   `POST /api/siae/ticketed-events/:id/postpone` - Postpone event with new date
+    -   `POST /api/siae/ticketed-events/:id/cancel` - Cancel event with reason
+    -   `GET /api/siae/ticketed-events/:id/refund-list` - List tickets pending refund
+    -   `POST /api/siae/tickets/:id/refund` - Refund individual ticket
+    -   `POST /api/siae/ticketed-events/:id/refund-batch` - Process all refunds
+
 ### International Operating Mode
 The system supports international ticket sales with SIAE exemption through a flexible operating mode system:
 -   **Operating Modes**: Gestori can choose between `italy_only` (default), `international_only`, or `hybrid` mode during registration or via admin settings.
