@@ -1,0 +1,173 @@
+                                                                                                                                                         
+  The error 0603 is still occurring. This means there's STILL a mismatch between the filename date, XML Data attribute, and XML DataGenerazione attribute. 
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  IMMEDIATE DEBUG STEPS                                                                                                                                    
+                                                                                                                                                           
+  Step 1: Log the Exact XML Being Sent                                                                                                                     
+                                                                                                                                                           
+  Add detailed logging RIGHT BEFORE sending the email to see what's actually being transmitted:                                                            
+                                                                                                                                                           
+  // Before sending email, add this logging:                                                                                                               
+  console.log('=== SIAE TRANSMISSION DEBUG ===');                                                                                                          
+  console.log('Filename:', filename);                                                                                                                      
+  console.log('Report Date:', reportDate);                                                                                                                 
+  console.log('Event Date:', eventDate);                                                                                                                   
+                                                                                                                                                           
+  // Extract and log the critical XML attributes                                                                                                           
+  const dataMatch = xmlContent.match(/Data="(\d+)"/);                                                                                                      
+  const dataGenMatch = xmlContent.match(/DataGenerazione="(\d+)"/);                                                                                        
+  const oraGenMatch = xmlContent.match(/OraGenerazione="(\d+)"/);                                                                                          
+                                                                                                                                                           
+  console.log('XML Data attribute:', dataMatch ? dataMatch[1] : 'NOT FOUND');                                                                              
+  console.log('XML DataGenerazione attribute:', dataGenMatch ? dataGenMatch[1] : 'NOT FOUND');                                                             
+  console.log('XML OraGenerazione attribute:', oraGenMatch ? oraGenMatch[1] : 'NOT FOUND');                                                                
+                                                                                                                                                           
+  // Extract date from filename                                                                                                                            
+  const filenameDateMatch = filename.match(/_(20\d{6})_/);                                                                                                 
+  console.log('Filename date part:', filenameDateMatch ? filenameDateMatch[1] : 'NOT FOUND');                                                              
+                                                                                                                                                           
+  // Validation                                                                                                                                            
+  if (dataMatch && dataGenMatch && filenameDateMatch) {                                                                                                    
+    const xmlData = dataMatch[1];                                                                                                                          
+    const xmlDataGen = dataGenMatch[1];                                                                                                                    
+    const filenameDate = filenameDateMatch[1];                                                                                                             
+                                                                                                                                                           
+    console.log('\n=== VALIDATION ===');                                                                                                                   
+    console.log('Filename date:', filenameDate);                                                                                                           
+    console.log('XML Data:     ', xmlData);                                                                                                                
+    console.log('XML DataGen:  ', xmlDataGen);                                                                                                             
+                                                                                                                                                           
+    if (filenameDate === xmlData && xmlData === xmlDataGen) {                                                                                              
+      console.log('✅ ALL DATES MATCH');                                                                                                                   
+    } else {                                                                                                                                               
+      console.error('❌ DATE MISMATCH DETECTED:');                                                                                                         
+      if (filenameDate !== xmlData) console.error('  - Filename ≠ XML Data');                                                                              
+      if (filenameDate !== xmlDataGen) console.error('  - Filename ≠ XML DataGenerazione');                                                                
+      if (xmlData !== xmlDataGen) console.error('  - XML Data ≠ XML DataGenerazione');                                                                     
+    }                                                                                                                                                      
+  }                                                                                                                                                        
+                                                                                                                                                           
+  console.log('=== FIRST 500 CHARS OF XML ===');                                                                                                           
+  console.log(xmlContent.substring(0, 500));                                                                                                               
+  console.log('================================\n');                                                                                                       
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Step 2: Check RMG-Specific Date Logic                                                                                                                    
+                                                                                                                                                           
+  For RMG (Fresh reports), there are TWO dates involved:                                                                                                   
+  - Report Date: The date the report is generated/sent                                                                                                     
+  - Event Date: The actual event date                                                                                                                      
+                                                                                                                                                           
+  SIAE expects:                                                                                                                                            
+  - Data attribute = Event Date (the date of the actual event)                                                                                             
+  - DataGenerazione = Report Date OR Event Date (needs verification)                                                                                       
+  - Filename = Should match whichever date is used in the XML                                                                                              
+                                                                                                                                                           
+  Find and show me the RMG generation code:                                                                                                                
+                                                                                                                                                           
+  # Search for RMG-specific logic                                                                                                                          
+  grep -n "RMG\|generateRMG\|fresh" server/siae-utils.ts | head -30                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Step 3: Verify Date Formatting Function                                                                                                                  
+                                                                                                                                                           
+  Check if there's a date formatting issue:                                                                                                                
+                                                                                                                                                           
+  // Find the date formatting function being used                                                                                                          
+  // Look for something like:                                                                                                                              
+  function formatDateForSIAE(date: string | Date): string {                                                                                                
+    // Show me this function's implementation                                                                                                              
+  }                                                                                                                                                        
+                                                                                                                                                           
+  Common issues:                                                                                                                                           
+  - Using wrong date variable (reportDate vs eventDate)                                                                                                    
+  - Date format conversion errors (YYYY-MM-DD → YYYYMMDD)                                                                                                  
+  - Timezone issues causing day shift                                                                                                                      
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Step 4: Show Me the Exact generateC1Xml Call                                                                                                             
+                                                                                                                                                           
+  Find where generateC1Xml (or equivalent) is called for RMG:                                                                                              
+                                                                                                                                                           
+  // Show me the EXACT call, something like:                                                                                                               
+  const xml = generateC1Xml({                                                                                                                              
+    reportType: 'RMG',                                                                                                                                     
+    reportDate: ???,      // What value is passed here?                                                                                                    
+    eventDate: ???,       // What value is passed here?                                                                                                    
+    dataDate: ???,        // Is there a separate dataDate?                                                                                                 
+    ...                                                                                                                                                    
+  });                                                                                                                                                      
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Step 5: Fix the Root Cause                                                                                                                               
+                                                                                                                                                           
+  Based on the debug output, apply the correct fix. Likely scenarios:                                                                                      
+                                                                                                                                                           
+  Scenario A: RMG uses Event Date (not Report Date)                                                                                                        
+  // For RMG specifically:                                                                                                                                 
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>                                                                                                      
+  <RiepilogoGiornaliero                                                                                                                                    
+    Data="${eventDate.replace(/-/g, '')}"              // Event date (when event happened)                                                                 
+    DataGenerazione="${eventDate.replace(/-/g, '')}"   // MUST match Data                                                                                  
+    OraGenerazione="${oraGenerazione}"                                                                                                                     
+    ProgressivoGenerazione="${progressivo}"                                                                                                                
+    Sostituzione="${sostituzione}">                                                                                                                        
+    ...                                                                                                                                                    
+  </RiepilogoGiornaliero>`;                                                                                                                                
+                                                                                                                                                           
+  // Filename MUST also use eventDate:                                                                                                                     
+  const filename = `RMG_${eventDate.replace(/-/g, '_')}_${progressivo.toString().padStart(3, '0')}.xsi`;                                                   
+                                                                                                                                                           
+  Scenario B: Mixed Dates                                                                                                                                  
+  // If you're accidentally mixing reportDate and eventDate:                                                                                               
+  // ❌ WRONG:                                                                                                                                             
+  Data="${reportDate}"              // 2026-01-22                                                                                                          
+  DataGenerazione="${eventDate}"    // 2026-02-20  ← MISMATCH!                                                                                             
+                                                                                                                                                           
+  // ✅ CORRECT:                                                                                                                                           
+  Data="${eventDate}"                                                                                                                                      
+  DataGenerazione="${eventDate}"    // Both use event date                                                                                                 
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  REQUIRED OUTPUT                                                                                                                                          
+                                                                                                                                                           
+  Run the debug logging and show me:                                                                                                                       
+                                                                                                                                                           
+  1. Console output from the debug block above showing:                                                                                                    
+    - Filename                                                                                                                                             
+    - Report Date                                                                                                                                          
+    - Event Date                                                                                                                                           
+    - XML Data attribute value                                                                                                                             
+    - XML DataGenerazione attribute value                                                                                                                  
+    - Validation results                                                                                                                                   
+  2. First 500 characters of the XML being sent                                                                                                            
+  3. The filename being used                                                                                                                               
+  4. The code where dates are set (show me the actual lines)                                                                                               
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  EXAMPLE OF CORRECT OUTPUT                                                                                                                                
+                                                                                                                                                           
+  For an event on 2026-02-20:                                                                                                                              
+                                                                                                                                                           
+  === SIAE TRANSMISSION DEBUG ===                                                                                                                          
+  Filename: RMG_2026_02_20_001.xsi                                                                                                                         
+  Report Date: 2026-01-22                                                                                                                                  
+  Event Date: 2026-02-20                                                                                                                                   
+  XML Data attribute: 20260220                                                                                                                             
+  XML DataGenerazione attribute: 20260220                                                                                                                  
+  XML OraGenerazione attribute: 181358                                                                                                                     
+                                                                                                                                                           
+  === VALIDATION ===                                                                                                                                       
+  Filename date: 20260220                                                                                                                                  
+  XML Data:      20260220                                                                                                                                  
+  XML DataGen:   20260220                                                                                                                                  
+  ✅ ALL DATES MATCH                                                                                                                                       
+                                                                                                                                                           
+  === FIRST 500 CHARS OF XML ===                                                                                                                           
+  <?xml version="1.0" encoding="UTF-8"?>                                                                                                                   
+  <RiepilogoGiornaliero Data="20260220" DataGenerazione="20260220" OraGenerazione="181358" ProgressivoGenerazione="001" Sostituzione="N">                  
+  ...                                                                                                                                                      
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  DO NOT guess the fix. First run the debug logging and show me the output so we can see exactly what's mismatched.

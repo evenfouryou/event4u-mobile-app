@@ -664,6 +664,50 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const attachmentBase64Content = Buffer.from(xmlContent, 'utf-8').toString('base64');
       console.log(`[EMAIL-SERVICE] Using UTF-8 encoding to match XML declaration`);
       
+      // ============================================================
+      // DEBUG 0603: Log delle date per diagnostica coerenza
+      // ============================================================
+      console.log('[EMAIL-SERVICE] === SIAE TRANSMISSION DEBUG ===');
+      console.log(`[EMAIL-SERVICE] Filename: ${fileName}`);
+      
+      const dataMatch = xmlContent.match(/Data="(\d+)"/);
+      const dataGenMatch = xmlContent.match(/DataGenerazione="(\d+)"/);
+      const oraGenMatch = xmlContent.match(/OraGenerazione="(\d+)"/);
+      const meseMatch = xmlContent.match(/Mese="(\d+)"/);
+      
+      console.log(`[EMAIL-SERVICE] XML Data attribute: ${dataMatch ? dataMatch[1] : 'NOT FOUND'}`);
+      console.log(`[EMAIL-SERVICE] XML DataGenerazione: ${dataGenMatch ? dataGenMatch[1] : 'NOT FOUND'}`);
+      console.log(`[EMAIL-SERVICE] XML OraGenerazione: ${oraGenMatch ? oraGenMatch[1] : 'NOT FOUND'}`);
+      console.log(`[EMAIL-SERVICE] XML Mese attribute: ${meseMatch ? meseMatch[1] : 'NOT FOUND (daily)'}`);
+      
+      // Extract date from filename (format: RPG_YYYY_MM_DD_NNN.xsi)
+      const filenameDateMatch = fileName.match(/_(\d{4})_(\d{2})_(\d{2})_/);
+      const filenameDate = filenameDateMatch ? `${filenameDateMatch[1]}${filenameDateMatch[2]}${filenameDateMatch[3]}` : 'NOT FOUND';
+      console.log(`[EMAIL-SERVICE] Filename date part: ${filenameDate}`);
+      
+      // Validation
+      if (dataMatch && dataGenMatch) {
+        const xmlData = dataMatch[1];
+        const xmlDataGen = dataGenMatch[1];
+        
+        console.log('[EMAIL-SERVICE] === VALIDATION ===');
+        console.log(`[EMAIL-SERVICE] Filename date: ${filenameDate}`);
+        console.log(`[EMAIL-SERVICE] XML Data:      ${xmlData}`);
+        console.log(`[EMAIL-SERVICE] XML DataGen:   ${xmlDataGen}`);
+        
+        // Per RMG giornaliero: Filename e Data devono essere uguali, DataGen = oggi
+        if (filenameDate === xmlData) {
+          console.log('[EMAIL-SERVICE] ✅ Filename = XML Data (MATCH)');
+        } else {
+          console.log('[EMAIL-SERVICE] ❌ Filename ≠ XML Data (MISMATCH!)');
+        }
+        // DataGenerazione può essere oggi (diversa da Data per eventi passati)
+      }
+      
+      console.log('[EMAIL-SERVICE] === FIRST 500 CHARS OF XML ===');
+      console.log(xmlContent.substring(0, 500));
+      console.log('[EMAIL-SERVICE] ================================');
+      
       // INTEGRITY CHECK: Log SHA-256 prima dell'invio per diagnostica trasmissione
       try {
         const crypto = await import('crypto');

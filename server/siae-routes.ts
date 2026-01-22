@@ -624,9 +624,11 @@ router.get("/api/siae/debug/send-fresh-rmg", async (req: Request, res: Response)
     const testEmail = req.query.to as string || 'servertest2@batest.siae.it';
     
     const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 30) + 1);
-    const eventDateStr = futureDate.toISOString().split('T')[0];
+    // FIX 0603: SIAE richiede che la data sia PASSATA (evento già avvenuto)
+    // Usa IERI come data evento per report giornaliero
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 1); // Ieri
+    const eventDateStr = pastDate.toISOString().split('T')[0];
     
     console.log(`[SIAE-DEBUG-FRESH] Creating fresh event and tickets with uniqueId=${uniqueId}, date=${eventDateStr}`);
     
@@ -652,7 +654,7 @@ router.get("/api/siae/debug/send-fresh-rmg", async (req: Request, res: Response)
       console.log(`[SIAE-DEBUG-FRESH] Created new location: ${locationId}`);
     }
     
-    const startDatetime = new Date(futureDate);
+    const startDatetime = new Date(pastDate);
     startDatetime.setHours(21, 0, 0, 0);
     const endDatetime = new Date(startDatetime);
     endDatetime.setHours(4, 0, 0, 0);
