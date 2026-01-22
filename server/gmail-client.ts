@@ -318,6 +318,13 @@ export async function fetchSiaeResponses(companyId?: string, sinceDate?: Date): 
         } else if (att.parsed.type === 'OK' && att.parsed.protocolNumber) {
           protocolNumber = att.parsed.protocolNumber;
           status = 'accepted';
+        } else if (att.parsed.code === '0000') {
+          // FIX: Handle success response when type is UNKNOWN but code is 0000
+          // SIAE returns code 0000 for successful submissions
+          errorCode = '0000';
+          protocolNumber = att.parsed.protocolNumber || undefined;
+          status = 'accepted';
+          console.log(`[Gmail] Response 0000 detected for ${att.filename} - marking as accepted`);
         }
         
         // Try to extract transmission reference from attachment filename

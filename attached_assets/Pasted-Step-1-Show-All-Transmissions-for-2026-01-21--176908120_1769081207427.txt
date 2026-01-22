@@ -1,0 +1,33 @@
+Step 1: Show All Transmissions for 2026-01-21                                                                                                            
+                                                                                                                                                           
+  SELECT                                                                                                                                                   
+    id,                                                                                                                                                    
+    filename,                                                                                                                                              
+    progressivoInvio,                                                                                                                                      
+    sostituzione,                                                                                                                                          
+    responseCode,                                                                                                                                          
+    status,                                                                                                                                                
+    datetime(createdAt) as sent_time,                                                                                                                      
+    datetime(updatedAt) as response_time                                                                                                                   
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE reportDate = '2026-01-21'                                                                                                                          
+  ORDER BY progressivoInvio;                                                                                                                               
+                                                                                                                                                           
+  Key questions:                                                                                                                                           
+  1. Did progressivo 001, 002, or 003 get accepted (0000)?                                                                                                 
+  2. Were they sent with Sostituzione="N" or "S"?                                                                                                          
+  3. What response codes did they get?                                                                                                                     
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Step 2: Check If Any Were Accepted                                                                                                                       
+                                                                                                                                                           
+  SELECT                                                                                                                                                   
+    progressivoInvio,                                                                                                                                      
+    sostituzione,                                                                                                                                          
+    responseCode,                                                                                                                                          
+    datetime(createdAt) as when_sent                                                                                                                       
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE reportDate = '2026-01-21'                                                                                                                          
+    AND responseCode = '0000'                                                                                                                              
+  ORDER BY progressivoInvio;                                                                                                                               
+                                               

@@ -1,0 +1,214 @@
+ Good! The logs show everything is correct:                                                                                                               
+  - ✅ XML generated and sent                                                                                                                              
+  - ✅ Dates match (no 0603 risk)                                                                                                                          
+  - ✅ DTD validation passed                                                                                                                               
+  - ✅ S/MIME signature completed                                                                                                                          
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  PROMPT FOR REPLIT: MONITOR AND ANALYZE SIAE RESPONSES                                                                                                    
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  MONITOR SIAE RESPONSES AND ANALYZE ERROR PATTERNS                                                                                                        
+                                                                                                                                                           
+  The system is sending correctly. Now monitor incoming SIAE responses and identify patterns.                                                              
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 1: Check Incoming Responses                                                                                                                         
+                                                                                                                                                           
+  Poll for new responses every 2 minutes:                                                                                                                  
+                                                                                                                                                           
+  async function pollSIAEResponses() {                                                                                                                     
+    console.log('\n=== CHECKING FOR NEW SIAE RESPONSES ===');                                                                                              
+    console.log('Time:', new Date().toISOString());                                                                                                        
+                                                                                                                                                           
+    // Query transmissions awaiting response                                                                                                               
+    const pending = await db.all(`                                                                                                                         
+      SELECT                                                                                                                                               
+        id,                                                                                                                                                
+        reportDate,                                                                                                                                        
+        progressivoInvio,                                                                                                                                  
+        sostituzione,                                                                                                                                      
+        responseCode,                                                                                                                                      
+        status,                                                                                                                                            
+        filename,                                                                                                                                          
+        ROUND((julianday('now') - julianday(createdAt)) * 24 * 60) as minutes_ago                                                                          
+      FROM siaeTransmissions                                                                                                                               
+      WHERE status IN ('sent', 'pending')                                                                                                                  
+        AND createdAt >= datetime('now', '-2 hours')                                                                                                       
+      ORDER BY createdAt DESC                                                                                                                              
+    `);                                                                                                                                                    
+                                                                                                                                                           
+    console.log(`Found ${pending.length} pending transmissions:`);                                                                                         
+    pending.forEach(tx => {                                                                                                                                
+      console.log(`  - ${tx.filename} (${tx.minutes_ago} min ago) - Status: ${tx.status}`);                                                                
+    });                                                                                                                                                    
+                                                                                                                                                           
+    // Query recent responses received                                                                                                                     
+    const recent = await db.all(`                                                                                                                          
+      SELECT                                                                                                                                               
+        reportDate,                                                                                                                                        
+        progressivoInvio,                                                                                                                                  
+        sostituzione,                                                                                                                                      
+        responseCode,                                                                                                                                      
+        LEFT(responseMessage, 200) as response_preview,                                                                                                    
+        ROUND((julianday('now') - julianday(updatedAt)) * 24 * 60) as minutes_ago                                                                          
+      FROM siaeTransmissions                                                                                                                               
+      WHERE responseCode IS NOT NULL                                                                                                                       
+        AND responseCode != ''                                                                                                                             
+        AND updatedAt >= datetime('now', '-30 minutes')                                                                                                    
+      ORDER BY updatedAt DESC                                                                                                                              
+    `);                                                                                                                                                    
+                                                                                                                                                           
+    console.log(`\nReceived ${recent.length} responses in last 30 min:`);                                                                                  
+    recent.forEach(resp => {                                                                                                                               
+      const icon = resp.responseCode === '0000' ? '✅' : '❌';                                                                                             
+      console.log(`  ${icon} ${resp.reportDate} prog ${resp.progressivoInvio}: Code ${resp.responseCode}`);                                                
+    });                                                                                                                                                    
+  }                                                                                                                                                        
+                                                                                                                                                           
+  // Run immediately                                                                                                                                       
+  await pollSIAEResponses();                                                                                                                               
+                                                                                                                                                           
+  // Then poll every 2 minutes for 10 minutes                                                                                                              
+  for (let i = 0; i < 5; i++) {                                                                                                                            
+    await new Promise(resolve => setTimeout(resolve, 120000));  // 2 min                                                                                   
+    await pollSIAEResponses();                                                                                                                             
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 2: Analyze Error Code Patterns                                                                                                                      
+                                                                                                                                                           
+  Once responses arrive, analyze patterns:                                                                                                                 
+                                                                                                                                                           
+  -- Error frequency analysis                                                                                                                              
+  SELECT                                                                                                                                                   
+    responseCode,                                                                                                                                          
+    COUNT(*) as count,                                                                                                                                     
+    GROUP_CONCAT(DISTINCT reportDate) as affected_dates                                                                                                    
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE responseCode IS NOT NULL                                                                                                                           
+    AND responseCode != '0000'                                                                                                                             
+    AND createdAt >= datetime('now', '-24 hours')                                                                                                          
+  GROUP BY responseCode                                                                                                                                    
+  ORDER BY count DESC;                                                                                                                                     
+                                                                                                                                                           
+  -- Replacement success rate                                                                                                                              
+  SELECT                                                                                                                                                   
+    sostituzione,                                                                                                                                          
+    responseCode,                                                                                                                                          
+    COUNT(*) as count                                                                                                                                      
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE responseCode IS NOT NULL                                                                                                                           
+    AND createdAt >= datetime('now', '-24 hours')                                                                                                          
+  GROUP BY sostituzione, responseCode                                                                                                                      
+  ORDER BY sostituzione, responseCode;                                                                                                                     
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 3: Check Specific Report Status                                                                                                                     
+                                                                                                                                                           
+  Check the fresh report sent (2026-01-22):                                                                                                                
+                                                                                                                                                           
+  SELECT                                                                                                                                                   
+    id,                                                                                                                                                    
+    reportDate,                                                                                                                                            
+    progressivoInvio,                                                                                                                                      
+    sostituzione,                                                                                                                                          
+    responseCode,                                                                                                                                          
+    status,                                                                                                                                                
+    filename,                                                                                                                                              
+    responseMessage,                                                                                                                                       
+    datetime(createdAt) as sent_time,                                                                                                                      
+    datetime(updatedAt) as response_time,                                                                                                                  
+    ROUND((julianday(updatedAt) - julianday(createdAt)) * 24 * 60, 2) as response_delay_minutes                                                            
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE reportDate = '2026-01-22'                                                                                                                          
+    AND progressivoInvio = 1                                                                                                                               
+  ORDER BY createdAt DESC                                                                                                                                  
+  LIMIT 1;                                                                                                                                                 
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 4: If Still No Response After 10 Minutes                                                                                                            
+                                                                                                                                                           
+  If the fresh report gets no response after 10 minutes:                                                                                                   
+                                                                                                                                                           
+  console.log('\n=== DIAGNOSTIC: NO RESPONSE ANALYSIS ===');                                                                                               
+                                                                                                                                                           
+  // Check email service logs                                                                                                                              
+  console.log('1. Verify email was actually sent:');                                                                                                       
+  // Check your email service logs for confirmation                                                                                                        
+                                                                                                                                                           
+  // Check SIAE email inbox manually                                                                                                                       
+  console.log('2. Check tickefouryou@gmail.com inbox for:');                                                                                               
+  console.log('   - Any SIAE response emails');                                                                                                            
+  console.log('   - Bounce/delivery failure messages');                                                                                                    
+                                                                                                                                                           
+  // Verify email handler is running                                                                                                                       
+  console.log('3. Verify email response handler is active');                                                                                               
+  console.log('   - Check if processSIAEResponse() is being called');                                                                                      
+  console.log('   - Check for any email polling errors');                                                                                                  
+                                                                                                                                                           
+  // Compare with working transmission                                                                                                                     
+  const working = await db.get(`                                                                                                                           
+    SELECT * FROM siaeTransmissions                                                                                                                        
+    WHERE responseCode = '0000'                                                                                                                            
+    ORDER BY createdAt DESC                                                                                                                                
+    LIMIT 1                                                                                                                                                
+  `);                                                                                                                                                      
+                                                                                                                                                           
+  const notResponding = await db.get(`                                                                                                                     
+    SELECT * FROM siaeTransmissions                                                                                                                        
+    WHERE reportDate = '2026-01-22'                                                                                                                        
+    AND progressivoInvio = 1                                                                                                                               
+  `);                                                                                                                                                      
+                                                                                                                                                           
+  console.log('\n4. Compare XMLs:');                                                                                                                       
+  console.log('Working transmission filename:', working?.filename);                                                                                        
+  console.log('Not responding filename:', notResponding?.filename);                                                                                        
+                                                                                                                                                           
+  // Check for differences                                                                                                                                 
+  if (working && notResponding) {                                                                                                                          
+    const workingXmlHash = working.xmlHash;                                                                                                                
+    const currentXmlHash = notResponding.xmlHash;                                                                                                          
+    console.log('XML hashes match:', workingXmlHash === currentXmlHash ? '✅' : '❌');                                                                     
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 5: Response Handler Verification                                                                                                                    
+                                                                                                                                                           
+  Ensure your response processor is working:                                                                                                               
+                                                                                                                                                           
+  // Test that the response handler can process a known response                                                                                           
+  const testResponse = `REPLY:                                                                                                                             
+                                                                                                                                                           
+  CODICE:      0000                                                                                                                                        
+  DESCRIZIONE: Riepilogo elaborato correttamente                                                                                                           
+  DETTAGLIO:                                                                                                                                               
+  `;                                                                                                                                                       
+                                                                                                                                                           
+  console.log('Testing response processor...');                                                                                                            
+  try {                                                                                                                                                    
+    await processSIAEResponse('RPG_2026_01_22_001.xsi_2026_01_22_0800008258_0000.txt', testResponse);                                                      
+    console.log('✅ Response processor is working');                                                                                                       
+  } catch (error) {                                                                                                                                        
+    console.error('❌ Response processor error:', error.message);                                                                                          
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 6: Expected Response Timeline                                                                                                                       
+                                                                                                                                                           
+  Based on your previous logs:                                                                                                                             
+                                                                                                                                                           
+  - Immediate (0-2 min): Email delivery confirmation                                                                                                       
+  - Normal (2-10 min): SIAE processing and response                                                                                                        
+  - Delayed (10-30 min): Possible during high load                                                                                                         
+  - No response (>30 min): Likely issue with XML or transmission                                                                                           
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  REPORT BACK AFTER 10 MINUTES                                                                                                                             
+                                                                                                                                                           
+  Show me:                                                                                                                                                 
+                                                                                                                                                           
+  1. Poll results: Any responses received?                                                                                                                 
+  2. Error patterns: What codes are appearing most?                                                                                                        
+  3. Fresh report status: Did RPG_2026_01_22_001 get a response?                                                                                           
+  4. Response delay: How long between send and response? 

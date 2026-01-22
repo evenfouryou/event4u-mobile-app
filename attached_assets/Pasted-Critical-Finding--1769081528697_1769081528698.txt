@@ -1,0 +1,64 @@
+Critical Finding                                                                                                                                         
+                                                                                                                                                           
+  Email shows:                                                                                                                                             
+  - ✅ RPG_2026_01_21_896.xsi - 0000 (Success)                                                                                                             
+  - ✅ RPM_2025_12_00_875.xsi - 0000 (Success)                                                                                                             
+  - ✅ RPM_2025_11_00_591.xsi - 0000 (Success)                                                                                                             
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  PROMPT FOR REPLIT - CHECK DATABASE SYNC                                                                                                                  
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  VERIFY RESPONSES ARE SAVED + TEST REPLACEMENT ON SUCCESSFUL REPORT                                                                                       
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 1: Check if 0000 Responses Are in Database                                                                                                          
+                                                                                                                                                           
+  -- Check for the successful daily report                                                                                                                 
+  SELECT                                                                                                                                                   
+    id,                                                                                                                                                    
+    filename,                                                                                                                                              
+    reportDate,                                                                                                                                            
+    progressivoInvio,                                                                                                                                      
+    sostituzione,                                                                                                                                          
+    responseCode,                                                                                                                                          
+    status,                                                                                                                                                
+    datetime(createdAt) as sent_at,                                                                                                                        
+    datetime(updatedAt) as updated_at                                                                                                                      
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE filename = 'RPG_2026_01_21_896.xsi';                                                                                                               
+                                                                                                                                                           
+  Expected:                                                                                                                                                
+  - If responseCode = '0000' → ✅ Response handler working                                                                                                 
+  - If responseCode = NULL or status = 'failed' → ❌ Response handler broken                                                                               
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 2: If Not in Database - Fix Response Handler                                                                                                        
+                                                                                                                                                           
+  The emails ARE arriving, but not being processed. Check:                                                                                                 
+                                                                                                                                                           
+  console.log('=== CHECKING RESPONSE HANDLER ===\n');                                                                                                      
+                                                                                                                                                           
+  // Check if processSIAEResponse function exists and is being called                                                                                      
+  console.log('1. Email polling active?');                                                                                                                 
+  // Your system should be polling tickefouryou@gmail.com                                                                                                  
+                                                                                                                                                           
+  console.log('2. Response files downloaded?');                                                                                                            
+  // Check if .txt files are being downloaded from emails                                                                                                  
+                                                                                                                                                           
+  console.log('3. Parser working?');                                                                                                                       
+  // Test parsing the filename: RPG_2026_01_21_896.xsi_2026_01_22_0800008258_0000.txt                                                                      
+                                                                                                                                                           
+  const testFilename = 'RPG_2026_01_21_896.xsi_2026_01_22_0800008258_0000.txt';                                                                            
+  const match = testFilename.match(/^(RPG|RPM|RMG)_(\d{4})_(\d{2})_(\d{2})_(\d+)/);                                                                        
+                                                                                                                                                           
+  if (match) {                                                                                                                                             
+    const [_, reportType, year, month, day, progressivo] = match;                                                                                          
+    console.log('✅ Parser working:');                                                                                                                     
+    console.log('  Type:', reportType);                                                                                                                    
+    console.log('  Date:', `${year}-${month}-${day}`);                                                                                                     
+    console.log('  Progressivo:', progressivo);                                                                                                            
+  } else {                                                                                                                                                 
+    console.log('❌ Parser FAILED');                                                                                                                       
+  }                                                                                                                                                        
+                                                    

@@ -1,0 +1,215 @@
+Good insight - if SIAE isn't responding at all, the XML is likely malformed or has invalid field values.                                                 
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  PROMPT FOR REPLIT                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  DEBUG: NO SIAE RESPONSE - VALIDATE XML STRUCTURE                                                                                                         
+                                                                                                                                                           
+  SIAE is not responding at all (no 0000, no errors). This suggests malformed XML or invalid field values.                                                 
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 1: Find a Working XML from Last Night                                                                                                               
+                                                                                                                                                           
+  Query the database for a transmission that GOT a response (any response):                                                                                
+                                                                                                                                                           
+  SELECT                                                                                                                                                   
+    reportDate,                                                                                                                                            
+    progressivoInvio,                                                                                                                                      
+    responseCode,                                                                                                                                          
+    LEFT(xmlContent, 2000) as xml_start,                                                                                                                   
+    createdAt                                                                                                                                              
+  FROM siaeTransmissions                                                                                                                                   
+  WHERE responseCode IS NOT NULL                                                                                                                           
+    AND responseCode != ''                                                                                                                                 
+    AND createdAt >= datetime('now', '-24 hours')                                                                                                          
+  ORDER BY createdAt DESC                                                                                                                                  
+  LIMIT 1;                                                                                                                                                 
+                                                                                                                                                           
+  Save this XML - it's our known-good reference.                                                                                                           
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 2: Create Minimal Fresh Test Event                                                                                                                  
+                                                                                                                                                           
+  Create a new event with minimal data for tomorrow's date (2026-01-23):                                                                                   
+                                                                                                                                                           
+  const testEvent = {                                                                                                                                      
+    date: '2026-01-23',                                                                                                                                    
+    time: '20:00',                                                                                                                                         
+    name: 'Test Event Minimal',                                                                                                                            
+    venue: 'Locale Test',                                                                                                                                  
+    venueCode: '0000000000001',                                                                                                                            
+    genre: 61,  // Sala da ballo                                                                                                                           
+    tickets: [                                                                                                                                             
+      {                                                                                                                                                    
+        type: 'I1',  // Ingresso                                                                                                                           
+        quantity: 1,                                                                                                                                       
+        price: 1000  // €10.00                                                                                                                             
+      }                                                                                                                                                    
+    ]                                                                                                                                                      
+  };                                                                                                                                                       
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 3: Generate and Log Complete XML                                                                                                                    
+                                                                                                                                                           
+  Generate the report and log EVERY detail:                                                                                                                
+                                                                                                                                                           
+  console.log('=== COMPLETE XML FOR VALIDATION ===');                                                                                                      
+  console.log('Length:', xmlContent.length);                                                                                                               
+  console.log('Encoding:', Buffer.from(xmlContent).toString('utf-8').substring(0, 50));                                                                    
+  console.log('\n=== FULL XML ===');                                                                                                                       
+  console.log(xmlContent);                                                                                                                                 
+  console.log('\n=== XML ATTRIBUTES ===');                                                                                                                 
+                                                                                                                                                           
+  // Extract and validate each critical attribute                                                                                                          
+  const matches = {                                                                                                                                        
+    data: xmlContent.match(/Data="(\d+)"/),                                                                                                                
+    dataGen: xmlContent.match(/DataGenerazione="(\d+)"/),                                                                                                  
+    ora: xmlContent.match(/OraGenerazione="(\d+)"/),                                                                                                       
+    prog: xmlContent.match(/ProgressivoGenerazione="(\d+)"/),                                                                                              
+    sost: xmlContent.match(/Sostituzione="(\w+)"/),                                                                                                        
+    denom: xmlContent.match(/<Denominazione>(.*?)<\/Denominazione>/),                                                                                      
+    cf: xmlContent.match(/<CodiceFiscale>(\d+)<\/CodiceFiscale>/),                                                                                         
+    locale: xmlContent.match(/<CodiceLocale>(\d+)<\/CodiceLocale>/),                                                                                       
+    genere: xmlContent.match(/<TipoGenere>(\d+)<\/TipoGenere>/),                                                                                           
+    corrispettivo: xmlContent.match(/<CorrispettivoLordo>(\d+)<\/CorrispettivoLordo>/)                                                                     
+  };                                                                                                                                                       
+                                                                                                                                                           
+  console.log('Extracted values:');                                                                                                                        
+  Object.keys(matches).forEach(key => {                                                                                                                    
+    console.log(`  ${key}:`, matches[key] ? matches[key][1] : '❌ NOT FOUND');                                                                             
+  });                                                                                                                                                      
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 4: Validate Against Known Issues                                                                                                                    
+                                                                                                                                                           
+  Check for common problems:                                                                                                                               
+                                                                                                                                                           
+  console.log('\n=== VALIDATION CHECKS ===');                                                                                                              
+                                                                                                                                                           
+  // Check 1: XML declaration                                                                                                                              
+  if (!xmlContent.startsWith('<?xml version="1.0" encoding="UTF-8"?>')) {                                                                                  
+    console.error('❌ Invalid XML declaration');                                                                                                           
+  }                                                                                                                                                        
+                                                                                                                                                           
+  // Check 2: Root element case sensitivity                                                                                                                
+  if (!xmlContent.includes('<RiepilogoGiornaliero')) {                                                                                                     
+    console.error('❌ Missing or misspelled RiepilogoGiornaliero element');                                                                                
+  }                                                                                                                                                        
+                                                                                                                                                           
+  // Check 3: Required elements present                                                                                                                    
+  const required = [                                                                                                                                       
+    'Titolare',                                                                                                                                            
+    'Denominazione',                                                                                                                                       
+    'CodiceFiscale',                                                                                                                                       
+    'SistemaEmissione',                                                                                                                                    
+    'Organizzatore',                                                                                                                                       
+    'Evento',                                                                                                                                              
+    'Intrattenimento',                                                                                                                                     
+    'Locale',                                                                                                                                              
+    'CodiceLocale'                                                                                                                                         
+  ];                                                                                                                                                       
+                                                                                                                                                           
+  required.forEach(elem => {                                                                                                                               
+    if (!xmlContent.includes(`<${elem}`)) {                                                                                                                
+      console.error(`❌ Missing required element: ${elem}`);                                                                                               
+    } else {                                                                                                                                               
+      console.log(`✅ Found: ${elem}`);                                                                                                                    
+    }                                                                                                                                                      
+  });                                                                                                                                                      
+                                                                                                                                                           
+  // Check 4: Valid attribute values                                                                                                                       
+  const validations = {                                                                                                                                    
+    'Sostituzione': /^(N|S)$/,                                                                                                                             
+    'TipoOrganizzatore': /^(G|I|S)$/,                                                                                                                      
+    'TipoTassazione': /^(S|E|N)$/                                                                                                                          
+  };                                                                                                                                                       
+                                                                                                                                                           
+  Object.keys(validations).forEach(attr => {                                                                                                               
+    const match = xmlContent.match(new RegExp(`${attr}[= ]+"?(\w+)"?`));                                                                                   
+    if (match) {                                                                                                                                           
+      if (!validations[attr].test(match[1])) {                                                                                                             
+        console.error(`❌ Invalid ${attr} value: ${match[1]}`);                                                                                            
+      } else {                                                                                                                                             
+        console.log(`✅ Valid ${attr}: ${match[1]}`);                                                                                                      
+      }                                                                                                                                                    
+    }                                                                                                                                                      
+  });                                                                                                                                                      
+                                                                                                                                                           
+  // Check 5: Numeric fields are numeric                                                                                                                   
+  const numericFields = ['CorrispettivoLordo', 'TipoGenere', 'Capienza'];                                                                                  
+  numericFields.forEach(field => {                                                                                                                         
+    const match = xmlContent.match(new RegExp(`<${field}>(.*?)<\/${field}>`));                                                                             
+    if (match && !/^\d+$/.test(match[1])) {                                                                                                                
+      console.error(`❌ ${field} is not numeric: ${match[1]}`);                                                                                            
+    }                                                                                                                                                      
+  });                                                                                                                                                      
+                                                                                                                                                           
+  // Check 6: Case sensitivity issues                                                                                                                      
+  if (xmlContent.includes('dataGenerazione') || xmlContent.includes('Datageneration')) {                                                                   
+    console.error('❌ DataGenerazione has wrong case');                                                                                                    
+  }                                                                                                                                                        
+                                                                                                                                                           
+  console.log('\n=== END VALIDATION ===');                                                                                                                 
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 5: Compare with Working XML                                                                                                                         
+                                                                                                                                                           
+  // If you have the working XML from Step 1:                                                                                                              
+  const workingXml = `...`;  // Paste here                                                                                                                 
+                                                                                                                                                           
+  console.log('\n=== DIFF WITH WORKING XML ===');                                                                                                          
+  console.log('Working XML root:', workingXml.match(/<\w+\s/)[0]);                                                                                         
+  console.log('Current XML root:', xmlContent.match(/<\w+\s/)[0]);                                                                                         
+                                                                                                                                                           
+  console.log('Working attributes order:', workingXml.match(/<RiepilogoGiornaliero[^>]+>/));                                                               
+  console.log('Current attributes order:', xmlContent.match(/<RiepilogoGiornaliero[^>]+>/));                                                               
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 6: Send and Monitor                                                                                                                                 
+                                                                                                                                                           
+  // Send the report                                                                                                                                       
+  await sendSIAEReport('RPG', '2026-01-23', testEvent);                                                                                                    
+                                                                                                                                                           
+  // Wait 5 minutes                                                                                                                                        
+  console.log('Waiting 5 minutes for SIAE response...');                                                                                                   
+  await new Promise(resolve => setTimeout(resolve, 300000));                                                                                               
+                                                                                                                                                           
+  // Check for response                                                                                                                                    
+  const response = await checkEmailForResponse('RPG_2026_01_23_001.xsi');                                                                                  
+  if (!response) {                                                                                                                                         
+    console.error('❌ NO RESPONSE from SIAE after 5 minutes');                                                                                             
+    console.log('This confirms XML is malformed or rejected silently');                                                                                    
+  } else {                                                                                                                                                 
+    console.log('✅ Got response:', response.code);                                                                                                        
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  STEP 7: Common XML Issues to Check                                                                                                                       
+                                                                                                                                                           
+  Case Sensitivity:                                                                                                                                        
+  - DataGenerazione not dataGenerazione or Datageneration                                                                                                  
+  - TipoOrganizzatore not tipoorganizzatore                                                                                                                
+                                                                                                                                                           
+  Invalid Values:                                                                                                                                          
+  - Sostituzione must be exactly "N" or "S" (uppercase)                                                                                                    
+  - TipoOrganizzatore must be "G", "I", or "S"                                                                                                             
+  - TipoTassazione must be "S", "E", or "N"                                                                                                                
+                                                                                                                                                           
+  Missing Required Elements:                                                                                                                               
+  - Every <Evento> must have <Intrattenimento>, <Locale>, <MultiGenere>                                                                                    
+                                                                                                                                                           
+  Encoding Issues:                                                                                                                                         
+  - Must be UTF-8                                                                                                                                          
+  - No BOM (byte order mark)                                                                                                                               
+  - Special characters properly escaped                                                                                                                    
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  REPORT BACK                                                                                                                                              
+                                                                                                                                                           
+  Show me:                                                                                                                                                 
+  1. ✅ Complete XML generated for the fresh event                                                                                                         
+  2. ✅ Validation check results (all required elements found?)                                                                                            
+  3. ✅ Any differences from working XML                                                                                                                   
+  4. ✅ Whether SIAE responds at all (even with error)                                                                                                     
+                                                                                                                                                           

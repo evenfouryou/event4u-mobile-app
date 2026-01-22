@@ -1617,16 +1617,36 @@ async function checkSiaeEmailResponses() {
             .orderBy(desc(siaeTransmissions.sentAt))
             .limit(10);
           
-          // Match trasmissione con risposta (per subject email)
+          // Match trasmissione con risposta (per subject email o attachment filename)
           for (const transmission of transmissions) {
             if (!transmission.fileName) continue;
             
             // Verifica se il subject della risposta contiene riferimenti alla trasmissione
-            const fileBaseName = transmission.fileName.replace(/\.(xml|p7m)$/i, '');
-            if (response.subject?.includes(fileBaseName) || 
+            const fileBaseName = transmission.fileName.replace(/\.(xml|p7m|xsi)$/i, '');
+            
+            // Check subject, body, and attachment filenames for match
+            let matched = response.subject?.includes(fileBaseName) || 
                 response.body?.includes(fileBaseName) ||
-                response.body?.includes(transmission.id)) {
-              
+                response.body?.includes(transmission.id);
+            
+            // Also check attachment filenames (format: RPG_2026_01_21_003.xsi_2026_01_22_...)
+            if (!matched && response.attachments) {
+              for (const att of response.attachments) {
+                if (att.filename?.startsWith(fileBaseName)) {
+                  matched = true;
+                  // Use attachment's parsed data if available
+                  if (att.parsed) {
+                    response.status = att.parsed.code === '0000' ? 'accepted' : 'rejected';
+                    response.errorCode = att.parsed.code || undefined;
+                    response.errorMessage = att.parsed.description || response.errorMessage;
+                    response.protocolNumber = att.parsed.protocolNumber || response.protocolNumber;
+                  }
+                  break;
+                }
+              }
+            }
+            
+            if (matched) {
               const newStatus = response.status === 'accepted' ? 'received' : 'error';
               
               await db.update(siaeTransmissions)
@@ -1642,7 +1662,7 @@ async function checkSiaeEmailResponses() {
                 })
                 .where(eq(siaeTransmissions.id, transmission.id));
               
-              log(`Risposta SIAE processata per trasmissione ${transmission.id}: ${newStatus}`);
+              log(`Risposta SIAE processata per trasmissione ${transmission.id}: ${newStatus} (code: ${response.errorCode})`);
               break;
             }
           }
