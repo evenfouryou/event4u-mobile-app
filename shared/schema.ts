@@ -1367,6 +1367,15 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   ticketsCancelled: integer("tickets_cancelled").notNull().default(0),
   totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default('0'),
   autoSendReports: boolean("auto_send_reports").notNull().default(true),
+  // Gestione posticipo/annullamento evento (normativa SIAE)
+  eventStatus: varchar("event_status", { length: 20 }).notNull().default('active'), // active, postponed, cancelled
+  originalEventDate: timestamp("original_event_date"), // Data originale per calcolo limite 90gg/12mesi
+  postponedAt: timestamp("postponed_at"), // Quando è stato posticipato
+  postponementReason: text("postponement_reason"), // Motivo posticipo
+  cancelledAt: timestamp("cancelled_at"), // Quando è stato annullato
+  cancellationReason: text("cancellation_reason"), // Motivo annullamento
+  refundDeadline: timestamp("refund_deadline"), // Scadenza per richiesta rimborso
+  refundsProcessed: integer("refunds_processed").notNull().default(0), // Contatore rimborsi elaborati
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
