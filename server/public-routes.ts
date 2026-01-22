@@ -542,12 +542,20 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
       
       // 2. Crea evento ticketed
       const ticketedEventId = randomUUID();
+      // Determina se è genere intrattenimento (60-69)
+      const genreNum = parseInt(genre.code);
+      const isIntrattenimento = genreNum >= 60 && genreNum <= 69;
+      
+      // Il codice locale SIAE deve essere esattamente 13 cifre
+      const siaeLocationCode = (location.siaeLocationCode || '0000000000001').padStart(13, '0').substring(0, 13);
+      
       await db.insert(siaeTicketedEvents).values({
         id: ticketedEventId, eventId, companyId,
-        siaeLocationCode: location.siaeLocationCode || '0000000000001',
+        siaeLocationCode: siaeLocationCode,
         genreCode: genre.code,
         author, performer,
-        taxType: parseInt(genre.code) >= 60 && parseInt(genre.code) <= 69 ? 'I' : 'S',
+        taxType: isIntrattenimento ? 'I' : 'S',
+        entertainmentIncidence: isIntrattenimento ? 100 : null, // 100% per discoteche/ballo
         totalCapacity: 500,
         requiresNominative: true,
         ticketingStatus: 'closed',
