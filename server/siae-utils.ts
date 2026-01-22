@@ -4840,11 +4840,14 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   const isMonthly = reportKind === 'mensile';
   const now = new Date();
   
-  // FIX SIAE 0603: DataGenerazione DEVE essere IDENTICA a Data/Mese del report
-  // NON è la data di creazione del file, ma deve corrispondere al periodo del report
-  // Tutte e 3 le date devono coincidere: Filename, Data XML, DataGenerazione XML
-  const dataGenAttr = formatSiaeDateCompact(reportDate); // USA reportDate, NON now!
-  const oraGen = formatSiaeTimeCompact(now); // L'ora può essere quella attuale
+  // FIX 2026-01-22: DataGenerazione varia in base al tipo report
+  // - RPM (mensile): DataGenerazione = DATA ODIERNA (quando viene generato il file)
+  // - RMG (giornaliero): DataGenerazione = DATA EVENTO (uguale all'attributo Data)
+  // Confermato dai report RPM accettati da SIAE: Mese="202601" + DataGenerazione="20260122"
+  const dataGenAttr = isMonthly 
+    ? formatSiaeDateCompact(now)        // RPM: usa data odierna
+    : formatSiaeDateCompact(reportDate); // RMG: usa data evento
+  const oraGen = formatSiaeTimeCompact(now); // L'ora è sempre quella attuale
 
   let periodAttrName: string;
   let periodAttrValue: string;
