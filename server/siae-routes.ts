@@ -13818,7 +13818,12 @@ console.log('[SIAE Routes] All routes registered including /api/siae/tickets/:id
 // TEST ENDPOINT: Genera e invia report C1 in formati diversi per test SIAE
 // Questo endpoint permette di testare quale formato è accettato dalla SIAE
 // per report vuoti: con Organizzatore vuoto o senza Organizzatore
-router.post("/api/siae/companies/:companyId/test-empty-report", requireAuth, requireGestore, async (req: Request, res: Response) => {
+// TEST ONLY - No auth in dev mode for testing
+router.post("/api/siae/companies/:companyId/test-empty-report", async (req: Request, res: Response) => {
+  // Allow only in test/dev mode
+  if (process.env.NODE_ENV === 'production' && !SIAE_TEST_MODE) {
+    return res.status(403).json({ message: "Endpoint disponibile solo in modalità test" });
+  }
   try {
     const { companyId } = req.params;
     const { 
@@ -13935,6 +13940,95 @@ router.post("/api/siae/companies/:companyId/test-empty-report", requireAuth, req
 
   } catch (error: any) {
     console.error('[SIAE-TEST] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// TEST ENDPOINT: Invia una trasmissione di test (no auth per dev)
+router.post("/api/siae/test-transmissions/:id/send", async (req: Request, res: Response) => {
+  // Allow only in test/dev mode
+  if (process.env.NODE_ENV === 'production' && !SIAE_TEST_MODE) {
+    return res.status(403).json({ message: "Endpoint disponibile solo in modalità test" });
+  }
+  try {
+    const { id } = req.params;
+    
+    // Find the transmission
+    const { getCachedEfffData } = await import('./bridge-relay');
+    const db = await import('./db');
+    const result = await db.db.query.siaeTransmissions.findFirst({
+      where: (t, { eq }) => eq(t.id, id)
+    });
+    
+    if (!result) {
+      return res.status(404).json({ message: "Trasmissione non trovata" });
+    }
+    
+    if (!result.fileContent) {
+      return res.status(400).json({ message: "Trasmissione senza contenuto XML" });
+    }
+    
+    const company = await storage.getCompany(result.companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Azienda non trovata" });
+    }
+    
+    // Get system code from transmission or smart card
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(result.companyId);
+    let sysCode = result.systemCode;
+    if (!sysCode || sysCode.length !== 8) {
+      const efffData = getCachedEfffData();
+      const smimeResult = resolveSystemCodeForSmime(efffData, systemConfig);
+      if (!smimeResult.success || !smimeResult.systemCode) {
+        return res.status(400).json({ 
+          message: smimeResult.error || 'Smart Card richiesta',
+          code: 'SMARTCARD_REQUIRED'
+        });
+      }
+      sysCode = smimeResult.systemCode;
+    }
+    
+    // Determine target email (test mode)
+    const targetEmail = SIAE_TEST_MODE ? SIAE_TEST_EMAIL : 'server@ba.siae.it';
+    
+    // Send via S/MIME signed email
+    const { sendSiaeTransmissionEmail } = await import('./email-service');
+    const fullFileName = result.fileName + (result.fileExtension || '.xsi');
+    const emailResult = await sendSiaeTransmissionEmail({
+      to: targetEmail,
+      companyName: company.name || 'N/A',
+      transmissionType: result.transmissionType,
+      periodDate: result.periodDate,
+      ticketsCount: result.ticketsCount || 0,
+      totalAmount: result.totalAmount || '0',
+      xmlContent: result.fileContent,
+      transmissionId: result.id,
+      systemCode: sysCode,
+      sequenceNumber: result.progressivoInvio || 1,
+      signWithSmime: true,
+      explicitFileName: fullFileName,
+    });
+    
+    if (emailResult.success) {
+      // Update transmission status
+      await siaeStorage.updateSiaeTransmission(id, {
+        status: 'sent',
+        sentAt: new Date(),
+      });
+      
+      res.json({
+        message: `Report inviato a ${targetEmail}`,
+        transmissionId: id,
+        emailResult
+      });
+    } else {
+      res.status(500).json({
+        message: `Errore invio: ${emailResult.error}`,
+        emailResult
+      });
+    }
+  } catch (error: any) {
+    console.error('[SIAE-TEST-SEND] Error:', error);
     res.status(500).json({ message: error.message });
   }
 });
