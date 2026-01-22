@@ -1906,6 +1906,10 @@ export const siaeTransmissionSettings = pgTable("siae_transmission_settings", {
   // Auto-invio
   autoSendEnabled: boolean("auto_send_enabled").notNull().default(false), // Abilita invio automatico scheduler
   
+  // Ora di invio programmato (0-23) - Default 01:00 per eventi notturni
+  // Normativa SIAE: RMG entro 24:00 giorno successivo, RPM entro 5° giorno lavorativo mese successivo
+  sendHour: integer("send_hour").notNull().default(1), // Ora invio (01:00 di notte)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

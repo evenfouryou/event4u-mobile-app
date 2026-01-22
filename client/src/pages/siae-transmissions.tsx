@@ -102,15 +102,18 @@ import {
   Save,
 } from "lucide-react";
 
+// Schema impostazioni trasmissione automatica SIAE
+// Normativa: RMG entro 24h dal giorno successivo, RPM entro 5° giorno lavorativo mese successivo
 const transmissionSettingsSchema = z.object({
   dailyEnabled: z.boolean(),
-  dailyIntervalDays: z.number().min(1).max(30),
+  dailyIntervalDays: z.number().min(1).max(30), // Intervallo batch giornaliero
   endEventEnabled: z.boolean(),
-  endEventDelayDays: z.number().min(1).max(30),
+  endEventDelayDays: z.number().min(0).max(30), // 0 = invio immediato dopo fine evento
   monthlyEnabled: z.boolean(),
-  monthlyDelayDays: z.number().min(1).max(30),
-  monthlyRecurringDay: z.number().min(1).max(28),
+  monthlyDelayDays: z.number().min(0).max(30), // 0 = invio il giorno stesso (es. 1° del mese)
+  monthlyRecurringDay: z.number().min(1).max(28), // Giorno del mese per invio RPM
   autoSendEnabled: z.boolean(),
+  sendHour: z.number().min(0).max(23), // Ora di invio (0-23), default 1 = 01:00
 });
 
 type TransmissionSettingsFormValues = z.infer<typeof transmissionSettingsSchema>;
@@ -162,17 +165,19 @@ export default function SiaeTransmissionsPage() {
   const companyId = isSuperAdmin ? selectedCompanyId : user?.companyId;
 
   // Settings form with react-hook-form
+  // Default secondo normativa SIAE: RMG entro 24h, RPM entro 5° giorno lavorativo
   const settingsForm = useForm<TransmissionSettingsFormValues>({
     resolver: zodResolver(transmissionSettingsSchema),
     defaultValues: {
       dailyEnabled: true,
-      dailyIntervalDays: 5,
+      dailyIntervalDays: 1, // Normativa: ogni giorno
       endEventEnabled: true,
-      endEventDelayDays: 5,
+      endEventDelayDays: 1, // Normativa: 1 giorno dopo evento (entro 24h)
       monthlyEnabled: true,
-      monthlyDelayDays: 5,
-      monthlyRecurringDay: 1,
+      monthlyDelayDays: 0, // Normativa: il giorno stesso del mese
+      monthlyRecurringDay: 1, // 1° del mese successivo
       autoSendEnabled: false,
+      sendHour: 1, // 01:00 di notte (eventi finiscono tardi)
     },
   });
 
@@ -187,17 +192,19 @@ export default function SiaeTransmissionsPage() {
   });
 
   // Update form when settings are loaded
+  // Default secondo normativa SIAE
   useEffect(() => {
     if (transmissionSettings) {
       settingsForm.reset({
         dailyEnabled: transmissionSettings.dailyEnabled ?? true,
-        dailyIntervalDays: transmissionSettings.dailyIntervalDays ?? 5,
+        dailyIntervalDays: transmissionSettings.dailyIntervalDays ?? 1,
         endEventEnabled: transmissionSettings.endEventEnabled ?? true,
-        endEventDelayDays: transmissionSettings.endEventDelayDays ?? 5,
+        endEventDelayDays: transmissionSettings.endEventDelayDays ?? 1,
         monthlyEnabled: transmissionSettings.monthlyEnabled ?? true,
-        monthlyDelayDays: transmissionSettings.monthlyDelayDays ?? 5,
+        monthlyDelayDays: transmissionSettings.monthlyDelayDays ?? 0,
         monthlyRecurringDay: transmissionSettings.monthlyRecurringDay ?? 1,
         autoSendEnabled: transmissionSettings.autoSendEnabled ?? false,
+        sendHour: transmissionSettings.sendHour ?? 1,
       });
     }
   }, [transmissionSettings, settingsForm]);
@@ -993,10 +1000,10 @@ export default function SiaeTransmissionsPage() {
                                   <FormControl>
                                     <Input
                                       type="number"
-                                      min={1}
+                                      min={0}
                                       max={30}
                                       {...field}
-                                      onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                                       data-testid="input-end-event-delay"
                                     />
                                   </FormControl>
@@ -1061,10 +1068,10 @@ export default function SiaeTransmissionsPage() {
                                 <FormControl>
                                   <Input
                                     type="number"
-                                    min={1}
+                                    min={0}
                                     max={30}
                                     {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                                     data-testid="input-monthly-delay"
                                   />
                                 </FormControl>
@@ -1091,6 +1098,46 @@ export default function SiaeTransmissionsPage() {
                             )}
                           />
                         </div>
+                      </div>
+
+                      {/* Ora invio programmato */}
+                      <div className="p-4 rounded-lg border bg-muted/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="font-medium">Ora Invio Programmato</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Ora di invio automatico (01:00 consigliato per eventi notturni)
+                            </p>
+                          </div>
+                        </div>
+                        <FormField
+                          control={settingsForm.control}
+                          name="sendHour"
+                          render={({ field }) => (
+                            <FormItem className="w-32">
+                              <FormControl>
+                                <Select
+                                  value={String(field.value)}
+                                  onValueChange={(v) => field.onChange(parseInt(v))}
+                                >
+                                  <SelectTrigger data-testid="select-send-hour">
+                                    <SelectValue placeholder="Ora" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({ length: 24 }, (_, i) => (
+                                      <SelectItem key={i} value={String(i)}>
+                                        {String(i).padStart(2, '0')}:00
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Normativa SIAE: RMG entro 24h dal giorno successivo, RPM entro 5° giorno lavorativo del mese
+                        </p>
                       </div>
 
                       {/* Auto-send toggle */}
