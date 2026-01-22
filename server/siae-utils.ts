@@ -1442,6 +1442,64 @@ export function getSiaeEmailForEnvironment(systemId: string | null | undefined):
     : 'server@ba.siae.it'; // Email produzione (da verificare con SIAE)
 }
 
+// ==================== Entertainment Incidence Defaults ====================
+
+/**
+ * Calcola l'incidenza intrattenimento di default in base al genere evento
+ * Conforme a DPR 640/1972 - Tariffa allegata
+ * 
+ * Regole:
+ * - Generi 60-69 (Ballo/Discoteca): Default 100% (intrattenimento puro con musica registrata)
+ * - Altri generi: Default 0% (spettacolo)
+ * 
+ * L'utente può sempre personalizzare il valore se l'evento ha caratteristiche diverse
+ * (es. discoteca con musica dal vivo >50% = incidenza 0%)
+ * 
+ * @param genreCode Codice genere SIAE (01-99)
+ * @returns Incidenza intrattenimento di default (0-100)
+ */
+export function getDefaultEntertainmentIncidence(genreCode: string | null | undefined): number {
+  if (!genreCode) return 0;
+  
+  const code = parseInt(genreCode, 10);
+  if (isNaN(code)) return 0;
+  
+  // Generi 60-69: Trattenimenti danzanti (discoteca, ballo, ecc.)
+  // Default 100% = intrattenimento puro (musica registrata/DJ)
+  // Se musica dal vivo >50%, l'organizzatore può impostare 0%
+  if (code >= 60 && code <= 69) {
+    return 100;
+  }
+  
+  // Altri generi: spettacolo (default 0%)
+  return 0;
+}
+
+/**
+ * Determina il tipo di tassazione di default in base al genere
+ * 
+ * Regole:
+ * - Generi 60-69 (Ballo/Discoteca): Default 'I' (Intrattenimento - ISI + IVA 22%)
+ * - Altri generi: Default 'S' (Spettacolo - solo IVA)
+ * 
+ * @param genreCode Codice genere SIAE (01-99)
+ * @returns Tipo tassazione di default ('S' = Spettacolo, 'I' = Intrattenimento)
+ */
+export function getDefaultTaxType(genreCode: string | null | undefined): 'S' | 'I' {
+  if (!genreCode) return 'S';
+  
+  const code = parseInt(genreCode, 10);
+  if (isNaN(code)) return 'S';
+  
+  // Generi 60-69: Trattenimenti danzanti → Intrattenimento
+  if (code >= 60 && code <= 69) {
+    return 'I';
+  }
+  
+  // Altri generi: Spettacolo
+  return 'S';
+}
+
 // ==================== DTD Validation ====================
 
 /**

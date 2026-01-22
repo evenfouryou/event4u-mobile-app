@@ -23,6 +23,11 @@ The core data model links Companies to Users, Locations, Events, Products, and P
 ### SIAE Ticketing Module
 A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations. It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types. The system includes robust auto-correction and pre-transmission validation for SIAE XML, including DTD validation and system code checks, to prevent common errors and ensure consistent system codes. This validation also prevents RPM reports from being sent for future months or including future events. System code resolution actively reads the EFFF file from the Smart Card for S/MIME signed transmissions to ensure correctness.
 
+**Entertainment Incidence Auto-Calculation (DPR 640/1972):**
+-   Genres 60-69 (dance/disco): Default 100% entertainment incidence + tax type 'I' (ISI + IVA 22%)
+-   Other genres: Default 0% entertainment incidence + tax type 'S' (spectacle, IVA only)
+-   Users can override these defaults if their event has different characteristics (e.g., disco with >50% live music = 0% incidence)
+
 ### International Operating Mode
 The system supports international ticket sales with SIAE exemption through a flexible operating mode system:
 -   **Operating Modes**: Gestori can choose between `italy_only` (default), `international_only`, or `hybrid` mode during registration or via admin settings.

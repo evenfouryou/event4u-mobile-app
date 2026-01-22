@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode, validateSiaeFileName } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode, validateSiaeFileName, getDefaultEntertainmentIncidence, getDefaultTaxType } from './siae-utils';
 import { createSiaeTransmissionWithXml, type CreateSiaeTransmissionParams } from './siae-transmission-service';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
@@ -2288,6 +2288,12 @@ router.post("/api/siae/ticketed-events", requireAuth, requireOrganizer, async (r
     const data = insertSiaeTicketedEventSchema.parse(req.body);
     const user = req.user as any;
     
+    // Apply automatic defaults for entertainment incidence and tax type based on genre
+    // User can override these values if they want different settings
+    // DPR 640/1972: Generi 60-69 (ballo/discoteca) default to 100% entertainment with 'I' tax type
+    const entertainmentIncidence = data.entertainmentIncidence ?? getDefaultEntertainmentIncidence(data.genreCode);
+    const taxType = data.taxType ?? getDefaultTaxType(data.genreCode);
+    
     // Check if user has skipSiaeApproval flag
     let approvalStatus = 'pending';
     let approvedBy = null;
@@ -2314,6 +2320,8 @@ router.post("/api/siae/ticketed-events", requireAuth, requireOrganizer, async (r
     
     const event = await siaeStorage.createSiaeTicketedEvent({
       ...data,
+      entertainmentIncidence,
+      taxType,
       approvalStatus,
       approvedBy,
       approvedAt,
