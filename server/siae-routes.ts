@@ -5907,12 +5907,19 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       return res.status(400).json({ message: "Trasmissione senza evento associato" });
     }
     
-    // Count existing transmissions for this event to get next progressivo
+    // FIX 2026-01-22: Per sostituzioni (errore 0604), usare lo STESSO progressivo del report originale
+    // SIAE richiede che Sostituzione="S" sia accompagnato dallo stesso ProgressivoGenerazione
+    // del report che si vuole sostituire, NON un nuovo progressivo incrementale.
     const existingTransmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(original.ticketedEventId);
     const sameTypeTransmissions = existingTransmissions.filter(t => 
       t.transmissionType === original.transmissionType
     );
-    const nextProgressivo = sameTypeTransmissions.length + 1;
+    
+    // Se forceSubstitution=true (per errori 0604 "già elaborato"), usa lo stesso progressivo dell'originale
+    // Altrimenti usa un nuovo progressivo (per errori diversi che richiedono un nuovo invio)
+    const nextProgressivo = forceSubstitution 
+      ? (original.progressivoInvio || 1)  // Riutilizza progressivo originale per sostituzione
+      : sameTypeTransmissions.length + 1;  // Nuovo progressivo per reinvio normale
     
     // Get event and company data for XML regeneration
     const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(original.ticketedEventId);
