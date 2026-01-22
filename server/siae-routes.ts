@@ -5895,7 +5895,7 @@ router.get("/api/siae/transmissions-list", requireAuth, requireGestore, async (r
 router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { toEmail } = req.body;
+    const { toEmail, forceSubstitution = true } = req.body; // FIX 2026-01-22: Aggiungi forceSubstitution (default true per resend)
     
     // Get original transmission
     const original = await siaeStorage.getSiaeTransmission(id);
