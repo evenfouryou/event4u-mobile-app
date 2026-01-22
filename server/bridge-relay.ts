@@ -21,6 +21,10 @@ const MASTER_TOKEN = process.env.SIAE_MASTER_TOKEN || '';
 // Single global bridge (Event Four You's desktop app)
 let globalBridge: BridgeConnection | null = null;
 
+// Track disconnect info for diagnostics
+let lastDisconnectTime: Date | null = null;
+let lastDisconnectReason: string | null = null;
+
 // Cached status from bridge - sent immediately to new clients
 let cachedBridgeStatus: any = null;
 let cachedBridgeStatusTimestamp: Date | null = null;
@@ -67,12 +71,17 @@ export function getBridgeDebugStatus(): {
   globalBridgeWsStateString: string | null;
   globalBridgeConnectedAt: string | null;
   globalBridgeLastPing: string | null;
+  lastDisconnectTime: string | null;
+  lastDisconnectReason: string | null;
   cachedBridgeStatus: any;
   cachedBridgeStatusTimestamp: string | null;
   cachedBridgeStatusAge: number | null;
   isStatusFresh: boolean;
   activeClientsCount: number;
   masterTokenConfigured: boolean;
+  pendingSealRequests: number;
+  pendingSignatureRequests: number;
+  pendingSmimeRequests: number;
 } {
   const wsStateStrings: Record<number, string> = {
     0: 'CONNECTING',
@@ -96,12 +105,17 @@ export function getBridgeDebugStatus(): {
       : null,
     globalBridgeConnectedAt: globalBridge?.connectedAt?.toISOString() ?? null,
     globalBridgeLastPing: globalBridge?.lastPing?.toISOString() ?? null,
+    lastDisconnectTime: lastDisconnectTime?.toISOString() ?? null,
+    lastDisconnectReason: lastDisconnectReason,
     cachedBridgeStatus: cachedBridgeStatus,
     cachedBridgeStatusTimestamp: cachedBridgeStatusTimestamp?.toISOString() ?? null,
     cachedBridgeStatusAge: statusAge,
     isStatusFresh: isStatusFresh(),
     activeClientsCount: clientCount,
-    masterTokenConfigured: !!MASTER_TOKEN
+    masterTokenConfigured: !!MASTER_TOKEN,
+    pendingSealRequests: getPendingSealRequestsCount(),
+    pendingSignatureRequests: getPendingSignatureRequestsCount(),
+    pendingSmimeRequests: getPendingSmimeRequestsCount()
   };
 }
 
@@ -409,6 +423,10 @@ export function setupBridgeRelay(server: Server): void {
       
       if (connectionType === 'bridge') {
         console.log(`[Bridge] GLOBAL BRIDGE DISCONNECTED - clearing state`);
+        // Track disconnect info for diagnostics
+        lastDisconnectTime = new Date();
+        lastDisconnectReason = reasonStr || `Code ${code}`;
+        
         globalBridge = null;
         cachedBridgeStatus = null; // Clear cached status when bridge disconnects
         cachedBridgeStatusTimestamp = null;

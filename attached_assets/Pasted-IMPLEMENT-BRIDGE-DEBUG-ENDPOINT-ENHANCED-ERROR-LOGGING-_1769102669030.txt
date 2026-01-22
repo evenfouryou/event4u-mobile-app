@@ -1,0 +1,65 @@
+IMPLEMENT BRIDGE DEBUG ENDPOINT + ENHANCED ERROR LOGGING                                                                                                         
+                                                                                                                                                                   
+  Add both diagnostic tools to identify why the bridge connection is failing.                                                                                      
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  1. Add Debug Endpoint /api/siae/bridge/debug-status                                                                                                              
+                                                                                                                                                                   
+  Create an endpoint that returns complete bridge connection status:                                                                                               
+                                                                                                                                                                   
+  // Response should include:                                                                                                                                      
+  {                                                                                                                                                                
+    "bridgeConnected": boolean,                                                                                                                                    
+    "globalBridgeExists": boolean,                                                                                                                                 
+    "webSocketState": number | null,  // 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED                                                                                 
+    "webSocketStateText": string,     // "CONNECTING" | "OPEN" | "CLOSING" | "CLOSED" | "NULL"                                                                     
+    "lastConnectionTime": string | null,                                                                                                                           
+    "lastDisconnectTime": string | null,                                                                                                                           
+    "lastDisconnectReason": string | null,                                                                                                                         
+    "pendingRequests": number,                                                                                                                                     
+    "bridgeVersion": string | null,                                                                                                                                
+    "cardDetected": boolean | null,                                                                                                                                
+    "certificateLoaded": boolean | null                                                                                                                            
+  }                                                                                                                                                                
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  2. Add Detailed Frontend Logging                                                                                                                                 
+                                                                                                                                                                   
+  When "Firma S/MIME Richiesta" error occurs, log:                                                                                                                 
+                                                                                                                                                                   
+  - Exact error code received (BRIDGE_NON_CONNESSO, FIRMA_NON_ABILITATA, FIRMA_OBBLIGATORIA)                                                                       
+  - Timestamp of error                                                                                                                                             
+  - Last known bridge status                                                                                                                                       
+  - What action user was attempting                                                                                                                                
+                                                                                                                                                                   
+  Show user more specific message:                                                                                                                                 
+  - "App desktop non connessa" instead of generic message                                                                                                          
+  - "Connessione al bridge persa - riavvia l'app desktop"                                                                                                          
+  - "Smart card non rilevata"                                                                                                                                      
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  3. Add Bridge Connection Health Check                                                                                                                            
+                                                                                                                                                                   
+  Before attempting signature:                                                                                                                                     
+                                                                                                                                                                   
+  1. Call /api/siae/bridge/debug-status first                                                                                                                      
+  2. If not connected, show specific error immediately                                                                                                             
+  3. If connected but card not detected, show card error                                                                                                           
+  4. Only proceed if both bridge connected AND card detected                                                                                                       
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  4. Add Reconnection Logic                                                                                                                                        
+                                                                                                                                                                   
+  If WebSocket state is CLOSED or CLOSING:                                                                                                                         
+                                                                                                                                                                   
+  - Attempt automatic reconnection                                                                                                                                 
+  - Show "Riconnessione in corso..." message                                                                                                                       
+  - Retry signature after reconnection                                                                                                                             
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  Report Back                                                                                                                                                      
+                                                                                                                                                                   
+  After implementation, show:                                                                                                                                      
+  - The debug endpoint response when desktop app is running with card                                                                                              
+  - The debug endpoint response when desktop app is not running                                                                                                    
+  - The improved error messages in UI 

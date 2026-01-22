@@ -398,6 +398,58 @@ export default function SiaeTransmissionsPage() {
 
   const sendC1Mutation = useMutation({
     mutationFn: async ({ date, toEmail, type, eventId, forceSubstitution }: { date: string; toEmail: string; type: 'daily' | 'monthly' | 'rca'; eventId?: string; forceSubstitution?: boolean }) => {
+      // Health check: verify bridge connection before attempting transmission
+      // For RCA/monthly transmissions, S/MIME signature is required
+      const requiresSignature = type === 'rca' || type === 'monthly';
+      
+      try {
+        const bridgeStatusRes = await fetch('/api/siae/bridge/debug-status');
+        
+        if (!bridgeStatusRes.ok && requiresSignature) {
+          // Health check endpoint unreachable for signature-required transmission
+          console.error('[SIAE Transmission] Health check endpoint failed with status:', bridgeStatusRes.status);
+          throw new Error('BRIDGE_NON_CONNESSO: Impossibile verificare lo stato del bridge. Ricarica la pagina e riprova.');
+        }
+        
+        if (bridgeStatusRes.ok) {
+          const bridgeStatus = await bridgeStatusRes.json();
+          const timestamp = new Date().toISOString();
+          console.log('[SIAE Transmission] Bridge status before send:', {
+            timestamp,
+            action: `send-c1-${type}`,
+            bridgeStatus
+          });
+          
+          if (requiresSignature) {
+            if (!bridgeStatus.bridgeConnected) {
+              console.error('[SIAE Transmission] Bridge disconnected:', { timestamp, lastDisconnect: bridgeStatus.lastDisconnectTime, reason: bridgeStatus.lastDisconnectReason });
+              throw new Error('BRIDGE_NON_CONNESSO: App desktop Event4U non connessa. Avvia l\'app desktop e riprova.');
+            }
+            if (!bridgeStatus.cardInserted) {
+              console.error('[SIAE Transmission] Smart card not inserted:', { timestamp, readerConnected: bridgeStatus.readerConnected, cardDetected: bridgeStatus.cardDetected });
+              throw new Error('BRIDGE_NON_CONNESSO: Smart Card non inserita. Inserisci la Smart Card SIAE e riprova.');
+            }
+            if (!bridgeStatus.certificateLoaded) {
+              console.error('[SIAE Transmission] Certificate not loaded:', { timestamp, cardInserted: bridgeStatus.cardInserted, certificateLoaded: bridgeStatus.certificateLoaded });
+              throw new Error('EMAIL_CERTIFICATO_NON_DISPONIBILE: Certificato non caricato. Attendi qualche secondo e riprova.');
+            }
+          }
+        }
+      } catch (healthCheckError: any) {
+        // If it's our own thrown error, re-throw it
+        if (healthCheckError.message?.includes('BRIDGE_NON_CONNESSO') || 
+            healthCheckError.message?.includes('EMAIL_CERTIFICATO_NON_DISPONIBILE')) {
+          throw healthCheckError;
+        }
+        // For signature-required transmissions, fail fast
+        if (requiresSignature) {
+          console.error('[SIAE Transmission] Health check failed for signature-required transmission:', healthCheckError);
+          throw new Error('BRIDGE_NON_CONNESSO: Verifica connessione bridge fallita. Ricarica la pagina e riprova.');
+        }
+        // For non-signature transmissions, log and continue
+        console.warn('[SIAE Transmission] Bridge health check failed, proceeding anyway:', healthCheckError);
+      }
+      
       const response = await apiRequest("POST", `/api/siae/companies/${companyId}/transmissions/send-c1`, {
         date,
         toEmail,
@@ -442,11 +494,36 @@ export default function SiaeTransmissionsPage() {
           description: `Il report contiene ${errors.length} errori: ${errors.slice(0, 2).join('; ')}${errors.length > 2 ? '...' : ''}`,
           variant: "destructive",
         });
-      } else if (error.message.includes('FIRMA_OBBLIGATORIA') || error.message.includes('BRIDGE_NON_CONNESSO') || error.message.includes('FIRMA_NON_ABILITATA')) {
-        // Errori specifici della firma S/MIME - mostra istruzioni chiare
+      } else if (error.message.includes('BRIDGE_NON_CONNESSO')) {
+        // App desktop non connessa
+        console.error('[SIAE Transmission] Bridge disconnected error:', error.message);
         toast({
-          title: "Firma S/MIME Richiesta",
-          description: "Per ricevere risposta da SIAE: 1) Avvia l'app desktop Event4U 2) Inserisci la Smart Card SIAE 3) Riprova l'invio",
+          title: "App Desktop Non Connessa",
+          description: "L'app desktop Event4U non è connessa al server. Avvia l'app desktop e attendi la connessione.",
+          variant: "destructive",
+        });
+      } else if (error.message.includes('FIRMA_NON_ABILITATA')) {
+        // Firma S/MIME non abilitata nelle impostazioni
+        console.error('[SIAE Transmission] S/MIME not enabled error:', error.message);
+        toast({
+          title: "Firma S/MIME Non Abilitata",
+          description: "La firma S/MIME non è abilitata. Attiva l'opzione nelle impostazioni e riprova.",
+          variant: "destructive",
+        });
+      } else if (error.message.includes('FIRMA_OBBLIGATORIA')) {
+        // La firma era richiesta ma è fallita
+        console.error('[SIAE Transmission] Signature required but failed:', error.message);
+        toast({
+          title: "Firma S/MIME Fallita",
+          description: "La firma è obbligatoria ma è fallita. Verifica che la Smart Card sia inserita correttamente e riprova.",
+          variant: "destructive",
+        });
+      } else if (error.message.includes('EMAIL_CERTIFICATO_NON_DISPONIBILE')) {
+        // Email del certificato non nel cache
+        console.error('[SIAE Transmission] Certificate email not available:', error.message);
+        toast({
+          title: "Certificato Non Disponibile",
+          description: "Riconnetti l'app desktop Event4U (chiudi e riapri) con la Smart Card inserita, poi attendi qualche secondo.",
           variant: "destructive",
         });
       } else {

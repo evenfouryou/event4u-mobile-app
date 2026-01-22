@@ -9,7 +9,7 @@ import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions,
 import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
+import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature, getCachedEfffData, getBridgeDebugStatus } from "./bridge-relay";
 import { sendPrintJobToAgent, getConnectedAgents } from "./print-relay";
 import { generateTicketHtml } from "./template-routes";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
@@ -389,6 +389,97 @@ function requireOrganizerOrCashier(req: Request, res: Response, next: NextFuncti
   }
   next();
 }
+
+// ==================== DEBUG ENDPOINT - Bridge Connection Status ====================
+// Endpoint per diagnosticare problemi di connessione con l'app desktop Event4U
+router.get("/api/siae/bridge/debug-status", async (req: Request, res: Response) => {
+  try {
+    const debugStatus = getBridgeDebugStatus();
+    const cachedStatus = getCachedBridgeStatus();
+    
+    // Extract card-related info from cached status
+    const cardData = cachedStatus || {};
+    const payload = cardData.data?.payload || cardData.payload?.data || cardData.data || cardData.payload || cardData;
+    
+    // Build comprehensive response
+    const response = {
+      timestamp: new Date().toISOString(),
+      
+      // Connection status
+      bridgeConnected: isBridgeConnected(),
+      globalBridgeExists: debugStatus.globalBridgeExists,
+      webSocketState: debugStatus.globalBridgeWsState,
+      webSocketStateText: debugStatus.globalBridgeWsStateString || 'NULL',
+      
+      // Timing info
+      lastConnectionTime: debugStatus.globalBridgeConnectedAt,
+      lastPingTime: debugStatus.globalBridgeLastPing,
+      lastDisconnectTime: debugStatus.lastDisconnectTime,
+      lastDisconnectReason: debugStatus.lastDisconnectReason,
+      statusCacheAge: debugStatus.cachedBridgeStatusAge,
+      isStatusFresh: debugStatus.isStatusFresh,
+      
+      // Configuration
+      masterTokenConfigured: debugStatus.masterTokenConfigured,
+      activeClientsCount: debugStatus.activeClientsCount,
+      
+      // Pending requests
+      pendingRequests: debugStatus.pendingSealRequests + debugStatus.pendingSignatureRequests + debugStatus.pendingSmimeRequests,
+      pendingSealRequests: debugStatus.pendingSealRequests,
+      pendingSignatureRequests: debugStatus.pendingSignatureRequests,
+      pendingSmimeRequests: debugStatus.pendingSmimeRequests,
+      
+      // Card/Reader status (from cached bridge status)
+      readerConnected: payload.readerConnected ?? null,
+      cardDetected: payload.cardInserted ?? null,
+      cardInserted: payload.cardInserted ?? null,
+      readerName: payload.readerName ?? null,
+      cardSerial: payload.cardSerial ?? null,
+      
+      // Certificate info
+      certificateLoaded: !!(payload.cardCertificateCN || payload.cardSignerEmail),
+      cardCertificateCN: payload.cardCertificateCN ?? null,
+      cardSignerEmail: payload.cardSignerEmail ?? null,
+      
+      // EFFF data (smart card system code)
+      efffDataLoaded: !!payload.efffData,
+      efffSystemCode: payload.efffData?.codiceSistemaEmissione ?? null,
+      
+      // Version info
+      bridgeVersion: payload.version ?? payload.bridgeVersion ?? null,
+      
+      // Diagnostics summary
+      diagnostics: {
+        canSign: isBridgeConnected() && (payload.cardInserted === true),
+        issues: [] as string[]
+      }
+    };
+    
+    // Add diagnostic issues
+    if (!response.bridgeConnected) {
+      response.diagnostics.issues.push('APP_DESKTOP_NON_CONNESSA: Avvia l\'app desktop Event4U');
+    } else if (!response.readerConnected) {
+      response.diagnostics.issues.push('LETTORE_NON_RILEVATO: Collega il lettore smart card');
+    } else if (!response.cardInserted) {
+      response.diagnostics.issues.push('SMART_CARD_NON_INSERITA: Inserisci la Smart Card SIAE');
+    } else if (!response.certificateLoaded) {
+      response.diagnostics.issues.push('CERTIFICATO_NON_CARICATO: Attendi il caricamento del certificato');
+    }
+    
+    if (response.diagnostics.issues.length === 0) {
+      response.diagnostics.issues.push('PRONTO: Sistema pronto per la firma S/MIME');
+    }
+    
+    res.json(response);
+  } catch (error: any) {
+    console.error('[SIAE] Bridge debug status error:', error);
+    res.status(500).json({
+      error: error.message,
+      bridgeConnected: false,
+      diagnostics: { canSign: false, issues: ['ERRORE_INTERNO: ' + error.message] }
+    });
+  }
+});
 
 // ==================== DEBUG ENDPOINT - Test Email SIAE ====================
 // Endpoint pubblico per testare l'invio email SMTP (solo in development)
