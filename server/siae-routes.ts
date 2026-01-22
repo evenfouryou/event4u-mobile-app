@@ -2456,6 +2456,421 @@ router.get("/api/siae/ticketed-events/:id/public-info", requireAuth, async (req:
   }
 });
 
+// ==================== Event Postponement & Cancellation (SIAE Compliance) ====================
+
+/**
+ * Posticipa un evento SIAE
+ * Normativa: 
+ * - Intrattenimento: biglietti validi se rinvio ≤90gg
+ * - Spettacolo: biglietti validi se rinvio ≤12 mesi
+ * I biglietti già venduti mantengono il sigillo fiscale originale
+ */
+router.post("/api/siae/ticketed-events/:id/postpone", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { newEventDate, reason } = req.body;
+    const user = req.user as any;
+    
+    if (!newEventDate) {
+      return res.status(400).json({ message: "Nuova data evento obbligatoria" });
+    }
+    
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    // Get the base event to check current date
+    const [baseEvent] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
+    if (!baseEvent) {
+      return res.status(404).json({ message: "Evento base non trovato" });
+    }
+    
+    const originalDate = ticketedEvent.originalEventDate || baseEvent.eventDate;
+    const newDate = new Date(newEventDate);
+    
+    // Calculate days difference
+    const daysDiff = Math.ceil((newDate.getTime() - new Date(originalDate!).getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Determine limit based on genre (60-69 = intrattenimento = 90gg, altri = spettacolo = 365gg)
+    const genreCode = parseInt(ticketedEvent.genreCode || '0', 10);
+    const isEntertainment = genreCode >= 60 && genreCode <= 69;
+    const maxDays = isEntertainment ? 90 : 365;
+    
+    let warning = null;
+    if (daysDiff > maxDays) {
+      warning = `Attenzione: il rinvio supera ${maxDays} giorni. I biglietti venduti dovranno essere rimborsati o riemessi con nuovo sigillo.`;
+    }
+    
+    // Update the base event date
+    await db.update(events)
+      .set({ 
+        eventDate: newDate,
+        updatedAt: new Date()
+      })
+      .where(eq(events.id, ticketedEvent.eventId));
+    
+    // Update ticketed event with postponement info
+    const [updatedEvent] = await db.update(siaeTicketedEvents)
+      .set({
+        eventStatus: 'postponed',
+        originalEventDate: ticketedEvent.originalEventDate || originalDate,
+        postponedAt: new Date(),
+        postponementReason: reason || null,
+        updatedAt: new Date()
+      })
+      .where(eq(siaeTicketedEvents.id, req.params.id))
+      .returning();
+    
+    // Count tickets affected
+    const [ticketCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(siaeTickets)
+      .where(and(
+        eq(siaeTickets.ticketedEventId, req.params.id),
+        sql`${siaeTickets.status} NOT IN ('cancelled', 'refunded')`
+      ));
+    
+    // Audit log
+    await siaeStorage.createAuditLog({
+      companyId: ticketedEvent.companyId,
+      userId: user.id,
+      action: 'event_postponed',
+      entityType: 'ticketed_event',
+      entityId: req.params.id,
+      description: `Evento posticipato da ${originalDate} a ${newDate.toISOString()}. ${ticketCount?.count || 0} biglietti interessati.`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    res.json({
+      success: true,
+      event: updatedEvent,
+      ticketsAffected: ticketCount?.count || 0,
+      daysDifference: daysDiff,
+      maxAllowedDays: maxDays,
+      exceedsLimit: daysDiff > maxDays,
+      warning,
+      message: warning 
+        ? `Evento posticipato. ${warning}` 
+        : `Evento posticipato con successo. I ${ticketCount?.count || 0} biglietti venduti restano validi con il sigillo originale.`
+    });
+  } catch (error: any) {
+    console.error('[POSTPONE EVENT] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Annulla un evento SIAE
+ * Normativa: tutti i biglietti devono essere rimborsati
+ */
+router.post("/api/siae/ticketed-events/:id/cancel", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { reason, refundDeadlineDays = 30 } = req.body;
+    const user = req.user as any;
+    
+    if (!reason) {
+      return res.status(400).json({ message: "Motivo annullamento obbligatorio" });
+    }
+    
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    // Calculate refund deadline
+    const refundDeadline = new Date();
+    refundDeadline.setDate(refundDeadline.getDate() + refundDeadlineDays);
+    
+    // Update ticketed event
+    const [updatedEvent] = await db.update(siaeTicketedEvents)
+      .set({
+        eventStatus: 'cancelled',
+        ticketingStatus: 'closed',
+        cancelledAt: new Date(),
+        cancellationReason: reason,
+        refundDeadline,
+        updatedAt: new Date()
+      })
+      .where(eq(siaeTicketedEvents.id, req.params.id))
+      .returning();
+    
+    // Get all tickets that need refund
+    const ticketsToRefund = await db
+      .select()
+      .from(siaeTickets)
+      .where(and(
+        eq(siaeTickets.ticketedEventId, req.params.id),
+        sql`${siaeTickets.status} NOT IN ('cancelled', 'refunded')`
+      ));
+    
+    // Calculate total refund amount
+    const totalRefundAmount = ticketsToRefund.reduce((sum, t) => sum + Number(t.grossPrice || 0), 0);
+    
+    // Audit log
+    await siaeStorage.createAuditLog({
+      companyId: ticketedEvent.companyId,
+      userId: user.id,
+      action: 'event_cancelled',
+      entityType: 'ticketed_event',
+      entityId: req.params.id,
+      description: `Evento annullato. Motivo: ${reason}. ${ticketsToRefund.length} biglietti da rimborsare per €${totalRefundAmount.toFixed(2)}.`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    res.json({
+      success: true,
+      event: updatedEvent,
+      ticketsToRefund: ticketsToRefund.length,
+      totalRefundAmount,
+      refundDeadline,
+      message: `Evento annullato. ${ticketsToRefund.length} biglietti da rimborsare entro il ${refundDeadline.toLocaleDateString('it-IT')}.`
+    });
+  } catch (error: any) {
+    console.error('[CANCEL EVENT] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Ottieni lista biglietti da rimborsare per evento annullato
+ */
+router.get("/api/siae/ticketed-events/:id/refund-list", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    if (ticketedEvent.eventStatus !== 'cancelled') {
+      return res.status(400).json({ message: "L'evento non è stato annullato" });
+    }
+    
+    // Get all tickets pending refund
+    const ticketsToRefund = await db
+      .select({
+        ticket: siaeTickets,
+        customer: siaeCustomers,
+        transaction: siaeTransactions
+      })
+      .from(siaeTickets)
+      .leftJoin(siaeCustomers, eq(siaeTickets.customerId, siaeCustomers.id))
+      .leftJoin(siaeTransactions, eq(siaeTickets.transactionId, siaeTransactions.id))
+      .where(and(
+        eq(siaeTickets.ticketedEventId, req.params.id),
+        sql`${siaeTickets.status} NOT IN ('cancelled', 'refunded')`
+      ));
+    
+    const refundList = ticketsToRefund.map(row => ({
+      ticketId: row.ticket.id,
+      ticketCode: row.ticket.ticketCode,
+      grossPrice: row.ticket.grossPrice,
+      customerName: row.customer ? `${row.customer.firstName} ${row.customer.lastName}` : 'N/A',
+      customerEmail: row.customer?.email || null,
+      stripePaymentIntentId: row.transaction?.stripePaymentIntentId || null,
+      paymentMethod: row.transaction?.paymentMethod || 'unknown',
+      emissionDate: row.ticket.emissionDate
+    }));
+    
+    const totalAmount = refundList.reduce((sum, t) => sum + Number(t.grossPrice || 0), 0);
+    
+    res.json({
+      eventId: req.params.id,
+      eventStatus: ticketedEvent.eventStatus,
+      cancellationReason: ticketedEvent.cancellationReason,
+      refundDeadline: ticketedEvent.refundDeadline,
+      refundsProcessed: ticketedEvent.refundsProcessed,
+      tickets: refundList,
+      totalTickets: refundList.length,
+      totalAmount
+    });
+  } catch (error: any) {
+    console.error('[REFUND LIST] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Processa rimborso per un singolo biglietto
+ */
+router.post("/api/siae/tickets/:id/refund", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { refundMethod = 'original' } = req.body; // original, voucher, manual
+    const user = req.user as any;
+    
+    const ticket = await siaeStorage.getSiaeTicket(req.params.id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+    
+    if (ticket.status === 'refunded') {
+      return res.status(400).json({ message: "Biglietto già rimborsato" });
+    }
+    
+    // Get transaction for Stripe refund
+    let stripeRefundResult = null;
+    if (refundMethod === 'original' && ticket.transactionId) {
+      const transaction = await siaeStorage.getSiaeTransaction(ticket.transactionId);
+      if (transaction?.stripePaymentIntentId) {
+        try {
+          const stripe = getUncachableStripeClient();
+          if (stripe) {
+            const refund = await stripe.refunds.create({
+              payment_intent: transaction.stripePaymentIntentId,
+              amount: Math.round(Number(ticket.grossPrice) * 100),
+            });
+            stripeRefundResult = { id: refund.id, status: refund.status };
+          }
+        } catch (stripeError: any) {
+          console.error('[STRIPE REFUND] Error:', stripeError);
+          return res.status(400).json({ 
+            message: `Errore rimborso Stripe: ${stripeError.message}. Usa rimborso manuale.` 
+          });
+        }
+      }
+    }
+    
+    // Update ticket status
+    const [updatedTicket] = await db.update(siaeTickets)
+      .set({
+        status: 'refunded',
+        cancellationReason: 'event_cancelled',
+        cancelledAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(siaeTickets.id, req.params.id))
+      .returning();
+    
+    // Update event refund counter
+    await db.update(siaeTicketedEvents)
+      .set({
+        refundsProcessed: sql`${siaeTicketedEvents.refundsProcessed} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(siaeTicketedEvents.id, ticket.ticketedEventId));
+    
+    // Audit log
+    await siaeStorage.createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      action: 'ticket_refunded',
+      entityType: 'ticket',
+      entityId: req.params.id,
+      description: `Biglietto ${ticket.ticketCode} rimborsato (€${ticket.grossPrice}). Metodo: ${refundMethod}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    res.json({
+      success: true,
+      ticket: updatedTicket,
+      refundMethod,
+      stripeRefund: stripeRefundResult,
+      message: `Biglietto rimborsato con successo (€${ticket.grossPrice})`
+    });
+  } catch (error: any) {
+    console.error('[REFUND TICKET] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Processa rimborsi batch per tutti i biglietti di un evento annullato
+ */
+router.post("/api/siae/ticketed-events/:id/refund-batch", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { refundMethod = 'original' } = req.body;
+    const user = req.user as any;
+    
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    if (ticketedEvent.eventStatus !== 'cancelled') {
+      return res.status(400).json({ message: "L'evento non è stato annullato" });
+    }
+    
+    // Get all tickets to refund
+    const ticketsToRefund = await db
+      .select()
+      .from(siaeTickets)
+      .where(and(
+        eq(siaeTickets.ticketedEventId, req.params.id),
+        sql`${siaeTickets.status} NOT IN ('cancelled', 'refunded')`
+      ));
+    
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+    
+    for (const ticket of ticketsToRefund) {
+      try {
+        // Process Stripe refund if applicable
+        if (refundMethod === 'original' && ticket.transactionId) {
+          const transaction = await siaeStorage.getSiaeTransaction(ticket.transactionId);
+          if (transaction?.stripePaymentIntentId) {
+            const stripe = getUncachableStripeClient();
+            if (stripe) {
+              await stripe.refunds.create({
+                payment_intent: transaction.stripePaymentIntentId,
+                amount: Math.round(Number(ticket.grossPrice) * 100),
+              });
+            }
+          }
+        }
+        
+        // Update ticket status
+        await db.update(siaeTickets)
+          .set({
+            status: 'refunded',
+            cancellationReason: 'event_cancelled',
+            cancelledAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(siaeTickets.id, ticket.id));
+        
+        successCount++;
+      } catch (ticketError: any) {
+        failCount++;
+        errors.push(`Biglietto ${ticket.ticketCode}: ${ticketError.message}`);
+      }
+    }
+    
+    // Update refunds processed counter
+    await db.update(siaeTicketedEvents)
+      .set({
+        refundsProcessed: sql`${siaeTicketedEvents.refundsProcessed} + ${successCount}`,
+        updatedAt: new Date()
+      })
+      .where(eq(siaeTicketedEvents.id, req.params.id));
+    
+    // Audit log
+    await siaeStorage.createAuditLog({
+      companyId: ticketedEvent.companyId,
+      userId: user.id,
+      action: 'batch_refund_processed',
+      entityType: 'ticketed_event',
+      entityId: req.params.id,
+      description: `Rimborso batch: ${successCount} successi, ${failCount} errori. Metodo: ${refundMethod}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    res.json({
+      success: failCount === 0,
+      successCount,
+      failCount,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Elaborati ${successCount} rimborsi${failCount > 0 ? `, ${failCount} errori` : ''}.`
+    });
+  } catch (error: any) {
+    console.error('[BATCH REFUND] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ==================== Event Sectors (Organizer) ====================
 
 router.get("/api/siae/ticketed-events/:eventId/sectors", requireAuth, async (req: Request, res: Response) => {
