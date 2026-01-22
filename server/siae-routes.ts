@@ -7240,15 +7240,17 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   
   // Controlla se l'invio è fallito (firma S/MIME non disponibile)
   if (!emailResult.success) {
+    const emailFailedError = emailResult.error || 'Invio email fallito - Firma S/MIME richiesta';
     await siaeStorage.updateSiaeTransmission(transmission.id, {
       status: 'failed',
-      errorMessage: emailResult.error || 'Invio email fallito',
+      errorMessage: emailFailedError,
     });
     return {
       success: false,
       statusCode: 400,
+      error: emailFailedError, // FIX: Error at top level for proper error handling
       data: {
-        message: emailResult.error || 'Invio email fallito - Firma S/MIME richiesta',
+        message: emailFailedError,
         transmissionId: transmission.id,
       }
     };
