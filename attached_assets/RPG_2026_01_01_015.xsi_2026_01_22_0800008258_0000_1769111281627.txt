@@ -1,0 +1,13 @@
+REPLY:
+
+CODICE:      0000
+DESCRIZIONE: Il riepilogo e' stato elaborato correttamente
+DETTAGLIO:   
+
+
+WARNING
+CODICE:      2606
+DESCRIZIONE: La denominazione del titolare  e' diversa da quella presente sulla smart-card associata al sistema
+DETTAGLIO:   Il riepilogo associa al titolare del sistema [P0004010] la denominazione [HYPER EVENTS], invece quella conosciuta e' [HURAEX SRL]
+
+
