@@ -60,19 +60,6 @@ A comprehensive SIAE-compliant ticketing and fiscal management system for Italia
 -   Super_admin può bypassare il blocco (con audit log)
 -   Audit log traccia tutti i tentativi bloccati e gli override
 
-**Coerenza Date Report SIAE (Errore 0603 Fix - 2026-01-22):**
--   L'errore SIAE 0603 "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti" si verifica quando le date nel report non sono allineate
--   Per report RMG (giornalieri): `DataGenerazione` nell'XML DEVE corrispondere alla data nel nome file (RPG_YYYY_MM_DD) e al subject email
--   Per report RPM (mensili): `DataGenerazione` può essere la data corrente (mese successivo al periodo), ma `Mese` deve corrispondere al periodo del report
--   La validazione pre-trasmissione ora verifica la coerenza tra `DataGenerazione` e la data del report (non più la data odierna)
-
-**Rilevamento Automatico Sostituzione (Errore 0604 Fix - 2026-01-22):**
--   L'errore SIAE 0604 "Riepilogo già elaborato" si verifica quando si reinvia un report per una data/evento già accettato senza flag Sostituzione="S"
--   Il sistema ora rileva automaticamente se esiste una trasmissione precedente accettata (siaeResponseCode='0000' o status='received')
--   Se rilevata, imposta automaticamente `effectiveForceSubstitution=true` → Sostituzione="S" nell'XML
--   Funziona per tutti i tipi di report: RMG (giornaliero), RPM (mensile), RCA (controllo accessi)
--   Non richiede intervento manuale dell'utente per i reinvii dopo accettazione
-
 ### International Operating Mode
 The system supports international ticket sales with SIAE exemption through a flexible operating mode system:
 -   **Operating Modes**: Gestori can choose between `italy_only` (default), `international_only`, or `hybrid` mode during registration or via admin settings.

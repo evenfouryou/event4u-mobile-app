@@ -6949,26 +6949,12 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     );
     let rcaProgressivo = rcaTransmissionsForEvent.length + 1;
     
-    // FIX 2026-01-22: RILEVAMENTO AUTOMATICO SOSTITUZIONE PER RCA
-    // Se esiste già una trasmissione ACCETTATA per lo stesso evento, il nuovo invio
-    // DEVE avere Sostituzione="S" per evitare errore SIAE 40604 (riepilogo già elaborato)
-    const hasAcceptedRcaTransmission = rcaTransmissionsForEvent.some(t => 
-      t.siaeResponseCode === '0000' || t.status === 'received'
-    );
-    
-    // Determina automaticamente forceSubstitution per RCA
-    let effectiveForceSubstitutionRca = forceSubstitution;
-    if (hasAcceptedRcaTransmission && !forceSubstitution) {
-      console.log(`[SIAE-ROUTES] RCA AUTO-SUBSTITUTION: Rilevata trasmissione precedente accettata per evento ${eventId} - impostazione automatica Sostituzione="S"`);
-      effectiveForceSubstitutionRca = true;
-    }
-    
     // Se forceSubstitution=true, aggiungi 1 extra per essere sicuri
     // (anche se già incrementato dal conteggio, SIAE potrebbe richiedere progressivo > precedente)
-    if (effectiveForceSubstitutionRca && rcaProgressivo <= rcaTransmissionsForEvent.length) {
+    if (forceSubstitution && rcaProgressivo <= rcaTransmissionsForEvent.length) {
       rcaProgressivo = rcaTransmissionsForEvent.length + 1;
     }
-    console.log(`[SIAE-ROUTES] RCA progressivo: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length}, effectiveForceSubstitution: ${effectiveForceSubstitutionRca})`);
+    console.log(`[SIAE-ROUTES] RCA progressivo: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length}, forceSubstitution: ${forceSubstitution})`);
     // FIX 2026-01-14: Salva progressivo per riuso nel nome file
     calculatedProgressivo = rcaProgressivo;
     
@@ -7002,8 +6988,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       companyName,
       taxId,
       progressivo: rcaProgressivo, // Progressivo incrementato per ogni trasmissione
-      // FIX 2026-01-22: Usa effectiveForceSubstitutionRca che include rilevamento automatico
-      forceSubstitution: effectiveForceSubstitutionRca,
+      forceSubstitution, // Forza Sostituzione="S" per reinvio (errore 40604)
     });
     
     if (!rcaResult.success) {
@@ -7075,23 +7060,6 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // FIX 2026-01-14: Salva progressivo per riuso nel nome file
     calculatedProgressivo = preCalculatedProgressivo;
     
-    // FIX 2026-01-22: RILEVAMENTO AUTOMATICO SOSTITUZIONE
-    // Se esiste già una trasmissione ACCETTATA per la stessa data/periodo, il nuovo invio
-    // DEVE avere Sostituzione="S" per evitare errore SIAE 0604 (riepilogo già elaborato)
-    // Una trasmissione è considerata accettata se:
-    // - siaeResponseCode === '0000' (codice successo SIAE)
-    // - OPPURE status === 'received' (confermato dal sistema)
-    const hasAcceptedTransmission = sameTypeTransmissionsForCalc.some(t => 
-      t.siaeResponseCode === '0000' || t.status === 'received'
-    );
-    
-    // Determina automaticamente forceSubstitution
-    let effectiveForceSubstitution = forceSubstitution;
-    if (hasAcceptedTransmission && !forceSubstitution) {
-      console.log(`[SIAE-ROUTES] AUTO-SUBSTITUTION: Rilevata trasmissione precedente accettata per ${transmissionTypeForCalc} ${effectiveReportDate.toISOString().split('T')[0]} - impostazione automatica Sostituzione="S"`);
-      effectiveForceSubstitution = true;
-    }
-    
     // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
     // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato email (errore SIAE 0600)
     // FIX 2026-01-15: Usa preResolvedSystemCode già calcolato all'inizio (non ridefinire!)
@@ -7135,9 +7103,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       subscriptions: hydratedData.subscriptions,
       // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
       nomeFile: preGeneratedFileName,
-      // FIX 2026-01-22: Usa effectiveForceSubstitution che include rilevamento automatico
-      // Se esiste una trasmissione precedente accettata, Sostituzione="S" automaticamente
-      forceSubstitution: effectiveForceSubstitution,
+      // FIX 2026-01-21: forceSubstitution viene passato dal chiamante per gestire reinvii
+      forceSubstitution,
     };
     
     const c1Result = generateC1Xml(c1Params);

@@ -4385,17 +4385,14 @@ export async function validatePreTransmission(
     if (dataGenerazioneMatch) {
       const xmlDate = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
       
-      // FIX 2026-01-22: DataGenerazione deve corrispondere alla data del REPORT (nel nome file)
-      // L'errore SIAE 0603 è per incoerenza tra nome file, subject e contenuto XML
-      // NON richiede che sia la data odierna - solo che tutte le date siano coerenti
-      // Per RMG: RPG_YYYY_MM_DD → DataGenerazione="YYYYMMDD" deve essere uguale
-      if (xmlDate !== reportDateStr) {
+      // DataGenerazione deve essere la data odierna (quando è stato generato il file)
+      if (xmlDate !== actualToday && xmlDate !== yesterdayStr) {
         datesCoherent = false;
         errors.push({
           code: 'DATE_MISMATCH',
           field: 'dates',
-          message: `DataGenerazione (${xmlDate}) non corrisponde alla data del report (${reportDateStr})`,
-          resolution: 'Verificare coerenza tra data nel nome file e DataGenerazione nell\'XML',
+          message: `DataGenerazione (${xmlDate}) non corrisponde alla data odierna (${actualToday})`,
+          resolution: 'Rigenerare il report per aggiornare DataGenerazione alla data corrente',
           siaeErrorCode: '0603'
         });
       }
@@ -4818,10 +4815,7 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
 
   const isMonthly = reportKind === 'mensile';
   const now = new Date();
-  // FIX 2026-01-22: DataGenerazione deve corrispondere alla data del report (errore SIAE 0603)
-  // "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
-  // La data nel nome file è reportDate, quindi DataGenerazione deve essere la stessa
-  const dataGenAttr = formatSiaeDateCompact(reportDate);
+  const dataGenAttr = formatSiaeDateCompact(now);
   const oraGen = formatSiaeTimeCompact(now);
 
   let periodAttrName: string;
