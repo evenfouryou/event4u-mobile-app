@@ -1,0 +1,51 @@
+ The daily report (RPG) is now working, but the monthly report (RPM) is broken. The fixes may not have been applied to RPM or not deployed to production.                                            
+                                                                                                                                                                                                      
+  Investigate and fix:                                                                                                                                                                                
+                                                                                                                                                                                                      
+  1. Check if RPM uses the same code as RPG                                                                                                                                                           
+  - Search for: RPM, RiepilogoMensile, monthly, mensile                                                                                                                                               
+  - Compare RPM generation code with RPG generation code                                                                                                                                              
+  - Check if they share the same functions or have separate implementations                                                                                                                           
+                                                                                                                                                                                                      
+  2. Verify the 3 fixes are applied to RPM:                                                                                                                                                           
+  ┌───────────────────┬───────────────────────────────────────────────┐                                                                                                                               
+  │        Fix        │           What to check in RPM code           │                                                                                                                               
+  ├───────────────────┼───────────────────────────────────────────────┤                                                                                                                               
+  │ Encoding          │ Buffer.from(xmlContent, 'utf-8') - NOT latin1 │                                                                                                                               
+  ├───────────────────┼───────────────────────────────────────────────┤                                                                                                                               
+  │ Empty reports     │ Validation to block empty RPM (no events)     │                                                                                                                               
+  ├───────────────────┼───────────────────────────────────────────────┤                                                                                                                               
+  │ Organization name │ <Denominazione>HURAEX SRL</Denominazione>     │                                                                                                                               
+  └───────────────────┴───────────────────────────────────────────────┘                                                                                                                               
+  3. Check production deployment                                                                                                                                                                      
+  - Compare the code in development vs production                                                                                                                                                     
+  - Look for: deployment scripts, build process, environment differences                                                                                                                              
+  - Check if recent changes were committed and deployed                                                                                                                                               
+  - Run: git log --oneline -10 to see recent commits                                                                                                                                                  
+  - Verify production is using the latest code                                                                                                                                                        
+                                                                                                                                                                                                      
+  4. Check for separate RPM code paths                                                                                                                                                                
+  Search for files containing RPM-specific logic:                                                                                                                                                     
+  - generateRPM, monthlyReport, RiepilogoMensile                                                                                                                                                      
+  - There may be duplicate code that wasn't updated                                                                                                                                                   
+                                                                                                                                                                                                      
+  5. Test RPM locally                                                                                                                                                                                 
+  - Generate a monthly report (RPM) for a test month                                                                                                                                                  
+  - Log the full XML output                                                                                                                                                                           
+  - Verify:                                                                                                                                                                                           
+    - encoding="UTF-8"                                                                                                                                                                                
+    - <Denominazione>HURAEX SRL</Denominazione>                                                                                                                                                       
+    - Has event data (not empty)                                                                                                                                                                      
+    - Price fields populated                                                                                                                                                                          
+                                                                                                                                                                                                      
+  6. Apply missing fixes to RPM                                                                                                                                                                       
+  If RPM has separate code, apply the same fixes:                                                                                                                                                     
+  - latin1 → utf-8 in email attachment encoding                                                                                                                                                       
+  - Add empty report validation                                                                                                                                                                       
+  - Update organization name                                                                                                                                                                          
+                                                                                                                                                                                                      
+  7. Deploy to production                                                                                                                                                                             
+  After fixes, ensure changes are deployed:                                                                                                                                                           
+  - Commit changes                                                                                                                                                                                    
+  - Deploy to production environment                                                                                                                                                                  
+  - Verify production is running new code

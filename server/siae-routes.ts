@@ -7160,15 +7160,16 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   );
   
   if (!preValidation.canTransmit) {
+    const preTransmitErrorMsg = `Validazione pre-trasmissione fallita: ${preValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; ')}`;
     await siaeStorage.updateSiaeTransmission(transmission.id, {
       status: 'error',
-      errorMessage: preValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; '),
+      errorMessage: preTransmitErrorMsg,
     });
     return {
       success: false,
       statusCode: 400,
+      error: preTransmitErrorMsg, // FIX: Error at top level for proper error handling
       data: {
-        error: 'Validazione pre-trasmissione fallita',
         errors: preValidation.errors,
         warnings: preValidation.warnings,
         details: preValidation.details,
