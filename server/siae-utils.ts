@@ -4815,8 +4815,12 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
 
   const isMonthly = reportKind === 'mensile';
   const now = new Date();
-  const dataGenAttr = formatSiaeDateCompact(now);
-  const oraGen = formatSiaeTimeCompact(now);
+  
+  // FIX SIAE 0603: DataGenerazione DEVE essere IDENTICA a Data/Mese del report
+  // NON è la data di creazione del file, ma deve corrispondere al periodo del report
+  // Tutte e 3 le date devono coincidere: Filename, Data XML, DataGenerazione XML
+  const dataGenAttr = formatSiaeDateCompact(reportDate); // USA reportDate, NON now!
+  const oraGen = formatSiaeTimeCompact(now); // L'ora può essere quella attuale
 
   let periodAttrName: string;
   let periodAttrValue: string;

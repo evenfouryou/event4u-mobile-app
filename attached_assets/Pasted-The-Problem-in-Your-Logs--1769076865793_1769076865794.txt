@@ -1,0 +1,59 @@
+The Problem in Your Logs                                                                                                                                 
+                                                                                                                                                           
+  Look at your validation output carefully:                                                                                                                
+                                                                                                                                                           
+  [EMAIL-SERVICE] Filename date: 20260121  ← Jan 21                                                                                                        
+  [EMAIL-SERVICE] XML Data:      20260121  ← Jan 21 ✅                                                                                                     
+  [EMAIL-SERVICE] XML DataGen:   20260122  ← Jan 22 ❌ MISMATCH!                                                                                           
+                                                                                                                                                           
+  This will still cause error 0603!                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  What SIAE Actually Requires                                                                                                                              
+                                                                                                                                                           
+  SIAE error 0603 means ALL THREE dates must be IDENTICAL:                                                                                                 
+                                                                                                                                                           
+  1. Filename date: 20260121                                                                                                                               
+  2. XML Data attribute: 20260121                                                                                                                          
+  3. XML DataGenerazione attribute: 20260121 ← MUST MATCH, not today's date!                                                                               
+                                                                                                                                                           
+  You're confusing the semantic meaning of "DataGenerazione" (when generated) with what SIAE requires (must match report date).                            
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Fix for Replit                                                                                                                                           
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  FIX SIAE 0603 - DataGenerazione MUST EQUAL Data ATTRIBUTE                                                                                                
+                                                                                                                                                           
+  Problem: DataGenerazione is using current date (20260122) but MUST use report date (20260121).                                                           
+                                                                                                                                                           
+  File: server/siae-utils.ts (around line 4824)                                                                                                            
+                                                                                                                                                           
+  Current code (WRONG):                                                                                                                                    
+  DataGenerazione="${formatDate(new Date(), 'YYYYMMDD')}"  // Today = 20260122                                                                             
+                                                                                                                                                           
+  Fixed code:                                                                                                                                              
+  DataGenerazione="${reportDate.replace(/-/g, '')}"  // Report date = 20260121                                                                             
+                                                                                                                                                           
+  For RMG/RPG reports, ALL dates must be the EVENT date:                                                                                                   
+  const eventDateFormatted = reportDate.replace(/-/g, '');  // e.g., "20260121"                                                                            
+                                                                                                                                                           
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>                                                                                                      
+  <RiepilogoGiornaliero                                                                                                                                    
+    Data="${eventDateFormatted}"              ← Event date                                                                                                 
+    DataGenerazione="${eventDateFormatted}"   ← SAME as Data                                                                                               
+    OraGenerazione="${oraGenerazione}"        ← Time can be now                                                                                            
+    ProgressivoGenerazione="${progressivo}"                                                                                                                
+    Sostituzione="${sostituzione}">                                                                                                                        
+  ...                                                                                                                                                      
+  </RiepilogoGiornaliero>`;                                                                                                                                
+                                                                                                                                                           
+  Validation must show:                                                                                                                                    
+  Filename date: 20260121                                                                                                                                  
+  XML Data:      20260121  ✅                                                                                                                              
+  XML DataGen:   20260121  ✅ ALL MATCH NOW                                                                                                                
+                                                                                                                                                           
+  After fix, test again and show validation output confirming all three dates are identical.                                                               
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  IMPORTANT: DataGenerazione is NOT the timestamp when the file was created. It's a SIAE field that must match the report period date.  

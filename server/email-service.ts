@@ -685,23 +685,25 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const filenameDate = filenameDateMatch ? `${filenameDateMatch[1]}${filenameDateMatch[2]}${filenameDateMatch[3]}` : 'NOT FOUND';
       console.log(`[EMAIL-SERVICE] Filename date part: ${filenameDate}`);
       
-      // Validation
+      // Validation - SIAE 0603: ALL THREE DATES MUST BE IDENTICAL
       if (dataMatch && dataGenMatch) {
         const xmlData = dataMatch[1];
         const xmlDataGen = dataGenMatch[1];
         
-        console.log('[EMAIL-SERVICE] === VALIDATION ===');
+        console.log('[EMAIL-SERVICE] === VALIDATION (SIAE 0603 CHECK) ===');
         console.log(`[EMAIL-SERVICE] Filename date: ${filenameDate}`);
         console.log(`[EMAIL-SERVICE] XML Data:      ${xmlData}`);
         console.log(`[EMAIL-SERVICE] XML DataGen:   ${xmlDataGen}`);
         
-        // Per RMG giornaliero: Filename e Data devono essere uguali, DataGen = oggi
-        if (filenameDate === xmlData) {
-          console.log('[EMAIL-SERVICE] ✅ Filename = XML Data (MATCH)');
+        // SIAE 0603: Tutte e 3 le date DEVONO essere IDENTICHE
+        if (filenameDate === xmlData && xmlData === xmlDataGen) {
+          console.log('[EMAIL-SERVICE] ✅ ALL THREE DATES MATCH - SIAE compliant');
         } else {
-          console.log('[EMAIL-SERVICE] ❌ Filename ≠ XML Data (MISMATCH!)');
+          console.log('[EMAIL-SERVICE] ❌ DATE MISMATCH DETECTED - will cause SIAE 0603!');
+          if (filenameDate !== xmlData) console.log('[EMAIL-SERVICE]   - Filename ≠ XML Data');
+          if (filenameDate !== xmlDataGen) console.log('[EMAIL-SERVICE]   - Filename ≠ XML DataGenerazione');
+          if (xmlData !== xmlDataGen) console.log('[EMAIL-SERVICE]   - XML Data ≠ XML DataGenerazione');
         }
-        // DataGenerazione può essere oggi (diversa da Data per eventi passati)
       }
       
       console.log('[EMAIL-SERVICE] === FIRST 500 CHARS OF XML ===');
