@@ -4699,6 +4699,13 @@ export interface C1XmlParams {
    * per sostituire una versione precedente già elaborata con codice 0000.
    */
   forceSubstitution?: boolean;
+  /**
+   * TEST 2026-01-22: Modalità test per formati report vuoti
+   * - 'with_empty_organizer': Includi <Organizzatore> anche senza <Evento> (formato attuale)
+   * - 'without_organizer': Ometti <Organizzatore> quando non ci sono eventi (test alternativo)
+   * DEFAULT: undefined → usa comportamento attuale (con Organizzatore)
+   */
+  emptyReportFormat?: 'with_empty_organizer' | 'without_organizer';
 }
 
 /**
@@ -4817,7 +4824,8 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     events,
     subscriptions = [],
     nomeFile,
-    forceSubstitution = false
+    forceSubstitution = false,
+    emptyReportFormat
   } = params;
 
   // FIX 2026-01-22: Validazione dati aziendali organizzatore OBBLIGATORI
@@ -5135,18 +5143,30 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   // Il DTD v0039 NON include NomeFile come attributo valido
   // L'errore 0600 e causato dal NOME FILE allegato sbagliato, non dall'XML
   
+  // TEST 2026-01-22: Supporto per test formati report vuoti
+  // Il DTD dice Organizzatore* (zero o più), quindi tecnicamente possiamo:
+  // A) Omettere Organizzatore quando non ci sono eventi (emptyReportFormat = 'without_organizer')
+  // B) Includere Organizzatore vuoto senza Evento (emptyReportFormat = 'with_empty_organizer' o default)
+  const isEmptyReport = eventsXml === '' && abbonamentiXml === '';
+  const shouldOmitOrganizer = isEmptyReport && emptyReportFormat === 'without_organizer';
+  
+  let organizerXml = '';
+  if (!shouldOmitOrganizer) {
+    organizerXml = `
+    <Organizzatore>
+        <Denominazione>${escapeXml(organizerNameValue)}</Denominazione>
+        <CodiceFiscale>${escapeXml(organizerTaxId)}</CodiceFiscale>
+        <TipoOrganizzatore valore="${organizerType}"/>${eventsXml}${abbonamentiXml}
+    </Organizzatore>`;
+  }
+  
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivePadded}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
         <SistemaEmissione>${escapeXml(resolvedSystemCode)}</SistemaEmissione>
-    </Titolare>
-    <Organizzatore>
-        <Denominazione>${escapeXml(organizerNameValue)}</Denominazione>
-        <CodiceFiscale>${escapeXml(organizerTaxId)}</CodiceFiscale>
-        <TipoOrganizzatore valore="${organizerType}"/>${eventsXml}${abbonamentiXml}
-    </Organizzatore>
+    </Titolare>${organizerXml}
 </${rootElement}>`;
 
   return {

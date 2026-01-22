@@ -13815,4 +13815,128 @@ router.post("/api/siae/tickets/:id/print", requireAuth, async (req: Request, res
 
 console.log('[SIAE Routes] All routes registered including /api/siae/tickets/:id/print');
 
+// TEST ENDPOINT: Genera e invia report C1 in formati diversi per test SIAE
+// Questo endpoint permette di testare quale formato è accettato dalla SIAE
+// per report vuoti: con Organizzatore vuoto o senza Organizzatore
+router.post("/api/siae/companies/:companyId/test-empty-report", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { companyId } = req.params;
+    const { 
+      reportType = 'daily', // 'daily' o 'monthly'
+      testDate, // Data per il test (YYYY-MM-DD)
+      emptyReportFormat = 'with_empty_organizer' // 'with_empty_organizer' o 'without_organizer'
+    } = req.body;
+
+    if (!testDate) {
+      return res.status(400).json({ message: "testDate obbligatoria (formato: YYYY-MM-DD)" });
+    }
+
+    // Verify company and config
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
+    const company = await storage.getCompany(companyId);
+    
+    if (!company) {
+      return res.status(404).json({ message: "Azienda non trovata" });
+    }
+
+    const taxId = systemConfig?.taxId || company.fiscalCode || company.taxId;
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+
+    // Require Smart Card for S/MIME
+    const { getCachedEfffData } = await import('./bridge-relay');
+    const efffData = getCachedEfffData();
+    const smimeResult = resolveSystemCodeForSmime(efffData, systemConfig);
+    if (!smimeResult.success || !smimeResult.systemCode) {
+      return res.status(400).json({
+        message: smimeResult.error || 'Smart Card richiesta per test report',
+        code: 'SMARTCARD_REQUIRED_FOR_SMIME'
+      });
+    }
+    const resolvedSystemCode = smimeResult.systemCode;
+
+    const reportDate = new Date(testDate);
+    const isMonthly = reportType === 'monthly';
+    const reportKind = isMonthly ? 'mensile' : 'giornaliero';
+
+    // Calculate progressive for this transmission
+    const existingTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const transmissionType = isMonthly ? 'monthly' : 'daily';
+    const sameTypeTransmissions = existingTransmissions.filter(t => {
+      const tDate = new Date(t.periodDate);
+      if (isMonthly) {
+        return t.transmissionType === 'monthly' &&
+               tDate.getFullYear() === reportDate.getFullYear() &&
+               tDate.getMonth() === reportDate.getMonth();
+      } else {
+        return t.transmissionType === 'daily' &&
+               tDate.getFullYear() === reportDate.getFullYear() &&
+               tDate.getMonth() === reportDate.getMonth() &&
+               tDate.getDate() === reportDate.getDate();
+      }
+    });
+    const sequenceNumber = sameTypeTransmissions.length + 1;
+
+    // Generate file name
+    const fileName = generateSiaeFileName(reportKind, reportDate, sequenceNumber, null, resolvedSystemCode);
+
+    // Generate EMPTY report XML with specified format
+    const c1Params: C1XmlParams = {
+      reportKind,
+      companyId,
+      reportDate,
+      resolvedSystemCode,
+      progressivo: sequenceNumber,
+      taxId,
+      businessName: company.name || 'N/D',
+      events: [], // VUOTO per test
+      subscriptions: [],
+      nomeFile: fileName,
+      emptyReportFormat: emptyReportFormat as 'with_empty_organizer' | 'without_organizer'
+    };
+
+    const c1Result = generateC1Xml(c1Params);
+    const xml = c1Result.xml;
+
+    // Create transmission record
+    const transmission = await siaeStorage.createSiaeTransmission({
+      companyId,
+      transmissionType,
+      periodDate: reportDate,
+      fileName: fileName.replace('.xsi', ''),
+      fileExtension: '.xsi',
+      fileContent: xml,
+      status: 'pending',
+      ticketsCount: 0,
+      totalAmount: '0',
+      progressivoInvio: sequenceNumber,
+      systemCode: resolvedSystemCode,
+      fileHash: calculateFileHash(xml),
+      totalIva: '0',
+      totalEsenti: '0',
+      totalImpostaIntrattenimento: '0',
+      cfOrganizzatore: taxId,
+    });
+
+    // Return preview without sending (for review)
+    res.json({
+      message: `Report test generato (formato: ${emptyReportFormat})`,
+      transmissionId: transmission.id,
+      fileName,
+      format: emptyReportFormat,
+      reportType,
+      xml,
+      instructions: "Usa l'endpoint /api/siae/transmissions/:id/send per inviare il report alla SIAE"
+    });
+
+  } catch (error: any) {
+    console.error('[SIAE-TEST] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;
