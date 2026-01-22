@@ -53,6 +53,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Calendar,
   ChevronLeft,
   Ticket,
@@ -76,6 +85,8 @@ import {
   Filter,
   ArrowUpDown,
   X,
+  CalendarX2,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -190,6 +201,13 @@ export default function AdminEventDetail() {
   const [dateToFilter, setDateToFilter] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Posticipo/Annullamento evento
+  const [postponeDialogOpen, setPostponeDialogOpen] = useState(false);
+  const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
+  const [postponeDate, setPostponeDate] = useState("");
+  const [postponeReason, setPostponeReason] = useState("");
+  const [cancelEventReason, setCancelEventReason] = useState("");
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: [`/api/events/${eventId}`],
@@ -325,6 +343,54 @@ export default function AdminEventDetail() {
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message || "Impossibile annullare il biglietto", variant: "destructive" });
+    }
+  });
+
+  // Mutation per posticipo evento
+  const postponeEventMutation = useMutation({
+    mutationFn: async (data: { newEventDate: string; reason?: string }) => {
+      if (!ticketedEvent?.id) {
+        throw new Error("Evento biglietteria SIAE non trovato");
+      }
+      const res = await apiRequest("POST", `/api/siae/ticketed-events/${ticketedEvent.id}/postpone`, {
+        newEventDate: data.newEventDate,
+        reason: data.reason
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Evento posticipato", description: "L'evento è stato posticipato con successo" });
+      setPostponeDialogOpen(false);
+      setPostponeDate("");
+      setPostponeReason("");
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', eventId, 'ticketing'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Mutation per annullamento evento
+  const cancelEventMutation = useMutation({
+    mutationFn: async (data: { reason: string }) => {
+      if (!ticketedEvent?.id) {
+        throw new Error("Evento biglietteria SIAE non trovato");
+      }
+      const res = await apiRequest("POST", `/api/siae/ticketed-events/${ticketedEvent.id}/cancel`, {
+        reason: data.reason
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Evento annullato", description: "L'evento è stato annullato. I biglietti dovranno essere rimborsati." });
+      setCancelEventDialogOpen(false);
+      setCancelEventReason("");
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', eventId, 'ticketing'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
     }
   });
 
@@ -1125,6 +1191,27 @@ export default function AdminEventDetail() {
             </div>
           )}
         </div>
+        {/* Azioni Evento */}
+        {event && event.status !== 'cancelled' && event.status !== 'closed' && ticketedEvent && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPostponeDialogOpen(true)}
+              data-testid="button-postpone-event"
+            >
+              <CalendarX2 className="w-4 h-4 mr-2" />
+              Posticipa
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setCancelEventDialogOpen(true)}
+              data-testid="button-cancel-event"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Annulla Evento
+            </Button>
+          </div>
+        )}
       </div>
 
       {renderStatCards()}
@@ -1384,6 +1471,107 @@ export default function AdminEventDetail() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Dialog Posticipo Evento */}
+      <Dialog open={postponeDialogOpen} onOpenChange={setPostponeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Posticipa Evento</DialogTitle>
+            <DialogDescription>
+              Seleziona la nuova data per l'evento "{event?.name}".
+              I biglietti già venduti manterranno il sigillo fiscale originale.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nuova Data Evento</Label>
+              <Input
+                type="datetime-local"
+                value={postponeDate}
+                onChange={(e) => setPostponeDate(e.target.value)}
+                min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                data-testid="input-postpone-date"
+              />
+              <p className="text-xs text-muted-foreground">
+                Limiti SIAE: 90 giorni per generi 60-69 (disco), 12 mesi per altri generi
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo (opzionale)</Label>
+              <Textarea
+                value={postponeReason}
+                onChange={(e) => setPostponeReason(e.target.value)}
+                placeholder="Es: Artista indisponibile, maltempo..."
+                data-testid="input-postpone-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPostponeDialogOpen(false)} data-testid="button-cancel-postpone">
+              Annulla
+            </Button>
+            <Button
+              onClick={() => {
+                if (postponeDate) {
+                  postponeEventMutation.mutate({
+                    newEventDate: postponeDate,
+                    reason: postponeReason || undefined
+                  });
+                }
+              }}
+              disabled={!postponeDate || postponeEventMutation.isPending}
+              data-testid="button-confirm-postpone"
+            >
+              {postponeEventMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Posticipa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Annullamento Evento */}
+      <Dialog open={cancelEventDialogOpen} onOpenChange={setCancelEventDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Annulla Evento</DialogTitle>
+            <DialogDescription>
+              Stai per annullare l'evento "{event?.name}".
+              Le vendite verranno chiuse e tutti i biglietti dovranno essere rimborsati.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo Annullamento (obbligatorio)</Label>
+              <Textarea
+                value={cancelEventReason}
+                onChange={(e) => setCancelEventReason(e.target.value)}
+                placeholder="Es: Artista indisponibile, emergenza sanitaria..."
+                data-testid="input-cancel-event-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelEventDialogOpen(false)} data-testid="button-back-cancel-event">
+              Indietro
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (cancelEventReason) {
+                  cancelEventMutation.mutate({
+                    reason: cancelEventReason
+                  });
+                }
+              }}
+              disabled={!cancelEventReason || cancelEventMutation.isPending}
+              data-testid="button-confirm-cancel-event"
+            >
+              {cancelEventMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Conferma Annullamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
