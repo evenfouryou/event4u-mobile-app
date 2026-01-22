@@ -428,8 +428,8 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
       const testXml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
-    <DenominazioneTitolareCA>DEBUG TEST COMPANY</DenominazioneTitolareCA>
-    <CFTitolareCA>DBGTST00A00A000A</CFTitolareCA>
+    <DenominazioneTitolareCA>HURAEX SRL</DenominazioneTitolareCA>
+    <CFTitolareCA>PTRJTH93M11I156B</CFTitolareCA>
     <CodiceSistemaCA>${DEBUG_TEST_SYSTEM_CODE}</CodiceSistemaCA>
     <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>
     <DataGenerazioneRiepilogo>${dataRiepilogo}</DataGenerazioneRiepilogo>
@@ -437,8 +437,8 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
     <ProgressivoRiepilogo>1</ProgressivoRiepilogo>
   </Titolare>
   <Evento>
-    <CFOrganizzatore>DBGTST00A00A000A</CFOrganizzatore>
-    <DenominazioneOrganizzatore>DEBUG TEST COMPANY</DenominazioneOrganizzatore>
+    <CFOrganizzatore>PTRJTH93M11I156B</CFOrganizzatore>
+    <DenominazioneOrganizzatore>HURAEX SRL</DenominazioneOrganizzatore>
     <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
     <SpettacoloIntrattenimento>N</SpettacoloIntrattenimento>
     <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
@@ -452,7 +452,7 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
     <Esecutore></Esecutore>
     <NazionalitaFilm></NazionalitaFilm>
     <NumOpereRappresentate>1</NumOpereRappresentate>
-    <SistemaEmissione CFTitolare="DBGTST00A00A000A" CodiceSistema="${DEBUG_TEST_SYSTEM_CODE}">
+    <SistemaEmissione CFTitolare="PTRJTH93M11I156B" CodiceSistema="${DEBUG_TEST_SYSTEM_CODE}">
       <Titoli>
         <CodiceOrdinePosto>A0</CodiceOrdinePosto>
         <Capienza>100</Capienza>
@@ -7602,9 +7602,9 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     // P0004010 è un codice test valido (P + 7 cifre)
     const TEST_SYSTEM_CODE = 'P0004010';
     
-    // Get company name
+    // Get company name - use HURAEX SRL to match smart card certificate and avoid SIAE warning 2606
     const company = companyId ? await storage.getCompany(companyId) : null;
-    const companyName = company?.name || 'Test Company';
+    const companyName = company?.name || 'HURAEX SRL';
     
     // Create test XML in RiepilogoControlloAccessi format (Allegato B - Provvedimento 04/03/2008)
     const now = new Date();
@@ -7618,7 +7618,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
     <DenominazioneTitolareCA>${escapeXml(companyName)}</DenominazioneTitolareCA>
-    <CFTitolareCA>TSTSAE00A00A000A</CFTitolareCA>
+    <CFTitolareCA>PTRJTH93M11I156B</CFTitolareCA>
     <CodiceSistemaCA>${TEST_SYSTEM_CODE}</CodiceSistemaCA>
     <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>
     <DataGenerazioneRiepilogo>${dataRiepilogo}</DataGenerazioneRiepilogo>
@@ -7626,7 +7626,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     <ProgressivoRiepilogo>1</ProgressivoRiepilogo>
   </Titolare>
   <Evento>
-    <CFOrganizzatore>TSTSAE00A00A000A</CFOrganizzatore>
+    <CFOrganizzatore>PTRJTH93M11I156B</CFOrganizzatore>
     <DenominazioneOrganizzatore>${escapeXml(companyName)}</DenominazioneOrganizzatore>
     <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
     <SpettacoloIntrattenimento>N</SpettacoloIntrattenimento>
@@ -7641,7 +7641,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     <Esecutore></Esecutore>
     <NazionalitaFilm></NazionalitaFilm>
     <NumOpereRappresentate>1</NumOpereRappresentate>
-    <SistemaEmissione CFTitolare="TSTSAE00A00A000A" CodiceSistema="${TEST_SYSTEM_CODE}">
+    <SistemaEmissione CFTitolare="PTRJTH93M11I156B" CodiceSistema="${TEST_SYSTEM_CODE}">
       <Titoli>
         <CodiceOrdinePosto>A0</CodiceOrdinePosto>
         <Capienza>100</Capienza>
