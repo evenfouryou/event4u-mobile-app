@@ -223,7 +223,11 @@ function generateXMLContent(reportData: any): string {
   }
   const systemCode: string = resolvedSystemCode;
   const taxId = cachedEfffData?.partnerCodFis || company?.taxId || 'XXXXXXXXXXXXXXXX';
+  // FIX 2026-01-22: Distinzione Titolare vs Organizzatore
+  // businessName = Titolare (chi possiede la Smart Card SIAE)
+  // organizerName = Organizzatore (azienda del gestore)
   const businessName = cachedEfffData?.partnerName || ticketedEvent.businessName || company?.name || 'N/A';
+  const organizerName = company?.name || ticketedEvent.businessName || cachedEfffData?.partnerName || 'N/A';
   
   const dataGenerazione = formatSiaeDateCompact(now);
   const oraGenerazione = formatSiaeTimeCompact(now);
@@ -301,6 +305,7 @@ function generateXMLContent(reportData: any): string {
       progressivo: progressivo,
       taxId: taxId,
       businessName: businessName,
+      organizerName: organizerName, // FIX 2026-01-22: Organizzatore da company.name
       events: [eventContext],
       subscriptions: c1Subscriptions,
       // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)

@@ -2384,9 +2384,20 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const sistemaEmissione = systemCodeResult.systemCode;
   const cfTitolare = taxId.toUpperCase().substring(0, 16);
   const cfOrganizzatore = (event.organizerTaxId || taxId).toUpperCase().substring(0, 16);
-  // PRIORITÀ: systemConfig.businessName > companyName (fix warning 2606)
-  const denominazioneTitolare = escapeXml((systemConfig?.businessName || companyName || 'N/D').substring(0, 60));
-  const denominazioneOrganizzatore = escapeXml((event.organizerName || systemConfig?.businessName || companyName || 'N/D').substring(0, 60));
+  
+  // FIX 2026-01-22: Validazione dati aziendali organizzatore OBBLIGATORI
+  if (!companyName || companyName.trim() === '' || companyName === 'N/D') {
+    errors.push('Dati aziendali organizzatore mancanti: il nome azienda (companies.name) è obbligatorio per i report SIAE');
+    return emptyResult();
+  }
+  
+  // PRIORITÀ TITOLARE: Smart Card EFFF > Config SIAE > Company (fix warning 2606)
+  // Il Titolare è chi possiede la Smart Card SIAE
+  const denominazioneTitolare = escapeXml((systemConfig?.businessName || companyName).substring(0, 60));
+  
+  // PRIORITÀ ORGANIZZATORE: Company > Config SIAE > Evento (fix 2026-01-22)
+  // L'Organizzatore è l'azienda del gestore che organizza l'evento
+  const denominazioneOrganizzatore = escapeXml((companyName || systemConfig?.businessName || event.organizerName || 'N/D').substring(0, 60));
   
   // Date/time evento (usato anche per DataRiepilogo - DEVE coincidere con nome file!)
   const eventDate = typeof event.date === 'string' ? new Date(event.date) : event.date;
@@ -4677,7 +4688,13 @@ export interface C1XmlParams {
   resolvedSystemCode: string;
   progressivo: number;
   taxId: string;
+  /** Nome del Titolare (chi possiede la Smart Card SIAE) */
   businessName: string;
+  /** 
+   * FIX 2026-01-22: Nome dell'Organizzatore (azienda del gestore)
+   * Se non specificato, usa businessName per retrocompatibilità
+   */
+  organizerName?: string;
   events: C1EventContext[];
   subscriptions?: C1SubscriptionData[];
   /** Nome file per allegato email (NON inserito nell'XML per conformità DTD SIAE) */
@@ -4814,6 +4831,11 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     nomeFile,
     forceSubstitution = false
   } = params;
+
+  // FIX 2026-01-22: Validazione dati aziendali organizzatore OBBLIGATORI
+  if (!businessName || businessName.trim() === '' || businessName === 'N/D') {
+    throw new Error('Dati aziendali organizzatore mancanti: il nome azienda è obbligatorio per i report SIAE C1');
+  }
 
   const isMonthly = reportKind === 'mensile';
   const now = new Date();
@@ -5107,8 +5129,11 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
     }
   }
 
+  // FIX 2026-01-22: Distinzione Titolare vs Organizzatore
+  // Titolare = businessName (chi possiede la Smart Card SIAE)
+  // Organizzatore = organizerName (azienda del gestore) oppure businessName per retrocompatibilità
   const titolareName = businessName;
-  const organizerName = businessName;
+  const organizerNameValue = params.organizerName || businessName;
   const organizerTaxId = taxId;
   const organizerType = 'G';
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
@@ -5127,7 +5152,7 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
         <SistemaEmissione>${escapeXml(resolvedSystemCode)}</SistemaEmissione>
     </Titolare>
     <Organizzatore>
-        <Denominazione>${escapeXml(organizerName)}</Denominazione>
+        <Denominazione>${escapeXml(organizerNameValue)}</Denominazione>
         <CodiceFiscale>${escapeXml(organizerTaxId)}</CodiceFiscale>
         <TipoOrganizzatore valore="${organizerType}"/>${eventsXml}${abbonamentiXml}
     </Organizzatore>
