@@ -1057,6 +1057,88 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
 
 export const SIAE_SYSTEM_CODE_DEFAULT = 'EVENT4U1';
 
+// ==================== Termini Annullamento (DM 13/07/2000 - Art. 7) ====================
+
+/**
+ * Calcola il numero di giorni lavorativi tra due date (esclusi weekend).
+ * I festivi italiani non sono considerati per semplicità.
+ */
+export function countBusinessDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const current = new Date(startDate);
+  current.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  
+  while (current <= end) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return count;
+}
+
+/**
+ * Calcola la data di scadenza per annullamento biglietto (5° giorno lavorativo dopo l'evento).
+ * DM 13/07/2000 - Art. 7
+ */
+export function getCancellationDeadline(eventDate: Date): Date {
+  const deadline = new Date(eventDate);
+  deadline.setHours(23, 59, 59, 999);
+  
+  let businessDaysAdded = 0;
+  while (businessDaysAdded < 5) {
+    deadline.setDate(deadline.getDate() + 1);
+    const dayOfWeek = deadline.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      businessDaysAdded++;
+    }
+  }
+  
+  return deadline;
+}
+
+/**
+ * Verifica se un biglietto può ancora essere annullato secondo DM 13/07/2000 Art. 7.
+ * 
+ * @param eventDate - Data dell'evento
+ * @param isSubscription - Se true, considera la fine validità abbonamento
+ * @returns Oggetto con stato e dettagli
+ */
+export function checkCancellationDeadline(
+  eventDate: Date | string,
+  isSubscription: boolean = false
+): {
+  canCancel: boolean;
+  deadline: Date;
+  daysRemaining: number;
+  message: string;
+} {
+  const eventDateObj = typeof eventDate === 'string' ? new Date(eventDate) : eventDate;
+  const now = new Date();
+  const deadline = getCancellationDeadline(eventDateObj);
+  
+  const canCancel = now <= deadline;
+  const daysRemaining = canCancel 
+    ? countBusinessDays(now, deadline) 
+    : -countBusinessDays(deadline, now);
+  
+  const entityType = isSubscription ? 'abbonamento' : 'biglietto';
+  const message = canCancel
+    ? `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} annullabile entro il ${deadline.toLocaleDateString('it-IT')} (${daysRemaining} giorni lavorativi rimanenti)`
+    : `Termine annullamento ${entityType} scaduto il ${deadline.toLocaleDateString('it-IT')} (DM 13/07/2000 Art. 7)`;
+  
+  return {
+    canCancel,
+    deadline,
+    daysRemaining,
+    message
+  };
+}
+
 /**
  * Valida il formato del codice sistema SIAE.
  * 

@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode, validateSiaeFileName, getDefaultEntertainmentIncidence, getDefaultTaxType } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, generateSiaeAttachmentName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, resolveSystemCodeForSmime, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml, generateC1Xml, type C1XmlParams, type C1EventContext, type C1SectorData, type C1TicketData, type C1SubscriptionData, validateSiaeSystemCode, validateSiaeFileName, getDefaultEntertainmentIncidence, getDefaultTaxType, checkCancellationDeadline } from './siae-utils';
 import { createSiaeTransmissionWithXml, type CreateSiaeTransmissionParams } from './siae-transmission-service';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
@@ -3608,6 +3608,24 @@ router.post("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, re
       }
     } else {
       return res.status(403).json({ message: "Non autorizzato ad annullare biglietti" });
+    }
+    
+    // Verifica termine annullamento (DM 13/07/2000 - Art. 7)
+    // Biglietti: entro 5° giorno lavorativo successivo all'evento
+    const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+    if (baseEvent && baseEvent.eventDate) {
+      const deadlineCheck = checkCancellationDeadline(baseEvent.eventDate, false);
+      if (!deadlineCheck.canCancel) {
+        // Solo super_admin può bypassare il termine
+        if (user.role !== 'super_admin') {
+          return res.status(400).json({ 
+            message: deadlineCheck.message,
+            deadlineExpired: true,
+            deadline: deadlineCheck.deadline,
+            daysOverdue: Math.abs(deadlineCheck.daysRemaining)
+          });
+        }
+      }
     }
     
     // Processa rimborso se richiesto
