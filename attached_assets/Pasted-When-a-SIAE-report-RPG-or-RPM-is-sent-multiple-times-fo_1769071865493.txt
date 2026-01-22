@@ -1,0 +1,295 @@
+When a SIAE report (RPG or RPM) is sent multiple times for the same date/period, automatically detect this and mark it as a replacement                  
+  (Sostituzione="S") instead of a new submission.                                                                                                          
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  REQUIREMENTS                                                                                                                                             
+                                                                                                                                                           
+  1. Database Tracking Table                                                                                                                               
+                                                                                                                                                           
+  Create a table to track all SIAE transmissions:                                                                                                          
+                                                                                                                                                           
+  CREATE TABLE siae_transmissions (                                                                                                                        
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,                                                                                                       
+      report_type ENUM('RPG', 'RPM') NOT NULL,                                                                                                             
+      report_date DATE NOT NULL,                                                                                                                           
+      report_month VARCHAR(7) NULL COMMENT 'YYYY-MM for monthly reports',                                                                                  
+      progressivo_generazione INT NOT NULL,                                                                                                                
+      sostituzione CHAR(1) DEFAULT 'N',                                                                                                                    
+      xml_content LONGTEXT NOT NULL,                                                                                                                       
+      xml_hash VARCHAR(64) NOT NULL COMMENT 'SHA-256 hash of normalized XML',                                                                              
+      response_code VARCHAR(10) NULL,                                                                                                                      
+      response_message TEXT NULL,                                                                                                                          
+      sent_at TIMESTAMP NULL,                                                                                                                              
+      status ENUM('pending', 'sent', 'accepted', 'rejected', 'error') DEFAULT 'pending',                                                                   
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,                                                                                                      
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,                                                                          
+                                                                                                                                                           
+      UNIQUE KEY unique_report (report_type, report_date, report_month),                                                                                   
+      INDEX idx_status (status),                                                                                                                           
+      INDEX idx_sent_at (sent_at)                                                                                                                          
+  );                                                                                                                                                       
+                                                                                                                                                           
+  Create Migration:                                                                                                                                        
+  # In your Node.js/TypeScript project                                                                                                                     
+  # Create: database/migrations/YYYY_MM_DD_create_siae_transmissions_table.sql                                                                             
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  2. Implementation Logic                                                                                                                                  
+                                                                                                                                                           
+  File to modify: server/siae-utils.ts (or wherever report generation/sending is handled)                                                                  
+                                                                                                                                                           
+  Steps:                                                                                                                                                   
+                                                                                                                                                           
+  A. Before Generating Report                                                                                                                              
+                                                                                                                                                           
+  async function checkExistingTransmission(reportType: 'RPG' | 'RPM', reportDate: string): Promise<{                                                       
+    exists: boolean;                                                                                                                                       
+    lastProgressivo: number;                                                                                                                               
+    wasAccepted: boolean;                                                                                                                                  
+  }> {                                                                                                                                                     
+    // Query database for existing transmission                                                                                                            
+    const existing = await db.query(                                                                                                                       
+      `SELECT progressivo_generazione, response_code, status                                                                                               
+       FROM siae_transmissions                                                                                                                             
+       WHERE report_type = ? AND report_date = ?                                                                                                           
+       ORDER BY progressivo_generazione DESC                                                                                                               
+       LIMIT 1`,                                                                                                                                           
+      [reportType, reportDate]                                                                                                                             
+    );                                                                                                                                                     
+                                                                                                                                                           
+    if (existing.length === 0) {                                                                                                                           
+      return { exists: false, lastProgressivo: 0, wasAccepted: false };                                                                                    
+    }                                                                                                                                                      
+                                                                                                                                                           
+    const wasAccepted = existing[0].response_code === '0000' || existing[0].status === 'accepted';                                                         
+                                                                                                                                                           
+    return {                                                                                                                                               
+      exists: true,                                                                                                                                        
+      lastProgressivo: existing[0].progressivo_generazione,                                                                                                
+      wasAccepted                                                                                                                                          
+    };                                                                                                                                                     
+  }                                                                                                                                                        
+                                                                                                                                                           
+  B. Set Sostituzione Flag                                                                                                                                 
+                                                                                                                                                           
+  async function generateReport(reportType: 'RPG' | 'RPM', reportDate: string, eventData: any) {                                                           
+    // Check if report already sent                                                                                                                        
+    const existing = await checkExistingTransmission(reportType, reportDate);                                                                              
+                                                                                                                                                           
+    let sostituzione = 'N';  // Default: new report                                                                                                        
+    let progressivo = 1;                                                                                                                                   
+                                                                                                                                                           
+    if (existing.exists) {                                                                                                                                 
+      sostituzione = 'S';  // Replacement                                                                                                                  
+      progressivo = existing.lastProgressivo + 1;  // Increment                                                                                            
+                                                                                                                                                           
+      console.log(`[SIAE] Report already exists for ${reportDate}. Sending as replacement (Sostituzione=S, Progressivo=${progressivo})`);                  
+    }                                                                                                                                                      
+                                                                                                                                                           
+    // Generate XML with correct flags                                                                                                                     
+    const xml = generateXML({                                                                                                                              
+      reportType,                                                                                                                                          
+      reportDate,                                                                                                                                          
+      sostituzione,                                                                                                                                        
+      progressivo,                                                                                                                                         
+      eventData                                                                                                                                            
+    });                                                                                                                                                    
+                                                                                                                                                           
+    return { xml, sostituzione, progressivo };                                                                                                             
+  }                                                                                                                                                        
+                                                                                                                                                           
+  C. Save Transmission Record                                                                                                                              
+                                                                                                                                                           
+  async function sendSIAEReport(reportType: 'RPG' | 'RPM', reportDate: string, eventData: any) {                                                           
+    const { xml, sostituzione, progressivo } = await generateReport(reportType, reportDate, eventData);                                                    
+                                                                                                                                                           
+    // Calculate XML hash for change detection                                                                                                             
+    const xmlHash = crypto.createHash('sha256').update(xml).digest('hex');                                                                                 
+                                                                                                                                                           
+    // Save transmission record BEFORE sending                                                                                                             
+    const transmissionId = await db.insert('siae_transmissions', {                                                                                         
+      report_type: reportType,                                                                                                                             
+      report_date: reportDate,                                                                                                                             
+      report_month: reportType === 'RPM' ? reportDate.substring(0, 7) : null,                                                                              
+      progressivo_generazione: progressivo,                                                                                                                
+      sostituzione,                                                                                                                                        
+      xml_content: xml,                                                                                                                                    
+      xml_hash: xmlHash,                                                                                                                                   
+      status: 'pending',                                                                                                                                   
+      sent_at: new Date()                                                                                                                                  
+    });                                                                                                                                                    
+                                                                                                                                                           
+    // Send via email                                                                                                                                      
+    try {                                                                                                                                                  
+      await sendEmail({                                                                                                                                    
+        to: 'servertest2@batest.siae.it',                                                                                                                  
+        subject: `${reportType}_${reportDate.replace(/-/g, '_')}_${progressivo}.xsi`,                                                                      
+        attachment: xml                                                                                                                                    
+      });                                                                                                                                                  
+                                                                                                                                                           
+      // Update status                                                                                                                                     
+      await db.update('siae_transmissions', transmissionId, {                                                                                              
+        status: 'sent'                                                                                                                                     
+      });                                                                                                                                                  
+                                                                                                                                                           
+      return { success: true, transmissionId };                                                                                                            
+    } catch (error) {                                                                                                                                      
+      await db.update('siae_transmissions', transmissionId, {                                                                                              
+        status: 'error',                                                                                                                                   
+        response_message: error.message                                                                                                                    
+      });                                                                                                                                                  
+      throw error;                                                                                                                                         
+    }                                                                                                                                                      
+  }                                                                                                                                                        
+                                                                                                                                                           
+  D. Process SIAE Response                                                                                                                                 
+                                                                                                                                                           
+  async function processSIAEResponse(filename: string, responseContent: string) {                                                                          
+    // Parse filename to get report type, date, progressivo                                                                                                
+    // Example: RPG_2026_01_22_001.xsi_2026_01_22_0800008258_0000.txt                                                                                      
+    const match = filename.match(/^(RPG|RPM)_(\d{4})_(\d{2})_(\d{2})_(\d+)/);                                                                              
+                                                                                                                                                           
+    if (!match) {                                                                                                                                          
+      console.error('[SIAE] Invalid response filename:', filename);                                                                                        
+      return;                                                                                                                                              
+    }                                                                                                                                                      
+                                                                                                                                                           
+    const [_, reportType, year, month, day, progressivo] = match;                                                                                          
+    const reportDate = `${year}-${month}-${day}`;                                                                                                          
+                                                                                                                                                           
+    // Parse response code                                                                                                                                 
+    const codeMatch = responseContent.match(/CODICE:\s+(\d+)/);                                                                                            
+    const code = codeMatch ? codeMatch[1] : null;                                                                                                          
+                                                                                                                                                           
+    // Update database                                                                                                                                     
+    await db.query(                                                                                                                                        
+      `UPDATE siae_transmissions                                                                                                                           
+       SET response_code = ?,                                                                                                                              
+           response_message = ?,                                                                                                                           
+           status = ?                                                                                                                                      
+       WHERE report_type = ?                                                                                                                               
+         AND report_date = ?                                                                                                                               
+         AND progressivo_generazione = ?`,                                                                                                                 
+      [                                                                                                                                                    
+        code,                                                                                                                                              
+        responseContent,                                                                                                                                   
+        code === '0000' ? 'accepted' : 'rejected',                                                                                                         
+        reportType,                                                                                                                                        
+        reportDate,                                                                                                                                        
+        parseInt(progressivo)                                                                                                                              
+      ]                                                                                                                                                    
+    );                                                                                                                                                     
+                                                                                                                                                           
+    console.log(`[SIAE] Response processed: ${reportType} ${reportDate} - Code ${code}`);                                                                  
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  3. User-Facing Logic                                                                                                                                     
+                                                                                                                                                           
+  When user clicks "Send Report":                                                                                                                          
+                                                                                                                                                           
+  // In your API endpoint or UI handler                                                                                                                    
+  async function handleSendReport(reportType: 'RPG' | 'RPM', reportDate: string) {                                                                         
+    const existing = await checkExistingTransmission(reportType, reportDate);                                                                              
+                                                                                                                                                           
+    if (existing.exists && existing.wasAccepted) {                                                                                                         
+      // Show confirmation dialog                                                                                                                          
+      const userConfirmed = await askUser({                                                                                                                
+        title: 'Report già inviato',                                                                                                                       
+        message: `Un report per ${reportDate} è già stato inviato e accettato da SIAE. Vuoi inviare una correzione?`,                                      
+        options: ['Annulla', 'Invia Correzione']                                                                                                           
+      });                                                                                                                                                  
+                                                                                                                                                           
+      if (userConfirmed !== 'Invia Correzione') {                                                                                                          
+        return { cancelled: true };                                                                                                                        
+      }                                                                                                                                                    
+    }                                                                                                                                                      
+                                                                                                                                                           
+    // Proceed with sending                                                                                                                                
+    return await sendSIAEReport(reportType, reportDate, eventData);                                                                                        
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  4. History/Audit Trail UI                                                                                                                                
+                                                                                                                                                           
+  Create endpoint to view transmission history:                                                                                                            
+                                                                                                                                                           
+  async function getTransmissionHistory(reportType?: 'RPG' | 'RPM', limit = 50) {                                                                          
+    const query = `                                                                                                                                        
+      SELECT                                                                                                                                               
+        id,                                                                                                                                                
+        report_type,                                                                                                                                       
+        report_date,                                                                                                                                       
+        progressivo_generazione,                                                                                                                           
+        sostituzione,                                                                                                                                      
+        response_code,                                                                                                                                     
+        status,                                                                                                                                            
+        sent_at                                                                                                                                            
+      FROM siae_transmissions                                                                                                                              
+      ${reportType ? 'WHERE report_type = ?' : ''}                                                                                                         
+      ORDER BY sent_at DESC                                                                                                                                
+      LIMIT ?                                                                                                                                              
+    `;                                                                                                                                                     
+                                                                                                                                                           
+    return await db.query(query, reportType ? [reportType, limit] : [limit]);                                                                              
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  5. XML Generation Update                                                                                                                                 
+                                                                                                                                                           
+  Ensure XML uses the flags:                                                                                                                               
+                                                                                                                                                           
+  function generateC1Xml(data: any) {                                                                                                                      
+    const { reportType, reportDate, sostituzione, progressivo } = data;                                                                                    
+                                                                                                                                                           
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>                                                                                                    
+  <RiepilogoGiornaliero                                                                                                                                    
+    Data="${reportDate.replace(/-/g, '')}"                                                                                                                 
+    DataGenerazione="${formatDate(new Date())}"                                                                                                            
+    OraGenerazione="${formatTime(new Date())}"                                                                                                             
+    ProgressivoGenerazione="${progressivo.toString().padStart(3, '0')}"                                                                                    
+    Sostituzione="${sostituzione}">                                                                                                                        
+    ...                                                                                                                                                    
+  </RiepilogoGiornaliero>`;                                                                                                                                
+                                                                                                                                                           
+    return xml;                                                                                                                                            
+  }                                                                                                                                                        
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  6. Testing Steps                                                                                                                                         
+                                                                                                                                                           
+  After implementation, test:                                                                                                                              
+                                                                                                                                                           
+  1. First Submission (New Report)                                                                                                                         
+    - Send RPG for date 2026-01-25                                                                                                                         
+    - Verify: Sostituzione="N", ProgressivoGenerazione="001"                                                                                               
+    - Check database: record created with status='sent'                                                                                                    
+  2. Second Submission (Replacement)                                                                                                                       
+    - Send RPG for same date 2026-01-25 again                                                                                                              
+    - Verify: Sostituzione="S", ProgressivoGenerazione="002"                                                                                               
+    - Check database: new record created                                                                                                                   
+  3. Error Code 0604 Handling                                                                                                                              
+    - Should NOT occur anymore (SIAE accepts replacements with Sostituzione="S")                                                                           
+  4. Response Processing                                                                                                                                   
+    - Manually trigger response processor with test file                                                                                                   
+    - Verify database status updates correctly                                                                                                             
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  7. Migration & Deployment Checklist                                                                                                                      
+                                                                                                                                                           
+  - Create siae_transmissions table migration                                                                                                              
+  - Run migration on dev database                                                                                                                          
+  - Implement checkExistingTransmission() function                                                                                                         
+  - Update generateReport() to use Sostituzione flag                                                                                                       
+  - Implement sendSIAEReport() with database tracking                                                                                                      
+  - Create response processor/webhook handler                                                                                                              
+  - Add user confirmation dialog for replacements                                                                                                          
+  - Test with multiple submissions of same date                                                                                                            
+  - Deploy to production                                                                                                                                   
+  - Monitor first real replacement submission                                                                                                              
+                                                                                                                                                           
+  ---                                                                                                                                                      
+  Report back:                                                                                                                                             
+  - Confirmation that siae_transmissions table was created                                                                                                 
+  - Test results for first and second submission                                                                                                           
+  - Screenshot/log of Sostituzione flag in generated XML 
