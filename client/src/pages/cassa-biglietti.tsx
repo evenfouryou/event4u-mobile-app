@@ -57,6 +57,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,6 +87,7 @@ import {
   WifiOff,
   Radio,
   Printer,
+  Calendar,
 } from "lucide-react";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
@@ -291,6 +293,17 @@ export default function CassaBigliettiPage() {
   const { data: cancellationReasons } = useQuery<SiaeCancellationReason[]>({
     queryKey: ["/api/siae/cancellation-reasons"],
     enabled: isCancelDialogOpen || isRangeCancelDialogOpen,
+  });
+
+  // Cancellation deadline info (DM 13/07/2000 Art. 7)
+  const { data: cancellationDeadline, isLoading: deadlineLoading } = useQuery<{
+    canCancel: boolean;
+    deadline: string;
+    daysRemaining: number;
+    message: string;
+  } | null>({
+    queryKey: ["/api/siae/ticketed-events", selectedEventId, "cancellation-deadline"],
+    enabled: isCancelDialogOpen && !!selectedEventId,
   });
 
   // Connected print agents (real-time)
@@ -852,14 +865,33 @@ export default function CassaBigliettiPage() {
                 </div>
               </div>
             )}
+
+            {!deadlineLoading && cancellationDeadline && (
+              <Alert 
+                variant={cancellationDeadline.canCancel ? "default" : "destructive"}
+                className={cancellationDeadline.canCancel ? "border-blue-500/50 bg-blue-500/10" : ""}
+                data-testid="alert-cancellation-deadline"
+              >
+                <Calendar className="h-4 w-4" />
+                <AlertTitle>
+                  {cancellationDeadline.canCancel ? "Deadline Annullamento" : "Termine Annullamento Scaduto"}
+                </AlertTitle>
+                <AlertDescription>
+                  {cancellationDeadline.canCancel 
+                    ? `Biglietti annullabili entro il ${cancellationDeadline.deadline}${cancellationDeadline.daysRemaining > 0 ? ` (${cancellationDeadline.daysRemaining} giorni rimanenti)` : ''}`
+                    : `Termine annullamento scaduto il ${cancellationDeadline.deadline}. Non è più possibile annullare questo biglietto.`
+                  }
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-dialog-cancel">Annulla</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-500 hover:bg-red-600"
-              disabled={!cancelReasonCode || cancelTicketMutation.isPending}
+              disabled={!cancelReasonCode || cancelTicketMutation.isPending || (cancellationDeadline && !cancellationDeadline.canCancel)}
               onClick={() => {
-                if (ticketToCancel && cancelReasonCode) {
+                if (ticketToCancel && cancelReasonCode && (!cancellationDeadline || cancellationDeadline.canCancel)) {
                   cancelTicketMutation.mutate({
                     ticketId: ticketToCancel.id,
                     reasonCode: cancelReasonCode,

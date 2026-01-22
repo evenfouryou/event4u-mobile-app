@@ -45,6 +45,14 @@ A comprehensive SIAE-compliant ticketing and fiscal management system for Italia
     -   `GET /api/siae/ticketed-events/:id/refund-list` - List tickets pending refund
     -   `POST /api/siae/tickets/:id/refund` - Refund individual ticket
     -   `POST /api/siae/ticketed-events/:id/refund-batch` - Process all refunds
+    -   `GET /api/siae/ticketed-events/:id/cancellation-deadline` - Get cancellation deadline info
+
+**Termini Annullamento (DM 13/07/2000 - Art. 7):**
+-   Biglietti: Annullabili entro 5° giorno lavorativo successivo all'evento
+-   Abbonamenti: Annullabili entro 5° giorno lavorativo dalla fine della validità
+-   Backend enforces deadlines with 400 error after expiry (super_admin can bypass)
+-   Cassa interface shows deadline reminder with days remaining
+-   API: `checkCancellationDeadline()` utility in siae-utils.ts
 
 ### International Operating Mode
 The system supports international ticket sales with SIAE exemption through a flexible operating mode system:

@@ -2714,6 +2714,39 @@ router.get("/api/siae/ticketed-events/:id/refund-list", requireAuth, requireOrga
 });
 
 /**
+ * Ottieni informazioni sulla deadline di annullamento per un evento
+ * DM 13/07/2000 - Art. 7: Biglietti entro 5° giorno lavorativo successivo all'evento
+ */
+router.get("/api/siae/ticketed-events/:id/cancellation-deadline", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    // Get base event for event date
+    const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+    if (!baseEvent || !baseEvent.eventDate) {
+      return res.status(400).json({ message: "Data evento non disponibile" });
+    }
+    
+    const deadlineInfo = checkCancellationDeadline(baseEvent.eventDate, false);
+    
+    res.json({
+      eventId: req.params.id,
+      eventDate: baseEvent.eventDate,
+      canCancel: deadlineInfo.canCancel,
+      deadline: deadlineInfo.deadline,
+      daysRemaining: deadlineInfo.daysRemaining,
+      message: deadlineInfo.message
+    });
+  } catch (error: any) {
+    console.error('[CANCELLATION DEADLINE] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
  * Processa rimborso per un singolo biglietto
  */
 router.post("/api/siae/tickets/:id/refund", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
