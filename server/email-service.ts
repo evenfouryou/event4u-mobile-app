@@ -508,6 +508,55 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   console.log(`[EMAIL-SERVICE] SIAE Allegato C formato:`);
   console.log(`[EMAIL-SERVICE]   - Attachment: ${fileName} (formato 1.4.1)`);
   console.log(`[EMAIL-SERVICE]   - Subject: ${emailSubject} (formato 1.5.3)`);
+  
+  // ==================== DEBUG SIAE ERROR 0603 ====================
+  // Verifica coerenza date tra nome file, XML Data e XML DataGenerazione
+  console.log('=== SIAE TRANSMISSION DEBUG (0603 CHECK) ===');
+  console.log('[DEBUG] Filename:', fileName);
+  console.log('[DEBUG] Period Date (input):', periodDate.toISOString());
+  
+  // Estrai attributi critici dall'XML
+  const dataMatch = xmlContent.match(/Data="(\d+)"/);
+  const dataGenMatch = xmlContent.match(/DataGenerazione="(\d+)"/);
+  const oraGenMatch = xmlContent.match(/OraGenerazione="(\d+)"/);
+  const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
+  
+  console.log('[DEBUG] XML Data attribute:', dataMatch ? dataMatch[1] : 'NOT FOUND');
+  console.log('[DEBUG] XML DataGenerazione attribute:', dataGenMatch ? dataGenMatch[1] : 'NOT FOUND');
+  console.log('[DEBUG] XML OraGenerazione attribute:', oraGenMatch ? oraGenMatch[1] : 'NOT FOUND');
+  console.log('[DEBUG] XML NomeFile attribute:', nomeFileMatch ? nomeFileMatch[1] : 'NOT FOUND');
+  
+  // Estrai data dal nome file (formato RPG_YYYY_MM_DD_###.xsi)
+  const filenameDateMatch = fileName.match(/RPG_(\d{4})_(\d{2})_(\d{2})_/);
+  const filenameDate = filenameDateMatch ? `${filenameDateMatch[1]}${filenameDateMatch[2]}${filenameDateMatch[3]}` : null;
+  console.log('[DEBUG] Filename date extracted:', filenameDate || 'NOT FOUND');
+  
+  // Validazione coerenza date
+  if (dataMatch && dataGenMatch && filenameDate) {
+    const xmlData = dataMatch[1];
+    const xmlDataGen = dataGenMatch[1];
+    
+    console.log('\n=== VALIDATION ===');
+    console.log('[VALIDATION] Filename date:', filenameDate);
+    console.log('[VALIDATION] XML Data:     ', xmlData);
+    console.log('[VALIDATION] XML DataGen:  ', xmlDataGen);
+    
+    if (filenameDate === xmlData && xmlData === xmlDataGen) {
+      console.log('[VALIDATION] ✅ ALL DATES MATCH');
+    } else {
+      console.error('[VALIDATION] ❌ DATE MISMATCH DETECTED:');
+      if (filenameDate !== xmlData) console.error('  - Filename ≠ XML Data');
+      if (filenameDate !== xmlDataGen) console.error('  - Filename ≠ XML DataGenerazione');
+      if (xmlData !== xmlDataGen) console.error('  - XML Data ≠ XML DataGenerazione');
+    }
+  }
+  
+  // Preview XML
+  console.log('=== FIRST 600 CHARS OF XML ===');
+  console.log(xmlContent.substring(0, 600));
+  console.log('================================\n');
+  // ==================== END DEBUG ====================
+  
   console.log(`[EMAIL-SERVICE] FIX 2026-01-07: Using raw XML for S/MIME (no double signature)`);
   if (p7mBase64) {
     console.log(`[EMAIL-SERVICE] WARNING: P7M provided but ignored - S/MIME includes XML directly`);
