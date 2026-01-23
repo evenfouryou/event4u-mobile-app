@@ -1,0 +1,109 @@
+The initial report sending for a single event is working. Now implement the "resend" or "update" (substitution) functionality according to Italian
+   SIAE regulations.                                                                                                                                
+                                                                                                                                                    
+  Key Technical Requirements                                                                                                                        
+                                                                                                                                                    
+  1. Substitution Attribute (Sostituzione)                                                                                                          
+                                                                                                                                                    
+  When sending a report to SIAE, the XML must include a Sostituzione attribute:                                                                     
+  - Sostituzione="N" = New report (first submission) - this is what currently works                                                                 
+  - Sostituzione="S" = Substitute/replace a previously sent report                                                                                  
+                                                                                                                                                    
+  The XML root element should be:                                                                                                                   
+  <RiepilogoGiornaliero Sostituzione="S" Data="AAAAMMGG" DataGenerazione="AAAAMMGG" OraGenerazione="HHMMSS" ProgressivoGenerazione="########">      
+                                                                                                                                                    
+  Or for access control reports:                                                                                                                    
+  <RiepilogoControlloAccessi Sostituzione="S">                                                                                                      
+                                                                                                                                                    
+  2. ASCII Format Substitution Record (Type "S")                                                                                                    
+                                                                                                                                                    
+  If using ASCII format, when substituting a report, prepend a substitution record:                                                                 
+  ┌──────────────────────────┬───────────────────────────┬────────┬────────┬─────────────────────────────────────────┐                              
+  │         Position         │           Field           │ Format │ Length │                  Value                  │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 1                        │ TipoRecord                │ A      │ 2      │ "S"                                     │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 3                        │ CF Titolare CA            │ A      │ 16     │                                         │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 19                       │ Codice Sistema CA         │ A      │ 8      │ SIAE code                               │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 27                       │ Tipo riepilogo sostituito │ A      │ 1      │ "A" (for access reports) or "G" (daily) │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ Event being substituted: │                           │        │        │                                         │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 28                       │ CF Organizzatore          │ A      │ 16     │                                         │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 44                       │ Codice locale             │ N      │ 13     │                                         │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 57                       │ Data inizio evento        │ N      │ 8      │ AAAAMMGG                                │                              
+  ├──────────────────────────┼───────────────────────────┼────────┼────────┼─────────────────────────────────────────┤                              
+  │ 65                       │ Ora inizio evento         │ N      │ 4      │ HHMM                                    │                              
+  └──────────────────────────┴───────────────────────────┴────────┴────────┴─────────────────────────────────────────┘                              
+  3. File Naming with Progressive Number                                                                                                            
+                                                                                                                                                    
+  For resends, increment the progressive number in the filename:                                                                                    
+  XXX_AAAA_MM_GG_###.TTT.p7m                                                                                                                        
+                                                                                                                                                    
+  Where:                                                                                                                                            
+  - XXX = "RPG" (daily), "RPM" (monthly), "RCA" (access control), "LTA" (ticket list)                                                               
+  - AAAA = Year                                                                                                                                     
+  - MM = Month                                                                                                                                      
+  - GG = Day                                                                                                                                        
+  - ### = Progressive (001 for first, 002 for resend, etc.)                                                                                         
+  - TTT = "XSI" (XML) or "TXT" (ASCII)                                                                                                              
+                                                                                                                                                    
+  Example:                                                                                                                                          
+  - First send: RPG_2026_01_23_001.xsi.p7m                                                                                                          
+  - Resend: RPG_2026_01_23_002.xsi.p7m                                                                                                              
+                                                                                                                                                    
+  4. Email Subject for Substitutions                                                                                                                
+                                                                                                                                                    
+  Format: <RRR>_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>                                                                                 
+                                                                                                                                                    
+  Example resend: RPG_2026_01_23_12345678_002_XSI_V.01.00                                                                                           
+                                                                                                                                                    
+  5. Database Tracking Requirements                                                                                                                 
+                                                                                                                                                    
+  Track for each report:                                                                                                                            
+  - event_id - Event identifier                                                                                                                     
+  - report_type - "RPG", "RPM", "RCA"                                                                                                               
+  - progressive_number - Starts at 1, increments on resend                                                                                          
+  - sostituzione - "N" or "S"                                                                                                                       
+  - sent_at - Timestamp                                                                                                                             
+  - siae_response - Response code                                                                                                                   
+  - original_event_data - (for substitution) CF Organizzatore, Codice locale, Data/Ora evento                                                       
+                                                                                                                                                    
+  6. When to Use Substitution                                                                                                                       
+                                                                                                                                                    
+  Use Sostituzione="S" when:                                                                                                                        
+  - Correcting errors in a previously sent report                                                                                                   
+  - Updating ticket counts after the initial report                                                                                                 
+  - Modifying event details after first submission                                                                                                  
+  - The substitution completely replaces the previous report                                                                                        
+                                                                                                                                                    
+  7. Implementation Steps                                                                                                                           
+                                                                                                                                                    
+  1. Check if report already exists for this event + date combination                                                                               
+  2. If first report: Use Sostituzione="N", progressive = "001"                                                                                     
+  3. If resend/update:                                                                                                                              
+    - Use Sostituzione="S"                                                                                                                          
+    - Increment progressive number                                                                                                                  
+    - Include original event identification (CF Organizzatore, Codice locale, DataEvento, OraEvento)                                                
+  4. Generate XML/ASCII with correct substitution flag                                                                                              
+  5. Sign with PKCS#7 (.p7m)                                                                                                                        
+  6. Send via email to SIAE with correct subject line                                                                                               
+  7. Store progressive number in database for tracking                                                                                              
+                                                                                                                                                    
+  8. Cancellation Codes (if needed for ticket annullments)                                                                                          
+                                                                                                                                                    
+  001 - Errata compilazione (Data entry error)                                                                                                      
+  002 - Stampa non valida (Invalid print)                                                                                                           
+  003 - Transazione non completata (Incomplete transaction)                                                                                         
+  004 - Annullamento su richiesta cliente (Customer cancellation)                                                                                   
+  005 - Annullamento per motivi di servizio (Service reasons)                                                                                       
+  006 - Annullamento Evento (Event cancellation)                                                                                                    
+  007 - Annullamento per cambio nominativo (Name change)                                                                                            
+  008 - Annullamento per rivendita (Resale)                                                                                                         
+  009 - Annullamento per furto/smarrimento (Theft/loss)                                                                                             
+  010 - Annullamento per upselling (Ticket upgrade)                                                                                                 
+                                                    
