@@ -1,0 +1,23 @@
+Show me where in the EventFourYou app the user can test the 2 types of SIAE reports:                                                                             
+                                                                                                                                                                   
+  1. RPG/RMG - Daily reports (Riepilogo Giornaliero)                                                                                                               
+  2. RPM - Monthly reports (Riepilogo Mensile)                                                                                                                     
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  Find in Codebase                                                                                                                                                 
+                                                                                                                                                                   
+  Search for:                                                                                                                                                      
+  - SIAE transmission page/component                                                                                                                               
+  - Routes to SIAE features                                                                                                                                        
+  - Menu items for "Trasmissioni", "SIAE", "Riepilogo"                                                                                                             
+                                                                                                                                                                   
+  Check:                                                                                                                                                           
+  - client/src/pages/siae-transmissions.tsx - what route loads this?                                                                                               
+  - Navigation menu - where is SIAE section?                                                                                                                       
+  - Dashboard sidebar - is there a SIAE menu item?                                                                                                                 
+                                                                                                                                                                   
+  ---                                                                                                                                                              
+  Provide                                                                                                                                                          
+                                                                                                                                                                   
+  1. Navigation path: Dashboard → ? → ?                                                                                                                            
+  2. URL route: /dashboard/siae/... or similar
