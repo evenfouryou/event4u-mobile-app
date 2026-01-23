@@ -1626,8 +1626,10 @@ async function checkSiaeEmailResponses() {
             .limit(50);
           
           // Match trasmissione con risposta (per subject email o attachment filename)
+          // FIX 2026-01-23: Aggiunta validazione timestamp - la risposta deve essere DOPO l'invio
           for (const transmission of transmissions) {
             if (!transmission.fileName) continue;
+            if (!transmission.sentAt) continue; // Skip se non ha data invio
             
             // Verifica se il subject della risposta contiene riferimenti alla trasmissione
             const fileBaseName = transmission.fileName.replace(/\.(xml|p7m|xsi)$/i, '');
@@ -1637,10 +1639,23 @@ async function checkSiaeEmailResponses() {
                 response.body?.includes(fileBaseName) ||
                 response.body?.includes(transmission.id);
             
-            // Also check attachment filenames (format: RPG_2026_01_21_003.xsi_2026_01_22_...)
+            let responseTimestamp: Date | null = null;
+            let matchedAttFilename: string | null = null;
+            
+            // Also check attachment filenames (format: RPG_2026_01_21_003.xsi_2026_01_22_0800008258_0000.txt)
+            // Il timestamp è nel formato _YYYY_MM_DD_ dopo l'estensione
             if (!matched && response.attachments) {
               for (const att of response.attachments) {
                 if (att.filename?.startsWith(fileBaseName)) {
+                  matchedAttFilename = att.filename;
+                  // Estrai timestamp dalla risposta: RPG_2026_01_22_004.xsi_2026_01_23_0800008258_0000.txt
+                  // Pattern: file.xsi_YYYY_MM_DD_...
+                  const timestampMatch = att.filename.match(/\.xsi(?:\.p7m)?_(\d{4})_(\d{2})_(\d{2})_/);
+                  if (timestampMatch) {
+                    const [, year, month, day] = timestampMatch;
+                    responseTimestamp = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  }
+                  
                   matched = true;
                   // Use attachment's parsed data if available
                   if (att.parsed) {
@@ -1650,6 +1665,26 @@ async function checkSiaeEmailResponses() {
                     response.protocolNumber = att.parsed.protocolNumber || response.protocolNumber;
                   }
                   break;
+                }
+              }
+            }
+            
+            // VALIDAZIONE TIMESTAMP: La risposta deve essere DOPO l'invio della trasmissione
+            if (matched && responseTimestamp) {
+              const sentDate = new Date(transmission.sentAt);
+              // Confronta solo la data (ignora ore/minuti perché SIAE risponde una volta al giorno alle 08:00)
+              const sentDateOnly = new Date(sentDate.getFullYear(), sentDate.getMonth(), sentDate.getDate());
+              
+              if (responseTimestamp < sentDateOnly) {
+                // Risposta precedente all'invio - skip
+                log(`[TIMESTAMP-CHECK] Risposta ${matchedAttFilename || 'unknown'} ignorata per ${fileBaseName}: timestamp ${responseTimestamp.toISOString().split('T')[0]} precedente a invio ${sentDateOnly.toISOString().split('T')[0]}`);
+                matched = false;
+              } else if (responseTimestamp.getTime() === sentDateOnly.getTime()) {
+                // Stesso giorno - verifica che l'invio sia stato fatto prima delle 08:00 (orario risposta SIAE)
+                // Se inviato dopo le 08:00 dello stesso giorno, la risposta non può essere per questo report
+                if (sentDate.getHours() >= 8) {
+                  log(`[TIMESTAMP-CHECK] Risposta ${matchedAttFilename || 'unknown'} ignorata per ${fileBaseName}: invio ${sentDate.toISOString()} dopo le 08:00, risposta stesso giorno non valida`);
+                  matched = false;
                 }
               }
             }
