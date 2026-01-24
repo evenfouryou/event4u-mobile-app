@@ -1,0 +1,54 @@
+Prompt for Replit:                                                                                                                                
+                                                                                                                                                    
+  RMG XML structure is correct but SIAE is not responding at all. Need to debug the email sending.                                                  
+                                                                                                                                                    
+  ## Task: Debug Why SIAE Isn't Responding to RMG Resend                                                                                            
+                                                                                                                                                    
+  ### 1. Check Email Sending Logs                                                                                                                   
+                                                                                                                                                    
+  When sending RMG, verify:                                                                                                                         
+  - Email was actually sent (no errors in email-service)                                                                                            
+  - S/MIME signing worked (p7m file created)                                                                                                        
+  - Email subject format is correct for RMG                                                                                                         
+                                                                                                                                                    
+  Add logging to show:                                                                                                                              
+  ```typescript                                                                                                                                     
+  console.log('=== EMAIL SEND DEBUG ===');                                                                                                          
+  console.log('To:', recipientEmail);                                                                                                               
+  console.log('Subject:', emailSubject);                                                                                                            
+  console.log('Attachment filename:', filename);                                                                                                    
+  console.log('Attachment size:', attachment.length, 'bytes');                                                                                      
+  console.log('Send result:', result);                                                                                                              
+                                                                                                                                                    
+  2. Verify Email Subject Format                                                                                                                    
+                                                                                                                                                    
+  SIAE requires specific email subject format. Check what subject is being used for RMG:                                                            
+  - Should be something like: RMG_2026_01_24_002 or similar                                                                                         
+  - Must match the attached filename (without .xsi.p7m extension)                                                                                   
+                                                                                                                                                    
+  3. Check if Email Actually Sent                                                                                                                   
+                                                                                                                                                    
+  Look for:                                                                                                                                         
+  - SMTP success/failure in logs                                                                                                                    
+  - Any bounced emails                                                                                                                              
+  - SendGrid/email provider delivery status                                                                                                         
+                                                                                                                                                    
+  4. Compare RCA vs RMG Email                                                                                                                       
+                                                                                                                                                    
+  Since RCA resend worked and received response:                                                                                                    
+  - What was the email subject for RCA?                                                                                                             
+  - What was the email subject for RMG?                                                                                                             
+  - Are there any differences in how email is composed?                                                                                             
+                                                                                                                                                    
+  5. Test: Send Fresh RMG (Not Substitution)                                                                                                        
+                                                                                                                                                    
+  Try sending a new RMG report (Sostituzione="N") for a different date to see if SIAE responds at all. This confirms if the issue is:               
+  - Specific to substitutions                                                                                                                       
+  - Or general RMG email issue                                                                                                                      
+                                                                                                                                                    
+  Show Me                                                                                                                                           
+                                                                                                                                                    
+  1. The email sending logs when RMG is transmitted                                                                                                 
+  2. The email subject being used                                                                                                                   
+  3. Any errors in SMTP/email sending                                                                                                               
+  4. Difference between RCA and RMG email composition

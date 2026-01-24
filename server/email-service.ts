@@ -853,8 +853,22 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
         raw: Buffer.from(rawMessage, 'binary')
       };
       
-      console.log(`[EMAIL-SERVICE] Sending RAW S/MIME (${rawMessage.length} bytes) to ${to}`);
-      await siaeEmailTransporter.sendMail(rawMailOptions);
+      console.log(`[EMAIL-SERVICE] ===== EMAIL SEND DEBUG =====`);
+      console.log(`[EMAIL-SERVICE] To: ${to}`);
+      console.log(`[EMAIL-SERVICE] Subject: ${emailSubject}`);
+      console.log(`[EMAIL-SERVICE] Attachment filename: ${fileName}`);
+      console.log(`[EMAIL-SERVICE] Attachment size: ${xmlContent.length} bytes`);
+      console.log(`[EMAIL-SERVICE] Report type: ${reportType} (${transmissionType})`);
+      console.log(`[EMAIL-SERVICE] Progressive: ${sequenceNumber}`);
+      console.log(`[EMAIL-SERVICE] Sending RAW S/MIME (${rawMessage.length} bytes)...`);
+      
+      const sendResult = await siaeEmailTransporter.sendMail(rawMailOptions);
+      
+      console.log(`[EMAIL-SERVICE] ===== SEND RESULT =====`);
+      console.log(`[EMAIL-SERVICE] Accepted: ${JSON.stringify(sendResult.accepted)}`);
+      console.log(`[EMAIL-SERVICE] Rejected: ${JSON.stringify(sendResult.rejected)}`);
+      console.log(`[EMAIL-SERVICE] Message ID: ${sendResult.messageId}`);
+      console.log(`[EMAIL-SERVICE] Response: ${sendResult.response}`);
       console.log(`[EMAIL-SERVICE] S/MIME signed email sent successfully to ${to} via SIAE SMTP`);
       
       return {
@@ -936,7 +950,22 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   };
 
   try {
-    await siaeEmailTransporter.sendMail(mailOptions);
+    console.log(`[EMAIL-SERVICE] ===== UNSIGNED EMAIL SEND DEBUG =====`);
+    console.log(`[EMAIL-SERVICE] To: ${to}`);
+    console.log(`[EMAIL-SERVICE] Subject: ${emailSubject}`);
+    console.log(`[EMAIL-SERVICE] Attachment filename: ${fileName}`);
+    console.log(`[EMAIL-SERVICE] Attachment size: ${typeof attachmentContent === 'string' ? attachmentContent.length : attachmentContent.length} bytes`);
+    console.log(`[EMAIL-SERVICE] Report type: ${reportType} (${transmissionType})`);
+    console.log(`[EMAIL-SERVICE] Progressive: ${sequenceNumber}`);
+    
+    const unsignedResult = await siaeEmailTransporter.sendMail(mailOptions);
+    
+    console.log(`[EMAIL-SERVICE] ===== UNSIGNED SEND RESULT =====`);
+    console.log(`[EMAIL-SERVICE] Accepted: ${JSON.stringify(unsignedResult.accepted)}`);
+    console.log(`[EMAIL-SERVICE] Rejected: ${JSON.stringify(unsignedResult.rejected)}`);
+    console.log(`[EMAIL-SERVICE] Message ID: ${unsignedResult.messageId}`);
+    console.log(`[EMAIL-SERVICE] Response: ${unsignedResult.response}`);
+    
     const smimeNote = smimeResult.signed ? '' : ' (NON firmata S/MIME - SIAE potrebbe non confermare)';
     console.log(`[EMAIL-SERVICE] SIAE RCA email sent to ${to} via SIAE SMTP | Subject: ${emailSubject} | File: ${fileName}${smimeNote}`);
     
