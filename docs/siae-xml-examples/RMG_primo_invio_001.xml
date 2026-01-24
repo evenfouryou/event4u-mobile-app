@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- RMG (RiepilogoGiornaliero) - PRIMO INVIO - DTD v0039 COMPLIANT -->
 <!-- ProgressivoGenerazione e Sostituzione sono ATTRIBUTI del ROOT element -->
-<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="1000" ProgressivoGenerazione="001" Sostituzione="N">
+<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="100000" ProgressivoGenerazione="001" Sostituzione="N">
     <Titolare>
         <Denominazione>DISCO EXAMPLE SRL</Denominazione>
         <CodiceFiscale>12345678901</CodiceFiscale>

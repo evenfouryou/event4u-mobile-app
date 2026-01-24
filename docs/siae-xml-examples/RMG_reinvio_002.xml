@@ -2,7 +2,7 @@
 <!-- RMG (RiepilogoGiornaliero) - REINVIO (SOSTITUZIONE) - DTD v0039 COMPLIANT -->
 <!-- ProgressivoGenerazione INCREMENTATO a 002, Sostituzione="S" -->
 <!-- NOTA: Data rimane la STESSA del report originale (20260124) -->
-<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="1430" ProgressivoGenerazione="002" Sostituzione="S">
+<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="143000" ProgressivoGenerazione="002" Sostituzione="S">
     <Titolare>
         <Denominazione>DISCO EXAMPLE SRL</Denominazione>
         <CodiceFiscale>12345678901</CodiceFiscale>

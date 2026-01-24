@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      0704
+DESCRIZIONE: L'ora di generazione del riepilogo non e' valida
+DETTAGLIO:   Al riepilogo e' stata associata l'ora di generazione: [1000]
+
+
+

@@ -8,6 +8,7 @@
 | 0605 | Formato non coerente | Elementi/attributi errati o mancanti |
 | 0604 | Duplicato | File con stesso progressivo gia ricevuto |
 | 0603 | Data non corrispondente | Mismatch tra Data e DataGenerazione |
+| 0704 | Ora generazione non valida | Formato ora errato (deve essere HHMMSS, 6 cifre) |
 
 ## Struttura DTD v0039 Corretta
 
@@ -16,7 +17,7 @@
 <RiepilogoGiornaliero 
     Data="YYYYMMDD" 
     DataGenerazione="YYYYMMDD" 
-    OraGenerazione="HHMM" 
+    OraGenerazione="HHMMSS"       <!-- 6 CIFRE! Es: 100000 per 10:00:00 -->
     ProgressivoGenerazione="001" 
     Sostituzione="N">
     
