@@ -1256,6 +1256,90 @@ router.post("/api/bridge/send-test-report", async (req: Request, res: Response) 
   }
 });
 
+// ==================== TEST: Send report with intentional error for correction flow ====================
+router.post("/api/bridge/send-error-test", async (req: Request, res: Response) => {
+  try {
+    const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
+    const testDate = '20260106'; // Data diversa per non conflittare con test precedenti
+    
+    console.log(`[SIAE-ERROR-TEST] Mode: ${mode}`);
+    
+    const { requestCardEfffData } = await import('./bridge-relay');
+    const { transmitReport } = await import('./siae-transmission');
+    
+    // Read EFFF data from smart card
+    const efffData = await requestCardEfffData();
+    console.log('[SIAE-ERROR-TEST] EFFF data loaded');
+    
+    // Build transmission params
+    const transmissionParams = {
+      reportType: 'giornaliero' as const,
+      destinatario: efffData.siaeEmail || 'servertest2@batest.siae.it',
+      data: {
+        titolare: {
+          denominazione: efffData.partnerName || 'HURAEX SRL',
+          // ERRORE INTENZIONALE: P.IVA sbagliata se mode='error'
+          codiceFiscale: mode === 'error' ? '99999999999' : (efffData.partnerCodFis || '02120820432'),
+          sistemaEmissione: efffData.systemId || 'P0004010'
+        },
+        organizzatore: {
+          denominazione: 'JONATHAN PETRELLI',
+          codiceFiscale: 'PTRJTH93M11I156B',
+          tipoOrganizzatore: 'G'
+        },
+        evento: {
+          intrattenimento: { tipoTassazione: 'I', incidenza: 100 },
+          locale: { denominazione: 'CLUB TEST ERROR', codiceLocale: '0000000000004' },
+          dataEvento: testDate,
+          oraEvento: '2200',
+          multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['TEST ERROR FLOW'] }],
+          ordineDiPosto: [{
+            codiceOrdine: 'UN',
+            capienza: 200,
+            titoliAccesso: [{
+              tipoTitolo: 'R1',
+              quantita: 50,
+              corrispettivoLordo: 75000,
+              prevendita: 0,
+              ivaCorrispettivo: 13525,
+              ivaPrevendita: 0,
+              importoPrestazione: 0
+            }]
+          }]
+        },
+        dataReport: new Date('2026-01-06'),
+        progressivo: 1,
+        sostituzione: mode === 'fix' // Sostituzione="S" solo se stiamo correggendo
+      }
+    };
+    
+    const errorInfo = mode === 'error' 
+      ? `P.IVA ERRATA: 99999999999 (corretta: ${efffData.partnerCodFis})`
+      : `P.IVA CORRETTA: ${efffData.partnerCodFis}`;
+    
+    console.log(`[SIAE-ERROR-TEST] ${errorInfo}`);
+    console.log(`[SIAE-ERROR-TEST] Sostituzione: ${mode === 'fix' ? 'S' : 'N'}`);
+    
+    const result = await transmitReport(transmissionParams);
+    
+    res.json({
+      success: result.success,
+      mode,
+      message: mode === 'error' 
+        ? 'Report inviato con P.IVA ERRATA - aspetta risposta SIAE'
+        : 'Report CORRETTO inviato con Sostituzione=S',
+      errorInfo,
+      filename: result.fileName,
+      sostituzione: mode === 'fix' ? 'S' : 'N',
+      transmissionResult: result
+    });
+    
+  } catch (error: any) {
+    console.error('[SIAE-ERROR-TEST] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== SIAE Environment Detection Endpoint ====================
 router.get("/api/siae/environment", requireAuth, async (req: Request, res: Response) => {
   try {
