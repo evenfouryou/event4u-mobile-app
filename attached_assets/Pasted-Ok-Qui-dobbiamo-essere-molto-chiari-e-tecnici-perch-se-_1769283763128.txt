@@ -1,0 +1,83 @@
+Ok. Qui dobbiamo essere molto chiari e tecnici, perché se scrivi “non deve dire già elaborato” senza spiegare il contesto, l’AI rischia di fare supposizioni sbagliate.
+
+Ti preparo un prompt fatto bene per Replit / AI developer che:
+	•	deve leggere tutto il progetto
+	•	deve controllare logica + database
+	•	deve capire perché restituisce “già elaborato”
+	•	deve verificare documentazione e file caricati
+	•	deve proporre modifica corretta senza rompere altro
+
+⸻
+
+🔧 PROMPT DEBUG “GIÀ ELABORATO”
+
+Sei un senior developer full-stack.
+Nel progetto presente in questo workspace c’è un problema: il sistema restituisce il messaggio “già elaborato”, ma non dovrebbe farlo in questo caso.
+
+Devi analizzare l’intero progetto e trovare:
+	1.	Perché viene restituito “già elaborato”
+	2.	Qual è la condizione logica che lo genera
+	3.	Se è un problema di:
+	•	stato nel database
+	•	controllo duplicati
+	•	validazione file
+	•	controllo protocollo/id pratica
+	•	gestione upload
+	•	flag booleani errati
+	•	race condition
+	4.	Come modificare la logica per evitare il falso positivo
+	5.	Come verificare che la soluzione funzioni
+
+⸻
+
+⚠️ REGOLE OBBLIGATORIE
+	1.	Devi leggere tutta la logica collegata a:
+	•	gestione stato pratica
+	•	upload file
+	•	controllo duplicati
+	•	middleware
+	•	validazioni backend
+	•	eventuali controlli frontend
+	2.	Devi controllare:
+	•	schema database
+	•	campi status / processed / isCompleted / isElaborated ecc.
+	•	query di aggiornamento
+	•	trigger automatici
+	3.	Devi verificare se:
+	•	il controllo avviene prima del salvataggio
+	•	il flag viene settato troppo presto
+	•	il controllo usa un campo sbagliato
+	•	viene letto uno stato cache non aggiornato
+
+Non proporre fix senza aver individuato:
+	•	file
+	•	funzione
+	•	linea
+	•	condizione IF esatta che genera il messaggio
+
+⸻
+
+🎯 OBIETTIVO
+
+Fare in modo che:
+	•	il sistema non dica “già elaborato” se non è realmente elaborato
+	•	venga invece verificata correttamente la documentazione e i file caricati
+	•	lo stato venga controllato in modo coerente con la normativa/logica applicativa
+
+⸻
+
+📌 OUTPUT OBBLIGATORIO
+	1.	Dove viene generato il messaggio “già elaborato”
+	•	file
+	•	funzione
+	•	linea
+	2.	Qual è la condizione logica attuale
+	3.	Perché è sbagliata (tecnicamente)
+	4.	Proposta di fix minimo (codice corretto)
+	5.	Eventuale modifica schema DB (se necessaria)
+	6.	Come testare la correzione
+	7.	Rischi o effetti collaterali
+
+⸻
+
+Se vuoi, posso anche prepararti una versione ultra tecnica per TypeScript + Express, visto che il tuo stack è React + Node/Express, così il prompt diventa ancora più preciso e mirato alla tua architettura.

@@ -14215,21 +14215,39 @@ router.post("/api/siae/test-send-examples", async (req: Request, res: Response) 
         progressivo = fileName.match(/_(\d{3})\./)![1];
       }
       
-      // Generate SIAE-style filename
-      const today = new Date();
-      const dateStr = today.toISOString().substring(0, 10).replace(/-/g, '');
+      // Generate SIAE-style filename - extract date from XML content (Data attribute or DataEvento)
+      let xmlDate = '';
+      const dataAttrMatch = xmlContent.match(/Data="(\d{8})"/);
+      const dataEventoMatch = xmlContent.match(/<DataEvento>(\d{8})<\/DataEvento>/);
+      if (dataAttrMatch) {
+        xmlDate = dataAttrMatch[1]; // YYYYMMDD from Data attribute
+      } else if (dataEventoMatch) {
+        xmlDate = dataEventoMatch[1];
+      } else {
+        // Fallback to today
+        const today = new Date();
+        xmlDate = today.toISOString().substring(0, 10).replace(/-/g, '');
+      }
+      
       const siaeFileName = isRMG 
-        ? `RPG_${dateStr.substring(0,4)}_${dateStr.substring(4,6)}_${dateStr.substring(6,8)}_${progressivo}.xsi`
-        : `RCA_${dateStr.substring(0,4)}_${dateStr.substring(4,6)}_${dateStr.substring(6,8)}_${progressivo}.xsi`;
+        ? `RPG_${xmlDate.substring(0,4)}_${xmlDate.substring(4,6)}_${xmlDate.substring(6,8)}_${progressivo}.xsi`
+        : `RCA_${xmlDate.substring(0,4)}_${xmlDate.substring(4,6)}_${xmlDate.substring(6,8)}_${progressivo}.xsi`;
       
       console.log(`\n[TEST] Sending: ${fileName} as ${siaeFileName}`);
       console.log(`[TEST] Type: ${isRMG ? 'RMG' : 'RCA'}, Reinvio: ${isReinvio}, Progressivo: ${progressivo}`);
+      
+      // Parse xmlDate to Date object for periodDate
+      const periodDateObj = new Date(
+        parseInt(xmlDate.substring(0, 4)), 
+        parseInt(xmlDate.substring(4, 6)) - 1, 
+        parseInt(xmlDate.substring(6, 8))
+      );
       
       const emailResult = await sendSiaeTransmissionEmail({
         to: targetEmail,
         companyName: 'DISCO EXAMPLE SRL',
         transmissionType: isRMG ? 'daily' : 'rca',
-        periodDate: today,
+        periodDate: periodDateObj,
         ticketsCount: isRMG ? 150 : 145,
         totalAmount: isRMG ? '2250.00' : '0',
         xmlContent,
