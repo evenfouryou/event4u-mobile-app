@@ -14199,10 +14199,21 @@ router.post("/api/siae/test-send-examples", async (req: Request, res: Response) 
       const xmlContent = fs.readFileSync(filePath, 'utf-8');
       
       // Extract type from filename
-      const isRMG = fileName.includes('RMG');
-      const isRCA = fileName.includes('RCA');
-      const isReinvio = fileName.includes('reinvio');
-      const progressivo = fileName.includes('001') ? '001' : '002';
+      const isRMG = fileName.includes('RMG') || fileName.includes('RPG') || xmlContent.includes('<RiepilogoGiornaliero');
+      const isRCA = !isRMG && (fileName.includes('RCA') || xmlContent.includes('<RiepilogoControlloAccessi'));
+      const isReinvio = fileName.includes('reinvio') || xmlContent.includes('Sostituzione="S"');
+      
+      // Extract progressivo from XML (ProgressivoGenerazione for RMG, ProgressivoRiepilogo for RCA)
+      let progressivo = '001';
+      const progGenMatch = xmlContent.match(/ProgressivoGenerazione="(\d{3})"/);
+      const progRieMatch = xmlContent.match(/<ProgressivoRiepilogo>(\d{3})<\/ProgressivoRiepilogo>/);
+      if (progGenMatch) {
+        progressivo = progGenMatch[1];
+      } else if (progRieMatch) {
+        progressivo = progRieMatch[1];
+      } else if (fileName.match(/_(\d{3})\./)) {
+        progressivo = fileName.match(/_(\d{3})\./)![1];
+      }
       
       // Generate SIAE-style filename
       const today = new Date();

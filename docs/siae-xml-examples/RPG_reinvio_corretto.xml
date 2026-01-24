@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RMG (RiepilogoGiornaliero) - REINVIO (SOSTITUZIONE) -->
+<!-- ProgressivoGenerazione INCREMENTATO a 002, Sostituzione="S" -->
+<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="1000" ProgressivoGenerazione="002" Sostituzione="S">
+    <Titolare>
+        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <SistemaEmissione>ABC1234567</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>S</Intrattenimento>
+            <Locale>
+                <Denominazione>CLUB MILANO</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260124</DataEvento>
+            <OraEvento>2300</OraEvento>
+            <MultiGenere>
+                <TipoGenere>65</TipoGenere>
+                <IncidenzaGenere>100</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>SERATA DISCO ANNI 80</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <Settore>
+                <CodiceOrdine>001</CodiceOrdine>
+                <Capienza>500</Capienza>
+                <TipoBiglietto>
+                    <TipoTassazione valore="I"/>
+                    <Turno valore="U"/>
+                    <TipoTitolo>INT</TipoTitolo>
+                    <BigliettiEmessi>
+                        <Quantita>150</Quantita>
+                        <CorrispettivoLordo>225000</CorrispettivoLordo>
+                        <Prevendita>0</Prevendita>
+                        <IVACorrispettivo>40573</IVACorrispettivo>
+                        <IVAPrevendita>0</IVAPrevendita>
+                    </BigliettiEmessi>
+                    <BigliettiAnnullati>
+                        <Quantita>0</Quantita>
+                        <CorrispettivoLordo>0</CorrispettivoLordo>
+                        <Prevendita>0</Prevendita>
+                        <IVACorrispettivo>0</IVACorrispettivo>
+                        <IVAPrevendita>0</IVAPrevendita>
+                    </BigliettiAnnullati>
+                </TipoBiglietto>
+            </Settore>
+        </Evento>
+    </Organizzatore>
+</RiepilogoGiornaliero>
