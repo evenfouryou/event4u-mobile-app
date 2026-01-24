@@ -3,13 +3,13 @@
 <!-- ProgressivoGenerazione e Sostituzione sono ATTRIBUTI del ROOT element -->
 <RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="100000" ProgressivoGenerazione="001" Sostituzione="N">
     <Titolare>
-        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
-        <CodiceFiscale>12345678901</CodiceFiscale>
-        <SistemaEmissione>ABC1234567</SistemaEmissione>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
     </Titolare>
     <Organizzatore>
-        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
-        <CodiceFiscale>12345678901</CodiceFiscale>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
         <TipoOrganizzatore valore="G"/>
         <Evento>
             <Intrattenimento>S</Intrattenimento>

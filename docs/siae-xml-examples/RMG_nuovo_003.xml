@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="1845" ProgressivoGenerazione="003" Sostituzione="N">
     <Titolare>
-        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
-        <CodiceFiscale>12345678901</CodiceFiscale>
-        <SistemaEmissione>ABC1234567</SistemaEmissione>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
     </Titolare>
     <Organizzatore>
         <Denominazione>ORGANIZZATORE EVENTI SRL</Denominazione>

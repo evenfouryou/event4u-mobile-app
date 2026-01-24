@@ -4,9 +4,9 @@
 <RiepilogoControlloAccessi Sostituzione="S">
     <Titolare>
         <ProgressivoRiepilogo>002</ProgressivoRiepilogo>
-        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
-        <CodiceFiscale>12345678901</CodiceFiscale>
-        <SistemaEmissione>ABC1234567</SistemaEmissione>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
     </Titolare>
     <Evento>
         <DataEvento>20260124</DataEvento>
@@ -16,8 +16,8 @@
             <CodiceLocale>0000000000001</CodiceLocale>
         </Locale>
         <Organizzatore>
-            <Denominazione>DISCO EXAMPLE SRL</Denominazione>
-            <CodiceFiscale>12345678901</CodiceFiscale>
+            <Denominazione>PETRELLI JONATHAN</Denominazione>
+            <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
         </Organizzatore>
         <ControlloAccessi>
             <TipoGenere>65</TipoGenere>
