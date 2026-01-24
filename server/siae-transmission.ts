@@ -56,6 +56,48 @@ export interface SiaeEvento {
   capienza?: number;
 }
 
+// Interfacce per RPM/RPG DTD v0039 compliant
+export interface SiaeIntrattenimento {
+  tipoTassazione: 'S' | 'I';  // S=Spettacolo, I=Intrattenimento
+  incidenza?: number;         // 0-100%
+}
+
+export interface SiaeLocale {
+  denominazione: string;
+  codiceLocale: string;       // 13 cifre
+}
+
+export interface SiaeMultiGenere {
+  tipoGenere: string;         // Codice genere SIAE
+  incidenzaGenere: number;    // 0-100%
+  titoliOpere: string[];      // Titoli opere
+}
+
+export interface SiaeTitoloAccesso {
+  tipoTitolo: string;         // R1, R2, etc.
+  quantita: number;
+  corrispettivoLordo: number; // In centesimi
+  prevendita?: number;
+  ivaCorrispettivo: number;
+  ivaPrevendita?: number;
+  importoPrestazione?: number;
+}
+
+export interface SiaeOrdineDiPosto {
+  codiceOrdine: string;       // UN, PL, etc.
+  capienza: number;
+  titoliAccesso?: SiaeTitoloAccesso[];
+}
+
+export interface SiaeEventoRPM {
+  intrattenimento?: SiaeIntrattenimento;
+  locale?: SiaeLocale;
+  dataEvento: string;         // YYYYMMDD
+  oraEvento: string;          // HHMM
+  multiGenere?: SiaeMultiGenere[];
+  ordineDiPosto?: SiaeOrdineDiPosto[];
+}
+
 export interface SiaeBiglietto {
   tipo: string;
   ordine: string;
@@ -74,7 +116,7 @@ export interface SiaeSettore {
 export interface SiaeReportData {
   titolare: SiaeTitolare;
   organizzatore: SiaeOrganizzatore;
-  evento?: SiaeEvento;
+  evento?: SiaeEvento | SiaeEventoRPM;  // SiaeEvento per RCA, SiaeEventoRPM per RPM/RPG
   settori?: SiaeSettore[];
   sostituzione: boolean;
   dataReport: Date;
@@ -267,8 +309,8 @@ export function generateRMGXml(data: SiaeReportData): string {
 }
 
 /**
- * Genera XML RiepilogoMensile (RPM)
- * CORRETTO: Usa "Mese" come richiesto dal DTD v0039
+ * Genera XML RiepilogoMensile (RPM) - DTD v0039 Compliant
+ * STRUTTURA: RiepilogoMensile > Titolare + Organizzatore* (con Evento* dentro Organizzatore)
  */
 export function generateRPMXml(data: SiaeReportData): string {
   const now = new Date();
@@ -281,7 +323,6 @@ export function generateRPMXml(data: SiaeReportData): string {
   const sostituzione = data.sostituzione ? 'S' : 'N';
   
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  // CORRETTO: Usa "Mese" invece di "Periodo" come da DTD v0039
   xml += `<RiepilogoMensile Sostituzione="${sostituzione}" Mese="${reportMonth}" DataGenerazione="${generationDate}" OraGenerazione="${generationTime}" ProgressivoGenerazione="${prog}">\n`;
   
   // Titolare
@@ -291,13 +332,84 @@ export function generateRPMXml(data: SiaeReportData): string {
   xml += `        <SistemaEmissione>${data.titolare.sistemaEmissione}</SistemaEmissione>\n`;
   xml += `    </Titolare>\n`;
   
-  // Organizzatore
+  // Organizzatore (con Evento* obbligatorio dentro secondo DTD)
   xml += `    <Organizzatore>\n`;
   xml += `        <Denominazione>${escapeXml(data.organizzatore.denominazione)}</Denominazione>\n`;
   xml += `        <CodiceFiscale>${data.organizzatore.codiceFiscale}</CodiceFiscale>\n`;
   xml += `        <TipoOrganizzatore valore="${data.organizzatore.tipoOrganizzatore}"/>\n`;
-  xml += `    </Organizzatore>\n`;
   
+  // Evento (DTD: Evento* dentro Organizzatore)
+  if (data.evento && 'dataEvento' in data.evento) {
+    const evt = data.evento as SiaeEventoRPM;
+    xml += `        <Evento>\n`;
+    
+    // Intrattenimento (TipoTassazione, Incidenza?)
+    xml += `            <Intrattenimento>\n`;
+    xml += `                <TipoTassazione valore="${evt.intrattenimento?.tipoTassazione || 'S'}"/>\n`;
+    if (evt.intrattenimento?.incidenza !== undefined) {
+      xml += `                <Incidenza>${evt.intrattenimento.incidenza}</Incidenza>\n`;
+    }
+    xml += `            </Intrattenimento>\n`;
+    
+    // Locale (Denominazione, CodiceLocale)
+    xml += `            <Locale>\n`;
+    xml += `                <Denominazione>${escapeXml(evt.locale?.denominazione || 'LOCALE TEST')}</Denominazione>\n`;
+    xml += `                <CodiceLocale>${evt.locale?.codiceLocale || '0000000000001'}</CodiceLocale>\n`;
+    xml += `            </Locale>\n`;
+    
+    // DataEvento, OraEvento
+    xml += `            <DataEvento>${evt.dataEvento}</DataEvento>\n`;
+    xml += `            <OraEvento>${evt.oraEvento}</OraEvento>\n`;
+    
+    // MultiGenere+ (almeno uno richiesto)
+    if (evt.multiGenere && evt.multiGenere.length > 0) {
+      for (const mg of evt.multiGenere) {
+        xml += `            <MultiGenere>\n`;
+        xml += `                <TipoGenere>${mg.tipoGenere}</TipoGenere>\n`;
+        xml += `                <IncidenzaGenere>${mg.incidenzaGenere}</IncidenzaGenere>\n`;
+        // TitoliOpere+ (almeno uno richiesto)
+        if (mg.titoliOpere && mg.titoliOpere.length > 0) {
+          for (const titolo of mg.titoliOpere) {
+            xml += `                <TitoliOpere>\n`;
+            xml += `                    <Titolo>${escapeXml(titolo)}</Titolo>\n`;
+            xml += `                </TitoliOpere>\n`;
+          }
+        }
+        xml += `            </MultiGenere>\n`;
+      }
+    }
+    
+    // OrdineDiPosto+ (almeno uno richiesto)
+    if (evt.ordineDiPosto && evt.ordineDiPosto.length > 0) {
+      for (const odp of evt.ordineDiPosto) {
+        xml += `            <OrdineDiPosto>\n`;
+        xml += `                <CodiceOrdine>${odp.codiceOrdine}</CodiceOrdine>\n`;
+        xml += `                <Capienza>${odp.capienza}</Capienza>\n`;
+        xml += `                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>\n`;
+        
+        // TitoliAccesso*
+        if (odp.titoliAccesso && odp.titoliAccesso.length > 0) {
+          for (const ta of odp.titoliAccesso) {
+            xml += `                <TitoliAccesso>\n`;
+            xml += `                    <TipoTitolo>${ta.tipoTitolo}</TipoTitolo>\n`;
+            xml += `                    <Quantita>${ta.quantita}</Quantita>\n`;
+            xml += `                    <CorrispettivoLordo>${ta.corrispettivoLordo}</CorrispettivoLordo>\n`;
+            xml += `                    <Prevendita>${ta.prevendita || 0}</Prevendita>\n`;
+            xml += `                    <IVACorrispettivo>${ta.ivaCorrispettivo}</IVACorrispettivo>\n`;
+            xml += `                    <IVAPrevendita>${ta.ivaPrevendita || 0}</IVAPrevendita>\n`;
+            xml += `                    <ImportoPrestazione>${ta.importoPrestazione || 0}</ImportoPrestazione>\n`;
+            xml += `                </TitoliAccesso>\n`;
+          }
+        }
+        
+        xml += `            </OrdineDiPosto>\n`;
+      }
+    }
+    
+    xml += `        </Evento>\n`;
+  }
+  
+  xml += `    </Organizzatore>\n`;
   xml += `</RiepilogoMensile>\n`;
   
   return xml;
@@ -335,19 +447,20 @@ export function generateRCAXml(data: SiaeReportData): string {
   xml += `        <TipoOrganizzatore valore="${data.organizzatore.tipoOrganizzatore}"/>\n`;
   xml += `    </Organizzatore>\n`;
   
-  // Evento (se presente)
-  if (data.evento) {
+  // Evento (se presente) - usa SiaeEvento per RCA
+  if (data.evento && 'codice' in data.evento) {
+    const evt = data.evento as SiaeEvento;
     xml += `    <Evento>\n`;
-    xml += `        <CodiceEvento>${escapeXml(data.evento.codice)}</CodiceEvento>\n`;
-    xml += `        <Data>${data.evento.data}</Data>\n`;
-    xml += `        <Ora>${data.evento.ora}</Ora>\n`;
-    xml += `        <Genere>${escapeXml(data.evento.genere)}</Genere>\n`;
-    xml += `        <Denominazione>${escapeXml(data.evento.denominazione)}</Denominazione>\n`;
-    xml += `        <Localita>${escapeXml(data.evento.localita)}</Localita>\n`;
-    xml += `        <Provincia>${data.evento.provincia}</Provincia>\n`;
-    xml += `        <Luogo>${escapeXml(data.evento.luogo)}</Luogo>\n`;
-    if (data.evento.capienza) {
-      xml += `        <Capienza>${data.evento.capienza}</Capienza>\n`;
+    xml += `        <CodiceEvento>${escapeXml(evt.codice)}</CodiceEvento>\n`;
+    xml += `        <Data>${evt.data}</Data>\n`;
+    xml += `        <Ora>${evt.ora}</Ora>\n`;
+    xml += `        <Genere>${escapeXml(evt.genere)}</Genere>\n`;
+    xml += `        <Denominazione>${escapeXml(evt.denominazione)}</Denominazione>\n`;
+    xml += `        <Localita>${escapeXml(evt.localita)}</Localita>\n`;
+    xml += `        <Provincia>${evt.provincia}</Provincia>\n`;
+    xml += `        <Luogo>${escapeXml(evt.luogo)}</Luogo>\n`;
+    if (evt.capienza) {
+      xml += `        <Capienza>${evt.capienza}</Capienza>\n`;
     }
     xml += `    </Evento>\n`;
   }
