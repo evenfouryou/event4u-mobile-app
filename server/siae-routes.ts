@@ -14165,4 +14165,96 @@ router.post("/api/siae/test-transmissions/:id/send", async (req: Request, res: R
   }
 });
 
+// TEST ENDPOINT: Invia gli XML di esempio dalla cartella docs
+router.post("/api/siae/test-send-examples", async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === 'production' && !SIAE_TEST_MODE) {
+    return res.status(403).json({ message: "Endpoint disponibile solo in modalità test" });
+  }
+  
+  try {
+    const { files, toEmail } = req.body;
+    const targetEmail = toEmail || SIAE_TEST_EMAIL || 'server@ba.siae.it';
+    
+    console.log(`\n========== TEST SEND EXAMPLE XMLs ==========`);
+    console.log(`[TEST] Target email: ${targetEmail}`);
+    console.log(`[TEST] Files to send: ${files?.join(', ') || 'all'}`);
+    
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const examplesDir = path.join(process.cwd(), 'docs', 'siae-xml-examples');
+    const availableFiles = fs.readdirSync(examplesDir).filter((f: string) => f.endsWith('.xml'));
+    
+    const filesToSend = files && files.length > 0 
+      ? availableFiles.filter((f: string) => files.includes(f))
+      : availableFiles;
+    
+    console.log(`[TEST] Will send ${filesToSend.length} files: ${filesToSend.join(', ')}`);
+    
+    const { sendSiaeTransmissionEmail } = await import('./email-service');
+    const results: any[] = [];
+    
+    for (const fileName of filesToSend) {
+      const filePath = path.join(examplesDir, fileName);
+      const xmlContent = fs.readFileSync(filePath, 'utf-8');
+      
+      // Extract type from filename
+      const isRMG = fileName.includes('RMG');
+      const isRCA = fileName.includes('RCA');
+      const isReinvio = fileName.includes('reinvio');
+      const progressivo = fileName.includes('001') ? '001' : '002';
+      
+      // Generate SIAE-style filename
+      const today = new Date();
+      const dateStr = today.toISOString().substring(0, 10).replace(/-/g, '');
+      const siaeFileName = isRMG 
+        ? `RPG_${dateStr.substring(0,4)}_${dateStr.substring(4,6)}_${dateStr.substring(6,8)}_${progressivo}.xsi`
+        : `RCA_${dateStr.substring(0,4)}_${dateStr.substring(4,6)}_${dateStr.substring(6,8)}_${progressivo}.xsi`;
+      
+      console.log(`\n[TEST] Sending: ${fileName} as ${siaeFileName}`);
+      console.log(`[TEST] Type: ${isRMG ? 'RMG' : 'RCA'}, Reinvio: ${isReinvio}, Progressivo: ${progressivo}`);
+      
+      const emailResult = await sendSiaeTransmissionEmail({
+        to: targetEmail,
+        companyName: 'DISCO EXAMPLE SRL',
+        transmissionType: isRMG ? 'daily' : 'rca',
+        periodDate: today,
+        ticketsCount: isRMG ? 150 : 145,
+        totalAmount: isRMG ? '2250.00' : '0',
+        xmlContent,
+        transmissionId: `test-${Date.now()}`,
+        systemCode: 'ABC12345',
+        sequenceNumber: parseInt(progressivo),
+        signWithSmime: isRCA, // RCA requires S/MIME signing
+        explicitFileName: siaeFileName,
+      });
+      
+      results.push({
+        originalFile: fileName,
+        sentAs: siaeFileName,
+        type: isRMG ? 'RMG' : 'RCA',
+        isSubstitution: isReinvio,
+        progressivo,
+        success: emailResult.success,
+        error: emailResult.error,
+        messageId: emailResult.messageId
+      });
+      
+      console.log(`[TEST] Result: ${emailResult.success ? 'SUCCESS' : 'FAILED'} - ${emailResult.messageId || emailResult.error}`);
+    }
+    
+    console.log(`\n========== END TEST SEND ==========\n`);
+    
+    res.json({
+      message: `Inviati ${results.filter(r => r.success).length}/${results.length} file XML`,
+      targetEmail,
+      results
+    });
+    
+  } catch (error: any) {
+    console.error('[TEST-SEND-EXAMPLES] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;
