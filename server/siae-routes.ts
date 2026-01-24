@@ -1346,7 +1346,8 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
 router.post("/api/bridge/send-rpm-test", async (req: Request, res: Response) => {
   try {
     const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
-    const testMonth = '202512'; // Dicembre 2025 (mese passato per test)
+    // Accetta mese dalla query string (es: 202511 per novembre 2025), default dicembre 2025
+    const testMonth = (req.query.month as string) || '202512';
     // CRITICO: Il progressivo deve essere INCREMENTATO per il reinvio!
     // Accetta progressivo dalla query string, altrimenti usa default basato su mode
     const progressivoParam = req.query.progressivo ? parseInt(req.query.progressivo as string, 10) : null;
@@ -1377,7 +1378,7 @@ router.post("/api/bridge/send-rpm-test", async (req: Request, res: Response) => 
         evento: {
           intrattenimento: { tipoTassazione: 'I', incidenza: 100 },
           locale: { denominazione: 'CLUB TEST RPM', codiceLocale: '0000000000007' },
-          dataEvento: '20251215',
+          dataEvento: testMonth.substring(0, 6) + '15', // Es: 202511 -> 20251115
           oraEvento: '2300',
           multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['TEST RPM MENSILE'] }],
           ordineDiPosto: [{
@@ -1395,7 +1396,7 @@ router.post("/api/bridge/send-rpm-test", async (req: Request, res: Response) => 
             }]
           }]
         },
-        dataReport: new Date('2025-12-01'), // Mese dicembre 2025
+        dataReport: new Date(`${testMonth.substring(0, 4)}-${testMonth.substring(4, 6)}-01`), // Mese dal parametro
         progressivo: progressivo,
         sostituzione: mode === 'fix'
       }
