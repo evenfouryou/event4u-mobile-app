@@ -1260,7 +1260,7 @@ router.post("/api/bridge/send-test-report", async (req: Request, res: Response) 
 router.post("/api/bridge/send-error-test", async (req: Request, res: Response) => {
   try {
     const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
-    const testDate = '20260106'; // Data diversa per non conflittare con test precedenti
+    const testDate = '20260107'; // Data diversa per non conflittare con test precedenti
     
     console.log(`[SIAE-ERROR-TEST] Mode: ${mode}`);
     
@@ -1278,8 +1278,7 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
       data: {
         titolare: {
           denominazione: efffData.partnerName || 'HURAEX SRL',
-          // ERRORE INTENZIONALE: P.IVA sbagliata se mode='error'
-          codiceFiscale: mode === 'error' ? '99999999999' : (efffData.partnerCodFis || '02120820432'),
+          codiceFiscale: efffData.partnerCodFis || '02120820432',
           sistemaEmissione: efffData.systemId || 'P0004010'
         },
         organizzatore: {
@@ -1289,33 +1288,34 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
         },
         evento: {
           intrattenimento: { tipoTassazione: 'I', incidenza: 100 },
-          locale: { denominazione: 'CLUB TEST ERROR', codiceLocale: '0000000000004' },
+          locale: { denominazione: 'CLUB TEST BIGLIETTI', codiceLocale: '0000000000005' },
           dataEvento: testDate,
           oraEvento: '2200',
-          multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['TEST ERROR FLOW'] }],
+          multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['TEST BIGLIETTI'] }],
           ordineDiPosto: [{
             codiceOrdine: 'UN',
             capienza: 200,
             titoliAccesso: [{
               tipoTitolo: 'R1',
-              quantita: 50,
-              corrispettivoLordo: 75000,
+              // ERRORE INTENZIONALE SUI BIGLIETTI se mode='error'
+              quantita: mode === 'error' ? 30 : 50,  // Quantità errata vs corretta
+              corrispettivoLordo: mode === 'error' ? 45000 : 75000, // Importo errato vs corretto
               prevendita: 0,
-              ivaCorrispettivo: 13525,
+              ivaCorrispettivo: mode === 'error' ? 8115 : 13525, // IVA errata vs corretta
               ivaPrevendita: 0,
               importoPrestazione: 0
             }]
           }]
         },
-        dataReport: new Date('2026-01-06'),
+        dataReport: new Date('2026-01-07'),
         progressivo: 1,
         sostituzione: mode === 'fix' // Sostituzione="S" solo se stiamo correggendo
       }
     };
     
     const errorInfo = mode === 'error' 
-      ? `P.IVA ERRATA: 99999999999 (corretta: ${efffData.partnerCodFis})`
-      : `P.IVA CORRETTA: ${efffData.partnerCodFis}`;
+      ? `BIGLIETTI ERRATI: 30 biglietti, €450.00 lordo (corretto: 50 biglietti, €750.00)`
+      : `BIGLIETTI CORRETTI: 50 biglietti, €750.00 lordo`;
     
     console.log(`[SIAE-ERROR-TEST] ${errorInfo}`);
     console.log(`[SIAE-ERROR-TEST] Sostituzione: ${mode === 'fix' ? 'S' : 'N'}`);
