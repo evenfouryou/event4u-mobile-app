@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<RiepilogoGiornaliero Data="20260110" DataGenerazione="20260110" OraGenerazione="100000" ProgressivoGenerazione="001" Sostituzione="N">
+<RiepilogoGiornaliero Data="20260105" DataGenerazione="20260105" OraGenerazione="100000" ProgressivoGenerazione="001" Sostituzione="N">
     <Titolare>
         <Denominazione>PETRELLI JONATHAN</Denominazione>
         <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
-        <SistemaEmissione>EVENT4U1</SistemaEmissione>
+        <SistemaEmissione>P0004010</SistemaEmissione>
     </Titolare>
     <Organizzatore>
         <Denominazione>PETRELLI JONATHAN</Denominazione>
@@ -18,7 +18,7 @@
                 <Denominazione>CLUB NAPOLI SUNSET</Denominazione>
                 <CodiceLocale>0000000000003</CodiceLocale>
             </Locale>
-            <DataEvento>20260110</DataEvento>
+            <DataEvento>20260105</DataEvento>
             <OraEvento>2130</OraEvento>
             <MultiGenere>
                 <TipoGenere>65</TipoGenere>
