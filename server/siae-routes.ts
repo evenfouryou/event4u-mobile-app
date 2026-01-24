@@ -1218,11 +1218,12 @@ router.post("/api/bridge/send-test-report", async (req: Request, res: Response) 
         },
         dataReport: new Date('2026-01-05'),
         progressivo: 1,
-        sostituzione: false
+        sostituzione: req.query.resend === 'true' // Sostituzione="S" se resend=true
       }
     };
     
     console.log('[SIAE-TEST] Transmitting with params:');
+    console.log('[SIAE-TEST]   Sostituzione: ' + (req.query.resend === 'true' ? 'S (reinvio)' : 'N (nuovo)'));
     console.log('[SIAE-TEST]   Titolare: ' + transmissionParams.data.titolare.denominazione);
     console.log('[SIAE-TEST]   CF/P.IVA: ' + transmissionParams.data.titolare.codiceFiscale);
     console.log('[SIAE-TEST]   Sistema: ' + transmissionParams.data.titolare.sistemaEmissione);
