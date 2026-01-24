@@ -106,9 +106,9 @@ export interface SiaeTransmissionResult {
  * Genera nome file SIAE conforme Allegato C
  * 
  * FORMATI:
- * - RMG_YYYYMMDD_SSSSSSSS_NNN.xsi (giornaliero)
- * - RPM_YYYYMM_SSSSSSSS_NNN.xsi (mensile)
- * - RCA_YYYYMMDD_SSSSSSSS_NNN.xsi (evento)
+ * - RPG_YYYYMMDD_NNN.xsi (giornaliero) - RPG = RiepilogoGiornaliero
+ * - RPM_YYYYMM_NNN.xsi (mensile) - RPM = RiepilogoMensile
+ * - RCA_YYYYMMDD_NNN.xsi (evento) - RCA = RiepilogoControlloAccessi
  * 
  * NESSUN TIMESTAMP - MAI!
  */
@@ -154,8 +154,8 @@ export function generateFileName(
       break;
     case 'giornaliero':
     default:
-      // RMG_AAAA_MM_GG_NNN.xsi (5 parti)
-      fileName = `RMG_${year}_${month}_${day}_${prog}.xsi`;
+      // RPG_AAAA_MM_GG_NNN.xsi (5 parti) - RPG = RiepilogoGiornaliero
+      fileName = `RPG_${year}_${month}_${day}_${prog}.xsi`;
       break;
   }
   
