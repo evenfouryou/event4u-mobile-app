@@ -267,23 +267,22 @@ export function generateRMGXml(data: SiaeReportData): string {
 }
 
 /**
- * @deprecated NON USARE - Usa generateC1Xml da siae-utils.ts
  * Genera XML RiepilogoMensile (RPM)
- * ATTENZIONE: Questa funzione usa "Periodo" invece di "Mese" - NON conforme al DTD!
+ * CORRETTO: Usa "Mese" come richiesto dal DTD v0039
  */
 export function generateRPMXml(data: SiaeReportData): string {
-  console.warn('[SIAE-TRANSMISSION] DEPRECATION WARNING: generateRPMXml è obsoleto e usa "Periodo" invece di "Mese"! Usare generateC1Xml da siae-utils.ts');
   const now = new Date();
   const year = data.dataReport.getFullYear();
   const month = String(data.dataReport.getMonth() + 1).padStart(2, '0');
-  const reportPeriod = `${year}${month}`;
+  const reportMonth = `${year}${month}`; // Formato YYYYMM
   const generationDate = formatDate(now);
   const generationTime = formatTime(now);
   const prog = String(data.progressivo).padStart(3, '0');
   const sostituzione = data.sostituzione ? 'S' : 'N';
   
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  xml += `<RiepilogoMensile Sostituzione="${sostituzione}" Periodo="${reportPeriod}" DataGenerazione="${generationDate}" OraGenerazione="${generationTime}" ProgressivoGenerazione="${prog}">\n`;
+  // CORRETTO: Usa "Mese" invece di "Periodo" come da DTD v0039
+  xml += `<RiepilogoMensile Sostituzione="${sostituzione}" Mese="${reportMonth}" DataGenerazione="${generationDate}" OraGenerazione="${generationTime}" ProgressivoGenerazione="${prog}">\n`;
   
   // Titolare
   xml += `    <Titolare>\n`;

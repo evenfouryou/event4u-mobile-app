@@ -1342,6 +1342,92 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
   }
 });
 
+// ==================== TEST: RPM (RiepilogoMensile) con flusso sostituzione ====================
+router.post("/api/bridge/send-rpm-test", async (req: Request, res: Response) => {
+  try {
+    const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
+    const testMonth = '202512'; // Dicembre 2025 (mese passato per test)
+    // CRITICO: Il progressivo deve essere INCREMENTATO per il reinvio!
+    const progressivo = mode === 'fix' ? 2 : 1;
+    
+    console.log(`[SIAE-RPM-TEST] Mode: ${mode}, Progressivo: ${progressivo}`);
+    
+    const { requestCardEfffData } = await import('./bridge-relay');
+    const { transmitReport } = await import('./siae-transmission');
+    
+    const efffData = await requestCardEfffData();
+    console.log('[SIAE-RPM-TEST] EFFF data loaded');
+    
+    const transmissionParams = {
+      reportType: 'mensile' as const,
+      destinatario: efffData.siaeEmail || 'servertest2@batest.siae.it',
+      data: {
+        titolare: {
+          denominazione: efffData.partnerName || 'HURAEX SRL',
+          codiceFiscale: efffData.partnerCodFis || '02120820432',
+          sistemaEmissione: efffData.systemId || 'P0004010'
+        },
+        organizzatore: {
+          denominazione: 'JONATHAN PETRELLI',
+          codiceFiscale: 'PTRJTH93M11I156B',
+          tipoOrganizzatore: 'G'
+        },
+        evento: {
+          intrattenimento: { tipoTassazione: 'I', incidenza: 100 },
+          locale: { denominazione: 'CLUB TEST RPM', codiceLocale: '0000000000007' },
+          dataEvento: '20251215',
+          oraEvento: '2300',
+          multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['TEST RPM MENSILE'] }],
+          ordineDiPosto: [{
+            codiceOrdine: 'UN',
+            capienza: 300,
+            titoliAccesso: [{
+              tipoTitolo: 'R1',
+              // ERRORE INTENZIONALE SUI BIGLIETTI se mode='error'
+              quantita: mode === 'error' ? 80 : 150,
+              corrispettivoLordo: mode === 'error' ? 120000 : 225000,
+              prevendita: 0,
+              ivaCorrispettivo: mode === 'error' ? 21640 : 40573,
+              ivaPrevendita: 0,
+              importoPrestazione: 0
+            }]
+          }]
+        },
+        dataReport: new Date('2025-12-01'), // Mese dicembre 2025
+        progressivo: progressivo,
+        sostituzione: mode === 'fix'
+      }
+    };
+    
+    const errorInfo = mode === 'error' 
+      ? `BIGLIETTI ERRATI: 80 biglietti, €1200 lordo (corretto: 150 biglietti, €2250)`
+      : `BIGLIETTI CORRETTI: 150 biglietti, €2250 lordo`;
+    
+    console.log(`[SIAE-RPM-TEST] ${errorInfo}`);
+    console.log(`[SIAE-RPM-TEST] Sostituzione: ${mode === 'fix' ? 'S' : 'N'}`);
+    
+    const result = await transmitReport(transmissionParams);
+    
+    res.json({
+      success: result.success,
+      mode,
+      reportType: 'RPM (RiepilogoMensile)',
+      message: mode === 'error' 
+        ? 'RPM inviato con dati ERRATI - aspetta risposta SIAE'
+        : 'RPM CORRETTO inviato con Sostituzione=S',
+      errorInfo,
+      filename: result.fileName,
+      sostituzione: mode === 'fix' ? 'S' : 'N',
+      progressivo,
+      transmissionResult: result
+    });
+    
+  } catch (error: any) {
+    console.error('[SIAE-RPM-TEST] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== SIAE Environment Detection Endpoint ====================
 router.get("/api/siae/environment", requireAuth, async (req: Request, res: Response) => {
   try {

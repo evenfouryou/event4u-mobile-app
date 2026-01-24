@@ -249,14 +249,13 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
   const parts = nameWithoutExt.split('_');
   const prefix = parts[0];
   
-  // FIX 2026-01-21 v8: FORMATO CONFORME agli esempi REALI dell'utente!
+  // FIX 2026-01-24: FORMATO CORRETTO secondo DTD SIAE Allegato C
   // 
-  // TUTTI i report usano 5 parti: XXX_AAAA_MM_GG_###.xsi
-  // La differenza è nel valore di GG:
-  // - RPG: RPG_AAAA_MM_GG_###.xsi (giorno REALE per giornaliero!)
-  // - RPM: RPM_AAAA_MM_00_###.xsi (giorno=00 per mensile)
-  // - RCA: RCA_AAAA_MM_GG_###.xsi (giorno reale)
-  // - LTA: LTA_AAAA_MM_GG_###.xsi (giorno reale)
+  // FORMATI DIVERSI per tipo report:
+  // - RPG: RPG_AAAA_MM_GG_###.xsi (5 parti, giorno reale per giornaliero)
+  // - RPM: RPM_AAAA_MM_###.xsi (4 parti, senza giorno per mensile!)
+  // - RCA: RCA_AAAA_MM_GG_###.xsi (5 parti, giorno reale per evento)
+  // - LTA: LTA_AAAA_MM_GG_###.xsi (5 parti)
   
   // Verifica prefisso valido (RPG non RMG!)
   if (!['RPG', 'RPM', 'RCA', 'LTA', 'LOG', 'RMG'].includes(prefix)) {
@@ -267,9 +266,12 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  // TUTTI i report: 5 parti!
-  const expectedParts = 5;
-  const formatExample = `${prefix}_AAAA_MM_GG_###.xsi (5 parti)`;
+  // FIX: RPM ha 4 parti (senza giorno), altri ne hanno 5
+  const isRPM = prefix === 'RPM';
+  const expectedParts = isRPM ? 4 : 5;
+  const formatExample = isRPM 
+    ? `${prefix}_AAAA_MM_###.xsi (4 parti)` 
+    : `${prefix}_AAAA_MM_GG_###.xsi (5 parti)`;
   
   if (parts.length !== expectedParts) {
     errors.push(
@@ -279,12 +281,18 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     return { valid: false, errors, warnings };
   }
   
-  // Tutti usano lo stesso parsing: XXX_AAAA_MM_GG_###
-  let year: string, month: string, day: string, progressivo: string;
-  [, year, month, day, progressivo] = parts;
+  // Parsing diverso per RPM (4 parti) vs altri (5 parti)
+  let year: string, month: string, day: string | null, progressivo: string;
+  if (isRPM) {
+    // RPM: XXX_AAAA_MM_###
+    [, year, month, progressivo] = parts;
+    day = null;
+  } else {
+    // RPG/RCA/LTA: XXX_AAAA_MM_GG_###
+    [, year, month, day, progressivo] = parts;
+  }
   
   const isRPG = prefix === 'RPG' || prefix === 'RMG'; // RPG è il prefisso corretto, RMG per retrocompatibilità
-  const isRPM = prefix === 'RPM';
   const isRCA = prefix === 'RCA' || prefix === 'LTA' || prefix === 'LOG';
   
   // Verifica anno (4 cifre)
@@ -307,8 +315,8 @@ export function validateSiaeFileName(fileName: string): SiaeFileNameValidationRe
     }
   }
   
-  // Verifica giorno (2 cifre) - solo per RCA/LTA (hanno data completa)
-  if (isRCA) {
+  // Verifica giorno (2 cifre) - solo per report con giorno (RPG, RCA, LTA - non RPM!)
+  if (!isRPM && day !== null) {
     if (!/^\d{2}$/.test(day)) {
       errors.push(`GIORNO NON VALIDO: Il giorno deve essere 2 cifre. Trovato: "${day}"`);
     } else {
