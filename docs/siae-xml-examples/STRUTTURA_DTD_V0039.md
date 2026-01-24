@@ -1,23 +1,35 @@
-# Struttura XML SIAE - DTD v0039 (RiepilogoGiornaliero)
+# Struttura XML SIAE - DTD v0039
+
+**Ultimo aggiornamento:** 24 Gennaio 2026
+**Fonte:** DTD ufficiali SIAE v0039 (RiepilogoGiornaliero_v0039_20040209.dtd, RiepilogoMensile_v0039_20040209.dtd)
 
 ## Errori Comuni
 
 | Codice | Descrizione | Causa |
 |--------|-------------|-------|
-| 0511 | Errore parsing RIEPILOGO GIORNALIERO | Struttura XML non conforme DTD v0039 |
+| 0511 | Errore parsing RIEPILOGO | Struttura XML non conforme DTD v0039 |
 | 0605 | Formato non coerente | Elementi/attributi errati o mancanti |
 | 0604 | Duplicato | File con stesso progressivo gia ricevuto |
 | 0603 | Data non corrispondente | Mismatch tra Data e DataGenerazione |
 | 0704 | Ora generazione non valida | Formato ora errato (deve essere HHMMSS, 6 cifre) |
 
-## Struttura DTD v0039 Corretta
+## DIFFERENZE CRITICHE TRA RPG E RPM
+
+| Aspetto | RPG (Giornaliero) | RPM (Mensile) |
+|---------|-------------------|---------------|
+| Attributo periodo | `Data="YYYYMMDD"` | `Mese="YYYYMM"` |
+| Filename | `RPG_AAAA_MM_GG_###.xsi` (5 parti) | `RPM_AAAA_MM_###.xsi` (4 parti) |
+| Intrattenimento | `TipoTassazione, Incidenza?` | `TipoTassazione, Incidenza?, ImponibileIntrattenimenti?` |
+| OrdineDiPosto | NO `IVAEccedenteOmaggi` | **SI** `IVAEccedenteOmaggi` (obbligatorio) |
+
+## Struttura RPG (RiepilogoGiornaliero) - DTD v0039
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoGiornaliero 
     Data="YYYYMMDD" 
     DataGenerazione="YYYYMMDD" 
-    OraGenerazione="HHMMSS"       <!-- 6 CIFRE! Es: 100000 per 10:00:00 -->
+    OraGenerazione="HHMMSS"
     ProgressivoGenerazione="001" 
     Sostituzione="N">
     
@@ -33,17 +45,17 @@
         <TipoOrganizzatore valore="G"/>
         
         <Evento>
-            <Intrattenimento>S</Intrattenimento>
+            <!-- CORRETTO: Intrattenimento contiene elementi, NON testo! -->
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
             <Locale>
                 <Denominazione>NOME LOCALE</Denominazione>
                 <CodiceLocale>0000000000001</CodiceLocale>
             </Locale>
             <DataEvento>YYYYMMDD</DataEvento>
             <OraEvento>HHMM</OraEvento>
-            <TipoTassazione valore="I"/>
-            <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
-            <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
-            
             <MultiGenere>
                 <TipoGenere>65</TipoGenere>
                 <IncidenzaGenere>100</IncidenzaGenere>
@@ -51,13 +63,10 @@
                     <Titolo>NOME EVENTO</Titolo>
                 </TitoliOpere>
             </MultiGenere>
-            
-            <!-- CORRETTO: OrdineDiPosto invece di Settore -->
+            <!-- RPG: NO IVAEccedenteOmaggi -->
             <OrdineDiPosto>
                 <CodiceOrdine>UN</CodiceOrdine>
                 <Capienza>500</Capienza>
-                
-                <!-- CORRETTO: TitoliAccesso invece di TipoBiglietto -->
                 <TitoliAccesso>
                     <TipoTitolo>R1</TipoTitolo>
                     <Quantita>150</Quantita>
@@ -71,6 +80,68 @@
         </Evento>
     </Organizzatore>
 </RiepilogoGiornaliero>
+```
+
+## Struttura RPM (RiepilogoMensile) - DTD v0039
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoMensile 
+    Mese="YYYYMM"
+    DataGenerazione="YYYYMMDD" 
+    OraGenerazione="HHMMSS"
+    ProgressivoGenerazione="001" 
+    Sostituzione="N">
+    
+    <Titolare>
+        <Denominazione>NOME AZIENDA</Denominazione>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <SistemaEmissione>ABCD123456</SistemaEmissione>
+    </Titolare>
+    
+    <Organizzatore>
+        <Denominazione>NOME ORGANIZZATORE</Denominazione>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        
+        <Evento>
+            <!-- RPM: Intrattenimento con ImponibileIntrattenimenti opzionale -->
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>NOME LOCALE</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>YYYYMMDD</DataEvento>
+            <OraEvento>HHMM</OraEvento>
+            <MultiGenere>
+                <TipoGenere>65</TipoGenere>
+                <IncidenzaGenere>100</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>NOME EVENTO</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <!-- RPM: IVAEccedenteOmaggi OBBLIGATORIO -->
+            <OrdineDiPosto>
+                <CodiceOrdine>UN</CodiceOrdine>
+                <Capienza>500</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>150</Quantita>
+                    <CorrispettivoLordo>225000</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>40573</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+    </Organizzatore>
+</RiepilogoMensile>
 ```
 
 ## Elementi ERRATI vs CORRETTI
@@ -137,26 +208,32 @@
 <CodiceOrdine>UN</CodiceOrdine>   <!-- 2 caratteri alfanumerici -->
 ```
 
-## Posizione di TipoTassazione
+## Struttura Intrattenimento (CRITICO!)
 
-Nel DTD v0039, `TipoTassazione` NON e dentro OrdineDiPosto ma a livello Evento:
+**ATTENZIONE:** `<Intrattenimento>` NON contiene testo, ma elementi figli!
 
+**ERRATO** (causa errore 0511):
 ```xml
-<Evento>
-    <Intrattenimento>S</Intrattenimento>
-    <Locale>...</Locale>
-    <DataEvento>20260124</DataEvento>
-    <OraEvento>2300</OraEvento>
-    <TipoTassazione valore="I"/>        <!-- QUI, a livello Evento -->
-    <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
+<Intrattenimento>S</Intrattenimento>
+<TipoTassazione valore="I"/>
+<IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
+```
+
+**CORRETTO** (DTD v0039):
+```xml
+<Intrattenimento>
+    <TipoTassazione valore="I"/>
+    <Incidenza>100</Incidenza>
+</Intrattenimento>
+```
+
+Per RPM mensile, aggiungere `ImponibileIntrattenimenti`:
+```xml
+<Intrattenimento>
+    <TipoTassazione valore="I"/>
+    <Incidenza>100</Incidenza>
     <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
-    <MultiGenere>...</MultiGenere>
-    <OrdineDiPosto>
-        <!-- TipoTassazione NON qui! -->
-        <CodiceOrdine>UN</CodiceOrdine>
-        ...
-    </OrdineDiPosto>
-</Evento>
+</Intrattenimento>
 ```
 
 ## Meccanismo Reinvio (Sostituzione)
