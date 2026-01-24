@@ -14225,7 +14225,7 @@ router.post("/api/siae/test-send-examples", async (req: Request, res: Response) 
         transmissionId: `test-${Date.now()}`,
         systemCode: 'ABC12345',
         sequenceNumber: parseInt(progressivo),
-        signWithSmime: isRCA, // RCA requires S/MIME signing
+        signWithSmime: true, // All SIAE reports require S/MIME signing
         explicitFileName: siaeFileName,
       });
       
