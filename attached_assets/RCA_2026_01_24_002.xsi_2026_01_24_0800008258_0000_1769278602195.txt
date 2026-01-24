@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      0605
+DESCRIZIONE: Il formato del riepilogo risulta non coerente, impossibile estrarre le informazioni
+DETTAGLIO:   
+
+
+

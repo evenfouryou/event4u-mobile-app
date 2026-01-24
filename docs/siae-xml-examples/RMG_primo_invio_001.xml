@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- RMG (RiepilogoGiornaliero) - PRIMO INVIO -->
+<!-- RMG (RiepilogoGiornaliero) - PRIMO INVIO - DTD v0039 COMPLIANT -->
 <!-- ProgressivoGenerazione e Sostituzione sono ATTRIBUTI del ROOT element -->
 <RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="1000" ProgressivoGenerazione="001" Sostituzione="N">
     <Titolare>
@@ -19,6 +19,9 @@
             </Locale>
             <DataEvento>20260124</DataEvento>
             <OraEvento>2300</OraEvento>
+            <TipoTassazione valore="I"/>
+            <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
+            <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
             <MultiGenere>
                 <TipoGenere>65</TipoGenere>
                 <IncidenzaGenere>100</IncidenzaGenere>
@@ -26,29 +29,19 @@
                     <Titolo>SERATA DISCO ANNI 80</Titolo>
                 </TitoliOpere>
             </MultiGenere>
-            <Settore>
-                <CodiceOrdine>001</CodiceOrdine>
+            <OrdineDiPosto>
+                <CodiceOrdine>UN</CodiceOrdine>
                 <Capienza>500</Capienza>
-                <TipoBiglietto>
-                    <TipoTassazione valore="I"/>
-                    <Turno valore="U"/>
-                    <TipoTitolo>INT</TipoTitolo>
-                    <BigliettiEmessi>
-                        <Quantita>150</Quantita>
-                        <CorrispettivoLordo>225000</CorrispettivoLordo>
-                        <Prevendita>0</Prevendita>
-                        <IVACorrispettivo>40573</IVACorrispettivo>
-                        <IVAPrevendita>0</IVAPrevendita>
-                    </BigliettiEmessi>
-                    <BigliettiAnnullati>
-                        <Quantita>0</Quantita>
-                        <CorrispettivoLordo>0</CorrispettivoLordo>
-                        <Prevendita>0</Prevendita>
-                        <IVACorrispettivo>0</IVACorrispettivo>
-                        <IVAPrevendita>0</IVAPrevendita>
-                    </BigliettiAnnullati>
-                </TipoBiglietto>
-            </Settore>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>150</Quantita>
+                    <CorrispettivoLordo>225000</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>40573</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
         </Evento>
     </Organizzatore>
 </RiepilogoGiornaliero>

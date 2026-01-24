@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      0511
+DESCRIZIONE: Errore di parsing generico su RIEPILOGO GIORNALIERO
+DETTAGLIO:   Versione DTD usata per la validazione: [RiepilogoGiornaliero_v0039_20040209.dtd]
+
+
+

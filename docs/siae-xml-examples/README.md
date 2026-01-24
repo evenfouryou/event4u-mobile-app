@@ -1,8 +1,8 @@
-# Esempi XML SIAE - Differenze Strutturali
+# Esempi XML SIAE - DTD v0039 Compliant
 
 ## Panoramica
 
-Questa cartella contiene esempi completi di XML SIAE per dimostrare le differenze strutturali tra i tipi di report.
+Questa cartella contiene esempi completi di XML SIAE conformi al DTD v0039.
 
 ## File Disponibili
 
@@ -12,56 +12,119 @@ Questa cartella contiene esempi completi di XML SIAE per dimostrare le differenz
 | `RMG_reinvio_002.xml` | RiepilogoGiornaliero | Reinvio/Sostituzione (Sostituzione="S") |
 | `RCA_primo_invio_001.xml` | RiepilogoControlloAccessi | Prima trasmissione (Sostituzione="N") |
 | `RCA_reinvio_002.xml` | RiepilogoControlloAccessi | Reinvio/Sostituzione (Sostituzione="S") |
+| `RPG_reinvio_corretto.xml` | RiepilogoGiornaliero | Esempio reinvio DTD v0039 corretto |
+| `STRUTTURA_DTD_V0039.md` | Documentazione | Struttura elementi DTD v0039 |
 
-## Differenza Chiave: Posizione del Progressivo
+## Struttura DTD v0039 - Elementi Chiave
 
 ### RMG/RPM (RiepilogoGiornaliero/Mensile)
+
 ```xml
 <RiepilogoGiornaliero 
     Data="20260124" 
     DataGenerazione="20260124" 
     OraGenerazione="1000" 
-    ProgressivoGenerazione="001"    <!-- ATTRIBUTO ROOT -->
-    Sostituzione="N">               <!-- ATTRIBUTO ROOT -->
+    ProgressivoGenerazione="001"
+    Sostituzione="N">
+    
     <Titolare>
         <Denominazione>...</Denominazione>
-        <!-- NO ProgressivoRiepilogo qui! -->
+        <CodiceFiscale>...</CodiceFiscale>
+        <SistemaEmissione>...</SistemaEmissione>
     </Titolare>
+    
+    <Organizzatore>
+        <Denominazione>...</Denominazione>
+        <CodiceFiscale>...</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        
+        <Evento>
+            <Intrattenimento>S</Intrattenimento>
+            <Locale>...</Locale>
+            <DataEvento>20260124</DataEvento>
+            <OraEvento>2300</OraEvento>
+            <TipoTassazione valore="I"/>
+            <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
+            <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            <MultiGenere>
+                <TipoGenere>65</TipoGenere>
+                <IncidenzaGenere>100</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>NOME EVENTO</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            
+            <!-- CORRETTO: OrdineDiPosto (non Settore!) -->
+            <OrdineDiPosto>
+                <CodiceOrdine>UN</CodiceOrdine>
+                <Capienza>500</Capienza>
+                <!-- CORRETTO: TitoliAccesso (non TipoBiglietto!) -->
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>150</Quantita>
+                    <CorrispettivoLordo>225000</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>40573</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+    </Organizzatore>
 </RiepilogoGiornaliero>
 ```
 
 ### RCA (RiepilogoControlloAccessi)
+
 ```xml
-<RiepilogoControlloAccessi 
-    Sostituzione="N">               <!-- ATTRIBUTO ROOT (solo questo!) -->
+<RiepilogoControlloAccessi Sostituzione="N">
     <Titolare>
-        <ProgressivoRiepilogo>001</ProgressivoRiepilogo>  <!-- ELEMENTO INTERNO -->
+        <ProgressivoRiepilogo>001</ProgressivoRiepilogo>
         <Denominazione>...</Denominazione>
+        <CodiceFiscale>...</CodiceFiscale>
+        <SistemaEmissione>...</SistemaEmissione>
     </Titolare>
+    ...
 </RiepilogoControlloAccessi>
 ```
 
-## Tabella Comparativa
+## Differenza Chiave: Posizione del Progressivo
 
-| Aspetto | RCA | RMG/RPM |
-|---------|-----|---------|
-| **Sostituzione** | Attributo ROOT | Attributo ROOT |
-| **Progressivo** | Elemento `<ProgressivoRiepilogo>` dentro `<Titolare>` | Attributo `ProgressivoGenerazione` nel ROOT |
-| **Data** | Non presente nel ROOT | Attributo `Data` nel ROOT |
-| **DataGenerazione** | Non presente | Attributo nel ROOT |
-| **OraGenerazione** | Non presente | Attributo nel ROOT |
+| Tipo | Progressivo | Sostituzione |
+|------|-------------|--------------|
+| RMG/RPM | Attributo ROOT `ProgressivoGenerazione` | Attributo ROOT |
+| RCA | Elemento `<ProgressivoRiepilogo>` in Titolare | Attributo ROOT |
 
-## Meccanismo Sostituzione
+## Errori Comuni SIAE
 
-Il meccanismo è **IDENTICO** per tutti i tipi:
+| Codice | Descrizione | Causa Comune |
+|--------|-------------|--------------|
+| 0511 | Errore parsing | Struttura XML non conforme DTD |
+| 0604 | Duplicato | File con stesso progressivo gia inviato |
+| 0605 | Formato non coerente | Elementi errati o mancanti |
+| 0603 | Data non corrispondente | Mismatch Data/DataGenerazione |
 
-1. **Primo Invio**: `Sostituzione="N"`, progressivo = 001
-2. **Reinvio**: `Sostituzione="S"`, progressivo = 002, 003, ...
+## Elementi ERRATI vs CORRETTI
 
-La differenza è solo nella **posizione** del progressivo, non nel meccanismo.
+| ERRATO | CORRETTO |
+|--------|----------|
+| `<Settore>` | `<OrdineDiPosto>` |
+| `<TipoBiglietto>` | `<TitoliAccesso>` |
+| `<CodiceOrdine>001</CodiceOrdine>` | `<CodiceOrdine>UN</CodiceOrdine>` |
+| `<BigliettiEmessi><Quantita>` | `<Quantita>` diretto |
 
-## Codice Sorgente
+## Meccanismo Reinvio
 
-- RMG/RPM: `server/siae-utils.ts` linee 5170-5177
-- RCA: `server/siae-routes.ts` funzione `generateRcaXml`
-- Logica Sostituzione: `server/siae-utils.ts` linea 4871
+| Parametro | Primo Invio | Reinvio |
+|-----------|-------------|---------|
+| ProgressivoGenerazione (RMG) | "001" | "002", "003", ... |
+| ProgressivoRiepilogo (RCA) | "001" | "002", "003", ... |
+| Sostituzione | "N" | "S" |
+| Nome file | `RPG_2026_01_24_001.xsi` | `RPG_2026_01_24_002.xsi` |
+
+## Riferimenti
+
+- DTD RMG: `RiepilogoGiornaliero_v0039_20040209.dtd`
+- DTD RPM: `RiepilogoMensile_v0039_20040209.dtd`
+- DTD RCA: `ControlloAccessi_v0001_20080626.dtd`
+- Codice: `server/siae-utils.ts` linee 4900-5180
