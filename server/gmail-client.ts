@@ -173,19 +173,12 @@ async function extractAttachments(
         const content = Buffer.from(base64Data, 'base64').toString('utf-8');
         const parsed = parseSiaeResponseFile(content);
         
-        // FIX: Extract error code from filename - this is the PRIMARY response code!
-        // Format: {ORIGINAL_FILENAME}_{RESPONSE_DATE}_{SIAE_ID}_{ERROR_CODE}.txt
-        // Example: RPG_2026_01_16_001.xsi_2026_01_22_0800008258_0000.txt
-        let filenameCode: string | null = null;
-        const filenameCodeMatch = filename.match(/_(\d{4})\.txt$/i);
-        if (filenameCodeMatch) {
-          filenameCode = filenameCodeMatch[1];
-        }
-        
-        // Use filename code as primary, content code as fallback
-        const finalCode = filenameCode || parsed.code;
-        const finalSuccess = filenameCode === '0000' || parsed.success;
-        const finalType = filenameCode === '0000' ? 'OK' : parsed.type;
+        // Il codice errore è NEL CONTENUTO del file, non nel nome!
+        // Il nome file contiene sempre _0000 (ID server SIAE), non è il codice di risposta
+        // Il codice reale è estratto dal contenuto (CODICE: XXXX)
+        const finalCode = parsed.code;
+        const finalSuccess = parsed.success;
+        const finalType = parsed.type;
         
         attachments.push({
           filename,
@@ -200,7 +193,7 @@ async function extractAttachments(
           }
         });
         
-        console.log(`[Gmail] Extracted attachment: ${filename}, type: ${finalType}, code: ${finalCode}${filenameCode ? ' (from filename)' : ''}`);
+        console.log(`[Gmail] Extracted attachment: ${filename}, type: ${finalType}, code: ${finalCode} (from content)`);
       } catch (err: any) {
         console.error(`[Gmail] Failed to get attachment ${filename}:`, err.message);
       }

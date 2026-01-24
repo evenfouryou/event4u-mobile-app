@@ -2816,7 +2816,11 @@ export function parseSiaeResponseFile(content: string): SiaeResponseParseResult 
     rawContent: content,
   };
   
+  // File vuoto = stato sconosciuto (non trattare come successo)
   if (!content || content.trim().length === 0) {
+    result.type = 'UNKNOWN';
+    result.code = null;
+    result.description = 'File risposta vuoto - stato sconosciuto';
     return result;
   }
   
