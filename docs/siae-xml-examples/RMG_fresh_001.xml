@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="1905" ProgressivoGenerazione="001" Sostituzione="N">
+    <Titolare>
+        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <SistemaEmissione>ABC1234567</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>ORGANIZZATORE EVENTI SRL</Denominazione>
+        <CodiceFiscale>98765432109</CodiceFiscale>
+    </Organizzatore>
+    <LuogoSpettacolo>
+        <Denominazione>CLUB MILANO DOWNTOWN</Denominazione>
+        <Indirizzo>Via Roma 100</Indirizzo>
+        <Comune>Milano</Comune>
+        <Provincia>MI</Provincia>
+        <CAP>20100</CAP>
+    </LuogoSpettacolo>
+    <Spettacolo>
+        <DataSpettacolo>20260124</DataSpettacolo>
+        <Genere>62</Genere>
+        <Titolo>SATURDAY NIGHT FEVER</Titolo>
+        <Autore>DJ MARCO</Autore>
+    </Spettacolo>
+    <TitoloAccesso>
+        <Tipologia>1</Tipologia>
+        <Descrizione>Ingresso Standard</Descrizione>
+        <Prezzo>20.00</Prezzo>
+        <Quantita>300</Quantita>
+        <Importo>6000.00</Importo>
+    </TitoloAccesso>
+    <Totali>
+        <TotaleBiglietti>300</TotaleBiglietti>
+        <TotaleImporto>6000.00</TotaleImporto>
+    </Totali>
+</RiepilogoGiornaliero>
