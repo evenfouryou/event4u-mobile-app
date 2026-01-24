@@ -5891,6 +5891,128 @@ router.get("/api/siae/transmissions-list", requireAuth, requireGestore, async (r
   }
 });
 
+// TEST ONLY: Test resend without auth (remove in production)
+router.post("/api/siae/test-resend/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { toEmail } = req.body;
+    
+    console.log(`\n========== TEST RESEND RMG ==========`);
+    console.log(`[TEST] Transmission ID: ${id}`);
+    console.log(`[TEST] Target Email: ${toEmail}`);
+    
+    // Get original transmission
+    const original = await siaeStorage.getSiaeTransmission(id);
+    if (!original) {
+      return res.status(404).json({ message: "Trasmissione originale non trovata" });
+    }
+    
+    console.log(`[TEST] Original transmission type: ${original.transmissionType}`);
+    console.log(`[TEST] Original progressivo: ${original.progressivoInvio}`);
+    console.log(`[TEST] Original filename: ${original.fileName}`);
+    
+    if (!original.ticketedEventId) {
+      return res.status(400).json({ message: "Trasmissione senza evento associato" });
+    }
+    
+    // Calculate next progressive
+    const existingTransmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(original.ticketedEventId);
+    const sameTypeTransmissions = existingTransmissions.filter(t => 
+      t.transmissionType === original.transmissionType
+    );
+    
+    const nextProgressivo = sameTypeTransmissions.length + 1;
+    
+    console.log(`[TEST] Existing transmissions of same type: ${sameTypeTransmissions.length}`);
+    console.log(`[TEST] Next progressivo will be: ${nextProgressivo}`);
+    console.log(`[TEST] forceSubstitution: true → Sostituzione="S"`);
+    
+    // Get event data for XML
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(original.ticketedEventId);
+    if (!ticketedEvent) {
+      return res.status(400).json({ message: "Evento SIAE non trovato" });
+    }
+    
+    const company = await storage.getCompany(original.companyId);
+    const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+    const allTickets = await siaeStorage.getSiaeTicketsByCompany(original.companyId);
+    const eventTickets = allTickets.filter(t => t.ticketedEventId === original.ticketedEventId);
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(original.companyId);
+    
+    // Get system code from Smart Card (getCachedEfffData already imported from bridge-relay at top)
+    const { resolveSystemCodeForSmime } = await import('./siae-utils');
+    const cachedEfff = getCachedEfffData();
+    const smimeResult = resolveSystemCodeForSmime(cachedEfff, systemConfig ? { systemCode: systemConfig.systemCode ?? undefined } : null);
+    
+    if (!smimeResult.success || !smimeResult.systemCode) {
+      console.log(`[TEST] ERROR: Smart Card not available: ${smimeResult.error}`);
+      return res.status(400).json({
+        message: smimeResult.error || 'Smart Card richiesta',
+        code: 'SMARTCARD_REQUIRED'
+      });
+    }
+    
+    console.log(`[TEST] System code from ${smimeResult.source}: ${smimeResult.systemCode}`);
+    
+    // Generate new XML with forceSubstitution=true
+    const { generateC1Xml } = await import('./siae-utils');
+    const { generateSiaeFilename } = await import('./siae-filename');
+    
+    // Determine type-specific parameters
+    const isDaily = original.transmissionType === 'daily';
+    const periodDate = original.periodDate ? new Date(original.periodDate) : new Date();
+    
+    console.log(`\n[TEST] ===== GENERATING XML =====`);
+    console.log(`[TEST] Type: ${isDaily ? 'RMG (daily)' : 'RPM (monthly)'}`);
+    console.log(`[TEST] Period date: ${periodDate.toISOString().substring(0, 10)}`);
+    console.log(`[TEST] Progressivo: ${nextProgressivo}`);
+    console.log(`[TEST] Sostituzione: "S" (forceSubstitution=true)`);
+    
+    const xmlResult = generateC1Xml({
+      company: company!,
+      event: baseEvent!,
+      ticketedEvent,
+      tickets: eventTickets,
+      systemCode: smimeResult.systemCode,
+      periodDate: periodDate,
+      progressivo: nextProgressivo,
+      forceSubstitution: true  // THIS IS THE KEY - generates Sostituzione="S"
+    });
+    
+    // Log the XML structure
+    const xmlPreview = xmlResult.substring(0, 800);
+    console.log(`\n[TEST] ===== XML PREVIEW =====`);
+    console.log(xmlPreview);
+    console.log(`[TEST] ===== END PREVIEW =====\n`);
+    
+    // Check for Sostituzione attribute
+    const sostituzionMatch = xmlResult.match(/Sostituzione="([NS])"/);
+    const progressivoMatch = xmlResult.match(/ProgressivoGenerazione="(\d+)"/);
+    
+    console.log(`[TEST] XML Sostituzione attribute: ${sostituzionMatch ? sostituzionMatch[1] : 'NOT FOUND'}`);
+    console.log(`[TEST] XML ProgressivoGenerazione: ${progressivoMatch ? progressivoMatch[1] : 'NOT FOUND'}`);
+    console.log(`========== END TEST RESEND ==========\n`);
+    
+    // Return analysis without actually sending
+    res.json({
+      success: true,
+      test: true,
+      analysis: {
+        originalType: original.transmissionType,
+        originalProgressivo: original.progressivoInvio,
+        newProgressivo: nextProgressivo,
+        forceSubstitution: true,
+        xmlSostituzione: sostituzionMatch ? sostituzionMatch[1] : 'NOT_FOUND',
+        xmlProgressivo: progressivoMatch ? progressivoMatch[1] : 'NOT_FOUND',
+        xmlLength: xmlResult.length
+      }
+    });
+  } catch (error: any) {
+    console.error('[TEST] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Resend transmission with Sostituzione="S"
 router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
