@@ -1168,6 +1168,93 @@ router.post("/api/bridge/read-efff", async (req: Request, res: Response) => {
   }
 });
 
+// ==================== TEST: Send XML with EFFF data (development only) ====================
+router.post("/api/bridge/send-test-report", async (req: Request, res: Response) => {
+  try {
+    console.log('[SIAE-TEST] Starting test report transmission with EFFF data...');
+    
+    const { requestCardEfffData } = await import('./bridge-relay');
+    const { transmitReport } = await import('./siae-transmission');
+    
+    // Read EFFF data from smart card
+    console.log('[SIAE-TEST] Reading EFFF data from smart card...');
+    const efffData = await requestCardEfffData();
+    console.log('[SIAE-TEST] EFFF data:', JSON.stringify(efffData, null, 2));
+    
+    // Build transmission params with EFFF data
+    const transmissionParams = {
+      reportType: 'giornaliero' as const,
+      destinatario: efffData.siaeEmail || 'servertest2@batest.siae.it',
+      data: {
+        titolare: {
+          denominazione: efffData.partnerName || 'HURAEX SRL',
+          codiceFiscale: efffData.partnerCodFis || '02120820432',
+          sistemaEmissione: efffData.systemId || 'P0004010'
+        },
+        organizzatore: {
+          denominazione: efffData.contactName + ' ' + efffData.contactLastName || 'PETRELLI JONATHAN',
+          codiceFiscale: efffData.contactCodFis || 'PTRJTH93M11I156B',
+          tipoOrganizzatore: 'G'
+        },
+        evento: {
+          intrattenimento: { tipoTassazione: 'I', incidenza: 100 },
+          locale: { denominazione: 'CLUB NAPOLI SUNSET', codiceLocale: '0000000000003' },
+          dataEvento: '20260105',
+          oraEvento: '2130',
+          multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['DISCO NIGHT PARADISE'] }],
+          ordineDiPosto: [{
+            codiceOrdine: 'UN',
+            capienza: 400,
+            titoliAccesso: [{
+              tipoTitolo: 'R1',
+              quantita: 120,
+              corrispettivoLordo: 180000,
+              prevendita: 0,
+              ivaCorrispettivo: 32459,
+              ivaPrevendita: 0,
+              importoPrestazione: 0
+            }]
+          }]
+        },
+        dataReport: new Date('2026-01-05'),
+        progressivo: 1,
+        sostituzione: false
+      }
+    };
+    
+    console.log('[SIAE-TEST] Transmitting with params:');
+    console.log('[SIAE-TEST]   Titolare: ' + transmissionParams.data.titolare.denominazione);
+    console.log('[SIAE-TEST]   CF/P.IVA: ' + transmissionParams.data.titolare.codiceFiscale);
+    console.log('[SIAE-TEST]   Sistema: ' + transmissionParams.data.titolare.sistemaEmissione);
+    console.log('[SIAE-TEST]   Destinatario: ' + transmissionParams.destinatario);
+    
+    // Send via S/MIME signed email
+    const result = await transmitReport(transmissionParams);
+    
+    console.log('[SIAE-TEST] Transmission result:', JSON.stringify(result, null, 2));
+    
+    res.json({
+      success: result.success,
+      message: result.success ? 'Test report sent with EFFF data' : result.error,
+      efffData: {
+        systemId: efffData.systemId,
+        partnerName: efffData.partnerName,
+        partnerCodFis: efffData.partnerCodFis,
+        siaeEmail: efffData.siaeEmail
+      },
+      filename: result.fileName,
+      transmissionResult: result
+    });
+    
+  } catch (error: any) {
+    console.error('[SIAE-TEST] Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // ==================== SIAE Environment Detection Endpoint ====================
 router.get("/api/siae/environment", requireAuth, async (req: Request, res: Response) => {
   try {
