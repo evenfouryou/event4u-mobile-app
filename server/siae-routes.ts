@@ -1260,9 +1260,11 @@ router.post("/api/bridge/send-test-report", async (req: Request, res: Response) 
 router.post("/api/bridge/send-error-test", async (req: Request, res: Response) => {
   try {
     const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
-    const testDate = '20260107'; // Data diversa per non conflittare con test precedenti
+    const testDate = '20260108'; // Data nuova per evitare conflitti con test precedenti
+    // CRITICO: Il progressivo deve essere INCREMENTATO per il reinvio!
+    const progressivo = mode === 'fix' ? 2 : 1; // 001 per primo invio, 002 per reinvio
     
-    console.log(`[SIAE-ERROR-TEST] Mode: ${mode}`);
+    console.log(`[SIAE-ERROR-TEST] Mode: ${mode}, Progressivo: ${progressivo}`);
     
     const { requestCardEfffData } = await import('./bridge-relay');
     const { transmitReport } = await import('./siae-transmission');
@@ -1288,8 +1290,8 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
         },
         evento: {
           intrattenimento: { tipoTassazione: 'I', incidenza: 100 },
-          locale: { denominazione: 'CLUB TEST BIGLIETTI', codiceLocale: '0000000000005' },
-          dataEvento: testDate,
+          locale: { denominazione: 'CLUB TEST SOSTITUZIONE', codiceLocale: '0000000000006' },
+          dataEvento: testDate, // 20260108
           oraEvento: '2200',
           multiGenere: [{ tipoGenere: '65', incidenzaGenere: 100, titoliOpere: ['TEST BIGLIETTI'] }],
           ordineDiPosto: [{
@@ -1307,8 +1309,8 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
             }]
           }]
         },
-        dataReport: new Date('2026-01-07'),
-        progressivo: 1,
+        dataReport: new Date('2026-01-08'),
+        progressivo: progressivo, // 1 per primo invio, 2 per reinvio (DEVE INCREMENTARE!)
         sostituzione: mode === 'fix' // Sostituzione="S" solo se stiamo correggendo
       }
     };
