@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      2602
+DESCRIZIONE: Codice fiscale/partita Iva titolare errata
+DETTAGLIO:   Nel riepilogo al titolare del sistema e' stato associato questo Codice fiscale/partita Iva [12345678901]
+
+
+
