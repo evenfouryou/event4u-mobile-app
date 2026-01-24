@@ -1118,6 +1118,56 @@ router.get("/api/siae/card/efff", requireAuth, async (req: Request, res: Respons
   }
 });
 
+// ==================== TEST: EFFF Direct Read (development only) ====================
+router.post("/api/bridge/read-efff", async (req: Request, res: Response) => {
+  try {
+    console.log('[SIAE] Direct EFFF read request received');
+    const { requestCardEfffData, getCachedEfffData } = await import('./bridge-relay');
+    
+    // First try to get fresh data from smart card
+    try {
+      const efffData = await requestCardEfffData();
+      console.log('[SIAE] EFFF data read from smart card:', JSON.stringify(efffData, null, 2));
+      
+      return res.json({
+        success: true,
+        source: 'smartcard',
+        systemId: efffData.systemId,
+        partnerName: efffData.partnerName,
+        partnerCodFis: efffData.partnerCodFis,
+        siaeEmail: efffData.siaeEmail,
+        contactEmail: efffData.contactEmail,
+        fullData: efffData
+      });
+    } catch (cardError: any) {
+      console.log('[SIAE] Smart card read failed:', cardError.message);
+      
+      // Fallback to cache
+      const cached = getCachedEfffData();
+      if (cached) {
+        return res.json({
+          success: true,
+          source: 'cache',
+          systemId: cached.systemId || 'NOT_IN_CACHE',
+          partnerName: cached.partnerName,
+          partnerCodFis: cached.partnerCodFis,
+          siaeEmail: cached.siaeEmail,
+          warning: 'Read from cache, systemId may be missing',
+          fullData: cached
+        });
+      }
+      
+      throw cardError;
+    }
+  } catch (error: any) {
+    console.error('[SIAE] EFFF read failed:', error.message);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 // ==================== SIAE Environment Detection Endpoint ====================
 router.get("/api/siae/environment", requireAuth, async (req: Request, res: Response) => {
   try {
