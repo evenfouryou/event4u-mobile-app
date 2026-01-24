@@ -1260,7 +1260,7 @@ router.post("/api/bridge/send-test-report", async (req: Request, res: Response) 
 router.post("/api/bridge/send-error-test", async (req: Request, res: Response) => {
   try {
     const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
-    const testDate = '20260108'; // Data nuova per evitare conflitti con test precedenti
+    const testDate = '20260109'; // Data 09/01/2026 per nuovo test pulito
     // CRITICO: Il progressivo deve essere INCREMENTATO per il reinvio!
     const progressivo = mode === 'fix' ? 2 : 1; // 001 per primo invio, 002 per reinvio
     
@@ -1309,7 +1309,7 @@ router.post("/api/bridge/send-error-test", async (req: Request, res: Response) =
             }]
           }]
         },
-        dataReport: new Date('2026-01-08'),
+        dataReport: new Date('2026-01-09'),
         progressivo: progressivo, // 1 per primo invio, 2 per reinvio (DEVE INCREMENTARE!)
         sostituzione: mode === 'fix' // Sostituzione="S" solo se stiamo correggendo
       }
