@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoMensile Sostituzione="N" Mese="202510" DataGenerazione="20260124" OraGenerazione="221229" ProgressivoGenerazione="001">
+    <Titolare>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>JONATHAN PETRELLI</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+    </Organizzatore>
+</RiepilogoMensile>
