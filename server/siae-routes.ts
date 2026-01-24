@@ -5907,19 +5907,19 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       return res.status(400).json({ message: "Trasmissione senza evento associato" });
     }
     
-    // FIX 2026-01-22: Per sostituzioni (errore 0604), usare lo STESSO progressivo del report originale
-    // SIAE richiede che Sostituzione="S" sia accompagnato dallo stesso ProgressivoGenerazione
-    // del report che si vuole sostituire, NON un nuovo progressivo incrementale.
+    // FIX 2026-01-24: Per sostituzioni (Sostituzione="S"), il progressivo DEVE incrementare
+    // Secondo la reference implementation Eventix/siae PHP e specifiche SIAE:
+    // - Ogni nuova trasmissione (anche sostitutiva) è un NUOVO invio con nuovo progressivo
+    // - Original: RCA_2026_01_24_001.xsi.p7m con ProgressivoRiepilogo=1
+    // - Substitution: RCA_2026_01_24_002.xsi.p7m con ProgressivoRiepilogo=2 e Sostituzione="S"
     const existingTransmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(original.ticketedEventId);
     const sameTypeTransmissions = existingTransmissions.filter(t => 
       t.transmissionType === original.transmissionType
     );
     
-    // Se forceSubstitution=true (per errori 0604 "già elaborato"), usa lo stesso progressivo dell'originale
-    // Altrimenti usa un nuovo progressivo (per errori diversi che richiedono un nuovo invio)
-    const nextProgressivo = forceSubstitution 
-      ? (original.progressivoInvio || 1)  // Riutilizza progressivo originale per sostituzione
-      : sameTypeTransmissions.length + 1;  // Nuovo progressivo per reinvio normale
+    // Sempre incrementa il progressivo per ogni nuovo invio (sostitutivo o meno)
+    // Il progressivo indica quante volte è stato inviato il report per questo evento/periodo
+    const nextProgressivo = sameTypeTransmissions.length + 1;
     
     // Get event and company data for XML regeneration
     const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(original.ticketedEventId);
@@ -6110,6 +6110,16 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       // FIX 2026-01-19: Usa lo stesso nome file per email e attributo NomeFile (errore 0600)
       resendEmailFileName = resendPreGeneratedFileName;
     }
+    
+    // FIX 2026-01-24: Diagnostic log per verifica XML sostituzione
+    console.log('[SIAE-ROUTES] ===== SUBSTITUTION XML DIAGNOSTIC =====');
+    console.log(`[SIAE-ROUTES] Transmission Type: ${original.transmissionType}`);
+    console.log(`[SIAE-ROUTES] Progressive Number: ${nextProgressivo} (incremented from ${original.progressivoInvio || 1})`);
+    console.log(`[SIAE-ROUTES] forceSubstitution: true (Sostituzione="S")`);
+    console.log(`[SIAE-ROUTES] File Name: ${resendEmailFileName}`);
+    // Log first 500 chars of XML to verify structure
+    console.log(`[SIAE-ROUTES] XML Preview:\n${generatedXml.substring(0, 800)}`);
+    console.log('[SIAE-ROUTES] ===== END DIAGNOSTIC =====');
     
     // FIX 2026-01-18: Validazione DTD pre-trasmissione obbligatoria per tutti i flussi
     const resendPreValidation = await validatePreTransmission(

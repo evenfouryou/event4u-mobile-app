@@ -1,0 +1,69 @@
+Based on reference implementation from Eventix/siae PHP library, please check and fix the SIAE resend/substitution functionality. Here are the    
+  specific things to verify and fix:                                                                                                                
+                                                                                                                                                    
+  ## 1. XML Structure Verification                                                                                                                  
+                                                                                                                                                    
+  Check that when generating RCA XML with `Sostituzione="S"`, the structure matches this exact format:                                              
+                                                                                                                                                    
+  ```xml                                                                                                                                            
+  <RiepilogoControlloAccessi Sostituzione="S">                                                                                                      
+      <Titolare>                                                                                                                                    
+          <DenominazioneTitolareCA>...</DenominazioneTitolareCA>                                                                                    
+          <CFTitolareCA>...</CFTitolareCA>                                                                                                          
+          <CodiceSistemaCA>...</CodiceSistemaCA>                                                                                                    
+          <DataRiepilogo>YYYYMMDD</DataRiepilogo>                                                                                                   
+          <DataGenerazioneRiepilogo>YYYYMMDD</DataGenerazioneRiepilogo>                                                                             
+          <OraGenerazioneRiepilogo>HHMMSS</OraGenerazioneRiepilogo>                                                                                 
+          <ProgressivoRiepilogo>N</ProgressivoRiepilogo>                                                                                            
+      </Titolare>                                                                                                                                   
+      <Evento>...</Evento>                                                                                                                          
+  </RiepilogoControlloAccessi>                                                                                                                      
+                                                                                                                                                    
+  2. Fix These Potential Issues                                                                                                                     
+                                                                                                                                                    
+  A. Progressive Number on Substitution                                                                                                             
+                                                                                                                                                    
+  When Sostituzione="S":                                                                                                                            
+  - The ProgressivoRiepilogo should INCREMENT (use next number, not same as original)                                                               
+  - This is because it's a NEW transmission replacing the old one                                                                                   
+  - Update the logic so resend uses: originalProgressivo + 1                                                                                        
+                                                                                                                                                    
+  B. Date/Time Format (no separators)                                                                                                               
+                                                                                                                                                    
+  - Dates must be YYYYMMDD (e.g., 20260124, NOT 2026-01-24)                                                                                         
+  - Times must be HHMMSS (e.g., 143022, NOT 14:30:22)                                                                                               
+  - Check DataRiepilogo, DataGenerazioneRiepilogo, OraGenerazioneRiepilogo                                                                          
+                                                                                                                                                    
+  C. Element Order Inside                                                                                                                           
+                                                                                                                                                    
+  Elements MUST be in this exact order (DTD requirement):                                                                                           
+  1. DenominazioneTitolareCA                                                                                                                        
+  2. CFTitolareCA                                                                                                                                   
+  3. CodiceSistemaCA                                                                                                                                
+  4. DataRiepilogo                                                                                                                                  
+  5. DataGenerazioneRiepilogo                                                                                                                       
+  6. OraGenerazioneRiepilogo                                                                                                                        
+  7. ProgressivoRiepilogo                                                                                                                           
+                                                                                                                                                    
+  D. File Naming for Substitution                                                                                                                   
+                                                                                                                                                    
+  For substitution, the filename progressive should also increment:                                                                                 
+  - Original: RCA_2026_01_24_001.xsi.p7m                                                                                                            
+  - Substitution: RCA_2026_01_24_002.xsi.p7m                                                                                                        
+                                                                                                                                                    
+  3. Test the Fix                                                                                                                                   
+                                                                                                                                                    
+  After making changes:                                                                                                                             
+  1. Generate a substitution XML and log it to console                                                                                              
+  2. Verify Sostituzione="S" is on root element                                                                                                     
+  3. Verify progressive number incremented                                                                                                          
+  4. Verify all date/time fields have no separators                                                                                                 
+  5. Verify element order inside                                                                                                                    
+                                                                                                                                                    
+  4. Show Me                                                                                                                                        
+                                                                                                                                                    
+  Please show:                                                                                                                                      
+  1. The code changes you made                                                                                                                      
+  2. A sample generated XML for a substitution                                                                                                      
+  3. Confirm the file naming format used                                                                                                            
+                                  

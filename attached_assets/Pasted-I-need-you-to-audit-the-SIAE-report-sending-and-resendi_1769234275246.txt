@@ -1,0 +1,108 @@
+I need you to audit the SIAE report sending and resending functionality in this project. Please analyze the codebase and answer the following:    
+                                                                                                                                                    
+  Part 1: Current Implementation Analysis                                                                                                           
+                                                                                                                                                    
+  1. Find and explain the SEND functionality:                                                                                                       
+    - Where is the initial report sending implemented?                                                                                              
+    - What XML structure is generated?                                                                                                              
+    - How is the Sostituzione attribute set for new reports?                                                                                        
+    - How is the progressive number (ProgressivoGenerazione) managed?                                                                               
+    - What is the file naming convention used?                                                                                                      
+    - How is the email subject line formatted?                                                                                                      
+  2. Find and explain the RESEND/SUBSTITUTION functionality:                                                                                        
+    - Where is the resend endpoint implemented?                                                                                                     
+    - How does it detect if a report needs Sostituzione="S"?                                                                                        
+    - How is the progressive number incremented on resend?                                                                                          
+    - What database fields track substitutions?                                                                                                     
+    - How does forceSubstitution work?                                                                                                              
+  3. Show me the relevant code files and functions for both send and resend.                                                                        
+                                                                                                                                                    
+  ---                                                                                                                                               
+  Part 2: Compliance Check Against SIAE Specifications                                                                                              
+                                                                                                                                                    
+  Compare the implementation against these official SIAE requirements:                                                                              
+                                                                                                                                                    
+  XML Substitution Attribute                                                                                                                        
+                                                                                                                                                    
+  - Sostituzione="N" for new reports (first submission)                                                                                             
+  - Sostituzione="S" for substituting a previously sent report                                                                                      
+  - Required attributes: Data, DataGenerazione, OraGenerazione, ProgressivoGenerazione                                                              
+                                                                                                                                                    
+  File Naming Convention                                                                                                                            
+                                                                                                                                                    
+  XXX_AAAA_MM_GG_###.TTT.p7m                                                                                                                        
+                                                                                                                                                    
+  Where:                                                                                                                                            
+  - XXX = Report type ("RPG" daily, "RPM" monthly, "RCA" access control, "LTA" ticket list)                                                         
+  - AAAA = Year                                                                                                                                     
+  - MM = Month                                                                                                                                      
+  - GG = Day                                                                                                                                        
+  - ### = Progressive number (001 for first, 002 for resend, etc.)                                                                                  
+  - TTT = "XSI" (XML) or "TXT" (ASCII)                                                                                                              
+  - .p7m = PKCS#7 signed                                                                                                                            
+                                                                                                                                                    
+  Email Subject Format                                                                                                                              
+                                                                                                                                                    
+  <RRR>_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>                                                                                         
+                                                                                                                                                    
+  Where:                                                                                                                                            
+  - RRR = Report type (RPG, RPM, RCA)                                                                                                               
+  - SSSSSSSS = 8-character system code (padded with zeros)                                                                                          
+  - ### = Progressive transmission number (001-999)                                                                                                 
+  - TTT = File type (XSI or TXT)                                                                                                                    
+  - V.XX.YY = Version (e.g., V.01.00)                                                                                                               
+                                                                                                                                                    
+  ASCII Substitution Record (Type "S")                                                                                                              
+                                                                                                                                                    
+  If ASCII format is used, substitution requires a prepended record:                                                                                
+  ┌─────┬───────────────────────────┬────────┬────────┬───────────────────────────────┐                                                             
+  │ Pos │           Field           │ Format │ Length │          Description          │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 1   │ TipoRecord                │ A      │ 2      │ "S"                           │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 3   │ CF Titolare CA            │ A      │ 16     │ Fiscal code                   │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 19  │ Codice Sistema CA         │ A      │ 8      │ SIAE system code              │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 27  │ Tipo riepilogo sostituito │ A      │ 1      │ "A" for access, "G" for daily │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 28  │ CF Organizzatore          │ A      │ 16     │ Organizer fiscal code         │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 44  │ Codice locale             │ N      │ 13     │ Venue code                    │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 57  │ Data inizio evento        │ N      │ 8      │ AAAAMMGG                      │                                                             
+  ├─────┼───────────────────────────┼────────┼────────┼───────────────────────────────┤                                                             
+  │ 65  │ Ora inizio evento         │ N      │ 4      │ HHMM                          │                                                             
+  └─────┴───────────────────────────┴────────┴────────┴───────────────────────────────┘                                                             
+  Cancellation Codes (TAB. 5 - Causale Annullamento)                                                                                                
+                                                                                                                                                    
+  001 - Errata compilazione (Data entry error)                                                                                                      
+  002 - Stampa non valida (Invalid print)                                                                                                           
+  003 - Transazione non completata (Incomplete transaction)                                                                                         
+  004 - Annullamento su richiesta cliente (Customer request)                                                                                        
+  005 - Annullamento per motivi di servizio (Service reasons)                                                                                       
+  006 - Annullamento Evento (Event cancelled)                                                                                                       
+  007 - Annullamento per cambio nominativo (Name change)                                                                                            
+  008 - Annullamento per rivendita (Resale)                                                                                                         
+  009 - Annullamento per furto/smarrimento (Theft/loss)                                                                                             
+  010 - Annullamento per upselling (Ticket upgrade)                                                                                                 
+                                                                                                                                                    
+  RiferimentoAnnullamento Element (for re-issued tickets)                                                                                           
+                                                                                                                                                    
+  <RiferimentoAnnullamento>                                                                                                                         
+    <OriginaleRiferimentoAnnullamento>...</OriginaleRiferimentoAnnullamento>                                                                        
+    <CartaRiferimentoAnnullamento>...</CartaRiferimentoAnnullamento>                                                                                
+    <CausaleRiferimentoAnnullamento>...</CausaleRiferimentoAnnullamento>                                                                            
+  </RiferimentoAnnullamento>                                                                                                                        
+                                                                                                                                                    
+  ---                                                                                                                                               
+  Part 3: Gap Analysis                                                                                                                              
+                                                                                                                                                    
+  Based on your analysis, provide:                                                                                                                  
+                                                                                                                                                    
+  1. ✅ What is correctly implemented according to SIAE specs                                                                                       
+  2. ⚠️ What is partially implemented or needs adjustment                                                                                           
+  3. ❌ What is missing and needs to be added                                                                                                       
+  4. Recommendations for any improvements                                                                                                           
+                                                                                                                                                    
+  Please be specific with file paths and line numbers where relevant.  
