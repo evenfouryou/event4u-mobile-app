@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RCA (RiepilogoControlloAccessi) - PRIMO INVIO -->
+<!-- Sostituzione e attributo del ROOT, ma ProgressivoRiepilogo e ELEMENTO interno -->
+<RiepilogoControlloAccessi Sostituzione="N">
+    <Titolare>
+        <ProgressivoRiepilogo>001</ProgressivoRiepilogo>
+        <Denominazione>DISCO EXAMPLE SRL</Denominazione>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <SistemaEmissione>ABC1234567</SistemaEmissione>
+    </Titolare>
+    <Evento>
+        <DataEvento>20260124</DataEvento>
+        <OraEvento>2300</OraEvento>
+        <Locale>
+            <Denominazione>CLUB MILANO</Denominazione>
+            <CodiceLocale>0000000000001</CodiceLocale>
+        </Locale>
+        <Organizzatore>
+            <Denominazione>DISCO EXAMPLE SRL</Denominazione>
+            <CodiceFiscale>12345678901</CodiceFiscale>
+        </Organizzatore>
+        <ControlloAccessi>
+            <TipoGenere>65</TipoGenere>
+            <AccessoSettore>
+                <CodiceOrdine>001</CodiceOrdine>
+                <Capienza>500</Capienza>
+                <Accessi>
+                    <TipoTitolo>INT</TipoTitolo>
+                    <AccessiTotali>
+                        <Quantita>145</Quantita>
+                    </AccessiTotali>
+                </Accessi>
+            </AccessoSettore>
+        </ControlloAccessi>
+    </Evento>
+</RiepilogoControlloAccessi>
