@@ -1348,7 +1348,9 @@ router.post("/api/bridge/send-rpm-test", async (req: Request, res: Response) => 
     const mode = req.query.mode as string || 'error'; // 'error' = invio con errore, 'fix' = correzione
     const testMonth = '202512'; // Dicembre 2025 (mese passato per test)
     // CRITICO: Il progressivo deve essere INCREMENTATO per il reinvio!
-    const progressivo = mode === 'fix' ? 2 : 1;
+    // Accetta progressivo dalla query string, altrimenti usa default basato su mode
+    const progressivoParam = req.query.progressivo ? parseInt(req.query.progressivo as string, 10) : null;
+    const progressivo = progressivoParam || (mode === 'fix' ? 2 : 1);
     
     console.log(`[SIAE-RPM-TEST] Mode: ${mode}, Progressivo: ${progressivo}`);
     
