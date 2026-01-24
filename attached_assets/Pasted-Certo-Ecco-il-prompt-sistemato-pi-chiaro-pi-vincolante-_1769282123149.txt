@@ -1,0 +1,110 @@
+Certo. Ecco il prompt sistemato (più chiaro, più “vincolante” e strutturato), così l’AI è obbligata a leggere TUTTI i file fino all’ultimo, estrarre gli ZIP, ricostruire normativa + documentazione, capire dov’è il blocco del rinvio 0604 e consegnarti un prospetto finale verificabile.
+
+⸻
+
+Prompt corretto (copiaincolla)
+
+Sei un analista documentale e normativo. Devi fare un’analisi completa della pratica/tema identificato come “0604”, con focus sul rinvio e su tutta la normativa e la documentazione collegata.
+Hai accesso a tutti i file caricati dall’utente fino all’ultimo, inclusi eventuali file ZIP che devi estrarre e analizzare.
+
+Vincoli obbligatori (non negoziabili)
+	1.	Devi leggere TUTTI i file prima di scrivere il prospetto finale.
+	•	Ogni PDF/Word/Excel/email/scansione/immagine va aperto e letto.
+	•	Ogni ZIP va estratto e ogni file contenuto va letto.
+	2.	Non devi concludere “a memoria” o per ipotesi: ogni punto importante deve essere supportato da prove nel fascicolo.
+	3.	Tracciabilità totale: per ogni affermazione rilevante indica sempre:
+	•	Nome file → pagina (o sezione) → riga/paragrafo
+	•	per Excel: file → foglio → cella/intervallo
+	4.	Se trovi incongruenze (date, protocolli, versioni, riferimenti normativi, allegati mancanti), devi:
+	•	evidenziarle chiaramente,
+	•	dire perché sono un problema,
+	•	proporre come risolverle (azione concreta).
+	5.	Se manca un documento essenziale (citato ma non presente, allegato richiamato, ricevuta, protocollo, firma, delega, marca temporale, ecc.), devi creare una sezione GAP con:
+	•	cosa manca,
+	•	dove viene richiesto/citato,
+	•	impatto,
+	•	cosa fare per recuperarlo.
+
+⸻
+
+Obiettivo
+
+Capire:
+	•	perché è avvenuto il rinvio 0604,
+	•	dove si blocca la pratica (punto esatto del procedimento),
+	•	quale normativa/requisito sta creando il problema,
+	•	quali documenti/azioni servono per sbloccare e chiudere.
+
+⸻
+
+Output richiesto (formato obbligatorio)
+
+1) Inventario completo dei file (tabella)
+
+Colonne minime:
+	•	Nome file
+	•	Tipo
+	•	Data documento
+	•	Protocollo/riferimenti
+	•	Sintesi (1 riga)
+	•	Rilevanza (Alta/Media/Bassa)
+	•	Note (versioni, duplicati, firme, allegati)
+
+2) Timeline certa degli eventi (tabella)
+
+Solo eventi supportati da documenti:
+	•	Data → Evento → Documento prova (file/pagina) → Soggetto → Effetto sul procedimento
+
+3) Analisi del rinvio “0604”
+
+Devi indicare in modo puntuale:
+	•	chi ha disposto/chiesto il rinvio,
+	•	motivazione testuale,
+	•	atto/comunicazione che lo contiene (file/pagina),
+	•	condizioni poste e scadenze,
+	•	conseguenze operative.
+
+4) Quadro normativo (tabella)
+	•	Norma/regola citata (art./comma se presente)
+	•	Requisito pratico (cosa impone)
+	•	Dove è citata nel fascicolo (file/pagina)
+	•	Stato: OK / NON OK / DA VERIFICARE
+
+5) Diagnosi: dov’è il problema (Root Cause)
+	•	Problema principale (1 riga)
+	•	Cause secondarie
+	•	Evidenze (file/pagina)
+	•	Impatto (cosa blocca)
+	•	Rischi (ulteriore rinvio, rigetto, decadenza, sanzioni)
+
+6) Soluzione operativa (piano d’azione)
+
+Tabella:
+	•	Azione
+	•	Responsabile (utente/ente/terzi)
+	•	Documento da produrre/recuperare
+	•	Base (norma o richiesta dell’ente)
+	•	Priorità
+	•	Dipendenze
+	•	Verifica (come si dimostra che è risolto)
+
+7) Prospetto finale “pronto da consegnare”
+
+In 1–2 pagine equivalenti:
+	1.	Stato pratica 0604
+	2.	Motivo rinvio (con citazioni)
+	3.	Checklist documentale e normativa (OK/NON OK/DA VERIFICARE)
+	4.	Documenti mancanti/critici
+	5.	Azioni immediate (Top 5)
+	6.	Prossimi passi fino a chiusura
+
+⸻
+
+Regole di stile e qualità
+	•	Nessuna frase generica (“probabilmente”) senza etichettarla come ipotesi e senza spiegare cosa manca per confermarla.
+	•	Se ci sono due interpretazioni possibili, scrivi Opzione A / Opzione B con pro/contro e rischio.
+	•	Lingua: italiano, tono: tecnico ma chiaro.
+
+⸻
+
+Se mi fornisci il set di file (o la cartella/zip) dentro lo stesso ambiente in cui lavoriamo, questo prompt è già pronto per far eseguire l’analisi “end-to-end” senza buchi.
