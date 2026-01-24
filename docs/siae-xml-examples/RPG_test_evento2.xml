@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RMG Test - Evento diverso - Data 25/01/2026 -->
+<RiepilogoGiornaliero Data="20260125" DataGenerazione="20260125" OraGenerazione="140000" ProgressivoGenerazione="001" Sostituzione="N">
+    <Titolare>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>S</Intrattenimento>
+            <Locale>
+                <Denominazione>CLUB ROMA CENTRALE</Denominazione>
+                <CodiceLocale>0000000000002</CodiceLocale>
+            </Locale>
+            <DataEvento>20260125</DataEvento>
+            <OraEvento>2200</OraEvento>
+            <TipoTassazione valore="I"/>
+            <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
+            <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            <MultiGenere>
+                <TipoGenere>65</TipoGenere>
+                <IncidenzaGenere>100</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>NOTTE LATINA SPECIAL</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>UN</CodiceOrdine>
+                <Capienza>300</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>85</Quantita>
+                    <CorrispettivoLordo>127500</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>22991</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+    </Organizzatore>
+</RiepilogoGiornaliero>
