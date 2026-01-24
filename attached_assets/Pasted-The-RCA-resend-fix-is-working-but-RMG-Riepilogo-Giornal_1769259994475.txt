@@ -1,0 +1,55 @@
+The RCA resend fix is working, but RMG (Riepilogo Giornaliero) resend is not getting a response from SIAE.                                        
+                                                                                                                                                    
+  ## Problem                                                                                                                                        
+                                                                                                                                                    
+  RMG reports have a DIFFERENT XML structure than RCA. The progressive number fix may not have been applied to RMG generation.                      
+                                                                                                                                                    
+  ## RMG XML Structure (from Eventix/siae DailyReport.php)                                                                                          
+                                                                                                                                                    
+  RMG uses these attributes on the ROOT element (not inside <Titolare>):                                                                            
+                                                                                                                                                    
+  ```xml                                                                                                                                            
+  <RiepilogoGiornaliero                                                                                                                             
+      Data="YYYYMMDD"                                                                                                                               
+      DataGenerazione="YYYYMMDD"                                                                                                                    
+      OraGenerazione="HHMMSS"                                                                                                                       
+      ProgressivoGenerazione="N"                                                                                                                    
+      Sostituzione="S">                                                                                                                             
+      <Titolare>...</Titolare>                                                                                                                      
+      <Organizzatore>...</Organizzatore>                                                                                                            
+  </RiepilogoGiornaliero>                                                                                                                           
+                                                                                                                                                    
+  Note: RMG has ProgressivoGenerazione as an ATTRIBUTE on the root element, NOT inside  like RCA.                                                   
+                                                                                                                                                    
+  Task                                                                                                                                              
+                                                                                                                                                    
+  1. Find RMG XML generation code - look for where RiepilogoGiornaliero is generated                                                                
+  2. Check progressive number logic for RMG - verify it increments for substitutions:                                                               
+  // Should be incrementing, not reusing:                                                                                                           
+  const nextProgressivo = sameTypeTransmissions.length + 1;                                                                                         
+  3. Verify RMG attributes are correct:                                                                                                             
+    - Sostituzione="S" for substitution                                                                                                             
+    - ProgressivoGenerazione should INCREMENT (2, 3, etc.)                                                                                          
+    - Data = report date (YYYYMMDD)                                                                                                                 
+    - DataGenerazione = generation date (YYYYMMDD)                                                                                                  
+    - OraGenerazione = generation time (HHMMSS)                                                                                                     
+  4. Add diagnostic logging for RMG similar to RCA:                                                                                                 
+  console.log('=== RMG SUBSTITUTION ===');                                                                                                          
+  console.log('ProgressivoGenerazione:', nextProgressivo);                                                                                          
+  console.log('Sostituzione:', forceSubstitution ? 'S' : 'N');                                                                                      
+  console.log('XML preview:', xmlContent.substring(0, 800));                                                                                        
+                                                                                                                                                    
+  Key Difference: RCA vs RMG                                                                                                                        
+  ┌──────────────┬───────────────────────────────────────────────┬──────────────────────────────────────────┐                                       
+  │    Field     │                 RCA Location                  │               RMG Location               │                                       
+  ├──────────────┼───────────────────────────────────────────────┼──────────────────────────────────────────┤                                       
+  │ Progressive  │ <ProgressivoRiepilogo> inside <Titolare>      │ ProgressivoGenerazione attribute on ROOT │                                       
+  ├──────────────┼───────────────────────────────────────────────┼──────────────────────────────────────────┤                                       
+  │ Sostituzione │ Attribute on root <RiepilogoControlloAccessi> │ Attribute on root <RiepilogoGiornaliero> │                                       
+  └──────────────┴───────────────────────────────────────────────┴──────────────────────────────────────────┘                                       
+  Show Me                                                                                                                                           
+                                                                                                                                                    
+  1. The RMG XML generation code                                                                                                                    
+  2. Whether progressive number is incrementing correctly for RMG substitutions                                                                     
+  3. A sample generated RMG XML with Sostituzione="S"                                                                                               
+  4. Console logs when sending      

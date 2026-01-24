@@ -4869,11 +4869,18 @@ export function generateC1Xml(params: C1XmlParams): C1XmlResult {
   // Il progressivo alto (005) indica solo che sono stati generati più file nello stesso
   // giorno, NON che si sta sostituendo un file precedente!
   const sostituzione = forceSubstitution ? 'S' : 'N';
-  
-  if (forceSubstitution) {
-    console.warn('[generateC1Xml] Sostituzione forzata: il report sostituirà quello precedentemente elaborato');
-  }
   const progressivePadded = String(progressivo).padStart(3, '0');
+  
+  // FIX 2026-01-24: Diagnostic logging per RMG/RPM substitution
+  const reportTypeLabel = isMonthly ? 'RPM' : 'RMG';
+  console.log(`[generateC1Xml] ===== ${reportTypeLabel} GENERATION =====`);
+  console.log(`[generateC1Xml] Report Type: ${reportTypeLabel} (${isMonthly ? 'mensile' : 'giornaliero'})`);
+  console.log(`[generateC1Xml] ProgressivoGenerazione: ${progressivePadded} (input: ${progressivo})`);
+  console.log(`[generateC1Xml] Sostituzione: "${sostituzione}" (forceSubstitution: ${forceSubstitution})`);
+  console.log(`[generateC1Xml] ${periodAttrName}: ${periodAttrValue}`);
+  console.log(`[generateC1Xml] DataGenerazione: ${dataGenAttr}`);
+  console.log(`[generateC1Xml] OraGenerazione: ${oraGen}`);
+  console.log(`[generateC1Xml] ===== END ${reportTypeLabel} GENERATION =====`);
 
   // RPG/RPM possono essere vuoti (0 biglietti/abbonamenti venduti nel periodo)
   // SIAE accetta report vuoti - indicano semplicemente nessuna attività
