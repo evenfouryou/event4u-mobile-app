@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero Data="20260124" DataGenerazione="20260124" OraGenerazione="193500" ProgressivoGenerazione="005" Sostituzione="N">
+    <Titolare>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>PETRELLI JONATHAN</Denominazione>
+        <CodiceFiscale>PTRJTH93M11I156B</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>CLUB NAPOLI SUNSET</Denominazione>
+                <CodiceLocale>0000000000003</CodiceLocale>
+            </Locale>
+            <DataEvento>20260124</DataEvento>
+            <OraEvento>2130</OraEvento>
+            <MultiGenere>
+                <TipoGenere>65</TipoGenere>
+                <IncidenzaGenere>100</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>DISCO NIGHT PARADISE</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>UN</CodiceOrdine>
+                <Capienza>400</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>120</Quantita>
+                    <CorrispettivoLordo>180000</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>32459</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+    </Organizzatore>
+</RiepilogoGiornaliero>
