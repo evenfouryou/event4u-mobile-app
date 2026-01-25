@@ -60,12 +60,18 @@ export function LandingScreen({
 
         <View style={styles.header}>
           <View style={styles.logoRow}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>E4U</Text>
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={[colors.primary, '#FFA500']}
+                style={styles.logoBox}
+              >
+                <Text style={styles.logoText}>E4U</Text>
+              </LinearGradient>
+              <Text style={styles.brandName}>EventFourYou</Text>
             </View>
             <View style={styles.headerRight}>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onPress={onNavigateLogin}
                 testID="button-login"
@@ -256,19 +262,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   logoBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.golden,
   },
   logoText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.primaryForeground,
+    color: '#000',
+  },
+  brandName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '700',
+    color: colors.foreground,
+    letterSpacing: 0.5,
   },
   headerRight: {
     flexDirection: 'row',

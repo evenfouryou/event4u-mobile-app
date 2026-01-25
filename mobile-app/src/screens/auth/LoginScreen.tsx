@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -12,22 +13,27 @@ interface LoginScreenProps {
   onNavigateRegister: () => void;
   onNavigateForgotPassword: () => void;
   onLoginSuccess: () => void;
+  onGoBack?: () => void;
 }
+
+type LoginMethod = 'email' | 'username' | 'phone';
 
 export function LoginScreen({
   onNavigateRegister,
   onNavigateForgotPassword,
   onLoginSuccess,
+  onGoBack,
 }: LoginScreenProps) {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Inserisci email e password');
+    if (!identifier || !password) {
+      setError('Inserisci le credenziali');
       triggerHaptic('error');
       return;
     }
@@ -35,7 +41,7 @@ export function LoginScreen({
     try {
       setLoading(true);
       setError('');
-      await login(email, password);
+      await login(identifier, password);
       triggerHaptic('success');
       onLoginSuccess();
     } catch (err: any) {
@@ -45,6 +51,34 @@ export function LoginScreen({
       setLoading(false);
     }
   };
+
+  const getInputProps = () => {
+    switch (loginMethod) {
+      case 'email':
+        return {
+          placeholder: 'esempio@email.com',
+          keyboardType: 'email-address' as const,
+          leftIcon: 'mail-outline' as const,
+          label: 'Email',
+        };
+      case 'username':
+        return {
+          placeholder: 'Il tuo username',
+          keyboardType: 'default' as const,
+          leftIcon: 'person-outline' as const,
+          label: 'Username',
+        };
+      case 'phone':
+        return {
+          placeholder: '+39 123 456 7890',
+          keyboardType: 'phone-pad' as const,
+          leftIcon: 'call-outline' as const,
+          label: 'Telefono',
+        };
+    }
+  };
+
+  const inputProps = getInputProps();
 
   return (
     <SafeArea style={styles.container}>
@@ -57,36 +91,82 @@ export function LoginScreen({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {onGoBack && (
+            <Pressable onPress={onGoBack} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+            </Pressable>
+          )}
+
           <View style={styles.glowContainer}>
             <View style={styles.glowGolden} />
             <View style={styles.glowTeal} />
           </View>
 
           <View style={styles.header}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>E4U</Text>
+            <Image
+              source={{ uri: 'https://manage.eventfouryou.com/logos/logo-vertical-dark.svg' }}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View style={styles.logoFallback}>
+              <LinearGradient
+                colors={[colors.primary, '#FFA500']}
+                style={styles.logoGradient}
+              >
+                <Text style={styles.logoText}>E4U</Text>
+              </LinearGradient>
+              <Text style={styles.brandName}>EventFourYou</Text>
             </View>
-            <Text style={styles.title}>Bentornato</Text>
-            <Text style={styles.subtitle}>Accedi per continuare</Text>
+            <Text style={styles.title}>Login</Text>
+          </View>
+
+          <View style={styles.methodTabs}>
+            <Text style={styles.methodLabel}>Non hai un account?</Text>
+            <View style={styles.tabsRow}>
+              {(['email', 'username', 'phone'] as LoginMethod[]).map((method) => (
+                <Pressable
+                  key={method}
+                  style={[
+                    styles.methodTab,
+                    loginMethod === method && styles.methodTabActive,
+                  ]}
+                  onPress={() => {
+                    setLoginMethod(method);
+                    setIdentifier('');
+                    setError('');
+                    triggerHaptic('light');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.methodTabText,
+                      loginMethod === method && styles.methodTabTextActive,
+                    ]}
+                  >
+                    {method === 'email' ? 'Email' : method === 'username' ? 'Username' : 'Phone'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           <View style={styles.form}>
             {error ? (
               <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.destructive} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
             <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="mario@example.com"
-              keyboardType="email-address"
+              label={inputProps.label}
+              value={identifier}
+              onChangeText={setIdentifier}
+              placeholder={inputProps.placeholder}
+              keyboardType={inputProps.keyboardType}
               autoCapitalize="none"
-              autoComplete="email"
-              leftIcon="mail-outline"
-              testID="input-email"
+              leftIcon={inputProps.leftIcon}
+              testID="input-identifier"
             />
 
             <Input
@@ -112,7 +192,7 @@ export function LoginScreen({
               style={styles.loginButton}
               testID="button-login"
             >
-              Accedi
+              Login
             </Button>
           </View>
 
@@ -140,6 +220,13 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
+  },
+  backButton: {
+    position: 'absolute',
+    top: spacing.md,
+    left: 0,
+    padding: spacing.sm,
+    zIndex: 10,
   },
   glowContainer: {
     position: 'absolute',
@@ -171,53 +258,101 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: spacing.xxl * 2,
-    marginBottom: spacing.xxl,
+    marginTop: spacing.xxl * 1.5,
+    marginBottom: spacing.xl,
   },
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
+  logo: {
+    width: 120,
+    height: 60,
+    marginBottom: spacing.md,
+  },
+  logoFallback: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  logoGradient: {
+    width: 70,
+    height: 70,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 10,
   },
   logoText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: colors.primaryForeground,
+    color: '#000',
+  },
+  brandName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    color: colors.foreground,
+    letterSpacing: 1,
   },
   title: {
-    fontSize: typography.fontSize['3xl'],
+    fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
     color: colors.foreground,
-    marginBottom: spacing.xs,
   },
-  subtitle: {
-    fontSize: typography.fontSize.base,
+  methodTabs: {
+    marginBottom: spacing.lg,
+  },
+  methodLabel: {
+    fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  methodTab: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+  },
+  methodTabActive: {
+    backgroundColor: colors.primary,
+  },
+  methodTabText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: colors.mutedForeground,
+  },
+  methodTabTextActive: {
+    color: '#000',
+    fontWeight: '600',
   },
   form: {
     marginBottom: spacing.xl,
   },
   errorContainer: {
-    backgroundColor: `${colors.destructive}20`,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.destructive}15`,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.destructive}40`,
+    borderColor: `${colors.destructive}30`,
+    gap: spacing.sm,
   },
   errorText: {
+    flex: 1,
     color: colors.destructive,
     fontSize: typography.fontSize.sm,
-    textAlign: 'center',
   },
   forgotLink: {
     alignSelf: 'flex-end',

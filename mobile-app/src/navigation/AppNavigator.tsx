@@ -99,6 +99,7 @@ export function AppNavigator() {
             onNavigateRegister={() => navigate({ name: 'register' })}
             onNavigateForgotPassword={() => navigate({ name: 'forgotPassword' })}
             onLoginSuccess={() => resetTo({ name: 'accountDashboard' })}
+            onGoBack={goBack}
           />
         );
 
@@ -107,6 +108,7 @@ export function AppNavigator() {
           <RegisterScreen
             onNavigateLogin={() => navigate({ name: 'login' })}
             onRegisterSuccess={() => resetTo({ name: 'accountDashboard' })}
+            onGoBack={goBack}
           />
         );
 

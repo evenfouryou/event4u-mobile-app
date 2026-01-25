@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
@@ -11,10 +12,15 @@ import { triggerHaptic } from '@/lib/haptics';
 interface RegisterScreenProps {
   onNavigateLogin: () => void;
   onRegisterSuccess: () => void;
+  onGoBack?: () => void;
 }
 
-export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterScreenProps) {
+type AccountType = 'customer' | 'organizer';
+
+export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }: RegisterScreenProps) {
   const { register } = useAuth();
+  const [step, setStep] = useState<'type' | 'form'>('type');
+  const [accountType, setAccountType] = useState<AccountType>('customer');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -78,6 +84,96 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
     }
   };
 
+  const handleSelectType = (type: AccountType) => {
+    setAccountType(type);
+    triggerHaptic('light');
+    if (type === 'organizer') {
+      setError('Registrazioni organizzatori temporaneamente sospese');
+    } else {
+      setError('');
+      setStep('form');
+    }
+  };
+
+  if (step === 'type') {
+    return (
+      <SafeArea style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {onGoBack && (
+            <Pressable onPress={onGoBack} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+            </Pressable>
+          )}
+
+          <View style={styles.glowContainer}>
+            <View style={styles.glowGolden} />
+            <View style={styles.glowTeal} />
+          </View>
+
+          <View style={styles.header}>
+            <LinearGradient
+              colors={[colors.primary, '#FFA500']}
+              style={styles.logoGradient}
+            >
+              <Text style={styles.logoText}>E4U</Text>
+            </LinearGradient>
+            <Text style={styles.brandName}>EventFourYou</Text>
+            <Text style={styles.title}>Crea Account</Text>
+            <Text style={styles.subtitle}>Scegli il tipo di account</Text>
+          </View>
+
+          <View style={styles.typeCards}>
+            <Pressable
+              style={[styles.typeCard, accountType === 'customer' && styles.typeCardActive]}
+              onPress={() => handleSelectType('customer')}
+            >
+              <LinearGradient
+                colors={accountType === 'customer' ? ['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)'] : ['rgba(17, 24, 39, 0.8)', 'rgba(17, 24, 39, 0.6)']}
+                style={styles.typeCardGradient}
+              >
+                <View style={[styles.typeIcon, accountType === 'customer' && styles.typeIconActive]}>
+                  <Ionicons name="person" size={32} color={accountType === 'customer' ? colors.primary : colors.mutedForeground} />
+                </View>
+                <Text style={[styles.typeTitle, accountType === 'customer' && styles.typeTitleActive]}>Cliente</Text>
+                <Text style={styles.typeDescription}>Acquista biglietti, gestisci prenotazioni e rivendite</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={[styles.typeCard, accountType === 'organizer' && styles.typeCardActive]}
+              onPress={() => handleSelectType('organizer')}
+            >
+              <LinearGradient
+                colors={accountType === 'organizer' ? ['rgba(0, 206, 209, 0.15)', 'rgba(0, 206, 209, 0.05)'] : ['rgba(17, 24, 39, 0.8)', 'rgba(17, 24, 39, 0.6)']}
+                style={styles.typeCardGradient}
+              >
+                <View style={[styles.typeIcon, accountType === 'organizer' && styles.typeIconActiveOrg]}>
+                  <Ionicons name="business" size={32} color={accountType === 'organizer' ? colors.teal : colors.mutedForeground} />
+                </View>
+                <Text style={[styles.typeTitle, accountType === 'organizer' && styles.typeTitleActiveOrg]}>Organizzatore</Text>
+                <Text style={styles.typeDescription}>Crea eventi, gestisci staff, vendite biglietti e inventario</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+
+          {error ? (
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle" size={20} color={colors.warning} />
+              <Text style={styles.infoText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Hai già un account?</Text>
+            <Pressable onPress={onNavigateLogin}>
+              <Text style={styles.loginLink}>Accedi</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </SafeArea>
+    );
+  }
+
   return (
     <SafeArea style={styles.container}>
       <KeyboardAvoidingView
@@ -89,21 +185,28 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <Pressable onPress={() => setStep('type')} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+          </Pressable>
+
           <View style={styles.glowContainer}>
             <View style={styles.glowGolden} />
           </View>
 
-          <View style={styles.header}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>E4U</Text>
-            </View>
-            <Text style={styles.title}>Crea Account</Text>
-            <Text style={styles.subtitle}>Unisciti alla community</Text>
+          <View style={styles.headerSmall}>
+            <LinearGradient
+              colors={[colors.primary, '#FFA500']}
+              style={styles.logoGradientSmall}
+            >
+              <Text style={styles.logoTextSmall}>E4U</Text>
+            </LinearGradient>
+            <Text style={styles.title}>Registrati come Cliente</Text>
           </View>
 
           <View style={styles.form}>
             {error ? (
               <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.destructive} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
@@ -116,6 +219,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
                   onChangeText={(v) => updateField('firstName', v)}
                   placeholder="Mario"
                   autoCapitalize="words"
+                  leftIcon="person-outline"
                   testID="input-firstName"
                 />
               </View>
@@ -147,7 +251,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
               label="Telefono (opzionale)"
               value={formData.phone}
               onChangeText={(v) => updateField('phone', v)}
-              placeholder="+39 333 1234567"
+              placeholder="+39 123 456 7890"
               keyboardType="phone-pad"
               leftIcon="call-outline"
               testID="input-phone"
@@ -176,12 +280,12 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
             <Pressable
               style={styles.privacyRow}
               onPress={() => {
-                triggerHaptic('selection');
                 setAcceptedPrivacy(!acceptedPrivacy);
+                triggerHaptic('light');
               }}
             >
-              <View style={[styles.checkbox, acceptedPrivacy && styles.checkboxChecked]}>
-                {acceptedPrivacy && <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />}
+              <View style={[styles.checkbox, acceptedPrivacy && styles.checkboxActive]}>
+                {acceptedPrivacy && <Ionicons name="checkmark" size={16} color="#000" />}
               </View>
               <Text style={styles.privacyText}>
                 Accetto la <Text style={styles.privacyLink}>Privacy Policy</Text> e i{' '}
@@ -197,7 +301,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
               style={styles.registerButton}
               testID="button-register"
             >
-              Registrati
+              Crea Account
             </Button>
           </View>
 
@@ -226,47 +330,88 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  backButton: {
+    position: 'absolute',
+    top: spacing.md,
+    left: 0,
+    padding: spacing.sm,
+    zIndex: 10,
+  },
   glowContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 300,
+    height: 400,
     overflow: 'hidden',
   },
   glowGolden: {
     position: 'absolute',
-    top: -50,
+    top: -100,
     right: -50,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: colors.primary,
+    opacity: 0.15,
+  },
+  glowTeal: {
+    position: 'absolute',
+    top: 150,
+    left: -100,
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: colors.primary,
-    opacity: 0.12,
+    backgroundColor: colors.teal,
+    opacity: 0.1,
   },
   header: {
     alignItems: 'center',
-    marginTop: spacing.xxl,
+    marginTop: spacing.xxl * 1.5,
     marginBottom: spacing.xl,
   },
-  logoBox: {
-    width: 64,
-    height: 64,
+  headerSmall: {
+    alignItems: 'center',
+    marginTop: spacing.xxl,
+    marginBottom: spacing.lg,
+  },
+  logoGradient: {
+    width: 70,
+    height: 70,
     borderRadius: 20,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  logoGradientSmall: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   logoText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: colors.primaryForeground,
+    color: '#000',
+  },
+  logoTextSmall: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000',
+  },
+  brandName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    color: colors.foreground,
+    letterSpacing: 1,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: typography.fontSize['2xl'],
@@ -278,8 +423,73 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     color: colors.mutedForeground,
   },
+  typeCards: {
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  typeCard: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  typeCardActive: {
+    borderColor: colors.primary,
+  },
+  typeCardGradient: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  typeIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  typeIconActive: {
+    backgroundColor: `${colors.primary}20`,
+  },
+  typeIconActiveOrg: {
+    backgroundColor: `${colors.teal}20`,
+  },
+  typeTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '700',
+    color: colors.foreground,
+    marginBottom: spacing.xs,
+  },
+  typeTitleActive: {
+    color: colors.primary,
+  },
+  typeTitleActiveOrg: {
+    color: colors.teal,
+  },
+  typeDescription: {
+    fontSize: typography.fontSize.sm,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.warning}15`,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: `${colors.warning}30`,
+  },
+  infoText: {
+    flex: 1,
+    color: colors.warning,
+    fontSize: typography.fontSize.sm,
+  },
   form: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   row: {
     flexDirection: 'row',
@@ -289,23 +499,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   errorContainer: {
-    backgroundColor: `${colors.destructive}20`,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.destructive}15`,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.destructive}40`,
+    borderColor: `${colors.destructive}30`,
+    gap: spacing.sm,
   },
   errorText: {
+    flex: 1,
     color: colors.destructive,
     fontSize: typography.fontSize.sm,
-    textAlign: 'center',
   },
   privacyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    marginVertical: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
   checkbox: {
     width: 24,
@@ -315,9 +529,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    backgroundColor: colors.card,
   },
-  checkboxChecked: {
+  checkboxActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
@@ -332,7 +546,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   registerButton: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   footer: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://workspace.jonathanpetrell.repl.co';
+const API_BASE_URL = 'https://manage.eventfouryou.com';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
