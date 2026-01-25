@@ -808,6 +808,47 @@ router.post("/api/pr/login", async (req: Request, res: Response) => {
       })
       .where(eq(prProfiles.id, profile.id));
     
+    // Silently ensure customer profile exists for this PR (background task)
+    (async () => {
+      try {
+        const normalizePhone = (phone: string): string => {
+          let normalized = phone.replace(/[^\d+]/g, '');
+          if (normalized.startsWith('0039')) normalized = '+39' + normalized.slice(4);
+          if (normalized.startsWith('39') && !normalized.startsWith('+')) normalized = '+' + normalized;
+          if (!normalized.startsWith('+')) normalized = '+39' + normalized;
+          if (normalized.startsWith('+390')) normalized = '+39' + normalized.slice(4);
+          return normalized;
+        };
+        
+        const prFullPhone = normalizePhone(`${profile.phonePrefix || '+39'}${profile.phone}`);
+        const customers = await db.select().from(siaeCustomers);
+        let existingCustomer = customers.find(c => c.phone && normalizePhone(c.phone) === prFullPhone) || null;
+        
+        if (!existingCustomer && profile.email) {
+          const [byEmail] = await db.select().from(siaeCustomers)
+            .where(sql`lower(${siaeCustomers.email}) = lower(${profile.email})`);
+          existingCustomer = byEmail || null;
+        }
+        
+        if (!existingCustomer) {
+          const uniqueCode = `PR-${profile.id.slice(0, 8)}-${Date.now().toString(36).toUpperCase()}`;
+          await db.insert(siaeCustomers).values({
+            uniqueCode,
+            firstName: profile.firstName || 'PR',
+            lastName: profile.lastName || 'User',
+            email: profile.email || `pr-${profile.id}@temp.local`,
+            phone: prFullPhone,
+            phoneVerified: profile.phoneVerified || false,
+            emailVerified: false,
+            authenticationType: 'BO',
+          });
+          console.log(`[PR-LOGIN] Auto-created customer profile for PR ${profile.id}`);
+        }
+      } catch (err) {
+        console.log(`[PR-LOGIN] Could not auto-create customer (may already exist): ${err}`);
+      }
+    })();
+    
     // Regenerate session for security (prevents session fixation)
     const prProfileData = {
       id: profile.id,
