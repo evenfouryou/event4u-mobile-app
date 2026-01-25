@@ -8,8 +8,8 @@ import {
   insertEventFloorplanSchema,
   insertEventTableSchema,
   insertTableBookingSchema,
-  insertGuestListSchema,
-  insertGuestListEntrySchema,
+  insertEventListSchema,
+  insertListEntrySchema,
   siaeCustomers,
   eventPrAssignments,
   users,
@@ -406,7 +406,7 @@ router.post("/api/pr/events/:eventId/guest-lists", requireAuth, requirePr, async
   try {
     const { eventId } = req.params;
     const user = req.user as any;
-    const validated = insertGuestListSchema.parse({
+    const validated = insertEventListSchema.parse({
       ...req.body,
       eventId,
       companyId: user.companyId,
@@ -541,14 +541,14 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
       return res.status(400).json({ error: "Lista chiusa" });
     }
     
-    // Check max guests
-    if (list.maxGuests && list.currentCount >= list.maxGuests) {
+    // Check max guests (maxCapacity in unified schema)
+    if (list.maxCapacity && list.currentCount >= list.maxCapacity) {
       return res.status(400).json({ error: "Lista piena" });
     }
     
-    const validated = insertGuestListEntrySchema.omit({ qrCode: true }).parse({
+    const validated = insertListEntrySchema.omit({ qrCode: true }).parse({
       ...req.body,
-      guestListId: listId,
+      listId: listId,
       eventId: list.eventId,
       companyId: list.companyId,
       addedByUserId: user.id,
@@ -813,7 +813,7 @@ router.get("/api/pr/events/:eventId/stats", requireAuth, async (req: Request, re
       guestLists: {
         total: guestListsData.length,
         active: guestListsData.filter(l => l.isActive).length,
-        totalCapacity: guestListsData.reduce((sum, l) => sum + (l.maxGuests || 0), 0),
+        totalCapacity: guestListsData.reduce((sum, l) => sum + (l.maxCapacity || 0), 0),
         currentGuests: guestListsData.reduce((sum, l) => sum + l.currentCount, 0),
       },
       entries: {

@@ -4300,13 +4300,20 @@ export type DigitalTicketTemplate = typeof digitalTicketTemplates.$inferSelect;
 
 // ==================== EVENT FOUR YOU - LISTE & TAVOLI ====================
 
-// Event Lists - Liste per evento
+// Event Lists - Liste per evento (UNIFICATO: usato sia da Event Hub che da PR)
 export const eventLists = pgTable("event_lists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   eventId: varchar("event_id").notNull().references(() => events.id),
   companyId: varchar("company_id").notNull().references(() => companies.id),
   name: varchar("name", { length: 255 }).notNull(),
-  maxCapacity: integer("max_capacity"),
+  // Campi PR
+  listType: varchar("list_type", { length: 50 }).notNull().default('standard'), // standard, vip, staff, press
+  createdByUserId: varchar("created_by_user_id").references(() => users.id), // Gestore o PR che ha creato
+  currentCount: integer("current_count").notNull().default(0), // Contatore ospiti attuali
+  closedAt: timestamp("closed_at"), // Quando la lista è stata chiusa
+  notes: text("notes"),
+  // Campi originali Event Hub
+  maxCapacity: integer("max_capacity"), // Alias per maxGuests
   validFrom: timestamp("valid_from"),
   validTo: timestamp("valid_to"),
   price: decimal("price", { precision: 10, scale: 2 }).default('0'),
@@ -4315,7 +4322,7 @@ export const eventLists = pgTable("event_lists", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// List Entries - Persone iscritte alle liste
+// List Entries - Persone iscritte alle liste (UNIFICATO: usato sia da Event Hub che da PR)
 export const listEntries = pgTable("list_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   listId: varchar("list_id").notNull().references(() => eventLists.id),
@@ -4323,12 +4330,21 @@ export const listEntries = pgTable("list_entries", {
   companyId: varchar("company_id").notNull().references(() => companies.id),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
   gender: varchar("gender", { length: 1 }),
   email: varchar("email", { length: 255 }),
   clientUserId: varchar("client_user_id").references(() => users.id),
+  // Campi PR aggiuntivi
+  addedByUserId: varchar("added_by_user_id").references(() => users.id), // PR che ha inserito
+  customerId: varchar("customer_id").references(() => siaeCustomers.id), // Cliente SIAE se registrato
+  plusOnes: integer("plus_ones").notNull().default(0), // Numero accompagnatori
+  plusOnesNames: text("plus_ones_names").array().default(sql`ARRAY[]::text[]`), // Nomi accompagnatori
+  ticketId: varchar("ticket_id").references(() => siaeTickets.id), // Biglietto SIAE se acquistato
+  // QR Code e Scan
   qrCode: varchar("qr_code", { length: 100 }).unique(),
-  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  qrScannedAt: timestamp("qr_scanned_at"), // Quando è stato scansionato
+  qrScannedByUserId: varchar("qr_scanned_by_user_id").references(() => users.id),
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, confirmed, arrived, cancelled, no_show
   checkedInAt: timestamp("checked_in_at"),
   checkedInBy: varchar("checked_in_by").references(() => users.id),
   createdBy: varchar("created_by").references(() => users.id),

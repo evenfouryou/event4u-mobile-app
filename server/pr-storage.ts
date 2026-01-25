@@ -4,8 +4,8 @@ import {
   eventFloorplans,
   eventTables,
   tableBookings,
-  guestLists,
-  guestListEntries,
+  eventLists,
+  listEntries,
   prOtpAttempts,
   type EventStaffAssignment,
   type InsertEventStaffAssignment,
@@ -15,13 +15,19 @@ import {
   type InsertEventTable,
   type TableBooking,
   type InsertTableBooking,
-  type GuestList,
-  type InsertGuestList,
-  type GuestListEntry,
-  type InsertGuestListEntry,
+  type EventList,
+  type InsertEventList,
+  type ListEntry,
+  type InsertListEntry,
   type PrOtpAttempt,
   type InsertPrOtpAttempt,
 } from "@shared/schema";
+
+// Type aliases for backward compatibility
+type GuestList = EventList;
+type InsertGuestList = InsertEventList;
+type GuestListEntry = ListEntry;
+type InsertGuestListEntry = InsertListEntry;
 import { db } from "./db";
 import { eq, and, desc, sql, lt, isNull } from "drizzle-orm";
 import crypto from "crypto";
@@ -343,58 +349,58 @@ export class PrStorage implements IPrStorage {
   // ==================== Guest Lists ====================
 
   async getGuestListsByEvent(eventId: string): Promise<GuestList[]> {
-    return await db.select().from(guestLists)
-      .where(eq(guestLists.eventId, eventId))
-      .orderBy(desc(guestLists.createdAt));
+    return await db.select().from(eventLists)
+      .where(eq(eventLists.eventId, eventId))
+      .orderBy(desc(eventLists.createdAt));
   }
 
   async getGuestListsByUser(userId: string): Promise<GuestList[]> {
-    return await db.select().from(guestLists)
-      .where(eq(guestLists.createdByUserId, userId))
-      .orderBy(desc(guestLists.createdAt));
+    return await db.select().from(eventLists)
+      .where(eq(eventLists.createdByUserId, userId))
+      .orderBy(desc(eventLists.createdAt));
   }
 
   async getGuestListsByCompany(companyId: string): Promise<GuestList[]> {
-    return await db.select().from(guestLists)
-      .where(eq(guestLists.companyId, companyId))
-      .orderBy(desc(guestLists.createdAt));
+    return await db.select().from(eventLists)
+      .where(eq(eventLists.companyId, companyId))
+      .orderBy(desc(eventLists.createdAt));
   }
 
   async getGuestList(id: string): Promise<GuestList | undefined> {
-    const [list] = await db.select().from(guestLists)
-      .where(eq(guestLists.id, id));
+    const [list] = await db.select().from(eventLists)
+      .where(eq(eventLists.id, id));
     return list;
   }
 
   async createGuestList(list: InsertGuestList): Promise<GuestList> {
-    const [created] = await db.insert(guestLists)
+    const [created] = await db.insert(eventLists)
       .values(list)
       .returning();
     return created;
   }
 
   async updateGuestList(id: string, list: Partial<GuestList>): Promise<GuestList | undefined> {
-    const [updated] = await db.update(guestLists)
+    const [updated] = await db.update(eventLists)
       .set({ ...list, updatedAt: new Date() })
-      .where(eq(guestLists.id, id))
+      .where(eq(eventLists.id, id))
       .returning();
     return updated;
   }
 
   async deleteGuestList(id: string): Promise<boolean> {
-    const result = await db.delete(guestLists)
-      .where(eq(guestLists.id, id));
+    const result = await db.delete(eventLists)
+      .where(eq(eventLists.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
   async closeGuestList(id: string): Promise<GuestList | undefined> {
-    const [updated] = await db.update(guestLists)
+    const [updated] = await db.update(eventLists)
       .set({
         isActive: false,
         closedAt: new Date(),
         updatedAt: new Date()
       })
-      .where(eq(guestLists.id, id))
+      .where(eq(eventLists.id, id))
       .returning();
     return updated;
   }
@@ -402,96 +408,95 @@ export class PrStorage implements IPrStorage {
   // ==================== Guest List Entries ====================
 
   async getGuestListEntriesByList(guestListId: string): Promise<GuestListEntry[]> {
-    return await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.guestListId, guestListId))
-      .orderBy(desc(guestListEntries.createdAt));
+    return await db.select().from(listEntries)
+      .where(eq(listEntries.listId, guestListId))
+      .orderBy(desc(listEntries.createdAt));
   }
 
   async getGuestListEntriesByEvent(eventId: string): Promise<GuestListEntry[]> {
-    return await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.eventId, eventId))
-      .orderBy(desc(guestListEntries.createdAt));
+    return await db.select().from(listEntries)
+      .where(eq(listEntries.eventId, eventId))
+      .orderBy(desc(listEntries.createdAt));
   }
 
   async getGuestListEntriesByUser(userId: string): Promise<GuestListEntry[]> {
-    return await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.addedByUserId, userId))
-      .orderBy(desc(guestListEntries.createdAt));
+    return await db.select().from(listEntries)
+      .where(eq(listEntries.addedByUserId, userId))
+      .orderBy(desc(listEntries.createdAt));
   }
 
   async getGuestListEntriesByCompany(companyId: string): Promise<GuestListEntry[]> {
-    return await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.companyId, companyId))
-      .orderBy(desc(guestListEntries.createdAt));
+    return await db.select().from(listEntries)
+      .where(eq(listEntries.companyId, companyId))
+      .orderBy(desc(listEntries.createdAt));
   }
 
   async getGuestListEntry(id: string): Promise<GuestListEntry | undefined> {
-    const [entry] = await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.id, id));
+    const [entry] = await db.select().from(listEntries)
+      .where(eq(listEntries.id, id));
     return entry;
   }
 
   async getGuestListEntryByQr(qrCode: string): Promise<GuestListEntry | undefined> {
-    const [entry] = await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.qrCode, qrCode));
+    const [entry] = await db.select().from(listEntries)
+      .where(eq(listEntries.qrCode, qrCode));
     return entry;
   }
 
   async createGuestListEntry(entry: Omit<InsertGuestListEntry, 'qrCode'>): Promise<GuestListEntry> {
     const qrCode = generateQrCode('GL');
-    const [created] = await db.insert(guestListEntries)
+    const [created] = await db.insert(listEntries)
       .values({ ...entry, qrCode })
       .returning();
     
     // Increment the guest list count
-    await db.update(guestLists)
+    await db.update(eventLists)
       .set({ 
-        currentCount: sql`${guestLists.currentCount} + 1`,
+        currentCount: sql`${eventLists.currentCount} + 1`,
         updatedAt: new Date() 
       })
-      .where(eq(guestLists.id, entry.guestListId));
+      .where(eq(eventLists.id, entry.listId));
     
     return created;
   }
 
   async updateGuestListEntry(id: string, entry: Partial<GuestListEntry>): Promise<GuestListEntry | undefined> {
-    const [updated] = await db.update(guestListEntries)
-      .set({ ...entry, updatedAt: new Date() })
-      .where(eq(guestListEntries.id, id))
+    const [updated] = await db.update(listEntries)
+      .set({ ...entry })
+      .where(eq(listEntries.id, id))
       .returning();
     return updated;
   }
 
   async deleteGuestListEntry(id: string): Promise<boolean> {
     // Get entry to decrement count
-    const [entry] = await db.select().from(guestListEntries)
-      .where(eq(guestListEntries.id, id));
+    const [entry] = await db.select().from(listEntries)
+      .where(eq(listEntries.id, id));
     
     if (entry) {
       // Decrement the guest list count
-      await db.update(guestLists)
+      await db.update(eventLists)
         .set({ 
-          currentCount: sql`GREATEST(0, ${guestLists.currentCount} - 1)`,
+          currentCount: sql`GREATEST(0, ${eventLists.currentCount} - 1)`,
           updatedAt: new Date() 
         })
-        .where(eq(guestLists.id, entry.guestListId));
+        .where(eq(eventLists.id, entry.listId));
     }
     
-    const result = await db.delete(guestListEntries)
-      .where(eq(guestListEntries.id, id));
+    const result = await db.delete(listEntries)
+      .where(eq(listEntries.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
   async markGuestListEntryScanned(id: string, scannedByUserId: string): Promise<GuestListEntry | undefined> {
-    const [updated] = await db.update(guestListEntries)
+    const [updated] = await db.update(listEntries)
       .set({
         qrScannedAt: new Date(),
         qrScannedByUserId: scannedByUserId,
         status: 'arrived',
-        arrivedAt: new Date(),
-        updatedAt: new Date()
+        checkedInAt: new Date()
       })
-      .where(eq(guestListEntries.id, id))
+      .where(eq(listEntries.id, id))
       .returning();
     return updated;
   }
