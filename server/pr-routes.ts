@@ -403,28 +403,42 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
       .where(
         and(
           eq(eventPrAssignments.eventId, eventId),
+          eq(eventPrAssignments.isActive, true),
           prAssignmentPredicates.length > 1 ? or(...prAssignmentPredicates) : prAssignmentPredicates[0]
         )
       );
     
     console.log(`[PR-LISTS] Found ${prAssignments.length} PR assignments for this user/event`);
     console.log(`[PR-LISTS] Searching for userId=${user.id} OR prProfileId=${sessionPrProfileId}`);
-    if (prAssignments.length > 0) {
-      console.log(`[PR-LISTS] Assignment IDs: ${prAssignments.map(a => a.id).join(', ')}`);
+    
+    // If PR is not assigned to this event, return empty
+    if (prAssignments.length === 0) {
+      console.log(`[PR-LISTS] PR not assigned to event, returning empty`);
+      return res.json([]);
     }
+    
+    // Check if PR has canAddToLists permission
+    const hasListPermission = prAssignments.some(a => a.canAddToLists);
+    console.log(`[PR-LISTS] PR has canAddToLists permission: ${hasListPermission}`);
+    console.log(`[PR-LISTS] Assignment IDs: ${prAssignments.map(a => a.id).join(', ')}`);
     
     // 3. Get list IDs assigned to those PR assignments
-    let assignedListIds: string[] = [];
-    if (prAssignments.length > 0) {
-      const prAssignmentIds = prAssignments.map(a => a.id);
-      const listAssignments = await db.select()
-        .from(prListAssignments)
-        .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
-      assignedListIds = listAssignments.map(la => la.listId);
-      console.log(`[PR-LISTS] Found ${listAssignments.length} list assignments, listIds: ${assignedListIds.join(', ')}`);
+    const prAssignmentIds = prAssignments.map(a => a.id);
+    const listAssignments = await db.select()
+      .from(prListAssignments)
+      .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
+    const assignedListIds = listAssignments.map(la => la.listId);
+    console.log(`[PR-LISTS] Found ${listAssignments.length} specific list assignments, listIds: ${assignedListIds.join(', ')}`);
+    
+    // 4. Determine which lists to show
+    // FIX 2026-01-25: If PR has canAddToLists=true but no specific list assignments,
+    // show ALL lists for the event (fallback behavior for easier UX)
+    if (hasListPermission && assignedListIds.length === 0) {
+      console.log(`[PR-LISTS] PR has canAddToLists but no specific assignments - showing all ${allLists.length} lists`);
+      return res.json(allLists);
     }
     
-    // 4. Filter lists: created by user OR assigned to user
+    // Otherwise filter: lists created by user OR specifically assigned
     const userLists = allLists.filter(list => 
       list.createdByUserId === user.id || assignedListIds.includes(list.id)
     );
