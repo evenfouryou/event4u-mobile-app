@@ -527,6 +527,7 @@ router.post("/api/e4u/events/:eventId/lists", requireAuth, async (req: Request, 
       ...req.body,
       eventId,
       companyId: event.companyId,
+      createdByUserId: getUserId(user), // FIX: Always set creator
     });
     
     const [list] = await db.insert(eventLists).values(data).returning();
