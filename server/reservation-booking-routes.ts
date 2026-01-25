@@ -913,54 +913,64 @@ router.post("/api/pr/logout", (req: Request, res: Response) => {
   });
 });
 
-// PR Switch to Customer Mode - Seamlessly switch to linked customer account
+// PR Switch to Customer Mode - Seamlessly switch to linked customer account or create one
 router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) => {
   try {
+    // Support both PR session auth and normal user auth
     const prSession = (req.session as any).prProfile;
+    const user = (req as any).user;
     
-    if (!prSession) {
-      return res.status(401).json({ error: "Non autenticato come PR" });
+    let prProfile = null;
+    
+    if (prSession) {
+      // PR session auth - get profile by session ID
+      const [profile] = await db.select()
+        .from(prProfiles)
+        .where(eq(prProfiles.id, prSession.id));
+      prProfile = profile;
+    } else if (user) {
+      // Normal user auth - check if user has a PR profile linked
+      const [profile] = await db.select()
+        .from(prProfiles)
+        .where(eq(prProfiles.userId, user.id));
+      prProfile = profile;
+      
+      // If no PR profile by userId, try by email
+      if (!prProfile && user.email) {
+        const [profileByEmail] = await db.select()
+          .from(prProfiles)
+          .where(sql`lower(${prProfiles.email}) = lower(${user.email})`);
+        prProfile = profileByEmail;
+      }
     }
     
-    // Get full PR profile to find linked customer
-    const [prProfile] = await db.select()
-      .from(prProfiles)
-      .where(eq(prProfiles.id, prSession.id));
-    
     if (!prProfile) {
-      return res.status(404).json({ error: "Profilo PR non trovato" });
+      return res.status(401).json({ error: "Non sei un PR o non hai un profilo PR collegato" });
     }
     
     // Normalize phone number: remove all non-digits except +, ensure +39 prefix
     const normalizePhone = (phone: string): string => {
-      // Remove spaces, dashes, parentheses etc
       let normalized = phone.replace(/[^\d+]/g, '');
-      // If starts with 0039, replace with +39
       if (normalized.startsWith('0039')) {
         normalized = '+39' + normalized.slice(4);
       }
-      // If starts with 39 (no +), add +
       if (normalized.startsWith('39') && !normalized.startsWith('+')) {
         normalized = '+' + normalized;
       }
-      // If doesn't start with +, assume Italian and add +39
       if (!normalized.startsWith('+')) {
         normalized = '+39' + normalized;
       }
-      // Handle +390xxx (extra trunk zero) - collapse to +39xxx
       if (normalized.startsWith('+390')) {
         normalized = '+39' + normalized.slice(4);
       }
       return normalized;
     };
     
-    // Look for a customer with the same phone number
+    // Look for a customer with the same phone number or email
     let customer = null;
     
     if (prProfile.phone) {
       const prFullPhone = normalizePhone(`${prProfile.phonePrefix || '+39'}${prProfile.phone}`);
-      
-      // Get all customers and compare normalized phones
       const customers = await db.select().from(siaeCustomers);
       customer = customers.find(c => c.phone && normalizePhone(c.phone) === prFullPhone) || null;
     }
@@ -973,51 +983,69 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       customer = foundByEmail;
     }
     
-    // Remove PR profile from session
-    delete (req.session as any).prProfile;
-    
-    if (customer) {
-      // Seamlessly authenticate as customer
-      (req.session as any).customerMode = {
-        customerId: customer.id,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-        phone: customer.phone,
-      };
+    // If customer not found, CREATE a new customer profile
+    if (!customer) {
+      const fullPhone = prProfile.phone 
+        ? normalizePhone(`${prProfile.phonePrefix || '+39'}${prProfile.phone}`)
+        : null;
       
-      console.log(`[PR-SWITCH] PR ${prProfile.id} switched to customer ${customer.id}`);
+      // Extract first/last name from displayName or firstName/lastName fields
+      let firstName = prProfile.firstName || '';
+      let lastName = prProfile.lastName || '';
       
-      // Save the session with customer mode activated
-      req.session.save((err) => {
-        if (err) {
-          console.error("Error saving session after switch:", err);
-          return res.status(500).json({ error: "Errore nel cambio modalità" });
-        }
-        res.json({ 
-          success: true, 
-          message: "Modalità cliente attivata",
-          customerFound: true,
-          redirect: "/acquista"
-        });
-      });
-    } else {
-      // No linked customer found - just clear PR session
-      console.log(`[PR-SWITCH] PR ${prProfile.id} switched to customer mode (no linked customer)`);
+      if (!firstName && !lastName && prProfile.displayName) {
+        const nameParts = prProfile.displayName.trim().split(' ');
+        firstName = nameParts[0] || '';
+        lastName = nameParts.slice(1).join(' ') || '';
+      }
       
-      req.session.save((err) => {
-        if (err) {
-          console.error("Error saving session after switch:", err);
-          return res.status(500).json({ error: "Errore nel cambio modalità" });
-        }
-        res.json({ 
-          success: true, 
-          message: "Modalità cliente attivata",
-          customerFound: false,
-          redirect: "/login"
-        });
-      });
+      // Generate unique code for the customer
+      const uniqueCode = `PR-${prProfile.id.slice(0, 8)}-${Date.now().toString(36).toUpperCase()}`;
+      
+      const [newCustomer] = await db.insert(siaeCustomers).values({
+        uniqueCode,
+        firstName: firstName || 'PR',
+        lastName: lastName || prProfile.displayName || 'User',
+        email: prProfile.email || `pr-${prProfile.id}@temp.local`,
+        phone: fullPhone || `+39000${Date.now().toString().slice(-7)}`,
+        phoneVerified: prProfile.phoneVerified || false,
+        emailVerified: false,
+        authenticationType: 'BO',
+      }).returning();
+      
+      customer = newCustomer;
+      console.log(`[PR-SWITCH] Created new customer ${customer.id} for PR ${prProfile.id}`);
     }
+    
+    // Remove PR profile from session if present
+    if ((req.session as any).prProfile) {
+      delete (req.session as any).prProfile;
+    }
+    
+    // Seamlessly authenticate as customer
+    (req.session as any).customerMode = {
+      customerId: customer.id,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+      phone: customer.phone,
+    };
+    
+    console.log(`[PR-SWITCH] PR ${prProfile.id} switched to customer ${customer.id}`);
+    
+    // Save the session with customer mode activated
+    req.session.save((err) => {
+      if (err) {
+        console.error("Error saving session after switch:", err);
+        return res.status(500).json({ error: "Errore nel cambio modalità" });
+      }
+      res.json({ 
+        success: true, 
+        message: "Modalità cliente attivata",
+        customerId: customer!.id,
+        redirect: "/account"
+      });
+    });
   } catch (error: any) {
     console.error("Error switching to customer mode:", error);
     res.status(500).json({ error: error.message });
