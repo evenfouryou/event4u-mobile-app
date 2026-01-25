@@ -10,6 +10,7 @@ import {
   tableTypes,
   tableReservations,
   tableGuests,
+  tableBookings,
   e4uStaffAssignments,
   eventPrAssignments,
   prListAssignments,
@@ -2402,9 +2403,127 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       });
     }
     
+    // Legacy format support: GL_timestamp_random for lists, TB_timestamp_random for tables
+    if (qrCode.startsWith('GL_') || qrCode.startsWith('TB_')) {
+      const isTable = qrCode.startsWith('TB_');
+      
+      if (isTable) {
+        // Find table booking by QR code
+        const [booking] = await db.select()
+          .from(tableBookings)
+          .where(eq(tableBookings.qrCode, qrCode));
+        
+        if (!booking) {
+          return res.status(404).json({ message: "Prenotazione tavolo non trovata" });
+        }
+        
+        if (eventId && booking.eventId !== eventId) {
+          return res.status(400).json({ message: "QR code non valido per questo evento" });
+        }
+        
+        // Check permissions
+        const isGestore = await isGestoreForEvent(user, booking.eventId);
+        if (!isGestore) {
+          const permResult = await checkScannerPermissionGranular(getUserId(user), booking.eventId, 'tables');
+          if (!permResult.allowed) {
+            return res.status(403).json({ 
+              message: permResult.reason || "Non hai i permessi di scansione tavoli per questo evento.",
+              errorCode: "SCANNER_PERMISSION_DENIED"
+            });
+          }
+        }
+        
+        if (booking.qrScannedAt) {
+          return res.status(400).json({ 
+            message: "Già entrato",
+            alreadyCheckedIn: true,
+            checkedInAt: booking.qrScannedAt,
+          });
+        }
+        
+        // Check in
+        const [updated] = await db.update(tableBookings)
+          .set({
+            qrScannedAt: new Date(),
+            qrScannedByUserId: getUserId(user),
+            status: 'checked_in',
+          })
+          .where(eq(tableBookings.id, booking.id))
+          .returning();
+        
+        return res.json({
+          success: true,
+          type: 'table',
+          message: "Check-in tavolo completato",
+          person: {
+            firstName: updated.guestName?.split(' ')[0] || '',
+            lastName: updated.guestName?.split(' ').slice(1).join(' ') || '',
+            type: 'tavolo',
+          },
+        });
+      } else {
+        // Find list entry by QR code
+        const [entry] = await db.select()
+          .from(listEntries)
+          .where(eq(listEntries.qrCode, qrCode));
+        
+        if (!entry) {
+          return res.status(404).json({ message: "Ospite non trovato nella lista" });
+        }
+        
+        if (eventId && entry.eventId !== eventId) {
+          return res.status(400).json({ message: "QR code non valido per questo evento" });
+        }
+        
+        // Check permissions
+        const isGestore = await isGestoreForEvent(user, entry.eventId);
+        if (!isGestore) {
+          const permResult = await checkScannerPermissionGranular(getUserId(user), entry.eventId, 'lists', entry.listId);
+          if (!permResult.allowed) {
+            return res.status(403).json({ 
+              message: permResult.reason || "Non hai i permessi di scansione liste per questo evento.",
+              errorCode: "SCANNER_PERMISSION_DENIED"
+            });
+          }
+        }
+        
+        if (entry.checkedInAt || entry.status === 'checked_in' || entry.status === 'arrived') {
+          return res.status(400).json({ 
+            message: "Già entrato",
+            alreadyCheckedIn: true,
+            checkedInAt: entry.checkedInAt,
+          });
+        }
+        
+        // Check in
+        const [updated] = await db.update(listEntries)
+          .set({
+            status: 'checked_in',
+            checkedInAt: new Date(),
+            checkedInBy: getUserId(user),
+            qrScannedAt: new Date(),
+            qrScannedByUserId: getUserId(user),
+          })
+          .where(eq(listEntries.id, entry.id))
+          .returning();
+        
+        return res.json({
+          success: true,
+          type: 'list',
+          message: "Check-in completato",
+          person: {
+            firstName: updated.firstName || '',
+            lastName: updated.lastName || '',
+            type: 'lista',
+            plusOnes: updated.plusOnes || 0,
+          },
+        });
+      }
+    }
+    
     // Original E4U format: E4U-{type}-{id}-{random}
     if (parts.length !== 4 || parts[0] !== 'E4U') {
-      return res.status(400).json({ message: "Formato codice QR non valido. Formati supportati: E4U-LST-*, E4U-TBL-*, SIAE-TKT-*, SIAE-SUB-*, RES-*" });
+      return res.status(400).json({ message: "Formato codice QR non valido. Formati supportati: E4U-LST-*, E4U-TBL-*, SIAE-TKT-*, SIAE-SUB-*, RES-*, GL_*, TB_*" });
     }
     
     const type = parts[1]; // LST or TBL

@@ -32,11 +32,11 @@ import { db } from "./db";
 import { eq, and, desc, sql, lt, isNull } from "drizzle-orm";
 import crypto from "crypto";
 
-// Helper to generate unique QR codes
-function generateQrCode(prefix: string): string {
-  const timestamp = Date.now().toString(36);
-  const random = crypto.randomBytes(8).toString('hex');
-  return `${prefix}_${timestamp}_${random}`.toUpperCase();
+// Helper to generate unique QR codes in E4U format compatible with /api/e4u/scan
+function generateQrCode(type: 'LST' | 'TBL'): string {
+  const id = crypto.randomUUID();
+  const random = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `E4U-${type}-${id.substring(0, 8)}-${random}`;
 }
 
 // Helper to generate OTP code
@@ -311,7 +311,7 @@ export class PrStorage implements IPrStorage {
   }
 
   async createTableBooking(booking: Omit<InsertTableBooking, 'qrCode'>): Promise<TableBooking> {
-    const qrCode = generateQrCode('TB');
+    const qrCode = generateQrCode('TBL');
     const [created] = await db.insert(tableBookings)
       .values({ ...booking, qrCode })
       .returning();
@@ -444,7 +444,7 @@ export class PrStorage implements IPrStorage {
   }
 
   async createGuestListEntry(entry: Omit<InsertGuestListEntry, 'qrCode'>): Promise<GuestListEntry> {
-    const qrCode = generateQrCode('GL');
+    const qrCode = generateQrCode('LST');
     const [created] = await db.insert(listEntries)
       .values({ ...entry, qrCode })
       .returning();
