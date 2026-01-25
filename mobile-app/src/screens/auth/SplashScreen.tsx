@@ -1,22 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 import { Asset } from 'expo-asset';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  withRepeat,
-  withSequence,
-  withDelay,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, spacing } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const logoImage = require('../../../assets/logo.png');
 
 interface SplashScreenProps {
@@ -27,17 +16,17 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
   const { isLoading, isAuthenticated } = useAuth();
   const [assetsLoaded, setAssetsLoaded] = useState(false);
 
-  const logoScale = useSharedValue(0.3);
-  const logoOpacity = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  const textTranslateY = useSharedValue(20);
-  const glowScale = useSharedValue(0.8);
-  const glowOpacity = useSharedValue(0);
-  const ringScale = useSharedValue(0.5);
-  const ringOpacity = useSharedValue(0);
-  const dot1Opacity = useSharedValue(0.3);
-  const dot2Opacity = useSharedValue(0.3);
-  const dot3Opacity = useSharedValue(0.3);
+  const logoScale = useRef(new Animated.Value(0.3)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const textTranslateY = useRef(new Animated.Value(20)).current;
+  const glowScale = useRef(new Animated.Value(0.8)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+  const ringScale = useRef(new Animated.Value(0.5)).current;
+  const ringOpacity = useRef(new Animated.Value(0)).current;
+  const dot1Opacity = useRef(new Animated.Value(0.3)).current;
+  const dot2Opacity = useRef(new Animated.Value(0.3)).current;
+  const dot3Opacity = useRef(new Animated.Value(0.3)).current;
 
   const loadAssets = useCallback(async () => {
     try {
@@ -54,49 +43,91 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
 
   useEffect(() => {
     if (assetsLoaded) {
-      glowOpacity.value = withTiming(0.6, { duration: 800 });
-      glowScale.value = withRepeat(
-        withSequence(
-          withTiming(1.1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.9, { duration: 2000, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
+      Animated.timing(glowOpacity, {
+        toValue: 0.6,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
 
-      ringOpacity.value = withDelay(200, withTiming(0.3, { duration: 600 }));
-      ringScale.value = withDelay(200, withSpring(1, { damping: 12 }));
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowScale, {
+            toValue: 1.1,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowScale, {
+            toValue: 0.9,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
 
-      logoOpacity.value = withDelay(300, withTiming(1, { duration: 600 }));
-      logoScale.value = withDelay(300, withSpring(1, { damping: 10, stiffness: 100 }));
+      setTimeout(() => {
+        Animated.timing(ringOpacity, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
+        Animated.spring(ringScale, {
+          toValue: 1,
+          damping: 12,
+          useNativeDriver: true,
+        }).start();
+      }, 200);
 
-      textOpacity.value = withDelay(600, withTiming(1, { duration: 500 }));
-      textTranslateY.value = withDelay(600, withSpring(0, { damping: 12 }));
+      setTimeout(() => {
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
+        Animated.spring(logoScale, {
+          toValue: 1,
+          damping: 10,
+          stiffness: 100,
+          useNativeDriver: true,
+        }).start();
+      }, 300);
 
-      dot1Opacity.value = withDelay(800, withRepeat(
-        withSequence(
-          withTiming(1, { duration: 400 }),
-          withTiming(0.3, { duration: 400 })
-        ),
-        -1,
-        true
-      ));
-      dot2Opacity.value = withDelay(1000, withRepeat(
-        withSequence(
-          withTiming(1, { duration: 400 }),
-          withTiming(0.3, { duration: 400 })
-        ),
-        -1,
-        true
-      ));
-      dot3Opacity.value = withDelay(1200, withRepeat(
-        withSequence(
-          withTiming(1, { duration: 400 }),
-          withTiming(0.3, { duration: 400 })
-        ),
-        -1,
-        true
-      ));
+      setTimeout(() => {
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+        Animated.spring(textTranslateY, {
+          toValue: 0,
+          damping: 12,
+          useNativeDriver: true,
+        }).start();
+      }, 600);
+
+      const createDotAnimation = (dotOpacity: Animated.Value, delay: number) => {
+        setTimeout(() => {
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(dotOpacity, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+              }),
+              Animated.timing(dotOpacity, {
+                toValue: 0.3,
+                duration: 400,
+                useNativeDriver: true,
+              }),
+            ])
+          ).start();
+        }, delay);
+      };
+
+      createDotAnimation(dot1Opacity, 800);
+      createDotAnimation(dot2Opacity, 1000);
+      createDotAnimation(dot3Opacity, 1200);
     }
   }, [assetsLoaded]);
 
@@ -109,40 +140,20 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     }
   }, [isLoading, isAuthenticated, assetsLoaded, onReady]);
 
-  const glowStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: glowScale.value }],
-    opacity: glowOpacity.value,
-  }));
+  const dot1Scale = dot1Opacity.interpolate({
+    inputRange: [0.3, 1],
+    outputRange: [0.8, 1.2],
+  });
 
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ringScale.value }],
-    opacity: ringOpacity.value,
-  }));
+  const dot2Scale = dot2Opacity.interpolate({
+    inputRange: [0.3, 1],
+    outputRange: [0.8, 1.2],
+  });
 
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-    opacity: logoOpacity.value,
-  }));
-
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-    transform: [{ translateY: textTranslateY.value }],
-  }));
-
-  const dot1Style = useAnimatedStyle(() => ({
-    opacity: dot1Opacity.value,
-    transform: [{ scale: interpolate(dot1Opacity.value, [0.3, 1], [0.8, 1.2]) }],
-  }));
-
-  const dot2Style = useAnimatedStyle(() => ({
-    opacity: dot2Opacity.value,
-    transform: [{ scale: interpolate(dot2Opacity.value, [0.3, 1], [0.8, 1.2]) }],
-  }));
-
-  const dot3Style = useAnimatedStyle(() => ({
-    opacity: dot3Opacity.value,
-    transform: [{ scale: interpolate(dot3Opacity.value, [0.3, 1], [0.8, 1.2]) }],
-  }));
+  const dot3Scale = dot3Opacity.interpolate({
+    inputRange: [0.3, 1],
+    outputRange: [0.8, 1.2],
+  });
 
   return (
     <View style={styles.container}>
@@ -151,18 +162,18 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
         style={StyleSheet.absoluteFill}
       />
 
-      <Animated.View style={[styles.glowOuter, glowStyle]}>
+      <Animated.View style={[styles.glowOuter, { transform: [{ scale: glowScale }], opacity: glowOpacity }]}>
         <LinearGradient
           colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)', 'transparent']}
           style={styles.glowGradient}
         />
       </Animated.View>
 
-      <Animated.View style={[styles.ring, ringStyle]} />
-      <Animated.View style={[styles.ringInner, ringStyle]} />
+      <Animated.View style={[styles.ring, { transform: [{ scale: ringScale }], opacity: ringOpacity }]} />
+      <Animated.View style={[styles.ringInner, { transform: [{ scale: ringScale }], opacity: ringOpacity }]} />
 
       <View style={styles.centerContent}>
-        <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+        <Animated.View style={[styles.logoContainer, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}>
           <LinearGradient
             colors={['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.08)']}
             style={styles.logoBg}
@@ -175,15 +186,15 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View style={textAnimatedStyle}>
+        <Animated.View style={{ opacity: textOpacity, transform: [{ translateY: textTranslateY }] }}>
           <Text style={styles.tagline}>La tua serata inizia qui</Text>
         </Animated.View>
       </View>
 
       <View style={styles.loadingContainer}>
-        <Animated.View style={[styles.loadingDot, dot1Style]} />
-        <Animated.View style={[styles.loadingDot, dot2Style]} />
-        <Animated.View style={[styles.loadingDot, dot3Style]} />
+        <Animated.View style={[styles.loadingDot, { opacity: dot1Opacity, transform: [{ scale: dot1Scale }] }]} />
+        <Animated.View style={[styles.loadingDot, { opacity: dot2Opacity, transform: [{ scale: dot2Scale }] }]} />
+        <Animated.View style={[styles.loadingDot, { opacity: dot3Opacity, transform: [{ scale: dot3Scale }] }]} />
       </View>
 
       <View style={styles.footer}>
