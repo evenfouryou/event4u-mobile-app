@@ -1,7 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { Asset } from 'expo-asset';
 import { colors, typography, spacing } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
+
+const logoImage = require('../../../assets/logo.png');
 
 interface SplashScreenProps {
   onReady: (isAuthenticated: boolean) => void;
@@ -9,15 +12,29 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onReady }: SplashScreenProps) {
   const { isLoading, isAuthenticated } = useAuth();
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+
+  const loadAssets = useCallback(async () => {
+    try {
+      await Asset.loadAsync([logoImage]);
+      setAssetsLoaded(true);
+    } catch {
+      setAssetsLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!isLoading) {
+    loadAssets();
+  }, [loadAssets]);
+
+  useEffect(() => {
+    if (!isLoading && assetsLoaded) {
       const timer = setTimeout(() => {
         onReady(isAuthenticated);
-      }, 800);
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, isAuthenticated, onReady]);
+  }, [isLoading, isAuthenticated, assetsLoaded, onReady]);
 
   return (
     <View style={styles.container}>
@@ -25,7 +42,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
       
       <View style={styles.logoContainer}>
         <Image
-          source={require('../../../assets/logo.png')}
+          source={logoImage}
           style={[styles.logo, { tintColor: '#FFFFFF' }]}
           resizeMode="contain"
         />
@@ -68,20 +85,8 @@ const styles = StyleSheet.create({
     width: 200,
     height: 80,
   },
-  logoText: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: colors.primaryForeground,
-    letterSpacing: -1,
-  },
   textContainer: {
     alignItems: 'center',
-  },
-  title: {
-    fontSize: typography.fontSize['4xl'],
-    fontWeight: '700',
-    color: colors.foreground,
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: typography.fontSize.lg,
