@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
@@ -84,9 +84,17 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Pressable onPress={onBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color={colors.foreground} />
-          </Pressable>
+          <View style={styles.topHeader}>
+            <Pressable onPress={onBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={28} color={colors.foreground} />
+            </Pressable>
+            <Image
+              source={require('../../../assets/logo-white.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <View style={styles.headerSpacer} />
+          </View>
 
           <View style={styles.header}>
             <View style={styles.iconContainer}>
@@ -154,13 +162,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
   backButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: -spacing.sm,
-    marginTop: spacing.sm,
+  },
+  headerLogo: {
+    height: 28,
+    width: 100,
+  },
+  headerSpacer: {
+    width: 44,
   },
   header: {
     alignItems: 'center',

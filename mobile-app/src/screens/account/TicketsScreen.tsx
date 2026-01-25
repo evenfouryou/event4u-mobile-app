@@ -178,7 +178,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
   return (
     <SafeArea style={styles.container}>
       <Header
-        title="I miei Biglietti"
+        showLogo
         showBack
         onBack={onBack}
         testID="header-tickets"

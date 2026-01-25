@@ -70,7 +70,7 @@ export function TicketDetailScreen({
   return (
     <SafeArea style={styles.container}>
       <Header
-        title="Dettaglio Biglietto"
+        showLogo
         showBack
         onBack={onBack}
         rightElement={

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '@/lib/theme';
@@ -12,6 +12,7 @@ interface HeaderProps {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   transparent?: boolean;
+  showLogo?: boolean;
   testID?: string;
 }
 
@@ -23,6 +24,7 @@ export function Header({
   rightElement,
   leftElement,
   transparent = false,
+  showLogo = false,
   testID,
 }: HeaderProps) {
   const insets = useSafeAreaInsets();
@@ -52,15 +54,25 @@ export function Header({
         </View>
 
         <View style={styles.center}>
-          {title && (
-            <Text style={styles.title} numberOfLines={1}>
-              {title}
-            </Text>
-          )}
-          {subtitle && (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {subtitle}
-            </Text>
+          {showLogo ? (
+            <Image
+              source={require('../../assets/logo-white.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+          ) : (
+            <>
+              {title && (
+                <Text style={styles.title} numberOfLines={1}>
+                  {title}
+                </Text>
+              )}
+              {subtitle && (
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              )}
+            </>
           )}
         </View>
 
@@ -149,6 +161,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.foreground,
     textAlign: 'center',
+  },
+  headerLogo: {
+    height: 28,
+    width: 100,
   },
   subtitle: {
     fontSize: typography.fontSize.sm,

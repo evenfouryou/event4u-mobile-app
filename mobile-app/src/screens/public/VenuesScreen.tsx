@@ -153,7 +153,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
 
   return (
     <SafeArea style={styles.container}>
-      <Header title="Locali" showBack onBack={onBack} testID="header-venues" />
+      <Header showLogo showBack onBack={onBack} testID="header-venues" />
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.mutedForeground} />

@@ -219,7 +219,7 @@ export function ResalesScreen({
   return (
     <SafeArea style={styles.container}>
       <Header
-        title="Rivendite"
+        showLogo
         showBack
         onBack={onBack}
         rightElement={

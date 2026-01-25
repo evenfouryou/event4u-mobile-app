@@ -106,7 +106,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
 
   return (
     <SafeArea style={styles.container}>
-      <Header title="Ricarica Wallet" showBack onBack={onBack} testID="header-topup" />
+      <Header showLogo showBack onBack={onBack} testID="header-topup" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

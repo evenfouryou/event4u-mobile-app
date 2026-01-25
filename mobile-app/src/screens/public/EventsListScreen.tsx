@@ -218,9 +218,11 @@ export function EventsListScreen({
           <Pressable onPress={onBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={28} color={colors.foreground} />
           </Pressable>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoText}>E4U</Text>
-          </View>
+          <Image
+            source={require('../../../assets/logo-white.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
           <View style={styles.headerActions}>
             <Pressable onPress={onCartPress} style={styles.iconButton}>
               <Ionicons name="bag-outline" size={24} color={colors.foreground} />
@@ -338,18 +340,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: -spacing.sm,
   },
-  logoBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.primaryForeground,
+  headerLogo: {
+    height: 28,
+    width: 100,
   },
   headerActions: {
     flexDirection: 'row',

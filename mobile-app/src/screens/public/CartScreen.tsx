@@ -88,7 +88,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
   return (
     <SafeArea style={styles.container}>
       <Header
-        title="Carrello"
+        showLogo
         showBack
         onBack={onBack}
         rightElement={

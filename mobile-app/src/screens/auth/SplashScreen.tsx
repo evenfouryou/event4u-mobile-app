@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { colors, typography } from '@/lib/theme';
+import { colors, typography, spacing } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SplashScreenProps {
@@ -24,13 +24,14 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
       <View style={styles.glow} />
       
       <View style={styles.logoContainer}>
-        <View style={styles.logoBox}>
-          <Text style={styles.logoText}>E4U</Text>
-        </View>
+        <Image
+          source={require('../../../assets/logo-white.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.textContainer}>
-        <Text style={styles.title}>Event4U</Text>
         <Text style={styles.subtitle}>La tua serata inizia qui</Text>
       </View>
 
@@ -60,20 +61,12 @@ const styles = StyleSheet.create({
     top: '30%',
   },
   logoContainer: {
-    marginBottom: 24,
-  },
-  logoBox: {
-    width: 120,
-    height: 120,
-    borderRadius: 32,
-    backgroundColor: colors.primary,
+    marginBottom: spacing.xl,
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 15,
+  },
+  logo: {
+    width: 200,
+    height: 80,
   },
   logoText: {
     fontSize: 36,
