@@ -34,7 +34,7 @@ export function AccountDashboard({
   onLogout,
   onGoBack,
 }: AccountDashboardProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
 
   const walletBalance = 125.0;
@@ -271,8 +271,9 @@ export function AccountDashboard({
             <Button
               variant="outline"
               size="lg"
-              onPress={() => {
+              onPress={async () => {
                 triggerHaptic('medium');
+                await logout();
                 onLogout();
               }}
               style={styles.logoutButton}

@@ -65,7 +65,7 @@ export function SettingsScreen({
   onNavigateNameChange,
   onLogout 
 }: SettingsScreenProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
 
@@ -78,8 +78,9 @@ export function SettingsScreen({
         { 
           text: 'Esci', 
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             triggerHaptic('medium');
+            await logout();
             onLogout();
           }
         },
