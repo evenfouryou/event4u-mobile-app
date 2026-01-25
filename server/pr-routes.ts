@@ -18,6 +18,7 @@ import {
   events,
   prProfiles,
   companies,
+  eventStaffAssignments,
 } from "@shared/schema";
 import { z } from "zod";
 import { like, or, eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
@@ -1659,6 +1660,81 @@ router.post("/api/pr/switch-company", async (req: Request, res: Response) => {
 
 // ==================== PR Event Dashboard Endpoints ====================
 
+// Get all PR performance stats for an event (for Event Hub)
+router.get("/api/events/:eventId/pr-performance", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    
+    // Get all PR assignments for this event using eventPrAssignments table
+    const assignments = await db.select({
+      prProfileId: eventPrAssignments.prProfileId,
+      prProfile: prProfiles,
+    })
+    .from(eventPrAssignments)
+    .leftJoin(prProfiles, eq(eventPrAssignments.prProfileId, prProfiles.id))
+    .where(eq(eventPrAssignments.eventId, eventId));
+    
+    const { siaeTickets, siaeTicketedEvents } = await import("@shared/schema");
+    
+    // Get the ticketed event
+    const [ticketedEvent] = await db.select({ id: siaeTicketedEvents.id })
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.eventId, eventId))
+      .limit(1);
+    
+    // Build performance data for each PR
+    const performanceData = await Promise.all(
+      assignments.map(async (assignment) => {
+        const prProfile = assignment.prProfile;
+        if (!prProfile) return null;
+        
+        let ticketsSold = 0;
+        let revenue = 0;
+        let commission = 0;
+        
+        if (ticketedEvent) {
+          const [stats] = await db.select({
+            count: sql<number>`count(*)`,
+            revenue: sql<number>`coalesce(sum(${siaeTickets.grossAmount}), 0)`,
+            commission: sql<number>`coalesce(sum(${siaeTickets.prCommissionAmount}), 0)`,
+          })
+          .from(siaeTickets)
+          .where(and(
+            eq(siaeTickets.ticketedEventId, ticketedEvent.id),
+            eq(siaeTickets.prCode, prProfile.prCode),
+            eq(siaeTickets.status, 'valid')
+          ));
+          
+          ticketsSold = Number(stats?.count || 0);
+          revenue = Number(stats?.revenue || 0);
+          commission = Number(stats?.commission || 0);
+        }
+        
+        // Generate tracking link
+        const trackingLink = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://manage.eventfouryou.com'}/e/${eventId}?pr=${prProfile.prCode}`;
+        
+        return {
+          prProfileId: prProfile.id,
+          prCode: prProfile.prCode,
+          firstName: prProfile.firstName,
+          lastName: prProfile.lastName,
+          email: prProfile.email,
+          phone: prProfile.phone,
+          ticketsSold,
+          revenue,
+          commission,
+          trackingLink,
+        };
+      })
+    );
+    
+    res.json(performanceData.filter(Boolean));
+  } catch (error: any) {
+    console.error("Error getting PR performance:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get ticket stats for a PR on an event
 router.get("/api/pr/events/:eventId/ticket-stats", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -1794,6 +1870,157 @@ router.get("/api/pr/events/:eventId/activity-logs", requireAuth, async (req: Req
     res.json(logs);
   } catch (error: any) {
     console.error("Error getting PR activity logs:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Event Activity Logs (for Event Hub) ====================
+
+// Get all PR activity logs for an event (gestore view)
+router.get("/api/events/:eventId/pr-activity-logs", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { prActivityLogs } = await import("@shared/schema");
+    
+    const logs = await db.select({
+      log: prActivityLogs,
+      prProfile: prProfiles,
+    })
+    .from(prActivityLogs)
+    .leftJoin(prProfiles, eq(prActivityLogs.prProfileId, prProfiles.id))
+    .where(eq(prActivityLogs.eventId, eventId))
+    .orderBy(desc(prActivityLogs.createdAt))
+    .limit(100);
+    
+    res.json(logs.map(l => ({
+      ...l.log,
+      prProfile: l.prProfile,
+    })));
+  } catch (error: any) {
+    console.error("Error getting PR activity logs:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Event Rewards Management (for Event Hub) ====================
+
+// Get all rewards for an event (gestore view)
+router.get("/api/events/:eventId/rewards", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const user = req.user as any;
+    
+    const { prRewards, prRewardProgress } = await import("@shared/schema");
+    
+    // Get event to find company
+    const [event] = await db.select({ companyId: events.companyId })
+      .from(events)
+      .where(eq(events.id, eventId));
+    
+    if (!event) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Get rewards for this event or company-wide
+    const rewardsList = await db.select()
+      .from(prRewards)
+      .where(and(
+        eq(prRewards.companyId, event.companyId),
+        or(
+          eq(prRewards.eventId, eventId),
+          isNull(prRewards.eventId)
+        )
+      ))
+      .orderBy(prRewards.name);
+    
+    // Get progress for each reward across all PRs
+    const rewardsWithProgress = await Promise.all(
+      rewardsList.map(async (reward) => {
+        const progress = await db.select()
+          .from(prRewardProgress)
+          .where(eq(prRewardProgress.rewardId, reward.id));
+        return { ...reward, progress };
+      })
+    );
+    
+    res.json(rewardsWithProgress);
+  } catch (error: any) {
+    console.error("Error getting event rewards:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create reward for event
+router.post("/api/events/:eventId/rewards", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const user = req.user as any;
+    
+    const { prRewards, insertPrRewardSchema } = await import("@shared/schema");
+    
+    // Get event to find company
+    const [event] = await db.select({ companyId: events.companyId })
+      .from(events)
+      .where(eq(events.id, eventId));
+    
+    if (!event) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    const validated = insertPrRewardSchema.parse({
+      ...req.body,
+      eventId: req.body.isGlobal ? null : eventId,
+      companyId: event.companyId,
+    });
+    
+    const [reward] = await db.insert(prRewards).values(validated).returning();
+    res.status(201).json(reward);
+  } catch (error: any) {
+    console.error("Error creating reward:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update reward
+router.patch("/api/rewards/:rewardId", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { rewardId } = req.params;
+    const { prRewards } = await import("@shared/schema");
+    
+    const [updated] = await db.update(prRewards)
+      .set({ ...req.body, updatedAt: new Date() })
+      .where(eq(prRewards.id, rewardId))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ error: "Premio non trovato" });
+    }
+    res.json(updated);
+  } catch (error: any) {
+    console.error("Error updating reward:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete reward
+router.delete("/api/rewards/:rewardId", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { rewardId } = req.params;
+    const { prRewards } = await import("@shared/schema");
+    
+    const [deleted] = await db.delete(prRewards)
+      .where(eq(prRewards.id, rewardId))
+      .returning();
+    
+    if (!deleted) {
+      return res.status(404).json({ error: "Premio non trovato" });
+    }
+    res.status(204).send();
+  } catch (error: any) {
+    console.error("Error deleting reward:", error);
     res.status(500).json({ error: error.message });
   }
 });

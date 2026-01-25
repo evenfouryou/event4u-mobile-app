@@ -136,6 +136,8 @@ import {
   XCircle,
   Grid3X3,
   Search,
+  Gift,
+  History,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -1379,6 +1381,70 @@ export default function EventHub() {
     queryKey: ['/api/events', id, 'pr-assignments'],
     enabled: !!id,
   });
+  
+  // PR Performance Stats
+  const { data: prPerformance = [], isLoading: prPerformanceLoading } = useQuery<any[]>({
+    queryKey: ['/api/events', id, 'pr-performance'],
+    enabled: !!id,
+  });
+  
+  // PR Rewards
+  const { data: prRewards = [], isLoading: prRewardsLoading, refetch: refetchRewards } = useQuery<any[]>({
+    queryKey: ['/api/events', id, 'rewards'],
+    enabled: !!id,
+  });
+  
+  // PR Activity Logs
+  const { data: prActivityLogs = [], isLoading: prActivityLogsLoading } = useQuery<any[]>({
+    queryKey: ['/api/events', id, 'pr-activity-logs'],
+    enabled: !!id,
+  });
+  
+  // Create reward mutation
+  const [showCreateRewardDialog, setShowCreateRewardDialog] = useState(false);
+  const [newReward, setNewReward] = useState({ name: '', description: '', type: 'bonus_cash', targetValue: 10, rewardValue: 50, isGlobal: false });
+  
+  const createRewardMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/events/${id}/rewards`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'rewards'] });
+      setShowCreateRewardDialog(false);
+      setNewReward({ name: '', description: '', type: 'bonus_cash', targetValue: 10, rewardValue: 50, isGlobal: false });
+      toast({ title: "Premio creato!", description: "Il premio è stato aggiunto con successo" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
+  });
+  
+  const deleteRewardMutation = useMutation({
+    mutationFn: async (rewardId: string) => {
+      await apiRequest("DELETE", `/api/rewards/${rewardId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'rewards'] });
+      toast({ title: "Premio eliminato" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
+  });
+  
+  // Copy tracking link handler
+  const [copiedPrCode, setCopiedPrCode] = useState<string | null>(null);
+  const handleCopyPrLink = async (link: string, prCode: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedPrCode(prCode);
+      toast({ title: "Link copiato!", description: "Il link tracciato è stato copiato negli appunti" });
+      setTimeout(() => setCopiedPrCode(null), 2000);
+    } catch (error) {
+      toast({ title: "Errore", description: "Impossibile copiare il link", variant: "destructive" });
+    }
+  };
 
   // Available PR Users - using same endpoint as PR Management page which works correctly
   const { data: availablePrUsers = [] } = useQuery<any[]>({
@@ -4905,6 +4971,325 @@ export default function EventHub() {
                 )}
               </CardContent>
             </Card>
+            
+            {/* PR Performance Stats Card */}
+            <Card data-testid="card-pr-performance">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Performance Vendite PR
+                </CardTitle>
+                <CardDescription>Statistiche vendite biglietti per ogni PR con link tracciati</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {prPerformanceLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : prPerformance.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground" data-testid="empty-pr-performance">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessun PR assegnato o nessuna vendita</p>
+                    <p className="text-sm mt-1">Assegna PR all'evento per vedere le statistiche</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
+                        <div className="text-2xl font-bold text-primary">
+                          {prPerformance.reduce((acc: number, pr: any) => acc + (pr.ticketsSold || 0), 0)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Biglietti Totali</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="text-2xl font-bold text-emerald-400">
+                          €{prPerformance.reduce((acc: number, pr: any) => acc + (pr.revenue || 0), 0).toFixed(2)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Fatturato Totale</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                        <div className="text-2xl font-bold text-amber-400">
+                          €{prPerformance.reduce((acc: number, pr: any) => acc + (pr.commission || 0), 0).toFixed(2)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Commissioni Totali</div>
+                      </div>
+                    </div>
+                    
+                    {/* PR Table */}
+                    <Table data-testid="table-pr-performance">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>PR</TableHead>
+                          <TableHead className="text-center">Biglietti</TableHead>
+                          <TableHead className="text-right">Fatturato</TableHead>
+                          <TableHead className="text-right">Commissione</TableHead>
+                          <TableHead className="w-32">Link Tracciato</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {prPerformance.map((pr: any) => (
+                          <TableRow key={pr.prProfileId} data-testid={`row-pr-performance-${pr.prCode}`}>
+                            <TableCell>
+                              <div className="font-medium">{pr.firstName} {pr.lastName}</div>
+                              <div className="text-xs text-muted-foreground">{pr.prCode}</div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge className={pr.ticketsSold > 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"}>
+                                {pr.ticketsSold}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              €{(pr.revenue || 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right text-amber-400">
+                              €{(pr.commission || 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopyPrLink(pr.trackingLink, pr.prCode)}
+                                data-testid={`button-copy-link-${pr.prCode}`}
+                                className="w-full"
+                              >
+                                {copiedPrCode === pr.prCode ? (
+                                  <>
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Copiato
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3 w-3 mr-1" />
+                                    Copia Link
+                                  </>
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* PR Rewards Card */}
+            <Card data-testid="card-pr-rewards">
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gift className="h-5 w-5 text-primary" />
+                    Premi & Incentivi
+                  </CardTitle>
+                  <CardDescription>Incentivi per motivare i PR a vendere</CardDescription>
+                </div>
+                <Button onClick={() => setShowCreateRewardDialog(true)} data-testid="button-add-reward">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuovo Premio
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {prRewardsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                  </div>
+                ) : prRewards.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground" data-testid="empty-pr-rewards">
+                    <Gift className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessun premio configurato</p>
+                    <p className="text-sm mt-1">Crea incentivi per motivare i tuoi PR</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {prRewards.map((reward: any) => (
+                      <div 
+                        key={reward.id} 
+                        className="p-4 rounded-lg border bg-card/50 flex items-center justify-between"
+                        data-testid={`card-reward-${reward.id}`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium">{reward.name}</span>
+                            <Badge className={
+                              reward.type === 'bonus_cash' ? 'bg-emerald-500/20 text-emerald-400' :
+                              reward.type === 'percentage_bonus' ? 'bg-blue-500/20 text-blue-400' :
+                              reward.type === 'gift' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-amber-500/20 text-amber-400'
+                            }>
+                              {reward.type === 'bonus_cash' ? 'Bonus €' :
+                               reward.type === 'percentage_bonus' ? 'Bonus %' :
+                               reward.type === 'gift' ? 'Regalo' : 'Badge'}
+                            </Badge>
+                            {!reward.eventId && <Badge variant="outline">Globale</Badge>}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{reward.description}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>Obiettivo: {reward.targetValue} biglietti</span>
+                            <span>Premio: {reward.type === 'percentage_bonus' ? `${reward.rewardValue}%` : `€${reward.rewardValue}`}</span>
+                            <span>{reward.progress?.length || 0} PR attivi</span>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => deleteRewardMutation.mutate(reward.id)}
+                          disabled={deleteRewardMutation.isPending}
+                          data-testid={`button-delete-reward-${reward.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* PR Activity Logs Card */}
+            <Card data-testid="card-pr-activity-logs">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" />
+                  Storico Attività PR
+                </CardTitle>
+                <CardDescription>Ultime azioni e cancellazioni dei PR</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {prActivityLogsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : prActivityLogs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground" data-testid="empty-pr-activity-logs">
+                    <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessuna attività recente</p>
+                    <p className="text-sm mt-1">Le azioni dei PR appariranno qui</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {prActivityLogs.map((log: any) => (
+                      <div 
+                        key={log.id} 
+                        className="p-3 rounded-lg border bg-card/50 flex items-start gap-3"
+                        data-testid={`activity-log-${log.id}`}
+                      >
+                        <div className={`p-2 rounded-full ${
+                          log.actionType === 'cancellation' ? 'bg-red-500/20' :
+                          log.actionType === 'addition' ? 'bg-emerald-500/20' :
+                          log.actionType === 'modification' ? 'bg-amber-500/20' :
+                          'bg-blue-500/20'
+                        }`}>
+                          {log.actionType === 'cancellation' ? <XCircle className="h-4 w-4 text-red-400" /> :
+                           log.actionType === 'addition' ? <Plus className="h-4 w-4 text-emerald-400" /> :
+                           log.actionType === 'modification' ? <Edit2 className="h-4 w-4 text-amber-400" /> :
+                           <Eye className="h-4 w-4 text-blue-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">
+                              {log.prProfile ? `${log.prProfile.firstName} ${log.prProfile.lastName}` : 'PR'}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {log.actionType === 'cancellation' ? 'Cancellazione' :
+                               log.actionType === 'addition' ? 'Aggiunta' :
+                               log.actionType === 'modification' ? 'Modifica' : 'Altro'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">{log.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {log.createdAt && new Date(log.createdAt).toLocaleString('it-IT')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Create Reward Dialog */}
+            <Dialog open={showCreateRewardDialog} onOpenChange={setShowCreateRewardDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Crea Nuovo Premio</DialogTitle>
+                  <DialogDescription>Configura un incentivo per i tuoi PR</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Nome Premio</Label>
+                    <Input 
+                      value={newReward.name} 
+                      onChange={(e) => setNewReward({...newReward, name: e.target.value})}
+                      placeholder="Es: Bonus 10 Biglietti"
+                      data-testid="input-reward-name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Descrizione</Label>
+                    <Input 
+                      value={newReward.description} 
+                      onChange={(e) => setNewReward({...newReward, description: e.target.value})}
+                      placeholder="Es: Vendi 10 biglietti e ricevi €50 bonus"
+                      data-testid="input-reward-description"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Tipo Premio</Label>
+                      <Select value={newReward.type} onValueChange={(v) => setNewReward({...newReward, type: v})}>
+                        <SelectTrigger data-testid="select-reward-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bonus_cash">Bonus Cash (€)</SelectItem>
+                          <SelectItem value="percentage_bonus">Bonus Percentuale (%)</SelectItem>
+                          <SelectItem value="gift">Regalo</SelectItem>
+                          <SelectItem value="badge">Badge</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Obiettivo (biglietti)</Label>
+                      <Input 
+                        type="number"
+                        value={newReward.targetValue} 
+                        onChange={(e) => setNewReward({...newReward, targetValue: parseInt(e.target.value) || 0})}
+                        data-testid="input-reward-target"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Valore Premio {newReward.type === 'percentage_bonus' ? '(%)' : '(€)'}</Label>
+                    <Input 
+                      type="number"
+                      value={newReward.rewardValue} 
+                      onChange={(e) => setNewReward({...newReward, rewardValue: parseInt(e.target.value) || 0})}
+                      data-testid="input-reward-value"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      checked={newReward.isGlobal}
+                      onCheckedChange={(c) => setNewReward({...newReward, isGlobal: !!c})}
+                      id="reward-global"
+                    />
+                    <Label htmlFor="reward-global" className="text-sm">Premio globale (valido per tutti gli eventi)</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCreateRewardDialog(false)}>Annulla</Button>
+                  <Button 
+                    onClick={() => createRewardMutation.mutate(newReward)}
+                    disabled={!newReward.name || createRewardMutation.isPending}
+                    data-testid="button-confirm-create-reward"
+                  >
+                    {createRewardMutation.isPending ? "Creazione..." : "Crea Premio"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Access Tab */}
