@@ -11548,6 +11548,9 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
     const baseEvent = await storage.getEvent(ticketedEvent.eventId);
     const sectors = await siaeStorage.getSiaeEventSectors(eventId);
     
+    // FIX 2026-01-25: Recupera location per fallback codice locale
+    const location = baseEvent?.locationId ? await storage.getLocation(baseEvent.locationId) : null;
+    
     // FIX 2026-01-25: Usa la configurazione SIAE specifica dell'azienda, con fallback alla globale
     let systemConfig = ticketedEvent.companyId 
       ? await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId) 
@@ -11565,6 +11568,9 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
     console.log('[Validate Prerequisites] Company:', company?.name, company?.taxId);
     console.log('[Validate Prerequisites] SystemConfig:', systemConfig?.systemCode);
     console.log('[Validate Prerequisites] Bridge:', bridgeConnected, 'EFFF:', efffData?.systemId);
+    console.log('[Validate Prerequisites] Location:', location?.name, 'Code:', location?.siaeLocationCode);
+    console.log('[Validate Prerequisites] TicketedEvent siaeLocationCode:', ticketedEvent.siaeLocationCode);
+    console.log('[Validate Prerequisites] Final siaeLocationCode:', ticketedEvent.siaeLocationCode || location?.siaeLocationCode || 'null');
     
     // Costruisci dati per validazione
     const prerequisiteData: SiaePrerequisiteData = {
@@ -11577,7 +11583,8 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
       },
       ticketedEvent: {
         id: ticketedEvent.id,
-        siaeLocationCode: ticketedEvent.siaeLocationCode || null,
+        // FIX 2026-01-25: Fallback su location.siaeLocationCode se ticketedEvent non ha codice locale
+        siaeLocationCode: ticketedEvent.siaeLocationCode || location?.siaeLocationCode || null,
         genreCode: ticketedEvent.genreCode || '61',
         taxType: ticketedEvent.taxType || 'I',
         entertainmentIncidence: ticketedEvent.entertainmentIncidence ?? null,
