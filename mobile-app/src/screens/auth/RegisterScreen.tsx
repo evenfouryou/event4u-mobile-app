@@ -245,7 +245,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
             />
 
             <Input
-              label="Telefono (opzionale)"
+              label="Telefono"
               value={formData.phone}
               onChangeText={(v) => updateField('phone', v)}
               placeholder="+39 123 456 7890"

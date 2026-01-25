@@ -90,6 +90,8 @@ export function AppNavigator() {
             onNavigateRegister={() => navigate({ name: 'register' })}
             onNavigateVenues={() => navigate({ name: 'venues' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
+            onNavigateAccount={() => navigate({ name: 'accountDashboard' })}
+            isAuthenticated={isAuthenticated}
           />
         );
 
@@ -195,6 +197,7 @@ export function AppNavigator() {
             onNavigateResales={() => navigate({ name: 'resales' })}
             onNavigateSettings={() => navigate({ name: 'subscriptions' })}
             onLogout={() => resetTo({ name: 'landing' })}
+            onGoBack={() => goBack()}
           />
         );
 

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
@@ -20,6 +20,7 @@ interface AccountDashboardProps {
   onNavigateResales: () => void;
   onNavigateSettings: () => void;
   onLogout: () => void;
+  onGoBack: () => void;
 }
 
 export function AccountDashboard({
@@ -30,6 +31,7 @@ export function AccountDashboard({
   onNavigateResales,
   onNavigateSettings,
   onLogout,
+  onGoBack,
 }: AccountDashboardProps) {
   const { user } = useAuth();
 
@@ -67,6 +69,33 @@ export function AccountDashboard({
 
   return (
     <SafeArea style={styles.container} edges={['top']}>
+      <View style={styles.topHeader}>
+        <Pressable
+          onPress={() => {
+            triggerHaptic('light');
+            onGoBack();
+          }}
+          style={styles.backButton}
+          testID="button-back"
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+        </Pressable>
+        <Image
+          source={require('../../../assets/logo-white.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
+        <Pressable
+          onPress={() => {
+            triggerHaptic('light');
+            onNavigateSettings();
+          }}
+          style={styles.settingsButton}
+          testID="button-settings"
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -81,18 +110,6 @@ export function AccountDashboard({
               size="lg"
               testID="avatar-user"
             />
-          }
-          rightElement={
-            <Pressable
-              onPress={() => {
-                triggerHaptic('light');
-                onNavigateSettings();
-              }}
-              style={styles.settingsButton}
-              testID="button-settings"
-            >
-              <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
-            </Pressable>
           }
         />
 
@@ -273,6 +290,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerLogo: {
+    height: 32,
+    width: 120,
   },
   scrollView: {
     flex: 1,

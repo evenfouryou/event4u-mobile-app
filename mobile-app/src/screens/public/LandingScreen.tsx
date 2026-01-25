@@ -16,6 +16,8 @@ interface LandingScreenProps {
   onNavigateRegister: () => void;
   onNavigateVenues: () => void;
   onNavigateResales: () => void;
+  onNavigateAccount: () => void;
+  isAuthenticated: boolean;
 }
 
 export function LandingScreen({
@@ -24,6 +26,8 @@ export function LandingScreen({
   onNavigateRegister,
   onNavigateVenues,
   onNavigateResales,
+  onNavigateAccount,
+  isAuthenticated,
 }: LandingScreenProps) {
   const upcomingEvents = [
     {
@@ -81,14 +85,26 @@ export function LandingScreen({
             resizeMode="contain"
           />
           <View style={styles.headerButtons}>
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={onNavigateLogin}
-              testID="button-login"
-            >
-              Accedi
-            </Button>
+            {isAuthenticated ? (
+              <Button
+                variant="golden"
+                size="sm"
+                onPress={onNavigateAccount}
+                testID="button-account"
+              >
+                <Ionicons name="person" size={16} color="#000" />
+                <Text style={{ color: '#000', marginLeft: 4 }}>Profilo</Text>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={onNavigateLogin}
+                testID="button-login"
+              >
+                Accedi
+              </Button>
+            )}
           </View>
         </View>
 
@@ -199,70 +215,35 @@ export function LandingScreen({
           </ScrollView>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Servizi</Text>
-          <View style={styles.servicesGrid}>
-            <Pressable style={styles.serviceCard} onPress={onNavigateVenues}>
-              <View style={[styles.serviceIcon, { backgroundColor: `${colors.teal}20` }]}>
-                <Ionicons name="business-outline" size={28} color={colors.teal} />
-              </View>
-              <Text style={styles.serviceTitle}>Venues</Text>
-              <Text style={styles.serviceDesc}>Scopri i locali</Text>
-            </Pressable>
-            
-            <Pressable style={styles.serviceCard} onPress={onNavigateResales}>
-              <View style={[styles.serviceIcon, { backgroundColor: `${colors.primary}20` }]}>
-                <Ionicons name="swap-horizontal-outline" size={28} color={colors.primary} />
-              </View>
-              <Text style={styles.serviceTitle}>Rivendita</Text>
-              <Text style={styles.serviceDesc}>Compra e vendi</Text>
-            </Pressable>
-            
-            <Pressable style={styles.serviceCard} onPress={onNavigateEvents}>
-              <View style={[styles.serviceIcon, { backgroundColor: '#E91E6320' }]}>
-                <Ionicons name="heart-outline" size={28} color="#E91E63" />
-              </View>
-              <Text style={styles.serviceTitle}>Liste</Text>
-              <Text style={styles.serviceDesc}>VIP & Guest list</Text>
-            </Pressable>
-            
-            <Pressable style={styles.serviceCard} onPress={onNavigateEvents}>
-              <View style={[styles.serviceIcon, { backgroundColor: '#9C27B020' }]}>
-                <Ionicons name="calendar-outline" size={28} color="#9C27B0" />
-              </View>
-              <Text style={styles.serviceTitle}>Prenotazioni</Text>
-              <Text style={styles.serviceDesc}>Tavoli e aree VIP</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.ctaSection}>
-          <LinearGradient
-            colors={['rgba(255, 215, 0, 0.1)', 'rgba(0, 206, 209, 0.1)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.ctaCard}
-          >
-            <Image
-              source={require('../../../assets/logo-white.png')}
-              style={styles.ctaLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.ctaTitle}>Pronto per la notte?</Text>
-            <Text style={styles.ctaText}>
-              Crea un account gratuito e scopri tutti gli eventi esclusivi della tua zona
-            </Text>
-            <Button
-              variant="golden"
-              size="lg"
-              onPress={onNavigateRegister}
-              style={styles.ctaButton}
-              testID="button-cta-register"
+        {!isAuthenticated && (
+          <View style={styles.ctaSection}>
+            <LinearGradient
+              colors={['rgba(255, 215, 0, 0.1)', 'rgba(0, 206, 209, 0.1)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.ctaCard}
+            >
+              <Image
+                source={require('../../../assets/logo-white.png')}
+                style={styles.ctaLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.ctaTitle}>Pronto per la notte?</Text>
+              <Text style={styles.ctaText}>
+                Crea un account gratuito e scopri tutti gli eventi esclusivi della tua zona
+              </Text>
+              <Button
+                variant="golden"
+                size="lg"
+                onPress={onNavigateRegister}
+                style={styles.ctaButton}
+                testID="button-cta-register"
             >
               Inizia Ora
-            </Button>
-          </LinearGradient>
-        </View>
+              </Button>
+            </LinearGradient>
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Event4U - La tua app per eventi</Text>
