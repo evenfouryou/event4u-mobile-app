@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, createContext, useContext } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { colors } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +22,7 @@ import { LandingScreen } from '@/screens/public/LandingScreen';
 import { EventsListScreen } from '@/screens/public/EventsListScreen';
 import { EventDetailScreen } from '@/screens/public/EventDetailScreen';
 import { CartScreen } from '@/screens/public/CartScreen';
-import { CheckoutScreen } from '@/screens/public/CheckoutScreen';
+import { CheckoutScreen, CartItem } from '@/screens/public/CheckoutScreen';
 import { VenuesScreen } from '@/screens/public/VenuesScreen';
 import { VenueDetailScreen } from '@/screens/public/VenueDetailScreen';
 import { ResalesScreen } from '@/screens/public/ResalesScreen';
@@ -36,7 +36,7 @@ type Screen =
   | { name: 'events' }
   | { name: 'eventDetail'; params: { eventId: string } }
   | { name: 'cart' }
-  | { name: 'checkout' }
+  | { name: 'checkout'; params?: { cartItems: CartItem[] } }
   | { name: 'venues' }
   | { name: 'venueDetail'; params: { venueId: string } }
   | { name: 'resales' }
@@ -50,10 +50,74 @@ type Screen =
   | { name: 'settings' }
   | { name: 'profile' };
 
+interface CartContextType {
+  cartItems: CartItem[];
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (index: number) => void;
+  updateQuantity: (index: number, delta: number) => void;
+  clearCart: () => void;
+}
+
+const CartContext = createContext<CartContextType | null>(null);
+
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within AppNavigator');
+  }
+  return context;
+}
+
 export function AppNavigator() {
   const { isAuthenticated } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<Screen>({ name: 'splash' });
   const [history, setHistory] = useState<Screen[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  const addToCart = (item: CartItem) => {
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(
+        i => i.ticketedEventId === item.ticketedEventId && 
+             i.sectorId === item.sectorId &&
+             i.ticketTypeId === item.ticketTypeId
+      );
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + item.quantity,
+        };
+        return updated;
+      }
+      return [...prev, item];
+    });
+  };
+
+  const removeFromCart = (index: number) => {
+    setCartItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateCartQuantity = (index: number, delta: number) => {
+    setCartItems(prev => prev.map((item, i) => {
+      if (i === index) {
+        const newQuantity = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQuantity };
+      }
+      return item;
+    }));
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  const cartContextValue: CartContextType = {
+    cartItems,
+    addToCart,
+    removeFromCart,
+    updateQuantity: updateCartQuantity,
+    clearCart,
+  };
 
   const navigate = (screen: Screen) => {
     setHistory(prev => [...prev, currentScreen]);
@@ -160,7 +224,11 @@ export function AppNavigator() {
         return (
           <CheckoutScreen
             onBack={goBack}
-            onSuccess={() => resetTo({ name: 'accountDashboard' })}
+            onSuccess={() => {
+              clearCart();
+              resetTo({ name: 'tickets' });
+            }}
+            cartItems={cartItems}
           />
         );
 
@@ -286,7 +354,11 @@ export function AppNavigator() {
     }
   };
 
-  return <View style={styles.container}>{renderScreen()}</View>;
+  return (
+    <CartContext.Provider value={cartContextValue}>
+      <View style={styles.container}>{renderScreen()}</View>
+    </CartContext.Provider>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -248,6 +248,39 @@ class ApiClient {
     return this.post<WalletTopUpConfirmResponse>('/api/public/account/wallet/topup-checkout/confirm', { sessionId });
   }
 
+  // Mobile checkout with Stripe Checkout Sessions (hosted page)
+  async createMobileCheckout(items: Array<{
+    ticketedEventId: string;
+    sectorId: string;
+    ticketTypeId?: string;
+    quantity: number;
+    unitPrice: number;
+  }>): Promise<{
+    checkoutUrl: string;
+    sessionId: string;
+    subtotal: number;
+    commissionAmount: number;
+    total: number;
+    items: any[];
+  }> {
+    return this.post('/api/public/mobile/checkout', {
+      items,
+      successUrl: 'https://manage.eventfouryou.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://manage.eventfouryou.com/checkout/cancel',
+    });
+  }
+
+  async confirmMobileCheckout(sessionId: string): Promise<{
+    success: boolean;
+    status: string;
+    paymentIntentId?: string;
+    total?: number;
+    items?: any[];
+    message: string;
+  }> {
+    return this.post('/api/public/mobile/checkout/confirm', { sessionId });
+  }
+
   async createCheckoutPaymentIntent(eventId: string, tickets: Array<{ sectorId: string; quantity: number }>, participantData?: any): Promise<CheckoutPaymentIntentResponse> {
     return this.post<CheckoutPaymentIntentResponse>('/api/public/checkout/create-payment-intent', {
       eventId,

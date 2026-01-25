@@ -4994,6 +4994,203 @@ router.post("/api/public/account/wallet/topup-checkout/confirm", async (req, res
   }
 });
 
+// ============ MOBILE TICKET CHECKOUT (Stripe Checkout Sessions) ============
+
+// Crea Stripe Checkout session per acquisto biglietti da app mobile
+router.post("/api/public/mobile/checkout", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Devi essere autenticato per procedere al pagamento" });
+    }
+
+    const { items, successUrl, cancelUrl } = req.body;
+    
+    // items = [{ ticketedEventId, sectorId, ticketTypeId, quantity, unitPrice }]
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Carrello vuoto" });
+    }
+
+    // Verifica eventi e calcola totali - SEMPRE validare prezzi dal database
+    let subtotal = 0;
+    const lineItems: any[] = [];
+    const eventDetails: any[] = [];
+
+    for (const item of items) {
+      const { ticketedEventId, sectorId, ticketTypeId, quantity } = item;
+      
+      if (!ticketedEventId || !sectorId || !quantity) {
+        return res.status(400).json({ message: "Dati biglietto incompleti" });
+      }
+
+      if (quantity < 1 || quantity > 10) {
+        return res.status(400).json({ message: "Quantità non valida (1-10)" });
+      }
+
+      // Verifica evento esiste e attivo
+      const [event] = await db
+        .select()
+        .from(siaeTicketedEvents)
+        .where(eq(siaeTicketedEvents.id, ticketedEventId));
+
+      if (!event || event.status !== 'active') {
+        return res.status(400).json({ message: "Evento non disponibile" });
+      }
+
+      // Valida il prezzo dal database - NON fidarsi del client
+      const [sector] = await db
+        .select()
+        .from(siaeEventSectors)
+        .where(and(
+          eq(siaeEventSectors.ticketedEventId, ticketedEventId),
+          eq(siaeEventSectors.id, sectorId)
+        ));
+
+      if (!sector) {
+        return res.status(400).json({ message: "Settore non trovato" });
+      }
+
+      // Usa il prezzo dal database (priceIntero è il prezzo base)
+      const validatedPrice = Number(sector.priceIntero) || 0;
+      if (validatedPrice <= 0) {
+        return res.status(400).json({ message: "Prezzo non disponibile per questo settore" });
+      }
+
+      const itemTotal = validatedPrice * quantity;
+      subtotal += itemTotal;
+
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(validatedPrice * 100),
+          product_data: {
+            name: `${event.eventName} - ${sector.name || 'Biglietto'}`,
+            description: `Quantità: ${quantity}`,
+          },
+        },
+        quantity: quantity,
+      });
+
+      eventDetails.push({
+        ticketedEventId,
+        sectorId,
+        ticketTypeId,
+        quantity,
+        unitPrice: validatedPrice,
+        sectorName: sector.name,
+        eventName: event.eventName,
+        eventDate: event.eventDate,
+      });
+    }
+
+    // Calcola commissioni (5%)
+    const commissionAmount = subtotal * 0.05;
+    const total = subtotal + commissionAmount;
+
+    // Aggiungi commissioni come riga separata
+    if (commissionAmount > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(commissionAmount * 100),
+          product_data: {
+            name: 'Commissioni di servizio',
+          },
+        },
+        quantity: 1,
+      });
+    }
+
+    const stripe = await getUncachableStripeClient();
+
+    // Crea Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: successUrl || 'https://manage.eventfouryou.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: cancelUrl || 'https://manage.eventfouryou.com/checkout/cancel',
+      customer_email: customer.email,
+      metadata: {
+        customerId: customer.id,
+        type: 'mobile_ticket_purchase',
+        itemsCount: items.length.toString(),
+        subtotal: subtotal.toFixed(2),
+        commissionAmount: commissionAmount.toFixed(2),
+        total: total.toFixed(2),
+        cartSnapshot: JSON.stringify(eventDetails),
+      },
+    });
+
+    console.log(`[MOBILE] Created checkout session ${session.id} for customer ${customer.id}, total: €${total.toFixed(2)}`);
+
+    res.json({
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      subtotal,
+      commissionAmount,
+      total,
+      items: eventDetails,
+    });
+  } catch (error: any) {
+    console.error("[MOBILE] Checkout session error:", error);
+    res.status(500).json({ message: "Errore nella creazione della sessione di pagamento" });
+  }
+});
+
+// Conferma checkout mobile dopo pagamento Stripe
+router.post("/api/public/mobile/checkout/confirm", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ message: "Session ID richiesto" });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    // Verifica che la sessione appartenga a questo cliente
+    if (session.metadata?.customerId !== customer.id) {
+      return res.status(403).json({ message: "Sessione non autorizzata" });
+    }
+
+    // Verifica stato pagamento
+    if (session.payment_status !== 'paid') {
+      return res.json({
+        success: false,
+        status: session.payment_status,
+        message: "Pagamento non completato",
+      });
+    }
+
+    // Recupera dettagli dal metadata
+    const cartSnapshot = JSON.parse(session.metadata?.cartSnapshot || '[]');
+    const total = parseFloat(session.metadata?.total || '0');
+
+    // TODO: Qui andrà la logica di emissione biglietti reali
+    // Per ora, restituiamo solo conferma del pagamento
+
+    console.log(`[MOBILE] Checkout confirmed for session ${sessionId}, total: €${total.toFixed(2)}`);
+
+    res.json({
+      success: true,
+      status: 'completed',
+      paymentIntentId: session.payment_intent as string,
+      total,
+      items: cartSnapshot,
+      message: "Pagamento completato con successo",
+    });
+  } catch (error: any) {
+    console.error("[MOBILE] Checkout confirm error:", error);
+    res.status(500).json({ message: "Errore nella conferma del pagamento" });
+  }
+});
+
 // Richiedi cambio nominativo
 router.post("/api/public/account/name-change", async (req, res) => {
   try {

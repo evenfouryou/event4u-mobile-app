@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, Linking, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
@@ -10,89 +10,180 @@ import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { triggerHaptic } from '@/lib/haptics';
+import api from '@/lib/api';
+
+export interface CartItem {
+  ticketedEventId: string;
+  eventName: string;
+  eventDate: string;
+  sectorId: string;
+  sectorName: string;
+  ticketTypeId?: string;
+  ticketTypeName: string;
+  quantity: number;
+  unitPrice: number;
+}
 
 interface CheckoutScreenProps {
   onBack: () => void;
   onSuccess: () => void;
+  cartItems?: CartItem[];
 }
 
-export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
+export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutScreenProps) {
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'details' | 'payment'>('details');
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-  });
-  const [cardData, setCardData] = useState({
-    number: '',
-    expiry: '',
-    cvc: '',
-  });
+  const [step, setStep] = useState<'review' | 'processing' | 'success'>('review');
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
-  const orderSummary = {
-    eventName: 'Saturday Night Fever',
-    eventDate: new Date('2026-02-01T23:00:00'),
-    tickets: 2,
-    subtotal: 70,
-    fees: 3.5,
-    total: 73.5,
-  };
+  const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const fees = subtotal * 0.05;
+  const total = subtotal + fees;
 
-  const updateFormField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const updateCardField = (field: string, value: string) => {
-    let formattedValue = value;
-    
-    if (field === 'number') {
-      formattedValue = value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('it-IT', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
     }
-    if (field === 'expiry') {
-      formattedValue = value.replace(/\D/g, '').replace(/^(\d{2})/, '$1/').substring(0, 5);
-    }
-    if (field === 'cvc') {
-      formattedValue = value.replace(/\D/g, '').substring(0, 4);
-    }
-    
-    setCardData(prev => ({ ...prev, [field]: formattedValue }));
-  };
-
-  const handleContinue = () => {
-    triggerHaptic('medium');
-    setStep('payment');
   };
 
   const handlePay = async () => {
+    if (cartItems.length === 0) {
+      Alert.alert('Errore', 'Il carrello è vuoto');
+      return;
+    }
+
     setLoading(true);
     triggerHaptic('medium');
     
-    setTimeout(() => {
-      triggerHaptic('success');
-      onSuccess();
-    }, 2000);
+    try {
+      const checkoutItems = cartItems.map(item => ({
+        ticketedEventId: item.ticketedEventId,
+        sectorId: item.sectorId,
+        ticketTypeId: item.ticketTypeId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }));
+
+      const result = await api.createMobileCheckout(checkoutItems);
+      
+      if (result.checkoutUrl) {
+        setCheckoutSessionId(result.sessionId);
+        setStep('processing');
+        
+        const supported = await Linking.canOpenURL(result.checkoutUrl);
+        if (supported) {
+          await Linking.openURL(result.checkoutUrl);
+          
+          Alert.alert(
+            'Pagamento in corso',
+            'Dopo aver completato il pagamento nel browser, torna qui e premi "Verifica Pagamento" per confermare.',
+            [
+              {
+                text: 'Verifica Pagamento',
+                onPress: async () => {
+                  try {
+                    setLoading(true);
+                    const confirmation = await api.confirmMobileCheckout(result.sessionId);
+                    if (confirmation.success) {
+                      triggerHaptic('success');
+                      setStep('success');
+                    } else {
+                      Alert.alert('Errore', confirmation.message || 'Pagamento non completato. Riprova.');
+                      setStep('review');
+                    }
+                  } catch (error: any) {
+                    console.error('Confirmation error:', error);
+                    Alert.alert('Errore', error.message || 'Impossibile verificare il pagamento');
+                    setStep('review');
+                  } finally {
+                    setLoading(false);
+                  }
+                },
+              },
+              {
+                text: 'Annulla',
+                style: 'cancel',
+                onPress: () => {
+                  setStep('review');
+                  setLoading(false);
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Errore', 'Impossibile aprire il browser');
+          setStep('review');
+        }
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      Alert.alert('Errore', error.message || 'Impossibile creare la sessione di pagamento');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('it-IT', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  if (step === 'success') {
+    return (
+      <SafeArea edges={['bottom']} style={styles.container}>
+        <View style={styles.successContainer}>
+          <View>
+            <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.successIcon}>
+              <Ionicons name="checkmark" size={48} color={colors.primaryForeground} />
+            </LinearGradient>
+          </View>
+          <View>
+            <Text style={styles.successTitle}>Acquisto Completato!</Text>
+            <Text style={styles.successAmount}>€{total.toFixed(2)}</Text>
+            <Text style={styles.successText}>
+              I tuoi biglietti sono stati aggiunti al tuo account.
+              Riceverai una email di conferma.
+            </Text>
+          </View>
+          <View style={styles.successActions}>
+            <Button variant="golden" size="lg" onPress={onSuccess} testID="button-done">
+              Vai ai Miei Biglietti
+            </Button>
+          </View>
+        </View>
+      </SafeArea>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <SafeArea edges={['bottom']} style={styles.container}>
+        <Header showLogo showBack onBack={onBack} testID="header-checkout" />
+        <View style={styles.emptyState}>
+          <Ionicons name="bag-outline" size={80} color={colors.mutedForeground} />
+          <Text style={styles.emptyTitle}>Carrello vuoto</Text>
+          <Text style={styles.emptyText}>
+            Aggiungi biglietti per i tuoi eventi preferiti
+          </Text>
+          <Button
+            variant="golden"
+            onPress={onBack}
+            style={styles.emptyButton}
+            testID="button-back-to-events"
+          >
+            Esplora Eventi
+          </Button>
+        </View>
+      </SafeArea>
+    );
+  }
 
   return (
     <SafeArea edges={['bottom']} style={styles.container}>
-      <Header
-        showLogo
-        showBack
-        onBack={onBack}
-        testID="header-checkout"
-      />
+      <Header showLogo showBack onBack={onBack} testID="header-checkout" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -104,180 +195,71 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.steps}>
-            <View style={[styles.step, step === 'details' && styles.stepActive]}>
-              <View style={[styles.stepDot, step === 'details' && styles.stepDotActive]}>
-                <Text style={styles.stepNumber}>1</Text>
-              </View>
-              <Text style={[styles.stepLabel, step === 'details' && styles.stepLabelActive]}>
-                Dati
-              </Text>
-            </View>
-            <View style={styles.stepLine} />
-            <View style={[styles.step, step === 'payment' && styles.stepActive]}>
-              <View style={[styles.stepDot, step === 'payment' && styles.stepDotActive]}>
-                <Text style={styles.stepNumber}>2</Text>
-              </View>
-              <Text style={[styles.stepLabel, step === 'payment' && styles.stepLabelActive]}>
-                Pagamento
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.pageTitle}>Riepilogo Ordine</Text>
 
-          <View>
-            <Card style={styles.orderCard}>
-              <View style={styles.orderHeader}>
-                <Ionicons name="ticket" size={24} color={colors.primary} />
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderEventName}>{orderSummary.eventName}</Text>
-                  <Text style={styles.orderDate}>{formatDate(orderSummary.eventDate)}</Text>
-                </View>
-                <Badge variant="default">{orderSummary.tickets}x</Badge>
-              </View>
-              <View style={styles.orderTotal}>
-                <Text style={styles.orderTotalLabel}>Totale</Text>
-                <Text style={styles.orderTotalValue}>€{orderSummary.total.toFixed(2)}</Text>
-              </View>
-            </Card>
-          </View>
-
-          {step === 'details' && (
-            <View>
-              <Text style={styles.sectionTitle}>Dati Intestatario</Text>
-              <Card style={styles.formCard}>
-                <View style={styles.formRow}>
-                  <View style={styles.formHalf}>
-                    <Input
-                      label="Nome"
-                      value={formData.firstName}
-                      onChangeText={(v) => updateFormField('firstName', v)}
-                      placeholder="Mario"
-                      autoCapitalize="words"
-                      testID="input-firstName"
-                    />
+          {cartItems.map((item, index) => (
+            <View key={`${item.ticketedEventId}-${item.sectorId}-${index}`}>
+              <Card style={styles.itemCard} testID={`checkout-item-${index}`}>
+                <View style={styles.itemHeader}>
+                  <Ionicons name="ticket" size={24} color={colors.primary} />
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemEventName}>{item.eventName}</Text>
+                    <Text style={styles.itemDate}>{formatDate(item.eventDate)}</Text>
                   </View>
-                  <View style={styles.formHalf}>
-                    <Input
-                      label="Cognome"
-                      value={formData.lastName}
-                      onChangeText={(v) => updateFormField('lastName', v)}
-                      placeholder="Rossi"
-                      autoCapitalize="words"
-                      testID="input-lastName"
-                    />
+                  <Badge variant="default">{item.quantity}x</Badge>
+                </View>
+                <View style={styles.itemDetails}>
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemDetailLabel}>Tipologia</Text>
+                    <Text style={styles.itemDetailValue}>{item.ticketTypeName}</Text>
+                  </View>
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemDetailLabel}>Settore</Text>
+                    <Text style={styles.itemDetailValue}>{item.sectorName}</Text>
+                  </View>
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemDetailLabel}>Prezzo</Text>
+                    <Text style={styles.itemDetailValue}>€{item.unitPrice.toFixed(2)}</Text>
                   </View>
                 </View>
-
-                <Input
-                  label="Email"
-                  value={formData.email}
-                  onChangeText={(v) => updateFormField('email', v)}
-                  placeholder="mario@example.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  leftIcon="mail-outline"
-                  testID="input-email"
-                />
-
-                <Input
-                  label="Telefono"
-                  value={formData.phone}
-                  onChangeText={(v) => updateFormField('phone', v)}
-                  placeholder="+39 333 1234567"
-                  keyboardType="phone-pad"
-                  leftIcon="call-outline"
-                  testID="input-phone"
-                />
+                <View style={styles.itemTotal}>
+                  <Text style={styles.itemTotalLabel}>Subtotale</Text>
+                  <Text style={styles.itemTotalValue}>€{(item.unitPrice * item.quantity).toFixed(2)}</Text>
+                </View>
               </Card>
+            </View>
+          ))}
 
-              <Button
-                variant="golden"
-                size="lg"
-                onPress={handleContinue}
-                style={styles.continueButton}
-                testID="button-continue"
-              >
-                Continua al Pagamento
-              </Button>
+          <Card style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Dettaglio Pagamento</Text>
+            
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotale biglietti</Text>
+              <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Commissioni di servizio</Text>
+              <Text style={styles.summaryValue}>€{fees.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Totale</Text>
+              <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
+            </View>
+          </Card>
+
+          {step === 'processing' && (
+            <View style={styles.processingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.processingTitle}>Pagamento in corso...</Text>
+              <Text style={styles.processingText}>
+                Completa il pagamento nel browser, poi torna qui per confermare.
+              </Text>
             </View>
           )}
 
-          {step === 'payment' && (
+          {step === 'review' && (
             <View>
-              <Text style={styles.sectionTitle}>Metodo di Pagamento</Text>
-              
-              <Card style={styles.cardPreview}>
-                <LinearGradient
-                  colors={['#1e3a5f', '#0f2744']}
-                  style={styles.cardGradient}
-                >
-                  <View style={styles.cardHeader}>
-                    <Ionicons name="card" size={32} color="white" />
-                    <Text style={styles.cardBrand}>VISA</Text>
-                  </View>
-                  <Text style={styles.cardNumber}>
-                    {cardData.number || '•••• •••• •••• ••••'}
-                  </Text>
-                  <View style={styles.cardFooter}>
-                    <View>
-                      <Text style={styles.cardLabel}>SCADENZA</Text>
-                      <Text style={styles.cardValue}>{cardData.expiry || 'MM/AA'}</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.cardLabel}>CVC</Text>
-                      <Text style={styles.cardValue}>{cardData.cvc ? '•••' : '•••'}</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </Card>
-
-              <Card style={styles.formCard}>
-                <Input
-                  label="Numero Carta"
-                  value={cardData.number}
-                  onChangeText={(v) => updateCardField('number', v)}
-                  placeholder="1234 5678 9012 3456"
-                  keyboardType="number-pad"
-                  leftIcon="card-outline"
-                  testID="input-card-number"
-                />
-
-                <View style={styles.formRow}>
-                  <View style={styles.formHalf}>
-                    <Input
-                      label="Scadenza"
-                      value={cardData.expiry}
-                      onChangeText={(v) => updateCardField('expiry', v)}
-                      placeholder="MM/AA"
-                      keyboardType="number-pad"
-                      testID="input-card-expiry"
-                    />
-                  </View>
-                  <View style={styles.formHalf}>
-                    <Input
-                      label="CVC"
-                      value={cardData.cvc}
-                      onChangeText={(v) => updateCardField('cvc', v)}
-                      placeholder="123"
-                      keyboardType="number-pad"
-                      secureTextEntry
-                      testID="input-card-cvc"
-                    />
-                  </View>
-                </View>
-              </Card>
-
-              <View style={styles.securityBadges}>
-                <View style={styles.securityBadge}>
-                  <Ionicons name="lock-closed" size={16} color={colors.success} />
-                  <Text style={styles.securityText}>SSL Sicuro</Text>
-                </View>
-                <View style={styles.securityBadge}>
-                  <Ionicons name="shield-checkmark" size={16} color={colors.success} />
-                  <Text style={styles.securityText}>PCI DSS</Text>
-                </View>
-              </View>
-
               <Button
                 variant="golden"
                 size="lg"
@@ -286,17 +268,15 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
                 style={styles.payButton}
                 testID="button-pay"
               >
-                <View style={styles.payButtonContent}>
-                  <Ionicons name="lock-closed" size={20} color={colors.primaryForeground} />
-                  <Text style={styles.payButtonText}>
-                    Paga €{orderSummary.total.toFixed(2)}
-                  </Text>
-                </View>
+                {loading ? 'Elaborazione...' : `Paga €${total.toFixed(2)}`}
               </Button>
 
-              <Pressable onPress={() => setStep('details')} style={styles.backLink}>
-                <Text style={styles.backLinkText}>← Torna ai dati</Text>
-              </Pressable>
+              <View style={styles.securityBadges}>
+                <View style={styles.securityBadge}>
+                  <Ionicons name="lock-closed" size={16} color={colors.success} />
+                  <Text style={styles.securityBadgeText}>Pagamento sicuro con Stripe</Text>
+                </View>
+              </View>
             </View>
           )}
         </ScrollView>
@@ -320,73 +300,78 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-  steps: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-  },
-  step: {
-    alignItems: 'center',
-    opacity: 0.5,
-  },
-  stepActive: {
-    opacity: 1,
-  },
-  stepDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  stepDotActive: {
-    backgroundColor: colors.primary,
-  },
-  stepNumber: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '600',
+  pageTitle: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '700',
     color: colors.foreground,
-  },
-  stepLabel: {
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
-  },
-  stepLabelActive: {
-    color: colors.foreground,
-    fontWeight: '500',
-  },
-  stepLine: {
-    width: 60,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.md,
     marginBottom: spacing.lg,
   },
-  orderCard: {
-    padding: spacing.md,
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '600',
+    color: colors.foreground,
+    marginTop: spacing.lg,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+    marginTop: spacing.sm,
     marginBottom: spacing.xl,
   },
-  orderHeader: {
+  emptyButton: {
+    paddingHorizontal: spacing.xxl,
+  },
+  itemCard: {
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  orderInfo: {
+  itemInfo: {
     flex: 1,
   },
-  orderEventName: {
+  itemEventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: colors.foreground,
   },
-  orderDate: {
+  itemDate: {
     fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
+    marginTop: 2,
   },
-  orderTotal: {
+  itemDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  itemDetail: {
+    alignItems: 'center',
+  },
+  itemDetailLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.mutedForeground,
+    marginBottom: 2,
+  },
+  itemDetailValue: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: colors.foreground,
+  },
+  itemTotal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -395,113 +380,125 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  orderTotalLabel: {
-    fontSize: typography.fontSize.base,
+  itemTotalLabel: {
+    fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
   },
-  orderTotalValue: {
-    fontSize: typography.fontSize.xl,
+  itemTotalValue: {
+    fontSize: typography.fontSize.lg,
     fontWeight: '700',
     color: colors.primary,
   },
-  sectionTitle: {
-    fontSize: typography.fontSize.lg,
+  summaryCard: {
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  summaryTitle: {
+    fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: colors.foreground,
     marginBottom: spacing.md,
   },
-  formCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  formRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  formHalf: {
-    flex: 1,
-  },
-  continueButton: {
-    marginTop: spacing.md,
-  },
-  cardPreview: {
-    padding: 0,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  cardGradient: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.xl,
-  },
-  cardHeader: {
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.sm,
   },
-  cardBrand: {
+  summaryLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.mutedForeground,
+  },
+  summaryValue: {
+    fontSize: typography.fontSize.sm,
+    color: colors.foreground,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
+  },
+  totalLabel: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    color: colors.foreground,
+  },
+  totalValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: 'white',
-    letterSpacing: 2,
+    color: colors.primary,
   },
-  cardNumber: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: '500',
-    color: 'white',
-    letterSpacing: 4,
-    marginBottom: spacing.lg,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    gap: spacing.xl,
-  },
-  cardLabel: {
-    fontSize: typography.fontSize.xs,
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: 2,
-  },
-  cardValue: {
-    fontSize: typography.fontSize.base,
-    color: 'white',
-    fontWeight: '500',
+  payButton: {
+    marginBottom: spacing.md,
   },
   securityBadges: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.lg,
-    marginBottom: spacing.lg,
   },
   securityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  securityText: {
+  securityBadgeText: {
     fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
   },
-  payButton: {
-    marginBottom: spacing.md,
-  },
-  payButtonContent: {
-    flexDirection: 'row',
+  processingContainer: {
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+    gap: spacing.md,
   },
-  payButtonText: {
-    fontSize: typography.fontSize.base,
+  processingTitle: {
+    fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: colors.foreground,
   },
-  backLink: {
-    alignItems: 'center',
-    padding: spacing.md,
-  },
-  backLinkText: {
+  processingText: {
     fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.xl,
+  },
+  successIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.lg,
+  },
+  successTitle: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '700',
+    color: colors.foreground,
+    textAlign: 'center',
+  },
+  successAmount: {
+    fontSize: typography.fontSize['3xl'],
+    fontWeight: '800',
     color: colors.primary,
-    fontWeight: '500',
+    textAlign: 'center',
+    marginVertical: spacing.sm,
+  },
+  successText: {
+    fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+  },
+  successActions: {
+    width: '100%',
+    paddingHorizontal: spacing.xl,
   },
 });
 
