@@ -97,12 +97,23 @@ Automatic detection and processing of SIAE email responses with intelligent erro
 Events are categorized for `gestore` view into "In Corso", "Futuri", and "Passati". The public-facing home page features event categories, geolocation support with a "Vicino a te" filter, and Google Maps integration for venue display.
 
 ### Mobile App (Expo React Native)
-The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 54 and React Native. It features a dark nightclub theme (#0a0e17 background, #FFD700 golden accent, #00CED1 teal status) with glass-morphism effects matching the web design exactly. Uses React Navigation for routing, TanStack Query for data fetching, and Zustand for state management. Backend connection: https://workspace.jonathanpetrell.repl.co
+The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 and React Native 0.76 with TypeScript. It features a dark nightclub theme (#0a0e17 background, #FFD700 golden accent, #00CED1 teal status) with glass-morphism effects matching the web design exactly. Uses a custom AppNavigator with history stack management, TanStack Query for data fetching, and Zustand for state management. Backend connection: https://workspace.jonathanpetrell.repl.co
 
-**Mobile Modules (155 screens total - Complete Feature Parity):**
+**Current MVP Implementation (19 screens):**
+-   **Authentication**: SplashScreen, LoginScreen, RegisterScreen, ForgotPasswordScreen (4 screens)
+-   **Public**: LandingScreen, EventsListScreen, EventDetailScreen, CartScreen, CheckoutScreen, VenuesScreen, VenueDetailScreen, ResalesScreen (8 screens)
+-   **Account**: AccountDashboard, TicketsScreen, TicketDetailScreen, WalletScreen, WalletTopUpScreen, NameChangeScreen, SubscriptionsScreen (7 screens)
+
+**Design System:**
+-   Theme tokens: colors, gradients (golden, teal, purple, blue, pink, cardPurple, creditCard), spacing, borderRadius, typography, shadows
+-   Reusable components: Button, Card, Input, Badge, Avatar, SafeArea, Header, Loading, ActionCard
+-   Haptic feedback via Expo Haptics with triggerHaptic utility
+-   Animations via React Native Reanimated with spring effects
+
+**Mobile Modules (155 screens planned - Complete Feature Parity):**
 -   **Authentication**: Login, Register, Forgot Password (3 screens)
--   **Public Events**: Home, Landing, Events list, Event details, Venues, Cart, Checkout, TicketVerify (8 screens)
--   **Account Management**: Profile, Tickets, Wallet, Name Change, Resales, Subscriptions, ClientWallet, ResaleSuccess (8 screens)
+-   **Public Events**: Home, Landing, Events list, Event details, Venues, VenueDetail, Cart, Checkout, TicketVerify (9 screens)
+-   **Account Management**: Profile, Tickets, Wallet, WalletTopUp, Name Change, Resales, Subscriptions, ClientWallet, ResaleSuccess (9 screens)
 -   **SIAE Ticketing**: Dashboard, Transmissions, Reports, Config, ActivationCards, Customers, Events, Tickets, TicketTypes, NameChanges, Resales, Transactions, BoxOffice, Subscriptions, NumberedSeats, AuditLogs, Approvals, Tables, TicketingConsole, ReportC1, ReportC2 (22 screens)
 -   **Inventory/Magazzino**: Products, Stock levels, Consumption, Adjustments, Warehouse, Suppliers, PurchaseOrders, ReturnToWarehouse (8 screens)
 -   **Management/Organizer**: Dashboard, Events, Locations, LocationDetail, Stations, StationDetail, EventWizard, DirectStock, BartenderStock, EventFormats, NightFile, Personnel, Staff, Reports, EventPageEditor (15 screens)
