@@ -1,7 +1,7 @@
 {
   "name": "event4u-mobile",
   "version": "1.0.0",
-  "main": "App.tsx",
+  "main": "expo/AppEntry",
   "scripts": {
     "start": "expo start --tunnel",
     "lan": "expo start --lan",
