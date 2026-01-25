@@ -1,9 +1,22 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
 import { Asset } from 'expo-asset';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withRepeat,
+  withSequence,
+  withDelay,
+  Easing,
+  interpolate,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, spacing } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
+const { width, height } = Dimensions.get('window');
 const logoImage = require('../../../assets/logo.png');
 
 interface SplashScreenProps {
@@ -13,6 +26,18 @@ interface SplashScreenProps {
 export function SplashScreen({ onReady }: SplashScreenProps) {
   const { isLoading, isAuthenticated } = useAuth();
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+
+  const logoScale = useSharedValue(0.3);
+  const logoOpacity = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+  const textTranslateY = useSharedValue(20);
+  const glowScale = useSharedValue(0.8);
+  const glowOpacity = useSharedValue(0);
+  const ringScale = useSharedValue(0.5);
+  const ringOpacity = useSharedValue(0);
+  const dot1Opacity = useSharedValue(0.3);
+  const dot2Opacity = useSharedValue(0.3);
+  const dot3Opacity = useSharedValue(0.3);
 
   const loadAssets = useCallback(async () => {
     try {
@@ -28,34 +53,141 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
   }, [loadAssets]);
 
   useEffect(() => {
+    if (assetsLoaded) {
+      glowOpacity.value = withTiming(0.6, { duration: 800 });
+      glowScale.value = withRepeat(
+        withSequence(
+          withTiming(1.1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.9, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+
+      ringOpacity.value = withDelay(200, withTiming(0.3, { duration: 600 }));
+      ringScale.value = withDelay(200, withSpring(1, { damping: 12 }));
+
+      logoOpacity.value = withDelay(300, withTiming(1, { duration: 600 }));
+      logoScale.value = withDelay(300, withSpring(1, { damping: 10, stiffness: 100 }));
+
+      textOpacity.value = withDelay(600, withTiming(1, { duration: 500 }));
+      textTranslateY.value = withDelay(600, withSpring(0, { damping: 12 }));
+
+      dot1Opacity.value = withDelay(800, withRepeat(
+        withSequence(
+          withTiming(1, { duration: 400 }),
+          withTiming(0.3, { duration: 400 })
+        ),
+        -1,
+        true
+      ));
+      dot2Opacity.value = withDelay(1000, withRepeat(
+        withSequence(
+          withTiming(1, { duration: 400 }),
+          withTiming(0.3, { duration: 400 })
+        ),
+        -1,
+        true
+      ));
+      dot3Opacity.value = withDelay(1200, withRepeat(
+        withSequence(
+          withTiming(1, { duration: 400 }),
+          withTiming(0.3, { duration: 400 })
+        ),
+        -1,
+        true
+      ));
+    }
+  }, [assetsLoaded]);
+
+  useEffect(() => {
     if (!isLoading && assetsLoaded) {
       const timer = setTimeout(() => {
         onReady(isAuthenticated);
-      }, 500);
+      }, 1200);
       return () => clearTimeout(timer);
     }
   }, [isLoading, isAuthenticated, assetsLoaded, onReady]);
 
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: glowScale.value }],
+    opacity: glowOpacity.value,
+  }));
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: ringOpacity.value,
+  }));
+
+  const logoAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoScale.value }],
+    opacity: logoOpacity.value,
+  }));
+
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: textTranslateY.value }],
+  }));
+
+  const dot1Style = useAnimatedStyle(() => ({
+    opacity: dot1Opacity.value,
+    transform: [{ scale: interpolate(dot1Opacity.value, [0.3, 1], [0.8, 1.2]) }],
+  }));
+
+  const dot2Style = useAnimatedStyle(() => ({
+    opacity: dot2Opacity.value,
+    transform: [{ scale: interpolate(dot2Opacity.value, [0.3, 1], [0.8, 1.2]) }],
+  }));
+
+  const dot3Style = useAnimatedStyle(() => ({
+    opacity: dot3Opacity.value,
+    transform: [{ scale: interpolate(dot3Opacity.value, [0.3, 1], [0.8, 1.2]) }],
+  }));
+
   return (
     <View style={styles.container}>
-      <View style={styles.glow} />
-      
-      <View style={styles.logoContainer}>
-        <Image
-          source={logoImage}
-          style={[styles.logo, { tintColor: '#FFFFFF' }]}
-          resizeMode="contain"
-        />
-      </View>
+      <LinearGradient
+        colors={['#0a0e17', '#0f1520', '#0a0e17']}
+        style={StyleSheet.absoluteFill}
+      />
 
-      <View style={styles.textContainer}>
-        <Text style={styles.subtitle}>La tua serata inizia qui</Text>
+      <Animated.View style={[styles.glowOuter, glowStyle]}>
+        <LinearGradient
+          colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)', 'transparent']}
+          style={styles.glowGradient}
+        />
+      </Animated.View>
+
+      <Animated.View style={[styles.ring, ringStyle]} />
+      <Animated.View style={[styles.ringInner, ringStyle]} />
+
+      <View style={styles.centerContent}>
+        <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+          <LinearGradient
+            colors={['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.08)']}
+            style={styles.logoBg}
+          >
+            <Image
+              source={logoImage}
+              style={[styles.logo, { tintColor: '#FFFFFF' }]}
+              resizeMode="contain"
+            />
+          </LinearGradient>
+        </Animated.View>
+
+        <Animated.View style={textAnimatedStyle}>
+          <Text style={styles.tagline}>La tua serata inizia qui</Text>
+        </Animated.View>
       </View>
 
       <View style={styles.loadingContainer}>
-        <View style={styles.loadingDot} />
-        <View style={[styles.loadingDot, styles.loadingDotDelay1]} />
-        <View style={[styles.loadingDot, styles.loadingDotDelay2]} />
+        <Animated.View style={[styles.loadingDot, dot1Style]} />
+        <Animated.View style={[styles.loadingDot, dot2Style]} />
+        <Animated.View style={[styles.loadingDot, dot3Style]} />
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Event4U</Text>
       </View>
     </View>
   );
@@ -68,48 +200,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glow: {
+  glowOuter: {
     position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: colors.primary,
-    opacity: 0.15,
-    top: '30%',
+    width: width * 1.5,
+    height: width * 1.5,
+    borderRadius: width * 0.75,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: width * 0.75,
+  },
+  ring: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  ringInner: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.1)',
+  },
+  centerContent: {
+    alignItems: 'center',
   },
   logoContainer: {
     marginBottom: spacing.xl,
+  },
+  logoBg: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
   },
   logo: {
-    width: 200,
-    height: 80,
+    width: 120,
+    height: 60,
   },
-  textContainer: {
-    alignItems: 'center',
-  },
-  subtitle: {
+  tagline: {
     fontSize: typography.fontSize.lg,
     color: colors.mutedForeground,
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 120,
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
   loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: colors.primary,
-    opacity: 0.3,
   },
-  loadingDotDelay1: {
-    opacity: 0.6,
+  footer: {
+    position: 'absolute',
+    bottom: 60,
   },
-  loadingDotDelay2: {
-    opacity: 1,
+  footerText: {
+    fontSize: typography.fontSize.sm,
+    color: 'rgba(255, 255, 255, 0.3)',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
 });
 
