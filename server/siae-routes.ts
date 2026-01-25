@@ -1301,10 +1301,13 @@ router.post("/api/bridge/send-rca-test/:ticketedEventId", async (req: Request, r
     }));
     
     const progressivo = parseInt(req.query.progressivo as string) || 104;
+    const isResend = req.query.resend === 'true';
+    console.log(`[SIAE-RCA-TEST] Progressivo: ${progressivo}, Sostituzione: ${isResend ? 'S' : 'N'}`);
     
     const rcaParams = {
       companyId: ticketedEvent.companyId,
       eventId: ticketedEvent.id,
+      forceSubstitution: isResend,
       event: {
         id: ticketedEvent.id, name: event?.name || 'Evento', date: eventDate,
         startTime: '20:00', endTime: '04:00', genreCode: ticketedEvent.genreCode || '61',
