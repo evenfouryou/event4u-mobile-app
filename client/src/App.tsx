@@ -93,7 +93,6 @@ import PrTables from "@/pages/pr-tables";
 import PrStaff from "@/pages/pr-staff";
 import PrMyEvents from "@/pages/pr-my-events";
 import PrEvents from "@/pages/pr-events";
-import PrApp from "@/pages/pr-app";
 import PrEventDashboard from "@/pages/pr-event-dashboard";
 import StaffApp from "@/pages/staff-app";
 import PrWallet from "@/pages/pr-wallet";
@@ -211,8 +210,6 @@ function Router() {
         <Route path="/account">
           <Redirect to="/login" />
         </Route>
-        {/* PR App - uses its own authentication (usePrAuth) */}
-        <Route path="/pr-app" component={PrApp} />
         <Route path="/staff-app" component={StaffApp} />
         <Route path="/pr-wallet" component={PrWallet} />
         <Route component={NotFound} />
@@ -242,15 +239,6 @@ function Router() {
 
   // PR and Capo Staff dedicated routes - Mobile-first interface
   if ((user as any)?.role === 'pr' || (user as any)?.role === 'capo_staff') {
-    // For /pr-app route, render without sidebar/header for clean mobile experience
-    if (location.startsWith('/pr-app')) {
-      return (
-        <div className="min-h-screen bg-background">
-          <PrApp />
-        </div>
-      );
-    }
-    
     // For /staff-app route, render without sidebar/header for clean mobile experience
     if (location.startsWith('/staff-app')) {
       return (
@@ -292,7 +280,7 @@ function Router() {
                 <Route path="/scanner/stats/:eventId?" component={ScannerStats} />
                 <Route path="/scanner" component={ScannerHome} />
                 <Route path="/">
-                  <Redirect to="/pr-app" />
+                  <Redirect to="/pr/my-events" />
                 </Route>
                 <Route component={NotFound} />
               </Switch>
@@ -425,7 +413,6 @@ function Router() {
               <Route path="/pr/events" component={PrEvents} />
               <Route path="/pr/events/:eventId" component={PrEventDashboard} />
               <Route path="/pr-wallet" component={PrWallet} />
-              <Route path="/pr-app" component={PrApp} />
               <Route path="/staff-app" component={StaffApp} />
               <Route path="/marketing/email" component={MarketingEmailPage} />
               <Route path="/loyalty/admin" component={LoyaltyAdminPage} />
