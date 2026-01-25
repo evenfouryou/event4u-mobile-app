@@ -4439,11 +4439,12 @@ export const eventPrAssignments = pgTable("event_pr_assignments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// PR List Assignments - Assegnazione liste specifiche ai PR
+// PR List Assignments - Assegnazione liste specifiche ai PR con quota
 export const prListAssignments = pgTable("pr_list_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   prAssignmentId: varchar("pr_assignment_id").notNull().references(() => eventPrAssignments.id, { onDelete: 'cascade' }),
   listId: varchar("list_id").notNull().references(() => eventLists.id, { onDelete: 'cascade' }),
+  quota: integer("quota"), // Numero max di persone che il PR può aggiungere a questa lista (null = illimitato)
   createdAt: timestamp("created_at").defaultNow(),
 });
 
