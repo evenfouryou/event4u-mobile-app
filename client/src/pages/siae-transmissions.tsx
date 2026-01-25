@@ -1447,6 +1447,7 @@ export default function SiaeTransmissionsPage() {
                                 variant="destructive"
                                 onClick={() => {
                                   setSelectedTransmission(trans);
+                                  setForceSubstitution(true); // Default Sostituzione="S" per reinvio
                                   setIsResendDialogOpen(true);
                                 }}
                                 data-testid={`button-resend-${trans.id}`}

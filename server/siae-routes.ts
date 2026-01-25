@@ -6620,7 +6620,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         companyName: company?.name || 'N/D',
         taxId,
         progressivo: nextProgressivo,
-        forceSubstitution: true
+        forceSubstitution // Usa parametro passato dal frontend (default true per resend)
       });
       
       generatedXml = rcaResult.xml;
@@ -6687,8 +6687,8 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
         subscriptions: hydratedData.subscriptions,
         // FIX 2026-01-19: Passa nomeFile per attributo NomeFile obbligatorio (errore SIAE 0600)
         nomeFile: resendPreGeneratedFileName,
-        // FIX 2026-01-21: Resend = Sostituzione="S" perché stiamo sostituendo un file precedente
-        forceSubstitution: true,
+        // FIX 2026-01-25: Usa parametro forceSubstitution passato dal frontend
+        forceSubstitution,
       });
       
       generatedXml = c1Result.xml;
@@ -6700,11 +6700,11 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       resendEmailFileName = resendPreGeneratedFileName;
     }
     
-    // FIX 2026-01-24: Diagnostic log per verifica XML sostituzione
+    // FIX 2026-01-25: Diagnostic log per verifica XML sostituzione
     console.log('[SIAE-ROUTES] ===== SUBSTITUTION XML DIAGNOSTIC =====');
     console.log(`[SIAE-ROUTES] Transmission Type: ${original.transmissionType}`);
     console.log(`[SIAE-ROUTES] Progressive Number: ${nextProgressivo} (incremented from ${original.progressivoInvio || 1})`);
-    console.log(`[SIAE-ROUTES] forceSubstitution: true (Sostituzione="S")`);
+    console.log(`[SIAE-ROUTES] forceSubstitution: ${forceSubstitution} (Sostituzione="${forceSubstitution ? 'S' : 'N'}")`);
     console.log(`[SIAE-ROUTES] File Name: ${resendEmailFileName}`);
     // Log first 500 chars of XML to verify structure
     console.log(`[SIAE-ROUTES] XML Preview:\n${generatedXml.substring(0, 800)}`);
