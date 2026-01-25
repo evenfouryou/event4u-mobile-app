@@ -88,12 +88,12 @@ export function AccountDashboard({
         <Pressable
           onPress={() => {
             triggerHaptic('light');
-            onNavigateTickets();
+            onNavigateSettings();
           }}
           style={styles.settingsButton}
-          testID="button-my-tickets"
+          testID="button-settings"
         >
-          <Ionicons name="ticket-outline" size={24} color={colors.mutedForeground} />
+          <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
         </Pressable>
       </View>
       <ScrollView

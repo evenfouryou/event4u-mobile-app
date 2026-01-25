@@ -15,6 +15,7 @@ import { WalletScreen } from '@/screens/account/WalletScreen';
 import { WalletTopUpScreen } from '@/screens/account/WalletTopUpScreen';
 import { NameChangeScreen } from '@/screens/account/NameChangeScreen';
 import { SubscriptionsScreen } from '@/screens/account/SubscriptionsScreen';
+import { SettingsScreen } from '@/screens/account/SettingsScreen';
 
 import { LandingScreen } from '@/screens/public/LandingScreen';
 import { EventsListScreen } from '@/screens/public/EventsListScreen';
@@ -44,7 +45,8 @@ type Screen =
   | { name: 'wallet' }
   | { name: 'walletTopUp' }
   | { name: 'nameChange'; params: { ticketId: string } }
-  | { name: 'subscriptions' };
+  | { name: 'subscriptions' }
+  | { name: 'settings' };
 
 export function AppNavigator() {
   const { isAuthenticated } = useAuth();
@@ -195,7 +197,7 @@ export function AppNavigator() {
             onNavigateProfile={() => navigate({ name: 'subscriptions' })}
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
-            onNavigateSettings={() => navigate({ name: 'tickets' })}
+            onNavigateSettings={() => navigate({ name: 'settings' })}
             onLogout={() => resetTo({ name: 'landing' })}
             onGoBack={() => resetTo({ name: 'landing' })}
           />
@@ -249,6 +251,16 @@ export function AppNavigator() {
           <SubscriptionsScreen
             onBack={goBack}
             onExploreSubscriptions={() => navigate({ name: 'venues' })}
+          />
+        );
+
+      case 'settings':
+        return (
+          <SettingsScreen
+            onBack={goBack}
+            onNavigateProfile={() => navigate({ name: 'subscriptions' })}
+            onNavigateNameChange={() => navigate({ name: 'tickets' })}
+            onLogout={() => resetTo({ name: 'landing' })}
           />
         );
 
