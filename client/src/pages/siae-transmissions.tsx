@@ -251,8 +251,8 @@ export default function SiaeTransmissionsPage() {
     e.status === 'scheduled' // eventi programmati per oggi
   ) || [];
 
-  // Fetch validation prerequisites for selected event
-  const { data: prerequisiteValidation, isLoading: isLoadingPrerequisites } = useQuery<{
+  // Fetch validation prerequisites for selected event - FIX 2026-01-25: Attiva per TUTTI i tipi di report
+  const { data: prerequisiteValidation, isLoading: isLoadingPrerequisites, refetch: refetchPrerequisites } = useQuery<{
     isReady: boolean;
     score: number;
     errors: Array<{ code: string; field: string; category: string; message: string; resolution: string; siaeErrorCode?: string }>;
@@ -260,7 +260,9 @@ export default function SiaeTransmissionsPage() {
     checklist: Array<{ category: string; field: string; label: string; status: string; value?: string | number | null; required: boolean }>;
   }>({
     queryKey: ['/api/siae/ticketed-events', selectedEventId, 'validate-prerequisites'],
-    enabled: !!selectedEventId && c1Type === 'rca',
+    enabled: !!selectedEventId, // FIX: Attiva per tutti i tipi (rca, daily, monthly)
+    staleTime: 0, // FIX: Sempre ricarica dati freschi
+    refetchOnMount: 'always', // FIX: Ricarica quando il componente monta
   });
 
   // Gmail OAuth status (system-wide, always enabled)
@@ -1643,8 +1645,8 @@ export default function SiaeTransmissionsPage() {
                 )}
               </div>
               
-              {/* Checklist Validazione Prerequisiti SIAE */}
-              {c1Type === 'rca' && selectedEventId && (
+              {/* Checklist Validazione Prerequisiti SIAE - FIX 2026-01-25: Mostra per TUTTI i tipi di report */}
+              {selectedEventId && (
                 <div className="p-3 rounded-lg border">
                   {isLoadingPrerequisites ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -1664,9 +1666,21 @@ export default function SiaeTransmissionsPage() {
                             {prerequisiteValidation.isReady ? 'Pronto per trasmissione' : 'Verifica richiesta'}
                           </span>
                         </div>
-                        <Badge variant={prerequisiteValidation.score >= 80 ? 'default' : prerequisiteValidation.score >= 50 ? 'secondary' : 'destructive'}>
-                          {prerequisiteValidation.score}%
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6"
+                            onClick={() => refetchPrerequisites()}
+                            title="Aggiorna validazione"
+                            data-testid="button-refresh-prerequisites"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </Button>
+                          <Badge variant={prerequisiteValidation.score >= 80 ? 'default' : prerequisiteValidation.score >= 50 ? 'secondary' : 'destructive'}>
+                            {prerequisiteValidation.score}%
+                          </Badge>
+                        </div>
                       </div>
                       
                       {/* Errori bloccanti */}
@@ -1793,7 +1807,7 @@ export default function SiaeTransmissionsPage() {
                 }}
                 disabled={
                   (c1Type === 'rca' && !selectedEventId) || 
-                  (c1Type === 'rca' && prerequisiteValidation && !prerequisiteValidation.isReady) ||
+                  (selectedEventId && prerequisiteValidation && !prerequisiteValidation.isReady) || // FIX: Blocca per TUTTI i tipi se validazione fallisce
                   !dailyDate || 
                   !dailyEmail || 
                   sendC1Mutation.isPending
@@ -2888,7 +2902,8 @@ export default function SiaeTransmissionsPage() {
             </div>
             
             {/* Checklist Validazione Prerequisiti SIAE - Mobile */}
-            {c1Type === 'rca' && selectedEventId && (
+            {/* FIX 2026-01-25: Mostra validazione per TUTTI i tipi di report */}
+            {selectedEventId && (
               <div className="p-3 rounded-lg border">
                 {isLoadingPrerequisites ? (
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -2908,9 +2923,20 @@ export default function SiaeTransmissionsPage() {
                           {prerequisiteValidation.isReady ? 'Pronto' : 'Verifica richiesta'}
                         </span>
                       </div>
-                      <Badge variant={prerequisiteValidation.score >= 80 ? 'default' : prerequisiteValidation.score >= 50 ? 'secondary' : 'destructive'}>
-                        {prerequisiteValidation.score}%
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => refetchPrerequisites()}
+                          title="Aggiorna validazione"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                        </Button>
+                        <Badge variant={prerequisiteValidation.score >= 80 ? 'default' : prerequisiteValidation.score >= 50 ? 'secondary' : 'destructive'}>
+                          {prerequisiteValidation.score}%
+                        </Badge>
+                      </div>
                     </div>
                     
                     {/* Errori bloccanti */}
@@ -3001,7 +3027,7 @@ export default function SiaeTransmissionsPage() {
               })}
               disabled={
                 (c1Type === 'rca' && !selectedEventId) || 
-                (c1Type === 'rca' && prerequisiteValidation && !prerequisiteValidation.isReady) ||
+                (selectedEventId && prerequisiteValidation && !prerequisiteValidation.isReady) || // FIX: Blocca per TUTTI i tipi se validazione fallisce
                 !dailyDate || 
                 !dailyEmail || 
                 sendC1Mutation.isPending
