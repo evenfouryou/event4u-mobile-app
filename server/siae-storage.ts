@@ -841,6 +841,11 @@ export class SiaeStorage implements ISiaeStorage {
       totalRevenue: siaeTicketedEvents.totalRevenue,
       createdAt: siaeTicketedEvents.createdAt,
       updatedAt: siaeTicketedEvents.updatedAt,
+      // FIX 2026-01-25: Aggiunti campi mancanti per validazione prerequisiti
+      author: siaeTicketedEvents.author,
+      performer: siaeTicketedEvents.performer,
+      filmNationality: siaeTicketedEvents.filmNationality,
+      entertainmentIncidence: siaeTicketedEvents.entertainmentIncidence,
       eventName: events.name,
       eventDate: events.startDatetime,
       eventTime: sql<string>`TO_CHAR(${events.startDatetime}, 'HH24:MI')`,

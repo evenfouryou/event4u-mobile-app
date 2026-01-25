@@ -3118,7 +3118,8 @@ function getGenreValidationRules(genreCode: string): GenreValidationRules {
 }
 
 /**
- * Valida Codice Fiscale italiano (16 caratteri alfanumerici)
+ * Valida Codice Fiscale italiano (16 caratteri alfanumerici) o P.IVA
+ * FIX 2026-01-25: Supporta anche formato europeo IT + 11 cifre
  */
 function validateCodiceFiscale(cf: string): { valid: boolean; error?: string } {
   if (!cf) return { valid: false, error: 'Codice Fiscale mancante' };
@@ -3130,7 +3131,12 @@ function validateCodiceFiscale(cf: string): { valid: boolean; error?: string } {
     return { valid: true };
   }
   
-  // Codice Fiscale: 16 caratteri alfanumerici
+  // P.IVA formato europeo: IT + 11 cifre (es. IT12345678901)
+  if (/^IT\d{11}$/.test(cleaned)) {
+    return { valid: true };
+  }
+  
+  // Codice Fiscale: 16 caratteri alfanumerici (formato standard)
   if (/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(cleaned)) {
     return { valid: true };
   }
@@ -3141,7 +3147,7 @@ function validateCodiceFiscale(cf: string): { valid: boolean; error?: string } {
   
   return { 
     valid: false, 
-    error: `Formato non valido (${cleaned.length} caratteri). Atteso: P.IVA 11 cifre o CF 16 caratteri` 
+    error: `Formato non valido (${cleaned.length} caratteri). Atteso: P.IVA 11 cifre, IT+11 cifre, o CF 16 caratteri` 
   };
 }
 
