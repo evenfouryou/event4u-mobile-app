@@ -1320,14 +1320,32 @@ router.get("/api/e4u/pr-assignments/:assignmentId/lists", requireAuth, requireGe
 });
 
 // POST /api/e4u/pr-assignments/:assignmentId/lists - Set list assignments for a PR
+// Supporta due formati:
+// - Vecchio: { listIds: string[] } - backward compatible, quota null
+// - Nuovo: { listAssignments: [{listId: string, quota?: number}] } - con quota
 router.post("/api/e4u/pr-assignments/:assignmentId/lists", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { assignmentId } = req.params;
-    const { listIds } = req.body;
+    const { listIds, listAssignments: listAssignmentsInput } = req.body;
     const user = req.user as any;
     
-    if (!Array.isArray(listIds)) {
-      return res.status(400).json({ message: "listIds deve essere un array" });
+    // Supporta entrambi i formati
+    let assignments: { listId: string; quota?: number | null }[] = [];
+    
+    if (listAssignmentsInput && Array.isArray(listAssignmentsInput)) {
+      // Nuovo formato con quota
+      assignments = listAssignmentsInput.map((a: any) => ({
+        listId: a.listId,
+        quota: a.quota ?? null,
+      }));
+    } else if (listIds && Array.isArray(listIds)) {
+      // Vecchio formato senza quota
+      assignments = listIds.map((listId: string) => ({
+        listId,
+        quota: null,
+      }));
+    } else {
+      return res.status(400).json({ message: "listIds o listAssignments deve essere un array" });
     }
     
     const [prAssignment] = await db.select()
@@ -1345,18 +1363,19 @@ router.post("/api/e4u/pr-assignments/:assignmentId/lists", requireAuth, requireG
     await db.delete(prListAssignments)
       .where(eq(prListAssignments.prAssignmentId, assignmentId));
     
-    if (listIds.length === 0) {
+    if (assignments.length === 0) {
       return res.json([]);
     }
     
-    const newAssignments = listIds.map((listId: string) => ({
+    const newAssignments = assignments.map((a) => ({
       prAssignmentId: assignmentId,
-      listId,
+      listId: a.listId,
+      quota: a.quota,
     }));
     
     await db.insert(prListAssignments).values(newAssignments);
     
-    const listAssignments = await db.select({
+    const listAssignmentsResult = await db.select({
       assignment: prListAssignments,
       list: eventLists,
     })
@@ -1365,7 +1384,7 @@ router.post("/api/e4u/pr-assignments/:assignmentId/lists", requireAuth, requireG
       .where(eq(prListAssignments.prAssignmentId, assignmentId))
       .orderBy(desc(prListAssignments.createdAt));
     
-    res.status(201).json(listAssignments);
+    res.status(201).json(listAssignmentsResult);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }
