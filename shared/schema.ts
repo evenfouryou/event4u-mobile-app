@@ -1545,6 +1545,12 @@ export const siaeTickets = pgTable("siae_tickets", {
   pdfUrl: varchar("pdf_url", { length: 500 }),
   // Testo libero personalizzabile (inserito dalla cassa)
   customText: varchar("custom_text", { length: 255 }),
+  // PR Tracking - vendite biglietti via PR
+  prProfileId: varchar("pr_profile_id").references(() => prProfiles.id),
+  prCode: varchar("pr_code", { length: 20 }), // Codice PR al momento dell'acquisto
+  prCommissionAmount: decimal("pr_commission_amount", { precision: 10, scale: 2 }).default('0'),
+  prCommissionPaid: boolean("pr_commission_paid").default(false),
+  prCommissionPaidAt: timestamp("pr_commission_paid_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -6486,3 +6492,148 @@ export type InsertMarketingDailyStats = z.infer<typeof insertMarketingDailyStats
 
 export type CustomerSegment = typeof customerSegments.$inferSelect;
 export type InsertCustomerSegment = z.infer<typeof insertCustomerSegmentSchema>;
+
+// ========== PR REWARDS & INCENTIVES ==========
+
+// Obiettivi/Premi PR configurati dal Gestore
+export const prRewards = pgTable("pr_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  eventId: varchar("event_id").references(() => events.id), // null = reward valido per tutti gli eventi
+  
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  rewardType: varchar("reward_type", { length: 30 }).notNull(), // 'bonus_cash' | 'percentage_bonus' | 'gift' | 'badge'
+  
+  // Condizioni per ottenere il premio
+  targetType: varchar("target_type", { length: 30 }).notNull(), // 'tickets_sold' | 'guests_added' | 'tables_booked' | 'revenue'
+  targetValue: integer("target_value").notNull(), // es. 50 biglietti, 100 ospiti
+  targetPeriod: varchar("target_period", { length: 20 }).default('event'), // 'event' | 'weekly' | 'monthly' | 'all_time'
+  
+  // Valore del premio
+  rewardValue: decimal("reward_value", { precision: 10, scale: 2 }).notNull(), // € bonus o % extra
+  rewardDescription: varchar("reward_description", { length: 255 }), // Descrizione premio fisico
+  
+  isActive: boolean("is_active").notNull().default(true),
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_pr_rewards_company").on(table.companyId),
+  index("idx_pr_rewards_event").on(table.eventId),
+]);
+
+export const prRewardsRelations = relations(prRewards, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [prRewards.companyId],
+    references: [companies.id],
+  }),
+  event: one(events, {
+    fields: [prRewards.eventId],
+    references: [events.id],
+  }),
+  progress: many(prRewardProgress),
+}));
+
+// Progressi PR verso i premi
+export const prRewardProgress = pgTable("pr_reward_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rewardId: varchar("reward_id").notNull().references(() => prRewards.id, { onDelete: 'cascade' }),
+  prProfileId: varchar("pr_profile_id").notNull().references(() => prProfiles.id),
+  
+  currentValue: integer("current_value").notNull().default(0), // Progresso attuale
+  targetValue: integer("target_value").notNull(), // Obiettivo (copiato dal reward)
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  
+  // Reward assegnato
+  rewardClaimed: boolean("reward_claimed").notNull().default(false),
+  rewardClaimedAt: timestamp("reward_claimed_at"),
+  rewardPaidAt: timestamp("reward_paid_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_pr_reward_progress_pr").on(table.prProfileId),
+  index("idx_pr_reward_progress_reward").on(table.rewardId),
+]);
+
+export const prRewardProgressRelations = relations(prRewardProgress, ({ one }) => ({
+  reward: one(prRewards, {
+    fields: [prRewardProgress.rewardId],
+    references: [prRewards.id],
+  }),
+  prProfile: one(prProfiles, {
+    fields: [prRewardProgress.prProfileId],
+    references: [prProfiles.id],
+  }),
+}));
+
+// Log attività PR (cancellazioni, modifiche)
+export const prActivityLogs = pgTable("pr_activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  eventId: varchar("event_id").references(() => events.id),
+  prProfileId: varchar("pr_profile_id").notNull().references(() => prProfiles.id),
+  
+  activityType: varchar("activity_type", { length: 30 }).notNull(), // 'list_entry_cancelled' | 'table_cancelled' | 'ticket_cancelled' | 'entry_added' | 'table_booked'
+  entityType: varchar("entity_type", { length: 30 }).notNull(), // 'list_entry' | 'table_booking' | 'ticket'
+  entityId: varchar("entity_id").notNull(),
+  
+  // Dati al momento della cancellazione
+  entityData: text("entity_data"), // JSON snapshot dei dati originali
+  reason: text("reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_pr_activity_logs_pr").on(table.prProfileId),
+  index("idx_pr_activity_logs_event").on(table.eventId),
+  index("idx_pr_activity_logs_type").on(table.activityType),
+]);
+
+export const prActivityLogsRelations = relations(prActivityLogs, ({ one }) => ({
+  company: one(companies, {
+    fields: [prActivityLogs.companyId],
+    references: [companies.id],
+  }),
+  event: one(events, {
+    fields: [prActivityLogs.eventId],
+    references: [events.id],
+  }),
+  prProfile: one(prProfiles, {
+    fields: [prActivityLogs.prProfileId],
+    references: [prProfiles.id],
+  }),
+}));
+
+// ========== INSERT SCHEMAS - PR REWARDS ==========
+
+export const insertPrRewardSchema = createInsertSchema(prRewards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPrRewardProgressSchema = createInsertSchema(prRewardProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPrActivityLogSchema = createInsertSchema(prActivityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ========== TYPES - PR REWARDS ==========
+
+export type PrReward = typeof prRewards.$inferSelect;
+export type InsertPrReward = z.infer<typeof insertPrRewardSchema>;
+
+export type PrRewardProgress = typeof prRewardProgress.$inferSelect;
+export type InsertPrRewardProgress = z.infer<typeof insertPrRewardProgressSchema>;
+
+export type PrActivityLog = typeof prActivityLogs.$inferSelect;
+export type InsertPrActivityLog = z.infer<typeof insertPrActivityLogSchema>;

@@ -168,7 +168,7 @@ export default function PrMyEventsPage() {
         custom={index}
         className="w-full"
       >
-        <Link href={`/events/${event.id}/panel`}>
+        <Link href={`/pr/events/${event.id}`}>
           <div 
             className={`
               relative min-h-[160px] rounded-2xl overflow-hidden

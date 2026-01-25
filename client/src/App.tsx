@@ -94,6 +94,7 @@ import PrStaff from "@/pages/pr-staff";
 import PrMyEvents from "@/pages/pr-my-events";
 import PrEvents from "@/pages/pr-events";
 import PrApp from "@/pages/pr-app";
+import PrEventDashboard from "@/pages/pr-event-dashboard";
 import StaffApp from "@/pages/staff-app";
 import PrWallet from "@/pages/pr-wallet";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
@@ -279,6 +280,7 @@ function Router() {
                 <Route path="/pr/staff" component={PrStaff} />
                 <Route path="/pr/my-events" component={PrMyEvents} />
                 <Route path="/pr/events" component={PrEvents} />
+                <Route path="/pr/events/:eventId" component={PrEventDashboard} />
                 <Route path="/pr-wallet" component={PrWallet} />
                 <Route path="/pr-dashboard" component={PrDashboard} />
                 <Route path="/events/:id/panel" component={StaffPrEventPanel} />
@@ -421,6 +423,7 @@ function Router() {
               <Route path="/pr/staff" component={PrStaff} />
               <Route path="/pr/my-events" component={PrMyEvents} />
               <Route path="/pr/events" component={PrEvents} />
+              <Route path="/pr/events/:eventId" component={PrEventDashboard} />
               <Route path="/pr-wallet" component={PrWallet} />
               <Route path="/pr-app" component={PrApp} />
               <Route path="/staff-app" component={StaffApp} />
