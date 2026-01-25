@@ -1,0 +1,191 @@
+import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { colors, borderRadius, spacing, typography, shadows, touchableMinHeight } from '@/lib/theme';
+import { triggerHaptic, HapticType } from '@/lib/haptics';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+type ButtonVariant = 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'golden';
+type ButtonSize = 'sm' | 'default' | 'lg' | 'icon';
+
+interface ButtonProps {
+  children: React.ReactNode;
+  onPress?: () => void;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  disabled?: boolean;
+  loading?: boolean;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
+  haptic?: HapticType;
+  testID?: string;
+}
+
+export function Button({
+  children,
+  onPress,
+  variant = 'default',
+  size = 'default',
+  disabled = false,
+  loading = false,
+  style,
+  textStyle,
+  haptic = 'light',
+  testID,
+}: ButtonProps) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const handlePress = () => {
+    if (!disabled && !loading) {
+      triggerHaptic(haptic);
+      onPress?.();
+    }
+  };
+
+  const getSizeStyles = (): ViewStyle => {
+    switch (size) {
+      case 'sm':
+        return { height: 40, paddingHorizontal: spacing.md };
+      case 'lg':
+        return { height: 56, paddingHorizontal: spacing.xl };
+      case 'icon':
+        return { width: 48, height: 48, paddingHorizontal: 0 };
+      default:
+        return { height: touchableMinHeight, paddingHorizontal: spacing.lg };
+    }
+  };
+
+  const getTextSize = (): number => {
+    switch (size) {
+      case 'sm':
+        return typography.fontSize.sm;
+      case 'lg':
+        return typography.fontSize.lg;
+      default:
+        return typography.fontSize.base;
+    }
+  };
+
+  const variantStyles: Record<ButtonVariant, { container: ViewStyle; text: TextStyle }> = {
+    default: {
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.primaryForeground, fontWeight: '600' },
+    },
+    secondary: {
+      container: { backgroundColor: colors.secondary },
+      text: { color: colors.secondaryForeground, fontWeight: '600' },
+    },
+    outline: {
+      container: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+      text: { color: colors.foreground, fontWeight: '500' },
+    },
+    ghost: {
+      container: { backgroundColor: 'transparent' },
+      text: { color: colors.foreground, fontWeight: '500' },
+    },
+    destructive: {
+      container: { backgroundColor: colors.destructive },
+      text: { color: colors.destructiveForeground, fontWeight: '600' },
+    },
+    golden: {
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.primaryForeground, fontWeight: '700' },
+    },
+  };
+
+  const variantStyle = variantStyles[variant];
+
+  if (variant === 'golden') {
+    return (
+      <AnimatedPressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        style={[animatedStyle, { opacity: disabled ? 0.5 : 1 }]}
+        testID={testID}
+      >
+        <LinearGradient
+          colors={['#FFD700', '#FFA500']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[
+            styles.base,
+            getSizeStyles(),
+            shadows.golden,
+            style,
+          ]}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.primaryForeground} />
+          ) : typeof children === 'string' ? (
+            <Text style={[styles.text, { fontSize: getTextSize() }, variantStyle.text, textStyle]}>
+              {children}
+            </Text>
+          ) : (
+            children
+          )}
+        </LinearGradient>
+      </AnimatedPressable>
+    );
+  }
+
+  return (
+    <AnimatedPressable
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={disabled || loading}
+      style={[
+        animatedStyle,
+        styles.base,
+        getSizeStyles(),
+        variantStyle.container,
+        disabled && styles.disabled,
+        style,
+      ]}
+      testID={testID}
+    >
+      {loading ? (
+        <ActivityIndicator color={variantStyle.text.color} />
+      ) : typeof children === 'string' ? (
+        <Text style={[styles.text, { fontSize: getTextSize() }, variantStyle.text, textStyle]}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </AnimatedPressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  base: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  text: {
+    textAlign: 'center',
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+});
+
+export default Button;
