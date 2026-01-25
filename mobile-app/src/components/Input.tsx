@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, TextInputProps, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { colors, borderRadius, spacing, typography } from '@/lib/theme';
 
 interface InputProps extends TextInputProps {
@@ -25,35 +24,34 @@ export function Input({
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const borderColor = useSharedValue(colors.border);
-
-  const animatedBorderStyle = useAnimatedStyle(() => ({
-    borderColor: borderColor.value,
-  }));
 
   const handleFocus = () => {
     setIsFocused(true);
-    borderColor.value = withTiming(colors.primary, { duration: 200 });
     props.onFocus?.({} as any);
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    borderColor.value = withTiming(error ? colors.destructive : colors.border, { duration: 200 });
     props.onBlur?.({} as any);
   };
 
   const isPassword = secureTextEntry !== undefined;
   const actualSecure = isPassword ? !showPassword : false;
 
+  const borderColor = error 
+    ? colors.destructive 
+    : isFocused 
+      ? colors.primary 
+      : colors.border;
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
       
-      <Animated.View
+      <View
         style={[
           styles.inputContainer,
-          animatedBorderStyle,
+          { borderColor },
           error && styles.inputError,
         ]}
       >
@@ -95,7 +93,7 @@ export function Input({
             <Ionicons name={rightIcon} size={20} color={colors.mutedForeground} />
           </Pressable>
         )}
-      </Animated.View>
+      </View>
       
       {error && <Text style={styles.error}>{error}</Text>}
     </View>

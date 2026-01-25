@@ -1,13 +1,5 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
 import { colors, typography } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,16 +9,6 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onReady }: SplashScreenProps) {
   const { isLoading, isAuthenticated } = useAuth();
-  
-  const logoOpacity = useSharedValue(0);
-  const logoScale = useSharedValue(0.8);
-  const textOpacity = useSharedValue(0);
-
-  useEffect(() => {
-    logoOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
-    logoScale.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.back(1.5)) });
-    textOpacity.value = withDelay(400, withTiming(1, { duration: 400 }));
-  }, []);
 
   useEffect(() => {
     if (!isLoading) {
@@ -37,35 +19,26 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     }
   }, [isLoading, isAuthenticated, onReady]);
 
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: logoOpacity.value,
-    transform: [{ scale: logoScale.value }],
-  }));
-
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
-
   return (
     <View style={styles.container}>
       <View style={styles.glow} />
       
-      <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+      <View style={styles.logoContainer}>
         <View style={styles.logoBox}>
           <Text style={styles.logoText}>E4U</Text>
         </View>
-      </Animated.View>
+      </View>
 
-      <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
+      <View style={styles.textContainer}>
         <Text style={styles.title}>Event4U</Text>
         <Text style={styles.subtitle}>La tua serata inizia qui</Text>
-      </Animated.View>
+      </View>
 
-      <Animated.View style={[styles.loadingContainer, textAnimatedStyle]}>
+      <View style={styles.loadingContainer}>
         <View style={styles.loadingDot} />
         <View style={[styles.loadingDot, styles.loadingDotDelay1]} />
         <View style={[styles.loadingDot, styles.loadingDotDelay2]} />
-      </Animated.View>
+      </View>
     </View>
   );
 }

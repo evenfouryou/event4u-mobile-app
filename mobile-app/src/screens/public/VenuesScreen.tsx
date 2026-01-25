@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -90,7 +89,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
   };
 
   const renderVenue = ({ item, index }: { item: Venue; index: number }) => (
-    <Animated.View entering={FadeInDown.delay(index * 80).springify()}>
+    <View>
       <Pressable
         onPress={() => {
           triggerHaptic('light');
@@ -149,7 +148,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
           </View>
         </Card>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 
   return (

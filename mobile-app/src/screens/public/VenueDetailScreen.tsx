@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, gradients } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -88,7 +87,7 @@ export function VenueDetailScreen({
           </View>
         </View>
 
-        <Animated.View entering={FadeInUp.springify()} style={styles.content}>
+        <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.headerInfo}>
               <Text style={styles.venueName}>{venue.name}</Text>
@@ -151,7 +150,7 @@ export function VenueDetailScreen({
           <View style={styles.eventsSection}>
             <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
             {venue.upcomingEvents.map((event, index) => (
-              <Animated.View key={event.id} entering={FadeInDown.delay(index * 50)}>
+              <View key={event.id}>
                 <Pressable
                   onPress={() => {
                     triggerHaptic('light');
@@ -174,7 +173,7 @@ export function VenueDetailScreen({
                     <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
                   </Card>
                 </Pressable>
-              </Animated.View>
+              </View>
             ))}
           </View>
 
@@ -197,7 +196,7 @@ export function VenueDetailScreen({
               </Pressable>
             </Card>
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     </SafeArea>
   );

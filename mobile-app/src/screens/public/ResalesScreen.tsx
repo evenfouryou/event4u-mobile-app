@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -108,7 +107,7 @@ export function ResalesScreen({
     const discount = getDiscount(item.originalPrice, item.resalePrice);
 
     return (
-      <Animated.View entering={FadeInDown.delay(index * 80).springify()}>
+      <View>
         <Card style={styles.ticketCard} testID={`resale-${item.id}`}>
           <View style={styles.ticketHeader}>
             <View style={styles.ticketDateBox}>
@@ -161,12 +160,12 @@ export function ResalesScreen({
             </Button>
           </View>
         </Card>
-      </Animated.View>
+      </View>
     );
   };
 
   const renderMyResale = ({ item, index }: { item: ResaleTicket; index: number }) => (
-    <Animated.View entering={FadeInDown.delay(index * 80).springify()}>
+    <View>
       <Card style={styles.ticketCard} testID={`my-resale-${item.id}`}>
         <View style={styles.ticketHeader}>
           <View style={styles.ticketDateBox}>
@@ -212,7 +211,7 @@ export function ResalesScreen({
           )}
         </View>
       </Card>
-    </Animated.View>
+    </View>
   );
 
   const tickets = activeTab === 'marketplace' ? marketplaceTickets : myResales;

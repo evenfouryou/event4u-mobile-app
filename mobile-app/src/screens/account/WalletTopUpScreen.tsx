@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -83,23 +82,23 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
     return (
       <SafeArea style={styles.container}>
         <View style={styles.successContainer}>
-          <Animated.View entering={FadeIn.delay(100)}>
+          <View>
             <LinearGradient colors={gradients.golden} style={styles.successIcon}>
               <Ionicons name="checkmark" size={48} color={colors.primaryForeground} />
             </LinearGradient>
-          </Animated.View>
-          <Animated.View entering={FadeInUp.delay(300).springify()}>
+          </View>
+          <View>
             <Text style={styles.successTitle}>Ricarica Completata!</Text>
             <Text style={styles.successAmount}>+€{selectedValue.toFixed(2)}</Text>
             <Text style={styles.successText}>
               Il tuo nuovo saldo è di €{(currentBalance + selectedValue).toFixed(2)}
             </Text>
-          </Animated.View>
-          <Animated.View entering={FadeInUp.delay(500).springify()} style={styles.successActions}>
+          </View>
+          <View style={styles.successActions}>
             <Button variant="golden" size="lg" onPress={onSuccess} testID="button-done">
               Torna al Wallet
             </Button>
-          </Animated.View>
+          </View>
         </View>
       </SafeArea>
     );
@@ -119,7 +118,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeIn}>
+          <View>
             <LinearGradient colors={gradients.goldenLight} style={styles.balanceCard}>
               <Text style={styles.balanceLabel}>Saldo attuale</Text>
               <Text style={styles.balanceValue}>€{currentBalance.toFixed(2)}</Text>
@@ -132,10 +131,10 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
                 </View>
               )}
             </LinearGradient>
-          </Animated.View>
+          </View>
 
           {step === 'amount' && (
-            <Animated.View entering={FadeInDown.delay(100).springify()}>
+            <View>
               <Text style={styles.sectionTitle}>Seleziona importo</Text>
 
               <View style={styles.amountsGrid}>
@@ -199,11 +198,11 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
                   ? `Ricarica €${selectedValue.toFixed(2)}`
                   : 'Seleziona un importo'}
               </Button>
-            </Animated.View>
+            </View>
           )}
 
           {step === 'payment' && (
-            <Animated.View entering={FadeIn}>
+            <View>
               <Text style={styles.sectionTitle}>Dettagli Carta</Text>
 
               <Card style={styles.cardPreview}>
@@ -286,7 +285,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
               <Pressable onPress={() => setStep('amount')} style={styles.backLink}>
                 <Text style={styles.backLinkText}>← Modifica importo</Text>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>

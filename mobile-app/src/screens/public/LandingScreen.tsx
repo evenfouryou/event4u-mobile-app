@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -55,17 +54,11 @@ export function LandingScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.glowContainer}>
-          <Animated.View
-            entering={FadeIn.delay(200)}
-            style={styles.glowGolden}
-          />
-          <Animated.View
-            entering={FadeIn.delay(400)}
-            style={styles.glowTeal}
-          />
+          <View style={styles.glowGolden} />
+          <View style={styles.glowTeal} />
         </View>
 
-        <Animated.View entering={FadeInDown.springify()} style={styles.header}>
+        <View style={styles.header}>
           <View style={styles.logoRow}>
             <View style={styles.logoBox}>
               <Text style={styles.logoText}>E4U</Text>
@@ -81,9 +74,9 @@ export function LandingScreen({
               </Button>
             </View>
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.hero}>
+        <View style={styles.hero}>
           <View style={styles.liveBadgeContainer}>
             <LiveBadge testID="badge-live" />
             <Text style={styles.liveBadgeText}>Eventi Live Stasera</Text>
@@ -122,9 +115,9 @@ export function LandingScreen({
               Registrati Gratis
             </Button>
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.quickLinks}>
+        <View style={styles.quickLinks}>
           <Pressable
             onPress={() => {
               triggerHaptic('light');
@@ -155,9 +148,9 @@ export function LandingScreen({
             <Ionicons name="business" size={20} color={colors.primary} />
             <Text style={styles.quickLinkText}>Locali</Text>
           </Pressable>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.features}>
+        <View style={styles.features}>
           <Text style={styles.sectionTitle}>Perché Event4U?</Text>
           <View style={styles.featuresGrid}>
             {features.map((feature, index) => (
@@ -170,9 +163,9 @@ export function LandingScreen({
               </Card>
             ))}
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(500).springify()}>
+        <View>
           <LinearGradient
             colors={['rgba(255, 215, 0, 0.15)', 'rgba(0, 206, 209, 0.1)']}
             start={{ x: 0, y: 0 }}
@@ -199,7 +192,7 @@ export function LandingScreen({
               </View>
             </Button>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
         <View style={styles.footer}>
           <View style={styles.footerLogo}>

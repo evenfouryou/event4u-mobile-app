@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -128,7 +127,7 @@ export function EventsListScreen({
     const isSoldOut = item.totalAvailable <= 0;
 
     return (
-      <Animated.View entering={FadeInDown.delay(index * 80).springify()}>
+      <View>
         <Pressable
           onPress={() => {
             triggerHaptic('light');
@@ -208,7 +207,7 @@ export function EventsListScreen({
             </View>
           </Card>
         </Pressable>
-      </Animated.View>
+      </View>
     );
   };
 
@@ -256,7 +255,7 @@ export function EventsListScreen({
         </View>
       </View>
 
-      <Animated.View entering={FadeInRight.springify()}>
+      <View>
         <FlatList
           horizontal
           data={filters}
@@ -289,7 +288,7 @@ export function EventsListScreen({
           contentContainerStyle={styles.filtersContainer}
           showsHorizontalScrollIndicator={false}
         />
-      </Animated.View>
+      </View>
 
       {loading ? (
         <Loading text="Caricamento eventi..." />

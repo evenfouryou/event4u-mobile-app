@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -145,7 +144,7 @@ export function EventDetailScreen({
           </View>
         </View>
 
-        <Animated.View entering={FadeInUp.springify()} style={styles.content}>
+        <View style={styles.content}>
           <Text style={styles.eventName}>{event.name}</Text>
 
           <View style={styles.eventMeta}>
@@ -184,10 +183,7 @@ export function EventDetailScreen({
             <Text style={styles.sectionTitle}>Scegli il tuo biglietto</Text>
 
             {event.sectors.map((sector) => (
-              <Animated.View
-                key={sector.id}
-                entering={FadeInDown.delay(100)}
-              >
+              <View key={sector.id}>
                 <Card style={styles.sectorCard}>
                   <Text style={styles.sectorName}>{sector.name}</Text>
 
@@ -239,14 +235,14 @@ export function EventDetailScreen({
                     );
                   })}
                 </Card>
-              </Animated.View>
+              </View>
             ))}
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       {selectedTicketType && selectedTicket && (
-        <Animated.View entering={FadeIn} style={styles.footer}>
+        <View style={styles.footer}>
           <View style={styles.footerContent}>
             <View style={styles.quantitySelector}>
               <Pressable
@@ -290,7 +286,7 @@ export function EventDetailScreen({
               </Button>
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
     </SafeArea>
   );

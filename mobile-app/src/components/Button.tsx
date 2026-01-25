@@ -1,10 +1,7 @@
 import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { colors, borderRadius, spacing, typography, shadows, touchableMinHeight } from '@/lib/theme';
 import { triggerHaptic, HapticType } from '@/lib/haptics';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type ButtonVariant = 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'golden';
 type ButtonSize = 'sm' | 'default' | 'lg' | 'icon';
@@ -34,20 +31,6 @@ export function Button({
   haptic = 'light',
   testID,
 }: ButtonProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  };
-
   const handlePress = () => {
     if (!disabled && !loading) {
       triggerHaptic(haptic);
@@ -110,12 +93,12 @@ export function Button({
 
   if (variant === 'golden') {
     return (
-      <AnimatedPressable
+      <Pressable
         onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
         disabled={disabled || loading}
-        style={[animatedStyle, { opacity: disabled ? 0.5 : 1 }]}
+        style={({ pressed }) => [
+          { opacity: disabled ? 0.5 : pressed ? 0.9 : 1 },
+        ]}
         testID={testID}
       >
         <LinearGradient
@@ -139,22 +122,20 @@ export function Button({
             children
           )}
         </LinearGradient>
-      </AnimatedPressable>
+      </Pressable>
     );
   }
 
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
       disabled={disabled || loading}
-      style={[
-        animatedStyle,
+      style={({ pressed }) => [
         styles.base,
         getSizeStyles(),
         variantStyle.container,
         disabled && styles.disabled,
+        { opacity: pressed ? 0.9 : 1 },
         style,
       ]}
       testID={testID}
@@ -168,7 +149,7 @@ export function Button({
       ) : (
         children
       )}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 

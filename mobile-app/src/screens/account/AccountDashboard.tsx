@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Avatar } from '@/components/Avatar';
@@ -96,7 +95,7 @@ export function AccountDashboard({
         />
 
         <View style={styles.content}>
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
+          <View>
             <Text style={styles.sectionTitle}>Azioni Rapide</Text>
             <View style={styles.actionsGrid}>
               <View style={styles.actionRow}>
@@ -132,9 +131,9 @@ export function AccountDashboard({
                 />
               </View>
             </View>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(200).springify()}>
+          <View>
             <Pressable
               onPress={() => {
                 triggerHaptic('light');
@@ -169,9 +168,9 @@ export function AccountDashboard({
                 </View>
               </LinearGradient>
             </Pressable>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(300).springify()}>
+          <View>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
               <Pressable
@@ -245,7 +244,7 @@ export function AccountDashboard({
                 </View>
               </Card>
             )}
-          </Animated.View>
+          </View>
         </View>
       </ScrollView>
     </SafeArea>

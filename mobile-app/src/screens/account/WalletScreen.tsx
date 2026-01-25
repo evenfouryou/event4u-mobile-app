@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -93,7 +92,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
   };
 
   const renderTransaction = ({ item, index }: { item: Transaction; index: number }) => (
-    <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+    <View>
       <View style={styles.transactionItem}>
         <View style={[styles.transactionIcon, { backgroundColor: `${getTransactionColor(item.type)}15` }]}>
           <Ionicons
@@ -117,7 +116,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
           {item.amount >= 0 ? '+' : ''}€{Math.abs(item.amount).toFixed(2)}
         </Text>
       </View>
-    </Animated.View>
+    </View>
   );
 
   return (
@@ -129,7 +128,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeIn.delay(100)}>
+        <View>
           <LinearGradient
             colors={['#FFD700', '#FFA500']}
             start={{ x: 0, y: 0 }}
@@ -157,9 +156,9 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
               </View>
             </Button>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(200).springify()}>
+        <View>
           <View style={styles.quickTopUp}>
             <Text style={styles.sectionTitle}>Ricarica Rapida</Text>
             <View style={styles.topUpGrid}>
@@ -177,9 +176,9 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
               ))}
             </View>
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(300).springify()}>
+        <View>
           <View style={styles.transactionsHeader}>
             <Text style={styles.sectionTitle}>Movimenti</Text>
           </View>
@@ -199,7 +198,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
               </View>
             )}
           </Card>
-        </Animated.View>
+        </View>
 
         <View style={styles.infoSection}>
           <View style={styles.infoRow}>

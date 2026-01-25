@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -95,10 +94,7 @@ export function SubscriptionsScreen({
     const entriesRemaining = item.totalEntries ? item.totalEntries - item.entriesUsed : null;
 
     return (
-      <Animated.View
-        key={item.id}
-        entering={FadeInDown.delay(index * 100).springify()}
-      >
+      <View key={item.id}>
         <Pressable
           onPress={() => {
             triggerHaptic('light');
@@ -175,7 +171,7 @@ export function SubscriptionsScreen({
             </View>
           </Card>
         </Pressable>
-      </Animated.View>
+      </View>
     );
   };
 

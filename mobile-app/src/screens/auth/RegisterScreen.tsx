@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
@@ -94,15 +93,15 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
             <View style={styles.glowGolden} />
           </View>
 
-          <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
+          <View style={styles.header}>
             <View style={styles.logoBox}>
               <Text style={styles.logoText}>E4U</Text>
             </View>
             <Text style={styles.title}>Crea Account</Text>
             <Text style={styles.subtitle}>Unisciti alla community</Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.form}>
+          <View style={styles.form}>
             {error ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -200,14 +199,14 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess }: RegisterS
             >
               Registrati
             </Button>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.footer}>
+          <View style={styles.footer}>
             <Text style={styles.footerText}>Hai già un account?</Text>
             <Pressable onPress={onNavigateLogin}>
               <Text style={styles.loginLink}>Accedi</Text>
             </Pressable>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeArea>

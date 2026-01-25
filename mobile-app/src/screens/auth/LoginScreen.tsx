@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -63,15 +62,15 @@ export function LoginScreen({
             <View style={styles.glowTeal} />
           </View>
 
-          <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
+          <View style={styles.header}>
             <View style={styles.logoBox}>
               <Text style={styles.logoText}>E4U</Text>
             </View>
             <Text style={styles.title}>Bentornato</Text>
             <Text style={styles.subtitle}>Accedi per continuare</Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.form}>
+          <View style={styles.form}>
             {error ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -115,14 +114,14 @@ export function LoginScreen({
             >
               Accedi
             </Button>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.footer}>
+          <View style={styles.footer}>
             <Text style={styles.footerText}>Non hai un account?</Text>
             <Pressable onPress={onNavigateRegister}>
               <Text style={styles.registerLink}>Registrati</Text>
             </Pressable>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeArea>

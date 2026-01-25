@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -87,7 +86,7 @@ export function TicketDetailScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeIn.delay(100)}>
+        <View>
           <Card style={styles.qrCard} testID="card-qr">
             <View style={styles.qrContainer}>
               <View style={styles.qrPlaceholder}>
@@ -122,9 +121,9 @@ export function TicketDetailScreen({
               </View>
             </View>
           </Card>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInDown.delay(200).springify()}>
+        <View>
           <Card style={styles.detailsCard}>
             <Text style={styles.sectionTitle}>Dettagli Biglietto</Text>
 
@@ -153,9 +152,9 @@ export function TicketDetailScreen({
               <Badge variant="success">Valido</Badge>
             </View>
           </Card>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <View>
           <Card style={styles.venueCard}>
             <Text style={styles.sectionTitle}>Location</Text>
             <View style={styles.venueInfo}>
@@ -174,9 +173,9 @@ export function TicketDetailScreen({
               </Pressable>
             </View>
           </Card>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.actions}>
+        <View style={styles.actions}>
           {onNameChange && (
             <Button
               variant="outline"
@@ -204,7 +203,7 @@ export function TicketDetailScreen({
               </View>
             </Button>
           )}
-        </Animated.View>
+        </View>
 
         <View style={styles.fiscalInfo}>
           <Ionicons name="shield-checkmark-outline" size={16} color={colors.mutedForeground} />

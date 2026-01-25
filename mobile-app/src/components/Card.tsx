@@ -1,10 +1,7 @@
 import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { colors, borderRadius, spacing, shadows } from '@/lib/theme';
 import { triggerHaptic } from '@/lib/haptics';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface CardProps {
   children: React.ReactNode;
@@ -15,24 +12,6 @@ interface CardProps {
 }
 
 export function Card({ children, style, variant = 'default', onPress, testID }: CardProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    if (onPress) {
-      scale.value = withSpring(0.98, { damping: 15, stiffness: 400 });
-    }
-  };
-
-  const handlePressOut = () => {
-    if (onPress) {
-      scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-    }
-  };
-
   const handlePress = () => {
     if (onPress) {
       triggerHaptic('light');
@@ -64,15 +43,18 @@ export function Card({ children, style, variant = 'default', onPress, testID }: 
 
   if (onPress) {
     return (
-      <AnimatedPressable
+      <Pressable
         onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[animatedStyle, styles.base, getVariantStyles(), style]}
+        style={({ pressed }) => [
+          styles.base,
+          getVariantStyles(),
+          { opacity: pressed ? 0.95 : 1 },
+          style,
+        ]}
         testID={testID}
       >
         {children}
-      </AnimatedPressable>
+      </Pressable>
     );
   }
 
@@ -84,24 +66,6 @@ export function Card({ children, style, variant = 'default', onPress, testID }: 
 }
 
 export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 'variant'>) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    if (onPress) {
-      scale.value = withSpring(0.98, { damping: 15, stiffness: 400 });
-    }
-  };
-
-  const handlePressOut = () => {
-    if (onPress) {
-      scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-    }
-  };
-
   const handlePress = () => {
     if (onPress) {
       triggerHaptic('light');
@@ -109,20 +73,30 @@ export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 
     }
   };
 
-  const Container = onPress ? AnimatedPressable : Animated.View;
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.glassBase,
+          { opacity: pressed ? 0.95 : 1 },
+          style,
+        ]}
+        testID={testID}
+      >
+        <BlurView intensity={20} tint="dark" style={styles.blurView}>
+          <View style={styles.glassContent}>{children}</View>
+        </BlurView>
+      </Pressable>
+    );
+  }
 
   return (
-    <Container
-      onPress={onPress ? handlePress : undefined}
-      onPressIn={onPress ? handlePressIn : undefined}
-      onPressOut={onPress ? handlePressOut : undefined}
-      style={[animatedStyle, styles.glassBase, style]}
-      testID={testID}
-    >
+    <View style={[styles.glassBase, style]} testID={testID}>
       <BlurView intensity={20} tint="dark" style={styles.blurView}>
         <View style={styles.glassContent}>{children}</View>
       </BlurView>
-    </Container>
+    </View>
   );
 }
 

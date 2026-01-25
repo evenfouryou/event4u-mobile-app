@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -49,11 +48,11 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
         </Pressable>
 
         <View style={styles.successContainer}>
-          <Animated.View entering={FadeInDown.springify()} style={styles.successIcon}>
+          <View style={styles.successIcon}>
             <Ionicons name="mail-outline" size={64} color={colors.primary} />
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(200).springify()}>
+          <View>
             <Text style={styles.successTitle}>Email Inviata!</Text>
             <Text style={styles.successText}>
               Abbiamo inviato un link per reimpostare la password a{'\n'}
@@ -62,13 +61,13 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
             <Text style={styles.successHint}>
               Controlla anche la cartella spam
             </Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.successActions}>
+          <View style={styles.successActions}>
             <Button variant="golden" size="lg" onPress={onBack} testID="button-back-to-login">
               Torna al Login
             </Button>
-          </Animated.View>
+          </View>
         </View>
       </SafeArea>
     );
@@ -89,7 +88,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
             <Ionicons name="chevron-back" size={28} color={colors.foreground} />
           </Pressable>
 
-          <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
+          <View style={styles.header}>
             <View style={styles.iconContainer}>
               <Ionicons name="key-outline" size={48} color={colors.primary} />
             </View>
@@ -97,9 +96,9 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
             <Text style={styles.subtitle}>
               Inserisci la tua email e ti invieremo un link per reimpostare la password
             </Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.form}>
+          <View style={styles.form}>
             {error ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -128,14 +127,14 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
             >
               Invia Link
             </Button>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.footer}>
+          <View style={styles.footer}>
             <Text style={styles.footerText}>Ricordi la password?</Text>
             <Pressable onPress={onBack}>
               <Text style={styles.loginLink}>Accedi</Text>
             </Pressable>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeArea>

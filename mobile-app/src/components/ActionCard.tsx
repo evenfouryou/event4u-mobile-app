@@ -1,11 +1,9 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { colors, borderRadius, spacing, typography, shadows } from '@/lib/theme';
 import { triggerHaptic } from '@/lib/haptics';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type GradientType = 'golden' | 'teal' | 'purple' | 'blue' | 'pink';
 
@@ -32,19 +30,7 @@ export function ActionCard({
   gradient = 'golden',
   testID,
 }: ActionCardProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  };
+  const [pressed, setPressed] = useState(false);
 
   const handlePress = () => {
     triggerHaptic('medium');
@@ -52,11 +38,14 @@ export function ActionCard({
   };
 
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[animatedStyle, styles.container]}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
+        styles.container,
+        pressed && styles.containerPressed,
+      ]}
       testID={testID}
     >
       <LinearGradient
@@ -70,7 +59,7 @@ export function ActionCard({
         </View>
         <Text style={styles.label}>{label}</Text>
       </LinearGradient>
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
@@ -95,6 +84,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 120,
     ...shadows.md,
+  },
+  containerPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   gradient: {
     flex: 1,

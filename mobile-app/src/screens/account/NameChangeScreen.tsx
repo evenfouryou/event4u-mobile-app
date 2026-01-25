@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -88,21 +87,21 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
       <SafeArea style={styles.container}>
         <Header title="Cambio Nominativo" showBack onBack={onBack} />
         <View style={styles.successContainer}>
-          <Animated.View entering={FadeInDown.springify()} style={styles.successIcon}>
+          <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={80} color={colors.success} />
-          </Animated.View>
-          <Animated.View entering={FadeInUp.delay(200).springify()}>
+          </View>
+          <View>
             <Text style={styles.successTitle}>Richiesta Inviata!</Text>
             <Text style={styles.successText}>
               Il cambio nominativo è stato elaborato con successo.{'\n\n'}
               Il nuovo intestatario riceverà una email di conferma con il biglietto aggiornato.
             </Text>
-          </Animated.View>
-          <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.successActions}>
+          </View>
+          <View style={styles.successActions}>
             <Button variant="golden" size="lg" onPress={onSuccess} testID="button-done">
               Torna ai Biglietti
             </Button>
-          </Animated.View>
+          </View>
         </View>
       </SafeArea>
     );
@@ -122,7 +121,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.springify()}>
+          <View>
             <Card style={styles.ticketCard}>
               <View style={styles.ticketHeader}>
                 <Ionicons name="ticket" size={24} color={colors.primary} />
@@ -138,10 +137,10 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                 <Text style={styles.currentHolderName}>{ticket.currentHolder}</Text>
               </View>
             </Card>
-          </Animated.View>
+          </View>
 
           {step === 'form' && (
-            <Animated.View entering={FadeInUp.delay(100).springify()}>
+            <View>
               <Text style={styles.sectionTitle}>Nuovo Intestatario</Text>
 
               {error ? (
@@ -212,11 +211,11 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
               >
                 Continua
               </Button>
-            </Animated.View>
+            </View>
           )}
 
           {step === 'confirm' && (
-            <Animated.View entering={FadeInUp.springify()}>
+            <View>
               <Text style={styles.sectionTitle}>Conferma Cambio</Text>
 
               <Card style={styles.confirmCard}>
@@ -281,7 +280,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                   Conferma
                 </Button>
               </View>
-            </Animated.View>
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -125,7 +124,7 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
             </View>
           </View>
 
-          <Animated.View entering={FadeInDown.springify()}>
+          <View>
             <Card style={styles.orderCard}>
               <View style={styles.orderHeader}>
                 <Ionicons name="ticket" size={24} color={colors.primary} />
@@ -140,10 +139,10 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
                 <Text style={styles.orderTotalValue}>€{orderSummary.total.toFixed(2)}</Text>
               </View>
             </Card>
-          </Animated.View>
+          </View>
 
           {step === 'details' && (
-            <Animated.View entering={FadeIn}>
+            <View>
               <Text style={styles.sectionTitle}>Dati Intestatario</Text>
               <Card style={styles.formCard}>
                 <View style={styles.formRow}>
@@ -200,11 +199,11 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
               >
                 Continua al Pagamento
               </Button>
-            </Animated.View>
+            </View>
           )}
 
           {step === 'payment' && (
-            <Animated.View entering={FadeIn}>
+            <View>
               <Text style={styles.sectionTitle}>Metodo di Pagamento</Text>
               
               <Card style={styles.cardPreview}>
@@ -298,7 +297,7 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
               <Pressable onPress={() => setStep('details')} style={styles.backLink}>
                 <Text style={styles.backLinkText}>← Torna ai dati</Text>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>

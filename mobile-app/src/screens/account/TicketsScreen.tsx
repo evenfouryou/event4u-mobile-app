@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -112,7 +111,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
   };
 
   const renderTicket = ({ item, index }: { item: Ticket; index: number }) => (
-    <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+    <View>
       <Pressable
         onPress={() => {
           triggerHaptic('light');
@@ -173,7 +172,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
           )}
         </Card>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 
   return (

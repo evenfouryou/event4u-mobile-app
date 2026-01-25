@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, FadeOut, Layout } from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -131,12 +130,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
             </View>
 
             {items.map((item, index) => (
-              <Animated.View
-                key={item.id}
-                entering={FadeInDown.delay(index * 100)}
-                exiting={FadeOut}
-                layout={Layout.springify()}
-              >
+              <View key={item.id}>
                 <Card style={styles.itemCard} testID={`cart-item-${item.id}`}>
                   <View style={styles.itemHeader}>
                     <View style={styles.itemInfo}>
@@ -196,7 +190,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
                     </Text>
                   </View>
                 </Card>
-              </Animated.View>
+              </View>
             ))}
 
             <Card style={styles.summaryCard}>
