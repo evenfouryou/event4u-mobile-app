@@ -1,0 +1,41 @@
+px expo start -c --tunnel
+npm warn ERESOLVE overriding peer dependency
+npm error code ERESOLVE
+npm error ERESOLVE could not resolve
+npm error
+npm error While resolving: react-native@0.81.5
+npm error Found: @types/react@19.0.14
+npm error node_modules/@types/react
+npm error   peerOptional @types/react@"^19.1.0" from @react-native/virtualized-lists@0.81.5
+npm error   node_modules/react-native/node_modules/@react-native/virtualized-lists
+npm error     @react-native/virtualized-lists@"0.81.5" from react-native@0.81.5
+npm error     node_modules/react-native
+npm error       react-native@"0.81.5" from the root project
+npm error       23 more (@expo/vector-icons, expo, expo-asset, expo-blur, ...)
+npm error
+npm error Could not resolve dependency:
+npm error peerOptional @types/react@"^19.1.0" from react-native@0.81.5
+npm error node_modules/react-native
+npm error   react-native@"0.81.5" from the root project
+npm error   peer react-native@"*" from @expo/vector-icons@14.1.0
+npm error   node_modules/@expo/vector-icons
+npm error     @expo/vector-icons@"^14.0.4" from the root project
+npm error   22 more (expo, expo-asset, expo-blur, expo-constants, ...)
+npm error
+npm error Conflicting peer dependency: @types/react@19.2.9
+npm error node_modules/@types/react
+npm error   peerOptional @types/react@"^19.1.0" from react-native@0.81.5
+npm error   node_modules/react-native
+npm error     react-native@"0.81.5" from the root project
+npm error     peer react-native@"*" from @expo/vector-icons@14.1.0
+npm error     node_modules/@expo/vector-icons
+npm error       @expo/vector-icons@"^14.0.4" from the root project
+npm error     22 more (expo, expo-asset, expo-blur, expo-constants, ...)
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error /home/runner/.npm/_logs/2026-01-25T18_07_51_817Z-eresolve-report.txt
