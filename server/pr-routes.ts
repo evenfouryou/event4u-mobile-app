@@ -13,13 +13,14 @@ import {
   siaeCustomers,
   eventPrAssignments,
   prListAssignments,
+  listEntries,
   users,
   events,
   prProfiles,
   companies,
 } from "@shared/schema";
 import { z } from "zod";
-import { like, or, eq, and, desc, isNull, inArray } from "drizzle-orm";
+import { like, or, eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -648,6 +649,55 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
     // Check max guests (maxCapacity in unified schema)
     if (list.maxCapacity && list.currentCount >= list.maxCapacity) {
       return res.status(400).json({ error: "Lista piena" });
+    }
+    
+    // FIX 2026-01-25: Check PR quota for this specific list
+    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+    const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
+    if (sessionPrProfileId) {
+      prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, sessionPrProfileId));
+    }
+    
+    const prAssignments = await db.select()
+      .from(eventPrAssignments)
+      .where(
+        and(
+          eq(eventPrAssignments.eventId, list.eventId!),
+          eq(eventPrAssignments.isActive, true),
+          prAssignmentPredicates.length > 1 ? or(...prAssignmentPredicates) : prAssignmentPredicates[0]
+        )
+      );
+    
+    if (prAssignments.length > 0) {
+      const prAssignmentIds = prAssignments.map(a => a.id);
+      const listQuota = await db.select()
+        .from(prListAssignments)
+        .where(
+          and(
+            inArray(prListAssignments.prAssignmentId, prAssignmentIds),
+            eq(prListAssignments.listId, listId)
+          )
+        );
+      
+      if (listQuota.length > 0 && listQuota[0].quota !== null) {
+        // Count existing entries by this PR in this list
+        const existingEntries = await db.select({ count: sql<number>`count(*)` })
+          .from(listEntries)
+          .where(
+            and(
+              eq(listEntries.listId, listId),
+              eq(listEntries.addedByUserId, user.id)
+            )
+          );
+        
+        const currentCount = Number(existingEntries[0]?.count || 0);
+        if (currentCount >= listQuota[0].quota) {
+          return res.status(400).json({ 
+            error: "Quota raggiunta", 
+            message: `Hai raggiunto il limite di ${listQuota[0].quota} persone per questa lista` 
+          });
+        }
+      }
     }
     
     const validated = insertListEntrySchema.omit({ qrCode: true }).parse({

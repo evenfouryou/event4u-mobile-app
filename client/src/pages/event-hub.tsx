@@ -742,6 +742,7 @@ export default function EventHub() {
   const [showPrListAssignmentDialog, setShowPrListAssignmentDialog] = useState(false);
   const [selectedPrAssignmentForLists, setSelectedPrAssignmentForLists] = useState<any>(null);
   const [prAssignedListIds, setPrAssignedListIds] = useState<string[]>([]);
+  const [prListQuotas, setPrListQuotas] = useState<Record<string, number | null>>({});
   const [prAssignedListsLoading, setPrAssignedListsLoading] = useState(false);
 
   // Biglietti Emessi state
@@ -1749,10 +1750,13 @@ export default function EventHub() {
     },
   });
 
-  // Update PR assigned lists mutation
+  // Update PR assigned lists mutation - con supporto quota
   const updatePrAssignedListsMutation = useMutation({
-    mutationFn: async ({ assignmentId, listIds }: { assignmentId: string; listIds: string[] }) => {
-      return apiRequest('POST', `/api/e4u/pr-assignments/${assignmentId}/lists`, { listIds });
+    mutationFn: async ({ assignmentId, listAssignments }: { 
+      assignmentId: string; 
+      listAssignments: { listId: string; quota: number | null }[] 
+    }) => {
+      return apiRequest('POST', `/api/e4u/pr-assignments/${assignmentId}/lists`, { listAssignments });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'pr-assignments'] });
@@ -1760,44 +1764,70 @@ export default function EventHub() {
       setShowPrListAssignmentDialog(false);
       setSelectedPrAssignmentForLists(null);
       setPrAssignedListIds([]);
+      setPrListQuotas({});
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error?.message || "Impossibile aggiornare le liste", variant: "destructive" });
     },
   });
 
-  // Open PR list assignment dialog
+  // Open PR list assignment dialog - carica anche le quote
   const openPrListAssignmentDialog = async (assignment: any) => {
     setSelectedPrAssignmentForLists(assignment);
     setPrAssignedListsLoading(true);
     setShowPrListAssignmentDialog(true);
+    setPrListQuotas({});
     
     try {
       const response = await apiRequest('GET', `/api/e4u/pr-assignments/${assignment.id}/lists`);
-      const assignedListIds = (response as any[]).map((item: any) => item.listId || item.id);
+      const items = response as any[];
+      const assignedListIds = items.map((item: any) => item.assignment?.listId || item.listId || item.id);
+      const quotas: Record<string, number | null> = {};
+      items.forEach((item: any) => {
+        const listId = item.assignment?.listId || item.listId || item.id;
+        const quota = item.assignment?.quota ?? item.quota ?? null;
+        quotas[listId] = quota;
+      });
       setPrAssignedListIds(assignedListIds);
+      setPrListQuotas(quotas);
     } catch (error) {
       setPrAssignedListIds([]);
+      setPrListQuotas({});
     } finally {
       setPrAssignedListsLoading(false);
     }
   };
 
-  // Toggle PR list selection
+  // Toggle PR list selection - resetta quota quando rimuovi
   const togglePrListSelection = (listId: string) => {
-    setPrAssignedListIds(prev => 
-      prev.includes(listId) 
-        ? prev.filter(id => id !== listId)
-        : [...prev, listId]
-    );
+    setPrAssignedListIds(prev => {
+      if (prev.includes(listId)) {
+        setPrListQuotas(q => {
+          const newQ = { ...q };
+          delete newQ[listId];
+          return newQ;
+        });
+        return prev.filter(id => id !== listId);
+      }
+      return [...prev, listId];
+    });
   };
 
-  // Save PR list assignments
+  // Update quota for a specific list
+  const updatePrListQuota = (listId: string, quota: number | null) => {
+    setPrListQuotas(prev => ({ ...prev, [listId]: quota }));
+  };
+
+  // Save PR list assignments - usa nuovo formato con quota
   const handleSavePrListAssignments = () => {
     if (!selectedPrAssignmentForLists) return;
+    const listAssignments = prAssignedListIds.map(listId => ({
+      listId,
+      quota: prListQuotas[listId] ?? null,
+    }));
     updatePrAssignedListsMutation.mutate({ 
       assignmentId: selectedPrAssignmentForLists.id, 
-      listIds: prAssignedListIds 
+      listAssignments 
     });
   };
 
@@ -5901,30 +5931,59 @@ export default function EventHub() {
                       </Button>
                     </div>
                   </div>
-                  {e4uLists.map((list: any) => (
-                    <div 
-                      key={list.id} 
-                      className="flex items-center gap-3 p-3 rounded-lg border hover-elevate cursor-pointer"
-                      onClick={() => togglePrListSelection(list.id)}
-                      data-testid={`checkbox-list-${list.id}`}
-                    >
-                      <Checkbox
-                        checked={prAssignedListIds.includes(list.id)}
-                        onCheckedChange={() => togglePrListSelection(list.id)}
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{list.name}</p>
-                        {list.maxCapacity && (
-                          <p className="text-xs text-muted-foreground">
-                            Capacità max: {list.maxCapacity}
-                          </p>
+                  {e4uLists.map((list: any) => {
+                    const isSelected = prAssignedListIds.includes(list.id);
+                    return (
+                      <div 
+                        key={list.id} 
+                        className={`p-3 rounded-lg border ${isSelected ? 'border-primary bg-primary/5' : ''} hover-elevate`}
+                        data-testid={`checkbox-list-${list.id}`}
+                      >
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => togglePrListSelection(list.id)}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => togglePrListSelection(list.id)}
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{list.name}</p>
+                            {list.maxCapacity && (
+                              <p className="text-xs text-muted-foreground">
+                                Capacità max lista: {list.maxCapacity}
+                              </p>
+                            )}
+                          </div>
+                          {list.price && parseFloat(list.price) > 0 && (
+                            <Badge variant="secondary">{list.price}€</Badge>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="mt-2 ml-7 flex items-center gap-2">
+                            <label className="text-xs text-muted-foreground whitespace-nowrap">
+                              Quota PR:
+                            </label>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="Illimitato"
+                              className="h-8 w-24 text-sm"
+                              value={prListQuotas[list.id] ?? ''}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const val = e.target.value;
+                                updatePrListQuota(list.id, val === '' ? null : parseInt(val, 10));
+                              }}
+                              data-testid={`input-quota-${list.id}`}
+                            />
+                            <span className="text-xs text-muted-foreground">persone</span>
+                          </div>
                         )}
                       </div>
-                      {list.price && parseFloat(list.price) > 0 && (
-                        <Badge variant="secondary">{list.price}€</Badge>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -5946,6 +6005,7 @@ export default function EventHub() {
                 setShowPrListAssignmentDialog(false);
                 setSelectedPrAssignmentForLists(null);
                 setPrAssignedListIds([]);
+                setPrListQuotas({});
               }}>
                 Annulla
               </Button>
