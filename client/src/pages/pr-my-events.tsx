@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   HapticButton, 
   MobileAppLayout, 
@@ -46,6 +54,12 @@ import {
   CheckCircle2,
   Sparkles,
   Eye,
+  ArrowRightLeft,
+  Loader2,
+  User,
+  Wallet,
+  Settings,
+  LogOut,
 } from "lucide-react";
 import { format, isAfter, isBefore, isToday } from "date-fns";
 import { it } from "date-fns/locale";
@@ -91,10 +105,47 @@ const cardVariants = {
 export default function PrMyEventsPage() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const [activeFilter, setActiveFilter] = useState<"upcoming" | "past">("upcoming");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isSwitchingToCustomer, setIsSwitchingToCustomer] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const handleSwitchToCustomer = async () => {
+    triggerHaptic('medium');
+    setIsSwitchingToCustomer(true);
+    try {
+      const response = await fetch('/api/pr/switch-to-customer', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        window.location.href = data.redirect || '/acquista';
+      } else {
+        toast({ title: "Errore", description: "Impossibile passare a modalità cliente", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Errore", description: "Errore di connessione", variant: "destructive" });
+    } finally {
+      setIsSwitchingToCustomer(false);
+    }
+  };
+  
+  const handleLogout = async () => {
+    triggerHaptic('medium');
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      window.location.href = '/login';
+    } catch {
+      toast({ title: "Errore", description: "Errore durante il logout", variant: "destructive" });
+      setIsLoggingOut(false);
+    }
+  };
 
   const { data: myEvents = [], isLoading, refetch, isRefetching } = useQuery<MyEvent[]>({
     queryKey: ["/api/e4u/my-events"],
@@ -319,16 +370,64 @@ export default function PrMyEventsPage() {
         </div>
       }
       rightAction={
-        <HapticButton
-          variant="ghost"
-          size="icon"
-          onClick={handleRefresh}
-          disabled={isRefetching}
-          data-testid="button-refresh"
-          className="w-11 h-11"
-        >
-          <RefreshCw className={`w-5 h-5 ${isRefetching ? 'animate-spin' : ''}`} />
-        </HapticButton>
+        <div className="flex items-center gap-2">
+          <HapticButton
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefetching}
+            data-testid="button-refresh"
+            className="w-11 h-11"
+          >
+            <RefreshCw className={`w-5 h-5 ${isRefetching ? 'animate-spin' : ''}`} />
+          </HapticButton>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <HapticButton
+                variant="ghost"
+                size="icon"
+                className="w-11 h-11"
+                data-testid="button-profile-menu"
+              >
+                <User className="w-5 h-5" />
+              </HapticButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem 
+                onClick={handleSwitchToCustomer}
+                disabled={isSwitchingToCustomer}
+                data-testid="button-switch-to-customer"
+              >
+                {isSwitchingToCustomer ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <ArrowRightLeft className="w-4 h-4 mr-2" />
+                )}
+                Passa a modalità cliente
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/pr-wallet" className="flex items-center">
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Wallet PR
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-destructive"
+                data-testid="button-logout"
+              >
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4 mr-2" />
+                )}
+                Esci
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       }
       className="border-b-0"
     />
@@ -348,15 +447,30 @@ export default function PrMyEventsPage() {
             <h1 className="text-3xl font-bold">{t('pr.myEvents')}</h1>
             <p className="text-muted-foreground">{t('pr.eventsAssignedAsPr')}</p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => refetch()} 
-            disabled={isRefetching}
-            data-testid="button-refresh-desktop"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            {t('common.refresh')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => refetch()} 
+              disabled={isRefetching}
+              data-testid="button-refresh-desktop"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSwitchToCustomer}
+              disabled={isSwitchingToCustomer}
+              data-testid="button-switch-to-customer-desktop"
+            >
+              {isSwitchingToCustomer ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="w-4 h-4 mr-2" />
+              )}
+              Modalità cliente
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
