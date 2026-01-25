@@ -114,25 +114,10 @@ export default function PrMyEventsPage() {
   const [isSwitchingToCustomer, setIsSwitchingToCustomer] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
-  const handleSwitchToCustomer = async () => {
+  const handleSwitchToCustomer = () => {
     triggerHaptic('medium');
     setIsSwitchingToCustomer(true);
-    try {
-      const response = await fetch('/api/pr/switch-to-customer', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        window.location.href = data.redirect || '/acquista';
-      } else {
-        toast({ title: "Errore", description: "Impossibile passare a modalità cliente", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Errore", description: "Errore di connessione", variant: "destructive" });
-    } finally {
-      setIsSwitchingToCustomer(false);
-    }
+    window.location.href = '/acquista';
   };
   
   const handleLogout = async () => {
