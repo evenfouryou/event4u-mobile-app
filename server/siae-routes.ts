@@ -6575,12 +6575,14 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     
     if (original.transmissionType === 'rca') {
       // RCA: Use generateRCAXml
+      // FIX: Fetch location to use siaeLocationCode from locations table only
+      const resendLocation = baseEvent?.locationId ? await storage.getLocation(baseEvent.locationId) : null;
       const eventForLog = {
         id: ticketedEvent.id,
         name: baseEvent?.name || 'Evento',
         date: baseEvent?.startDatetime || new Date(),
         time: baseEvent?.startDatetime || null,
-        venueCode: ticketedEvent.siaeLocationCode || '0000000000001',
+        venueCode: resendLocation?.siaeLocationCode || '0000000000001',
         genreCode: ticketedEvent.genreCode || 'S1',
         organizerTaxId: taxId,
         organizerName: company?.name || 'N/D',
@@ -7044,6 +7046,8 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           }
           
           const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+          // FIX: Fetch location to use siaeLocationCode from locations table only
+          const sendEmailLocation = baseEvent?.locationId ? await storage.getLocation(baseEvent.locationId) : null;
           const allTickets = await siaeStorage.getSiaeTicketsByCompany(transmission.companyId);
           const eventTickets = allTickets.filter(t => t.ticketedEventId === transmission.ticketedEventId);
           // systemConfig già recuperato sopra
@@ -7060,7 +7064,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
             name: baseEvent?.name || 'N/D',
             date: baseEvent?.startDatetime ? new Date(baseEvent.startDatetime) : new Date(),
             time: baseEvent?.startDatetime ? new Date(baseEvent.startDatetime) : null,
-            venueCode: ticketedEvent.siaeLocationCode || '0000000000001',
+            venueCode: sendEmailLocation?.siaeLocationCode || '0000000000001',
             genreCode: ticketedEvent.genreCode || 'S1',
             organizerTaxId: taxId,
             organizerName: companyName,
@@ -7606,6 +7610,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // Fetch ticketed event and base event for SiaeEventForLog
     const rcaTicketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
     const rcaEventDetails = rcaTicketedEvent ? await storage.getEvent(rcaTicketedEvent.eventId) : null;
+    // FIX: Fetch location to use siaeLocationCode from locations table only
+    const rcaLocation = rcaEventDetails?.locationId ? await storage.getLocation(rcaEventDetails.locationId) : null;
     
     // Prepare SiaeEventForLog
     const eventForLog: SiaeEventForLog = {
@@ -7613,7 +7619,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       name: rcaEventDetails?.name || 'N/D',
       date: rcaEventDetails?.startDatetime ? new Date(rcaEventDetails.startDatetime) : new Date(),
       time: rcaEventDetails?.startDatetime ? new Date(rcaEventDetails.startDatetime) : null,
-      venueCode: rcaTicketedEvent?.siaeLocationCode || '0000000000001',
+      venueCode: rcaLocation?.siaeLocationCode || '0000000000001',
       genreCode: rcaTicketedEvent?.genreCode || 'S1',
       organizerTaxId: taxId,
       organizerName: companyName,
@@ -9786,7 +9792,7 @@ async function hydrateC1EventContextFromTickets(
         id: ticketedEvent.id,
         companyId: ticketedEvent.companyId,
         eventId: ticketedEvent.eventId,
-        siaeLocationCode: ticketedEvent.siaeLocationCode,
+        siaeLocationCode: location?.siaeLocationCode || null,
         capacity: ticketedEvent.capacity,
         taxType: ticketedEvent.taxType,
         entertainmentIncidence: ticketedEvent.entertainmentIncidence,
@@ -10108,6 +10114,10 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     const systemConfig = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
     const company = await storage.getCompany(ticketedEvent.companyId);
     
+    // FIX: Fetch base event and location to get siaeLocationCode from locations table
+    const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+    const reportLocation = baseEvent?.locationId ? await storage.getLocation(baseEvent.locationId) : null;
+    
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
     const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
     if (!taxId) {
@@ -10131,7 +10141,7 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     <CodiceGenere>${escapeXml(ticketedEvent.genreCode)}</CodiceGenere>
     <DataEvento>${formatSiaeDate(ticketedEvent.saleStartDate)}</DataEvento>
     <OraInizio></OraInizio>
-    <Luogo>${escapeXml(ticketedEvent.siaeLocationCode || '')}</Luogo>
+    <Luogo>${escapeXml(reportLocation?.siaeLocationCode || '')}</Luogo>
     <Indirizzo></Indirizzo>
     <Comune></Comune>
     <Provincia></Provincia>
@@ -10831,8 +10841,8 @@ function buildC1ReportData(
     oraFineMalfunzionamento: null as string | null,
     
     // === DATI LOCALE/VENUE ===
-    // Usa dati da locations table se disponibile, altrimenti fallback su event
-    codiceLocale: location?.siaeLocationCode || event.siaeLocationCode || 'N/D',
+    // FIX: siaeLocationCode DEVE provenire SOLO dalla locations table
+    codiceLocale: location?.siaeLocationCode || 'N/D',
     denominazioneLocale: location?.name || event.venueName || 'N/D',
     indirizzoLocale: location?.address || event.venueAddress || 'N/D',
     comuneLocale: location?.city || event.venueCity || 'N/D',
@@ -11245,12 +11255,13 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     });
     
     // Prepara evento per generateRCAXml (formato SiaeEventForLog)
+    // FIX: siaeLocationCode DEVE provenire SOLO dalla locations table
     const eventForLog: SiaeEventForLog = {
       id: event.id,
       name: event.eventName || 'Evento',
       date: eventDate,
       time: event.eventTime ? new Date(event.eventTime) : eventDate,
-      venueCode: location?.siaeLocationCode || event.siaeVenueCode || '0000000000001',
+      venueCode: location?.siaeLocationCode || '0000000000001',
       genreCode: event.genreCode || '64',
       organizerTaxId: company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '',
       organizerName: company?.name || siaeConfig?.businessName || 'Organizzatore',
@@ -11569,8 +11580,6 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
     console.log('[Validate Prerequisites] SystemConfig:', systemConfig?.systemCode);
     console.log('[Validate Prerequisites] Bridge:', bridgeConnected, 'EFFF:', efffData?.systemId);
     console.log('[Validate Prerequisites] Location:', location?.name, 'Code:', location?.siaeLocationCode);
-    console.log('[Validate Prerequisites] TicketedEvent siaeLocationCode:', ticketedEvent.siaeLocationCode);
-    console.log('[Validate Prerequisites] Final siaeLocationCode:', ticketedEvent.siaeLocationCode || location?.siaeLocationCode || 'null');
     
     // Costruisci dati per validazione
     const prerequisiteData: SiaePrerequisiteData = {
@@ -11583,8 +11592,8 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
       },
       ticketedEvent: {
         id: ticketedEvent.id,
-        // FIX 2026-01-25: Fallback su location.siaeLocationCode se ticketedEvent non ha codice locale
-        siaeLocationCode: ticketedEvent.siaeLocationCode || location?.siaeLocationCode || null,
+        // FIX 2026-01-25: Codice locale SOLO dalla location
+        siaeLocationCode: location?.siaeLocationCode || null,
         genreCode: ticketedEvent.genreCode || '61',
         taxType: ticketedEvent.taxType || 'I',
         entertainmentIncidence: ticketedEvent.entertainmentIncidence ?? null,
@@ -11761,8 +11770,8 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       codiceSistemaEmissione: siaeConfig?.systemCode || event.emissionSystemCode || 'N/D',
       
       // Dati Locale
-      // Usa dati da locations table se disponibile, altrimenti fallback su event
-      codiceLocale: location?.siaeLocationCode || event.siaeLocationCode || 'N/D',
+      // FIX: siaeLocationCode DEVE provenire SOLO dalla locations table
+      codiceLocale: location?.siaeLocationCode || 'N/D',
       denominazioneLocale: location?.name || event.venueName || 'N/D',
       indirizzoLocale: location?.address || event.venueAddress || 'N/D',
       comuneLocale: location?.city || event.venueCity || 'N/D',
