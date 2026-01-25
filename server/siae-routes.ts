@@ -11595,7 +11595,7 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
       },
       sectors: sectors.map(s => ({
         id: s.id,
-        orderCode: s.sortOrder || null,
+        orderCode: s.sectorCode || null,
         capacity: s.capacity || null,
       })),
       systemConfig: systemConfig ? {
