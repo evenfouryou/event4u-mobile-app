@@ -76,7 +76,7 @@ export function Badge({
 
   return (
     <View style={[styles.base, currentStyle.container, currentSize.container, style]} testID={testID}>
-      {typeof children === 'string' ? (
+      {typeof children === 'string' || typeof children === 'number' ? (
         <Text style={[styles.text, currentStyle.text, currentSize.text, textStyle]}>{children}</Text>
       ) : (
         children

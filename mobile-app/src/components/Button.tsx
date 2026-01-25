@@ -114,7 +114,7 @@ export function Button({
         >
           {loading ? (
             <ActivityIndicator color={colors.primaryForeground} />
-          ) : typeof children === 'string' ? (
+          ) : typeof children === 'string' || typeof children === 'number' ? (
             <Text style={[styles.text, { fontSize: getTextSize() }, variantStyle.text, textStyle]}>
               {children}
             </Text>
@@ -142,7 +142,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator color={variantStyle.text.color} />
-      ) : typeof children === 'string' ? (
+      ) : typeof children === 'string' || typeof children === 'number' ? (
         <Text style={[styles.text, { fontSize: getTextSize() }, variantStyle.text, textStyle]}>
           {children}
         </Text>
