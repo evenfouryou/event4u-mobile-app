@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Share, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
@@ -89,8 +89,13 @@ export function TicketDetailScreen({
         <View>
           <Card style={styles.qrCard} testID="card-qr">
             <View style={styles.qrContainer}>
-              <View style={styles.qrPlaceholder}>
-                <Ionicons name="qr-code" size={160} color={colors.foreground} />
+              <View style={styles.qrWrapper}>
+                <Image
+                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.ticketCode)}&bgcolor=FFFFFF&color=000000` }}
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                  testID="image-qr-code"
+                />
               </View>
               <Text style={styles.ticketCode}>{ticket.ticketCode}</Text>
             </View>
@@ -243,14 +248,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
-  qrPlaceholder: {
+  qrWrapper: {
     width: 200,
     height: 200,
-    backgroundColor: colors.foreground,
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
+    padding: spacing.sm,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
   },
   ticketCode: {
     fontSize: typography.fontSize.lg,
