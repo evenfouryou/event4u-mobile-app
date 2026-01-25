@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, FlatList } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { Wallet, WalletTransaction } from '@/lib/api';
 
 interface Transaction {
   id: string;
@@ -25,42 +26,42 @@ interface WalletScreenProps {
 
 export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
   const [activeTab, setActiveTab] = useState<'transactions' | 'topup'>('transactions');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
 
-  const balance = 125.0;
-  const transactions: Transaction[] = [
-    {
-      id: '1',
-      type: 'topup',
-      description: 'Ricarica Wallet',
-      amount: 50,
-      date: new Date('2026-01-20T14:30:00'),
-    },
-    {
-      id: '2',
-      type: 'purchase',
-      description: 'Saturday Night Fever - 2x VIP',
-      amount: -100,
-      date: new Date('2026-01-18T22:15:00'),
-    },
-    {
-      id: '3',
-      type: 'refund',
-      description: 'Rimborso evento annullato',
-      amount: 75,
-      date: new Date('2026-01-15T10:00:00'),
-    },
-    {
-      id: '4',
-      type: 'topup',
-      description: 'Ricarica Wallet',
-      amount: 100,
-      date: new Date('2026-01-10T09:00:00'),
-    },
-  ];
+  useEffect(() => {
+    loadWalletData();
+  }, []);
 
+  const loadWalletData = async () => {
+    try {
+      setLoading(true);
+      const [walletData, transactionsData] = await Promise.all([
+        api.getWallet(),
+        api.getWalletTransactions(50),
+      ]);
+      setWallet(walletData);
+      setTransactions(transactionsData.transactions || []);
+    } catch (error) {
+      console.error('Error loading wallet:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadWalletData();
+    setRefreshing(false);
+  };
+
+  const balance = wallet?.balance || 0;
   const topUpOptions = [10, 25, 50, 100, 200];
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
       day: 'numeric',
       month: 'short',
@@ -69,29 +70,36 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
     });
   };
 
-  const getTransactionIcon = (type: Transaction['type']) => {
+  const getTransactionIcon = (type: string) => {
     switch (type) {
       case 'topup':
+      case 'credit':
         return 'arrow-down-circle';
       case 'purchase':
+      case 'debit':
         return 'cart';
       case 'refund':
         return 'return-up-back';
+      default:
+        return 'swap-horizontal';
     }
   };
 
-  const getTransactionColor = (type: Transaction['type']) => {
+  const getTransactionColor = (type: string) => {
     switch (type) {
       case 'topup':
+      case 'credit':
+      case 'refund':
         return colors.success;
       case 'purchase':
+      case 'debit':
         return colors.foreground;
-      case 'refund':
+      default:
         return colors.teal;
     }
   };
 
-  const renderTransaction = ({ item, index }: { item: Transaction; index: number }) => (
+  const renderTransaction = ({ item, index }: { item: WalletTransaction; index: number }) => (
     <View>
       <View style={styles.transactionItem}>
         <View style={[styles.transactionIcon, { backgroundColor: `${getTransactionColor(item.type)}15` }]}>
@@ -105,7 +113,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
           <Text style={styles.transactionDescription} numberOfLines={1}>
             {item.description}
           </Text>
-          <Text style={styles.transactionDate}>{formatDate(item.date)}</Text>
+          <Text style={styles.transactionDate}>{formatDate(item.createdAt)}</Text>
         </View>
         <Text
           style={[
@@ -127,6 +135,13 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View>
           <LinearGradient

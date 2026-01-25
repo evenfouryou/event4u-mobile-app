@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { GreetingHeader } from '@/components/Header';
 import { ActionCard } from '@/components/ActionCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { Wallet, Ticket as ApiTicket, TicketsResponse } from '@/lib/api';
 
 interface AccountDashboardProps {
   onNavigateTickets: () => void;
@@ -36,33 +38,51 @@ export function AccountDashboard({
 }: AccountDashboardProps) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [upcomingTickets, setUpcomingTickets] = useState<ApiTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const walletBalance = 125.0;
-  const upcomingTickets = [
-    {
-      id: '1',
-      eventName: 'Saturday Night Fever',
-      date: new Date('2026-02-01T23:00:00'),
-      location: 'Club XYZ',
-      ticketType: 'VIP',
-    },
-    {
-      id: '2',
-      eventName: 'DJ Set Special',
-      date: new Date('2026-02-08T22:00:00'),
-      location: 'Disco Palace',
-      ticketType: 'Standard',
-    },
-  ];
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const formatDate = (date: Date) => {
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [walletData, ticketsData] = await Promise.all([
+        api.getWallet().catch(() => null),
+        api.getMyTickets().catch(() => ({ upcoming: [], past: [], total: 0 })),
+      ]);
+      setWallet(walletData);
+      setUpcomingTickets(ticketsData.upcoming?.slice(0, 3) || []);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const walletBalance = wallet?.balance || 0;
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
       day: 'numeric',
       month: 'short',
     });
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
     return date.toLocaleTimeString('it-IT', {
       hour: '2-digit',
       minute: '2-digit',
@@ -102,6 +122,13 @@ export function AccountDashboard({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         <GreetingHeader
           name={user?.firstName || 'Utente'}
@@ -206,7 +233,9 @@ export function AccountDashboard({
 
             {upcomingTickets.length > 0 ? (
               <View style={styles.ticketsList}>
-                {upcomingTickets.map((ticket, index) => (
+                {upcomingTickets.map((ticket, index) => {
+                  const eventDate = ticket.eventStart ? new Date(ticket.eventStart) : null;
+                  return (
                   <Pressable
                     key={ticket.id}
                     onPress={() => {
@@ -221,30 +250,31 @@ export function AccountDashboard({
                       <View style={styles.ticketContent}>
                         <View style={styles.ticketDateBox}>
                           <Text style={styles.ticketDay}>
-                            {ticket.date.getDate()}
+                            {eventDate ? eventDate.getDate() : '-'}
                           </Text>
                           <Text style={styles.ticketMonth}>
-                            {ticket.date.toLocaleDateString('it-IT', { month: 'short' }).toUpperCase()}
+                            {eventDate ? eventDate.toLocaleDateString('it-IT', { month: 'short' }).toUpperCase() : '-'}
                           </Text>
                         </View>
                         <View style={styles.ticketInfo}>
                           <Text style={styles.ticketName} numberOfLines={1}>
-                            {ticket.eventName}
+                            {ticket.eventName || 'Evento'}
                           </Text>
                           <View style={styles.ticketMeta}>
                             <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                            <Text style={styles.ticketMetaText}>{ticket.location}</Text>
+                            <Text style={styles.ticketMetaText}>{ticket.locationName || '-'}</Text>
                             <Text style={styles.ticketMetaDot}>•</Text>
-                            <Text style={styles.ticketMetaText}>{formatTime(ticket.date)}</Text>
+                            <Text style={styles.ticketMetaText}>{formatTime(ticket.eventStart)}</Text>
                           </View>
                         </View>
                         <Badge variant={ticket.ticketType === 'VIP' ? 'default' : 'secondary'}>
-                          {ticket.ticketType}
+                          {ticket.ticketType || 'Standard'}
                         </Badge>
                       </View>
                     </Card>
                   </Pressable>
-                ))}
+                  );
+                })}
               </View>
             ) : (
               <Card style={styles.emptyCard}>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { PublicEventDetail as ApiEvent } from '@/lib/api';
 
 interface Sector {
   id: string;
@@ -38,46 +39,56 @@ export function EventDetailScreen({
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [selectedTicketType, setSelectedTicketType] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [eventData, setEventData] = useState<ApiEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const event = {
-    id: eventId,
-    name: 'Saturday Night Fever',
-    description: 'La serata disco più esclusiva di Milano. DJ set internazionali, atmosfera unica e tanto divertimento. Dress code elegante richiesto.',
-    startDate: new Date('2026-02-01T23:00:00'),
-    endDate: new Date('2026-02-02T05:00:00'),
-    imageUrl: null,
-    location: {
-      name: 'Club XYZ',
-      address: 'Via Roma 123, 20121 Milano',
-    },
-    category: 'Disco',
-    categoryColor: '#EC4899',
-    sectors: [
-      {
-        id: 's1',
-        name: 'Pista',
-        ticketTypes: [
-          { id: 't1', name: 'Ingresso Standard', price: 25, available: 100 },
-          { id: 't2', name: 'Ingresso + Drink', price: 35, available: 50 },
-        ],
-      },
-      {
-        id: 's2',
-        name: 'Zona VIP',
-        ticketTypes: [
-          { id: 't3', name: 'VIP Standard', price: 50, available: 20 },
-          { id: 't4', name: 'VIP Premium', price: 80, available: 10 },
-        ],
-      },
-      {
-        id: 's3',
-        name: 'Privé',
-        ticketTypes: [
-          { id: 't5', name: 'Tavolo Privé (max 6)', price: 300, available: 5 },
-        ],
-      },
-    ] as Sector[],
+  useEffect(() => {
+    loadEventData();
+  }, [eventId]);
+
+  const loadEventData = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getPublicEventById(eventId);
+      setEventData(data);
+    } catch (error) {
+      console.error('Error loading event:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadEventData();
+    setRefreshing(false);
+  };
+
+  const event = eventData ? {
+    id: eventData.id,
+    name: eventData.eventName || 'Evento',
+    description: 'Scopri questo evento unico. Acquista i tuoi biglietti ora!',
+    startDate: eventData.eventStart ? new Date(eventData.eventStart) : new Date(),
+    endDate: eventData.eventEnd ? new Date(eventData.eventEnd) : new Date(),
+    imageUrl: eventData.eventImageUrl || null,
+    location: {
+      name: eventData.locationName || 'Location',
+      address: eventData.locationAddress || '',
+    },
+    category: eventData.categoryName || 'Evento',
+    categoryColor: eventData.categoryColor || '#EC4899',
+    sectors: (eventData.sectors || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      ticketTypes: [{
+        id: `${s.id}-default`,
+        name: s.name,
+        price: s.price || 0,
+        available: s.available || 0,
+      }],
+    })) as Sector[],
+  } : null;
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('it-IT', {
@@ -94,7 +105,7 @@ export function EventDetailScreen({
     });
   };
 
-  const selectedTicket = event.sectors
+  const selectedTicket = event?.sectors
     .flatMap(s => s.ticketTypes)
     .find(t => t.id === selectedTicketType);
 
@@ -107,12 +118,44 @@ export function EventDetailScreen({
     }
   };
 
+  if (loading) {
+    return (
+      <SafeArea style={styles.container} edges={['bottom']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Caricamento evento...</Text>
+        </View>
+      </SafeArea>
+    );
+  }
+
+  if (!event) {
+    return (
+      <SafeArea style={styles.container} edges={['bottom']}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.loadingText}>Evento non trovato</Text>
+          <Button variant="outline" onPress={onBack} style={{ marginTop: spacing.md }}>
+            Torna indietro
+          </Button>
+        </View>
+      </SafeArea>
+    );
+  }
+
   return (
     <SafeArea style={styles.container} edges={['bottom']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View style={styles.imageContainer}>
           {event.imageUrl ? (
@@ -298,6 +341,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
   },
   scrollView: {
     flex: 1,

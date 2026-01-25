@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
@@ -7,8 +8,21 @@ import { Card } from '@/components/Card';
 import { Badge, LiveBadge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { PublicEvent } from '@/lib/api';
 
 const { width } = Dimensions.get('window');
+
+function formatEventDate(dateString: string): string {
+  const date = new Date(dateString);
+  const days = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
+}
+
+function formatEventTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
 
 interface LandingScreenProps {
   onNavigateEvents: () => void;
@@ -29,35 +43,24 @@ export function LandingScreen({
   onNavigateAccount,
   isAuthenticated,
 }: LandingScreenProps) {
-  const upcomingEvents = [
-    {
-      id: '1',
-      name: 'Saturday Night Party',
-      venue: 'Club Paradise',
-      date: 'Sab 25 Gen',
-      time: '23:00',
-      price: '15',
-      image: 'https://images.unsplash.com/photo-1571266028243-d220c6a8b0e8?w=400',
-    },
-    {
-      id: '2',
-      name: 'Deep House Session',
-      venue: 'Warehouse Milano',
-      date: 'Dom 26 Gen',
-      time: '22:00',
-      price: '20',
-      image: 'https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=400',
-    },
-    {
-      id: '3',
-      name: 'Reggaeton Fever',
-      venue: 'Latino Club',
-      date: 'Ven 31 Gen',
-      time: '23:30',
-      price: '12',
-      image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    },
-  ];
+  const [events, setEvents] = useState<PublicEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getPublicEvents({ limit: 6 });
+      setEvents(data);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = [
     { id: '1', name: 'Club', icon: 'musical-notes' as const, color: colors.primary },
@@ -177,42 +180,56 @@ export function LandingScreen({
             </Pressable>
           </View>
           
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.eventsScroll}
-          >
-            {upcomingEvents.map((event) => (
-              <Pressable
-                key={event.id}
-                style={styles.eventCard}
-                onPress={() => {
-                  triggerHaptic('light');
-                  onNavigateEvents();
-                }}
-              >
-                <Image
-                  source={{ uri: event.image }}
-                  style={styles.eventImage}
-                />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.9)']}
-                  style={styles.eventGradient}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : events.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
+              <Text style={styles.emptyText}>Nessun evento disponibile</Text>
+            </View>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.eventsScroll}
+            >
+              {events.map((event) => (
+                <Pressable
+                  key={event.id}
+                  style={styles.eventCard}
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateEvents();
+                  }}
+                  testID={`event-card-${event.id}`}
                 >
-                  <Badge variant="golden" size="sm">{event.date}</Badge>
-                  <Text style={styles.eventName}>{event.name}</Text>
-                  <View style={styles.eventInfo}>
-                    <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                    <Text style={styles.eventVenue}>{event.venue}</Text>
-                  </View>
-                  <View style={styles.eventFooter}>
-                    <Text style={styles.eventTime}>{event.time}</Text>
-                    <Text style={styles.eventPrice}>da {event.price}</Text>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            ))}
-          </ScrollView>
+                  <Image
+                    source={{ uri: event.eventImageUrl || 'https://images.unsplash.com/photo-1571266028243-d220c6a8b0e8?w=400' }}
+                    style={styles.eventImage}
+                  />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.9)']}
+                    style={styles.eventGradient}
+                  >
+                    <Badge variant="golden" size="sm">{formatEventDate(event.eventStart)}</Badge>
+                    <Text style={styles.eventName} numberOfLines={2}>{event.eventName}</Text>
+                    <View style={styles.eventInfo}>
+                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                      <Text style={styles.eventVenue} numberOfLines={1}>{event.locationName}</Text>
+                    </View>
+                    <View style={styles.eventFooter}>
+                      <Text style={styles.eventTime}>{formatEventTime(event.eventStart)}</Text>
+                      <Text style={styles.eventPrice}>
+                        {event.minPrice ? `da €${event.minPrice}` : 'Gratuito'}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {!isAuthenticated && (
@@ -507,6 +524,21 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     width: '100%',
+  },
+  loadingContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
   },
   footer: {
     alignItems: 'center',

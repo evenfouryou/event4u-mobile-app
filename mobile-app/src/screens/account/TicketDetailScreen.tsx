@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Share, Image, Dimensions } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Share, Image, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { Ticket as ApiTicket } from '@/lib/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TICKET_WIDTH = SCREEN_WIDTH - spacing.lg * 2;
@@ -25,26 +26,51 @@ export function TicketDetailScreen({
   onNameChange,
 }: TicketDetailScreenProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [ticketData, setTicketData] = useState<ApiTicket | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const ticket = {
-    id: ticketId,
-    ticketCode: 'EVT-2026-001234',
-    eventName: 'Saturday Night Fever',
-    eventDate: new Date('2026-02-01T23:00:00'),
-    eventEnd: new Date('2026-02-02T05:00:00'),
-    location: 'Club XYZ',
-    address: 'Via Roma 123, Milano',
-    ticketType: 'VIP',
-    sectorName: 'Zona Privé',
-    status: 'active' as const,
-    price: 50.0,
-    holderName: 'Mario Rossi',
-    fiscalSealCode: 'SIAE-2026-ABC123-DEF456-GHI789',
-    organizerCompany: 'Event4U S.r.l.',
-    ticketingManager: 'Biglietteria Centrale',
-    emissionDateTime: new Date('2026-01-20T14:30:00'),
-    progressiveNumber: '00123',
+  useEffect(() => {
+    loadTicketData();
+  }, [ticketId]);
+
+  const loadTicketData = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getTicketById(ticketId);
+      setTicketData(data);
+    } catch (error) {
+      console.error('Error loading ticket:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadTicketData();
+    setRefreshing(false);
+  };
+
+  const ticket = ticketData ? {
+    id: ticketData.id,
+    ticketCode: ticketData.ticketCode || 'N/A',
+    eventName: ticketData.eventName || 'Evento',
+    eventDate: ticketData.eventStart ? new Date(ticketData.eventStart) : new Date(),
+    eventEnd: ticketData.eventEnd ? new Date(ticketData.eventEnd) : new Date(),
+    location: ticketData.locationName || 'Location',
+    address: '',
+    ticketType: ticketData.ticketType || 'Standard',
+    sectorName: ticketData.sectorName || '-',
+    status: (ticketData.status === 'emitted' || ticketData.status === 'active') ? 'active' as const : ticketData.status as 'active',
+    price: ticketData.ticketPrice || 0,
+    holderName: `${ticketData.participantFirstName || ''} ${ticketData.participantLastName || ''}`.trim() || 'N/A',
+    fiscalSealCode: ticketData.qrCode || 'N/A',
+    organizerCompany: 'Event4U S.r.l.',
+    ticketingManager: 'Biglietteria',
+    emissionDateTime: ticketData.emittedAt ? new Date(ticketData.emittedAt) : new Date(),
+    progressiveNumber: ticketData.ticketCode?.slice(-5) || '00000',
+  } : null;
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('it-IT', {
@@ -80,6 +106,7 @@ export function TicketDetailScreen({
   };
 
   const handleShare = async () => {
+    if (!ticket) return;
     triggerHaptic('medium');
     try {
       await Share.share({
@@ -99,6 +126,33 @@ export function TicketDetailScreen({
     </View>
   );
 
+  if (loading) {
+    return (
+      <SafeArea edges={['bottom']} style={styles.container}>
+        <Header showLogo showBack onBack={onBack} testID="header-ticket-detail" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Caricamento biglietto...</Text>
+        </View>
+      </SafeArea>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <SafeArea edges={['bottom']} style={styles.container}>
+        <Header showLogo showBack onBack={onBack} testID="header-ticket-detail" />
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.loadingText}>Biglietto non trovato</Text>
+          <Button variant="outline" onPress={onBack} style={{ marginTop: spacing.md }}>
+            Torna indietro
+          </Button>
+        </View>
+      </SafeArea>
+    );
+  }
+
   return (
     <SafeArea edges={['bottom']} style={styles.container}>
       <Header
@@ -117,6 +171,13 @@ export function TicketDetailScreen({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View style={styles.ticketContainer}>
           <View style={styles.ticketCard}>
@@ -321,6 +382,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
   },
   scrollView: {
     flex: 1,

@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Image } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
@@ -10,21 +10,9 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { Avatar } from '@/components/Avatar';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { PublicEvent } from '@/lib/api';
 
 type FilterType = 'all' | 'today' | 'weekend' | 'month';
-
-interface PublicEvent {
-  id: string;
-  eventName: string;
-  eventStart: Date;
-  eventImageUrl: string | null;
-  locationName: string;
-  categoryName: string | null;
-  categoryColor: string | null;
-  minPrice: number;
-  totalAvailable: number;
-  distance: number | null;
-}
 
 interface EventsListScreenProps {
   onBack: () => void;
@@ -43,47 +31,74 @@ export function EventsListScreen({
 }: EventsListScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [locationEnabled, setLocationEnabled] = useState(false);
+  const [events, setEvents] = useState<PublicEvent[]>([]);
 
-  const mockEvents: PublicEvent[] = [
-    {
-      id: '1',
-      eventName: 'Saturday Night Fever',
-      eventStart: new Date('2026-02-01T23:00:00'),
-      eventImageUrl: null,
-      locationName: 'Club XYZ - Milano',
-      categoryName: 'Disco',
-      categoryColor: '#EC4899',
-      minPrice: 25,
-      totalAvailable: 150,
-      distance: 2.5,
-    },
-    {
-      id: '2',
-      eventName: 'DJ Set Special - Marco Carola',
-      eventStart: new Date('2026-02-08T22:00:00'),
-      eventImageUrl: null,
-      locationName: 'Disco Palace - Roma',
-      categoryName: 'Techno',
-      categoryColor: '#8B5CF6',
-      minPrice: 35,
-      totalAvailable: 80,
-      distance: null,
-    },
-    {
-      id: '3',
-      eventName: 'Latin Night',
-      eventStart: new Date('2026-02-14T21:00:00'),
-      eventImageUrl: null,
-      locationName: 'Salsa Club - Napoli',
-      categoryName: 'Latino',
-      categoryColor: '#F59E0B',
-      minPrice: 15,
-      totalAvailable: 200,
-      distance: 5.2,
-    },
-  ];
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getPublicEvents({ limit: 50 });
+      setEvents(data);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadEvents();
+    setRefreshing(false);
+  };
+
+  const getFilteredEvents = () => {
+    const now = new Date();
+    let filtered = events;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.eventName.toLowerCase().includes(query) ||
+        e.locationName.toLowerCase().includes(query)
+      );
+    }
+
+    switch (activeFilter) {
+      case 'today':
+        filtered = filtered.filter(e => {
+          const eventDate = new Date(e.eventStart);
+          return eventDate.toDateString() === now.toDateString();
+        });
+        break;
+      case 'weekend':
+        const saturday = new Date(now);
+        saturday.setDate(now.getDate() + (6 - now.getDay()));
+        const sunday = new Date(saturday);
+        sunday.setDate(saturday.getDate() + 1);
+        filtered = filtered.filter(e => {
+          const eventDate = new Date(e.eventStart);
+          return eventDate >= saturday && eventDate <= sunday;
+        });
+        break;
+      case 'month':
+        filtered = filtered.filter(e => {
+          const eventDate = new Date(e.eventStart);
+          return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+        });
+        break;
+    }
+
+    return filtered;
+  };
+
+  const filteredEvents = getFilteredEvents();
 
   const filters: { key: FilterType; label: string; icon?: string }[] = [
     { key: 'all', label: 'Tutti' },
@@ -92,7 +107,8 @@ export function EventsListScreen({
     { key: 'month', label: 'Mese' },
   ];
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     
@@ -105,7 +121,8 @@ export function EventsListScreen({
     });
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleTimeString('it-IT', {
       hour: '2-digit',
       minute: '2-digit',
@@ -123,8 +140,9 @@ export function EventsListScreen({
   };
 
   const renderEvent = ({ item, index }: { item: PublicEvent; index: number }) => {
-    const isToday = item.eventStart.toDateString() === new Date().toDateString();
-    const isSoldOut = item.totalAvailable <= 0;
+    const eventDate = new Date(item.eventStart);
+    const isToday = eventDate.toDateString() === new Date().toDateString();
+    const isSoldOut = item.availableTickets <= 0;
 
     return (
       <View>
@@ -196,11 +214,13 @@ export function EventsListScreen({
               <View style={styles.eventFooter}>
                 <View style={styles.priceContainer}>
                   <Text style={styles.priceLabel}>da</Text>
-                  <Text style={styles.priceValue}>€{item.minPrice}</Text>
+                  <Text style={styles.priceValue}>
+                    {item.minPrice ? `€${item.minPrice}` : 'Gratuito'}
+                  </Text>
                 </View>
                 <View style={styles.availabilityContainer}>
                   <Text style={styles.availabilityText}>
-                    {item.totalAvailable} disponibili
+                    {item.availableTickets} disponibili
                   </Text>
                 </View>
               </View>
@@ -296,11 +316,18 @@ export function EventsListScreen({
         <Loading text="Caricamento eventi..." />
       ) : (
         <FlatList
-          data={mockEvents}
+          data={filteredEvents}
           renderItem={renderEvent}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />

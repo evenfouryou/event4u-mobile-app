@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, FlatList } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, FlatList, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
@@ -9,20 +9,9 @@ import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { Ticket as ApiTicket, TicketsResponse } from '@/lib/api';
 
 type TabType = 'upcoming' | 'past' | 'cancelled';
-
-interface Ticket {
-  id: string;
-  ticketCode: string;
-  eventName: string;
-  eventDate: Date;
-  location: string;
-  ticketType: string;
-  sectorName: string;
-  status: 'active' | 'used' | 'cancelled' | 'expired';
-  qrCode?: string;
-}
 
 interface TicketsScreenProps {
   onBack: () => void;
@@ -31,50 +20,40 @@ interface TicketsScreenProps {
 
 export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [ticketsData, setTicketsData] = useState<TicketsResponse>({ upcoming: [], past: [], cancelled: [], total: 0 });
 
-  const mockTickets: Ticket[] = [
-    {
-      id: '1',
-      ticketCode: 'EVT-2026-001234',
-      eventName: 'Saturday Night Fever',
-      eventDate: new Date('2026-02-01T23:00:00'),
-      location: 'Club XYZ - Milano',
-      ticketType: 'VIP',
-      sectorName: 'Zona Privé',
-      status: 'active',
-    },
-    {
-      id: '2',
-      ticketCode: 'EVT-2026-001235',
-      eventName: 'DJ Set Special',
-      eventDate: new Date('2026-02-08T22:00:00'),
-      location: 'Disco Palace - Roma',
-      ticketType: 'Standard',
-      sectorName: 'Pista',
-      status: 'active',
-    },
-    {
-      id: '3',
-      ticketCode: 'EVT-2026-001100',
-      eventName: 'New Year Party',
-      eventDate: new Date('2025-12-31T22:00:00'),
-      location: 'Grand Hotel - Firenze',
-      ticketType: 'Premium',
-      sectorName: 'Tavolo',
-      status: 'used',
-    },
-  ];
+  useEffect(() => {
+    loadTickets();
+  }, []);
 
-  const getFilteredTickets = () => {
-    const now = new Date();
+  const loadTickets = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getMyTickets();
+      setTicketsData(data);
+    } catch (error) {
+      console.error('Error loading tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadTickets();
+    setRefreshing(false);
+  };
+
+  const getFilteredTickets = (): ApiTicket[] => {
     switch (activeTab) {
       case 'upcoming':
-        return mockTickets.filter(t => t.eventDate > now && t.status === 'active');
+        return ticketsData.upcoming || [];
       case 'past':
-        return mockTickets.filter(t => t.eventDate <= now || t.status === 'used');
+        return ticketsData.past || [];
       case 'cancelled':
-        return mockTickets.filter(t => t.status === 'cancelled');
+        return ticketsData.cancelled || [];
       default:
         return [];
     }
@@ -82,7 +61,9 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
 
   const tickets = getFilteredTickets();
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
       weekday: 'short',
       day: 'numeric',
@@ -90,90 +71,101 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
     });
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
     return date.toLocaleTimeString('it-IT', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  const getStatusBadge = (status: Ticket['status']) => {
+  const getStatusBadge = (status: string | null) => {
     switch (status) {
+      case 'emitted':
       case 'active':
         return <Badge variant="success">Valido</Badge>;
       case 'used':
         return <Badge variant="secondary">Usato</Badge>;
       case 'cancelled':
+      case 'annullato':
         return <Badge variant="destructive">Annullato</Badge>;
-      case 'expired':
+      default:
         return <Badge variant="secondary">Scaduto</Badge>;
     }
   };
 
-  const renderTicket = ({ item, index }: { item: Ticket; index: number }) => (
-    <View>
-      <Pressable
-        onPress={() => {
-          triggerHaptic('light');
-          onTicketPress(item.id);
-        }}
-      >
-        <Card style={styles.ticketCard} testID={`ticket-${item.id}`}>
-          <View style={styles.ticketHeader}>
-            <View style={styles.ticketDateBadge}>
-              <Text style={styles.ticketDateDay}>{item.eventDate.getDate()}</Text>
-              <Text style={styles.ticketDateMonth}>
-                {item.eventDate.toLocaleDateString('it-IT', { month: 'short' }).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.ticketInfo}>
-              <Text style={styles.ticketEventName} numberOfLines={1}>
-                {item.eventName}
-              </Text>
-              <View style={styles.ticketMeta}>
-                <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.ticketMetaText} numberOfLines={1}>
-                  {item.location}
+  const renderTicket = ({ item, index }: { item: ApiTicket; index: number }) => {
+    const eventDate = item.eventStart ? new Date(item.eventStart) : null;
+    const isValid = item.status === 'emitted' || item.status === 'active';
+    
+    return (
+      <View>
+        <Pressable
+          onPress={() => {
+            triggerHaptic('light');
+            onTicketPress(item.id);
+          }}
+        >
+          <Card style={styles.ticketCard} testID={`ticket-${item.id}`}>
+            <View style={styles.ticketHeader}>
+              <View style={styles.ticketDateBadge}>
+                <Text style={styles.ticketDateDay}>
+                  {eventDate ? eventDate.getDate() : '-'}
+                </Text>
+                <Text style={styles.ticketDateMonth}>
+                  {eventDate ? eventDate.toLocaleDateString('it-IT', { month: 'short' }).toUpperCase() : '-'}
                 </Text>
               </View>
-              <View style={styles.ticketMeta}>
-                <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-                <Text style={styles.ticketMetaText}>{formatTime(item.eventDate)}</Text>
+              <View style={styles.ticketInfo}>
+                <Text style={styles.ticketEventName} numberOfLines={1}>
+                  {item.eventName || 'Evento'}
+                </Text>
+                <View style={styles.ticketMeta}>
+                  <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.ticketMetaText} numberOfLines={1}>
+                    {item.locationName || '-'}
+                  </Text>
+                </View>
+                <View style={styles.ticketMeta}>
+                  <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.ticketMetaText}>{formatTime(item.eventStart)}</Text>
+                </View>
+              </View>
+              <View style={styles.ticketActions}>
+                {getStatusBadge(item.status)}
+                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
               </View>
             </View>
-            <View style={styles.ticketActions}>
-              {getStatusBadge(item.status)}
-              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-            </View>
-          </View>
 
-          <View style={styles.ticketDivider} />
+            <View style={styles.ticketDivider} />
 
-          <View style={styles.ticketFooter}>
-            <View style={styles.ticketDetail}>
-              <Text style={styles.ticketDetailLabel}>Tipologia</Text>
-              <Text style={styles.ticketDetailValue}>{item.ticketType}</Text>
+            <View style={styles.ticketFooter}>
+              <View style={styles.ticketDetail}>
+                <Text style={styles.ticketDetailLabel}>Tipologia</Text>
+                <Text style={styles.ticketDetailValue}>{item.ticketType || '-'}</Text>
+              </View>
+              <View style={styles.ticketDetail}>
+                <Text style={styles.ticketDetailLabel}>Settore</Text>
+                <Text style={styles.ticketDetailValue}>{item.sectorName || '-'}</Text>
+              </View>
+              <View style={styles.ticketDetail}>
+                <Text style={styles.ticketDetailLabel}>Codice</Text>
+                <Text style={styles.ticketDetailValue}>{item.ticketCode?.slice(-6) || '-'}</Text>
+              </View>
             </View>
-            <View style={styles.ticketDetail}>
-              <Text style={styles.ticketDetailLabel}>Settore</Text>
-              <Text style={styles.ticketDetailValue}>{item.sectorName}</Text>
-            </View>
-            <View style={styles.ticketDetail}>
-              <Text style={styles.ticketDetailLabel}>Codice</Text>
-              <Text style={styles.ticketDetailValue}>{item.ticketCode.slice(-6)}</Text>
-            </View>
-          </View>
 
-          {item.status === 'active' && (
-            <View style={styles.qrHint}>
-              <Ionicons name="qr-code-outline" size={16} color={colors.primary} />
-              <Text style={styles.qrHintText}>Tocca per vedere il QR Code</Text>
-            </View>
-          )}
-        </Card>
-      </Pressable>
-    </View>
-  );
+            {isValid && (
+              <View style={styles.qrHint}>
+                <Ionicons name="qr-code-outline" size={16} color={colors.primary} />
+                <Text style={styles.qrHintText}>Tocca per vedere il QR Code</Text>
+              </View>
+            )}
+          </Card>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <SafeArea edges={['bottom']} style={styles.container}>
@@ -211,6 +203,13 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
         />
       ) : (
         <View style={styles.emptyState}>

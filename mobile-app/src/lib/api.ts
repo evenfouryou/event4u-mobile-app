@@ -6,6 +6,101 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+export interface PublicEvent {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventImageUrl: string | null;
+  eventStart: string;
+  eventEnd: string;
+  locationId: string;
+  locationName: string;
+  locationAddress: string | null;
+  locationLatitude: number | null;
+  locationLongitude: number | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  categorySlug: string | null;
+  categoryIcon: string | null;
+  categoryColor: string | null;
+  totalCapacity: number | null;
+  ticketsSold: number;
+  ticketingStatus: string;
+  saleStartDate: string | null;
+  saleEndDate: string | null;
+  maxTicketsPerUser: number | null;
+  requiresNominative: boolean;
+  minPrice: number | null;
+  maxPrice: number | null;
+  availableTickets: number;
+  distance?: number | null;
+}
+
+export interface PublicEventDetail extends PublicEvent {
+  sectors: Array<{
+    id: string;
+    name: string;
+    price: number;
+    capacity: number;
+    sold: number;
+    available: number;
+  }>;
+}
+
+export interface Ticket {
+  id: string;
+  ticketCode: string;
+  ticketType: string;
+  ticketPrice: number;
+  participantFirstName: string | null;
+  participantLastName: string | null;
+  status: string;
+  emissionDate: string | null;
+  emittedAt: string | null;
+  qrCode: string | null;
+  sectorName: string | null;
+  eventName: string | null;
+  eventStart: string | null;
+  eventEnd: string | null;
+  locationName: string | null;
+  ticketedEventId: string;
+}
+
+export interface TicketsResponse {
+  upcoming: Ticket[];
+  past: Ticket[];
+  cancelled?: Ticket[];
+  total: number;
+}
+
+export interface Wallet {
+  id: string;
+  balance: number;
+  currency: string;
+  isActive: boolean;
+}
+
+export interface WalletTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+  status: string;
+}
+
+export interface Customer {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  fiscalCode: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  isVerified: boolean;
+}
+
 class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
@@ -67,6 +162,43 @@ class ApiClient {
 
   delete<T>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async getPublicEvents(params?: { limit?: number; offset?: number; categoryId?: string; userLat?: number; userLng?: number }): Promise<PublicEvent[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.categoryId) queryParams.append('categoryId', params.categoryId);
+    if (params?.userLat) queryParams.append('userLat', params.userLat.toString());
+    if (params?.userLng) queryParams.append('userLng', params.userLng.toString());
+    
+    const query = queryParams.toString();
+    return this.get<PublicEvent[]>(`/api/public/events${query ? `?${query}` : ''}`);
+  }
+
+  async getPublicEventById(id: string): Promise<PublicEventDetail> {
+    return this.get<PublicEventDetail>(`/api/public/events/${id}`);
+  }
+
+  async getMyTickets(): Promise<TicketsResponse> {
+    return this.get<TicketsResponse>('/api/public/account/tickets');
+  }
+
+  async getTicketById(id: string): Promise<Ticket> {
+    return this.get<Ticket>(`/api/public/account/tickets/${id}`);
+  }
+
+  async getWallet(): Promise<Wallet> {
+    return this.get<Wallet>('/api/public/account/wallet');
+  }
+
+  async getWalletTransactions(limit?: number): Promise<{ transactions: WalletTransaction[] }> {
+    const query = limit ? `?limit=${limit}` : '';
+    return this.get<{ transactions: WalletTransaction[] }>(`/api/public/account/wallet/transactions${query}`);
+  }
+
+  async getMe(): Promise<Customer> {
+    return this.get<Customer>('/api/public/account/me');
   }
 }
 
