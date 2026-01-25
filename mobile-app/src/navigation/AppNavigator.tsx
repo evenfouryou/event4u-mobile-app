@@ -194,6 +194,7 @@ export function AppNavigator() {
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
             onNavigateSettings={() => navigate({ name: 'subscriptions' })}
+            onLogout={() => resetTo({ name: 'landing' })}
           />
         );
 

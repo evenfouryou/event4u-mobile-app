@@ -19,6 +19,7 @@ interface AccountDashboardProps {
   onNavigateEvents: () => void;
   onNavigateResales: () => void;
   onNavigateSettings: () => void;
+  onLogout: () => void;
 }
 
 export function AccountDashboard({
@@ -28,6 +29,7 @@ export function AccountDashboard({
   onNavigateEvents,
   onNavigateResales,
   onNavigateSettings,
+  onLogout,
 }: AccountDashboardProps) {
   const { user } = useAuth();
 
@@ -245,6 +247,22 @@ export function AccountDashboard({
               </Card>
             )}
           </View>
+
+          <View style={styles.logoutSection}>
+            <Button
+              variant="outline"
+              size="lg"
+              onPress={() => {
+                triggerHaptic('medium');
+                onLogout();
+              }}
+              style={styles.logoutButton}
+              testID="button-logout"
+            >
+              <Ionicons name="log-out-outline" size={20} color={colors.foreground} />
+              <Text style={styles.logoutText}>Esci</Text>
+            </Button>
+          </View>
         </View>
       </ScrollView>
     </SafeArea>
@@ -408,6 +426,23 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     paddingHorizontal: spacing.xl,
+  },
+  logoutSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  logoutText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '500',
+    color: colors.foreground,
   },
 });
 

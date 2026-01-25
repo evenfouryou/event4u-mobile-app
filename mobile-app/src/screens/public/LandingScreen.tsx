@@ -76,7 +76,7 @@ export function LandingScreen({
 
         <View style={styles.header}>
           <Image
-            source={require('../../../assets/logo.png')}
+            source={require('../../../assets/logo-white.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -244,7 +244,7 @@ export function LandingScreen({
             style={styles.ctaCard}
           >
             <Image
-              source={require('../../../assets/logo.png')}
+              source={require('../../../assets/logo-white.png')}
               style={styles.ctaLogo}
               resizeMode="contain"
             />

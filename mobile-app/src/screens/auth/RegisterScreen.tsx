@@ -112,7 +112,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 
           <View style={styles.header}>
             <Image
-              source={require('../../../assets/logo.png')}
+              source={require('../../../assets/logo-white.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -193,7 +193,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 
           <View style={styles.headerSmall}>
             <Image
-              source={require('../../../assets/logo.png')}
+              source={require('../../../assets/logo-white.png')}
               style={styles.logoSmall}
               resizeMode="contain"
             />
