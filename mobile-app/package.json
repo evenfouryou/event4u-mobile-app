@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "App.tsx",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --tunnel",
+    "lan": "expo start --lan",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@expo/ngrok": "^4.1.3",
     "@types/react": "~19.0.10",
     "typescript": "~5.8.0"
   },
