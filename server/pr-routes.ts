@@ -651,7 +651,7 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
       return res.status(400).json({ error: "Lista piena" });
     }
     
-    // FIX 2026-01-25: Check PR quota for this specific list
+    // FIX 2026-01-25: Check PR assignment and quota for this list
     const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
     const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
     if (sessionPrProfileId) {
@@ -668,36 +668,58 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
         )
       );
     
-    if (prAssignments.length > 0) {
+    // FIX: Verify PR has canAddToLists permission for this event
+    const hasListPermission = prAssignments.some(a => a.canAddToLists);
+    const isListCreator = list.createdByUserId === user.id;
+    
+    if (!hasListPermission && !isListCreator) {
+      return res.status(403).json({ 
+        error: "Non autorizzato", 
+        message: "Non hai i permessi per aggiungere ospiti a questa lista" 
+      });
+    }
+    
+    // Check if specific list assignments exist and verify access
+    if (prAssignments.length > 0 && hasListPermission) {
       const prAssignmentIds = prAssignments.map(a => a.id);
-      const listQuota = await db.select()
+      const listAssignments = await db.select()
         .from(prListAssignments)
-        .where(
-          and(
-            inArray(prListAssignments.prAssignmentId, prAssignmentIds),
-            eq(prListAssignments.listId, listId)
-          )
-        );
+        .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
       
-      if (listQuota.length > 0 && listQuota[0].quota !== null) {
-        // Count existing entries by this PR in this list
-        const existingEntries = await db.select({ count: sql<number>`count(*)` })
-          .from(listEntries)
-          .where(
-            and(
-              eq(listEntries.listId, listId),
-              eq(listEntries.addedByUserId, user.id)
-            )
-          );
+      // If PR has specific list assignments, verify this list is in them
+      if (listAssignments.length > 0) {
+        const assignedListIds = listAssignments.map(la => la.listId);
+        const hasAccessToList = assignedListIds.includes(listId) || isListCreator;
         
-        const currentCount = Number(existingEntries[0]?.count || 0);
-        if (currentCount >= listQuota[0].quota) {
-          return res.status(400).json({ 
-            error: "Quota raggiunta", 
-            message: `Hai raggiunto il limite di ${listQuota[0].quota} persone per questa lista` 
+        if (!hasAccessToList) {
+          return res.status(403).json({ 
+            error: "Non autorizzato", 
+            message: "Non sei assegnato a questa lista" 
           });
         }
+        
+        // Check quota for this specific list
+        const listQuota = listAssignments.find(la => la.listId === listId);
+        if (listQuota && listQuota.quota !== null) {
+          const existingEntries = await db.select({ count: sql<number>`count(*)` })
+            .from(listEntries)
+            .where(
+              and(
+                eq(listEntries.listId, listId),
+                eq(listEntries.addedByUserId, user.id)
+              )
+            );
+          
+          const currentCount = Number(existingEntries[0]?.count || 0);
+          if (currentCount >= listQuota.quota) {
+            return res.status(400).json({ 
+              error: "Quota raggiunta", 
+              message: `Hai raggiunto il limite di ${listQuota.quota} persone per questa lista` 
+            });
+          }
+        }
       }
+      // If no specific list assignments, PR can add to any list (fallback behavior)
     }
     
     const validated = insertListEntrySchema.omit({ qrCode: true }).parse({
