@@ -1,9 +1,0 @@
-export { default as InventoryHomeScreen } from './InventoryHomeScreen';
-export { default as ProductListScreen } from './ProductListScreen';
-export { default as ProductDetailScreen } from './ProductDetailScreen';
-export { default as ConsumptionScreen } from './ConsumptionScreen';
-export { default as StockAdjustmentScreen } from './StockAdjustmentScreen';
-export { default as WarehouseScreen } from './WarehouseScreen';
-export { default as SuppliersScreen } from './SuppliersScreen';
-export { default as PurchaseOrdersScreen } from './PurchaseOrdersScreen';
-export { default as ReturnToWarehouseScreen } from './ReturnToWarehouseScreen';
