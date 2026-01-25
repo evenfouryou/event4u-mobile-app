@@ -376,14 +376,20 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
     const user = req.user as any;
     const allLists = await prStorage.getGuestListsByEvent(eventId);
     
+    console.log(`[PR-LISTS] User: ${user?.id}, role: ${user?.role}, eventId: ${eventId}`);
+    console.log(`[PR-LISTS] Total lists for event: ${allLists.length}`);
+    
     // Gestore/Super Admin vedono tutte le liste
     if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+      console.log(`[PR-LISTS] Gestore/Admin - returning all ${allLists.length} lists`);
       return res.json(allLists);
     }
     
     // PR/Capo Staff vedono liste proprie + liste assegnate
     // 1. Get prProfileId from session
     const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+    console.log(`[PR-LISTS] sessionPrProfileId: ${sessionPrProfileId}`);
+    console.log(`[PR-LISTS] req.session.prProfile:`, (req.session as any)?.prProfile);
     
     // 2. Find PR assignment for this event (matching userId OR prProfileId)
     // Build predicates array to avoid passing undefined to or()
@@ -401,6 +407,12 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
         )
       );
     
+    console.log(`[PR-LISTS] Found ${prAssignments.length} PR assignments for this user/event`);
+    console.log(`[PR-LISTS] Searching for userId=${user.id} OR prProfileId=${sessionPrProfileId}`);
+    if (prAssignments.length > 0) {
+      console.log(`[PR-LISTS] Assignment IDs: ${prAssignments.map(a => a.id).join(', ')}`);
+    }
+    
     // 3. Get list IDs assigned to those PR assignments
     let assignedListIds: string[] = [];
     if (prAssignments.length > 0) {
@@ -409,12 +421,14 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
         .from(prListAssignments)
         .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
       assignedListIds = listAssignments.map(la => la.listId);
+      console.log(`[PR-LISTS] Found ${listAssignments.length} list assignments, listIds: ${assignedListIds.join(', ')}`);
     }
     
     // 4. Filter lists: created by user OR assigned to user
     const userLists = allLists.filter(list => 
       list.createdByUserId === user.id || assignedListIds.includes(list.id)
     );
+    console.log(`[PR-LISTS] Final result: ${userLists.length} lists (created by user or assigned)`);
     res.json(userLists);
   } catch (error: any) {
     console.error("Error getting guest lists:", error);
