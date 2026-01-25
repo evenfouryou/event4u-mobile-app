@@ -176,7 +176,7 @@ export function SubscriptionsScreen({
   };
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-subscriptions" />
 
       <View style={styles.tabs}>

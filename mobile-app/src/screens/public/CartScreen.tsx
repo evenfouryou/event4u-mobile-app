@@ -86,7 +86,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
   const total = subtotal + fees;
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header
         showLogo
         showBack

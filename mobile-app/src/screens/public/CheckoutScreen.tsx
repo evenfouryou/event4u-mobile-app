@@ -86,7 +86,7 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
   };
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header
         showLogo
         showBack

@@ -217,7 +217,7 @@ export function ResalesScreen({
   const tickets = activeTab === 'marketplace' ? marketplaceTickets : myResales;
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header
         showLogo
         showBack

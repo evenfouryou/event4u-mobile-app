@@ -120,7 +120,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
   );
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-wallet" />
 
       <ScrollView

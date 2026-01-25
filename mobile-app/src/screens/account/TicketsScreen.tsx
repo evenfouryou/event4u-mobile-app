@@ -176,7 +176,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
   );
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header
         showLogo
         showBack

@@ -84,7 +84,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
 
   if (step === 'success') {
     return (
-      <SafeArea style={styles.container}>
+      <SafeArea edges={['bottom']} style={styles.container}>
         <Header showLogo showBack onBack={onBack} />
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
@@ -108,7 +108,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
   }
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-name-change" />
 
       <KeyboardAvoidingView

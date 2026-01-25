@@ -80,7 +80,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
 
   if (step === 'success') {
     return (
-      <SafeArea style={styles.container}>
+      <SafeArea edges={['bottom']} style={styles.container}>
         <View style={styles.successContainer}>
           <View>
             <LinearGradient colors={gradients.golden} style={styles.successIcon}>
@@ -105,7 +105,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
   }
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-topup" />
 
       <KeyboardAvoidingView

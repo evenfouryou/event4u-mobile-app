@@ -54,7 +54,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   };
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header
         title="Profilo"
         showBack

@@ -152,7 +152,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
   );
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-venues" />
 
       <View style={styles.searchContainer}>
