@@ -11547,11 +11547,24 @@ router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, 
     const company = ticketedEvent.companyId ? await storage.getCompany(ticketedEvent.companyId) : null;
     const baseEvent = await storage.getEvent(ticketedEvent.eventId);
     const sectors = await siaeStorage.getSiaeEventSectors(eventId);
-    const systemConfig = await siaeStorage.getGlobalSiaeSystemConfig();
+    
+    // FIX 2026-01-25: Usa la configurazione SIAE specifica dell'azienda, con fallback alla globale
+    let systemConfig = ticketedEvent.companyId 
+      ? await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId) 
+      : null;
+    if (!systemConfig) {
+      systemConfig = await siaeStorage.getGlobalSiaeSystemConfig();
+    }
     
     // Ottieni dati Smart Card dal bridge (se connesso)
     const bridgeConnected = isBridgeConnected();
     const efffData = getCachedEfffData();
+    
+    // FIX 2026-01-25: Aggiungi log per debug validazione
+    console.log('[Validate Prerequisites] Event:', ticketedEvent.id);
+    console.log('[Validate Prerequisites] Company:', company?.name, company?.taxId);
+    console.log('[Validate Prerequisites] SystemConfig:', systemConfig?.systemCode);
+    console.log('[Validate Prerequisites] Bridge:', bridgeConnected, 'EFFF:', efffData?.systemId);
     
     // Costruisci dati per validazione
     const prerequisiteData: SiaePrerequisiteData = {

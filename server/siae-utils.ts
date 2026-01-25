@@ -3220,18 +3220,23 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
   // ==================== VALIDAZIONI TITOLARE ====================
   
   // 1. Codice Sistema (8 caratteri) - OBBLIGATORIO
-  // Verifica se è stato configurato esplicitamente o si sta usando il default
+  // FIX 2026-01-25: Verifica se è stato configurato esplicitamente o si sta usando il default
+  // In test mode, accetta il default come valido
   const hasConfiguredSystemCode = !!(data.smartCardData?.systemId || data.systemConfig?.systemCode);
+  const isTestMode = process.env.SIAE_TEST_MODE === 'true';
   const sysCodeValidation = validateSystemCode(systemCode);
   
   // SystemCode DEVE essere configurato esplicitamente (Smart Card o config)
-  // Non è accettabile usare un default per trasmissioni RCA ufficiali
-  // - Se non configurato = error bloccante (non può procedere)
+  // FIX 2026-01-25: In test mode, accetta il default (warning invece di error)
+  // - Se non configurato E non test mode = error bloccante
+  // - Se non configurato E test mode = warning (usa default)
   // - Se configurato MA non valido = error bloccante
   // - Se configurato E valido = ok
   let systemCodeStatus: 'ok' | 'warning' | 'error' = 'ok';
-  if (!hasConfiguredSystemCode) {
-    systemCodeStatus = 'error'; // Mancanza configurazione = bloccante
+  if (!hasConfiguredSystemCode && !isTestMode) {
+    systemCodeStatus = 'error'; // Mancanza configurazione = bloccante in produzione
+  } else if (!hasConfiguredSystemCode && isTestMode) {
+    systemCodeStatus = 'warning'; // In test mode, usa default con warning
   } else if (!sysCodeValidation.valid) {
     systemCodeStatus = 'error'; // Valore non valido = bloccante
   }
@@ -3241,11 +3246,11 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
     field: 'systemCode',
     label: 'Codice Sistema SIAE',
     status: systemCodeStatus,
-    value: hasConfiguredSystemCode ? systemCode : 'Non configurato',
+    value: hasConfiguredSystemCode ? systemCode : (isTestMode ? `${systemCode} (default test)` : 'Non configurato'),
     required: true
   });
   
-  if (!hasConfiguredSystemCode) {
+  if (!hasConfiguredSystemCode && !isTestMode) {
     errors.push({
       code: 'SYSTEM_CODE_NOT_CONFIGURED',
       field: 'systemCode',
@@ -3253,6 +3258,14 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
       message: 'Codice Sistema SIAE obbligatorio ma non configurato',
       resolution: 'Connettere Smart Card per leggere il codice automaticamente, oppure configurare manualmente in Impostazioni SIAE (8 caratteri alfanumerici)',
       siaeErrorCode: '0600'
+    });
+  } else if (!hasConfiguredSystemCode && isTestMode) {
+    warnings.push({
+      code: 'SYSTEM_CODE_USING_DEFAULT',
+      field: 'systemCode',
+      category: 'titolare',
+      message: `Usando codice sistema di default: ${systemCode}`,
+      suggestion: 'In produzione, configurare il codice sistema dalla Smart Card o nelle Impostazioni SIAE'
     });
   } else if (!sysCodeValidation.valid) {
     errors.push({
