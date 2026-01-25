@@ -12,13 +12,14 @@ import {
   insertListEntrySchema,
   siaeCustomers,
   eventPrAssignments,
+  prListAssignments,
   users,
   events,
   prProfiles,
   companies,
 } from "@shared/schema";
 import { z } from "zod";
-import { like, or, eq, and, desc, isNull } from "drizzle-orm";
+import { like, or, eq, and, desc, isNull, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -368,7 +369,7 @@ router.delete("/api/pr/bookings/:id", requireAuth, requireGestore, async (req: R
 // ==================== Guest Lists ====================
 
 // Get guest lists for an event
-// FIX 2026-01-22: PR vede solo le proprie liste, Gestore vede tutte
+// FIX 2026-01-25: PR vede liste proprie + liste assegnate via prListAssignments
 router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
@@ -380,8 +381,40 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
       return res.json(allLists);
     }
     
-    // PR/Capo Staff vedono solo le proprie liste
-    const userLists = allLists.filter(list => list.createdByUserId === user.id);
+    // PR/Capo Staff vedono liste proprie + liste assegnate
+    // 1. Get prProfileId from session
+    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+    
+    // 2. Find PR assignment for this event (matching userId OR prProfileId)
+    // Build predicates array to avoid passing undefined to or()
+    const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
+    if (sessionPrProfileId) {
+      prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, sessionPrProfileId));
+    }
+    
+    const prAssignments = await db.select()
+      .from(eventPrAssignments)
+      .where(
+        and(
+          eq(eventPrAssignments.eventId, eventId),
+          prAssignmentPredicates.length > 1 ? or(...prAssignmentPredicates) : prAssignmentPredicates[0]
+        )
+      );
+    
+    // 3. Get list IDs assigned to those PR assignments
+    let assignedListIds: string[] = [];
+    if (prAssignments.length > 0) {
+      const prAssignmentIds = prAssignments.map(a => a.id);
+      const listAssignments = await db.select()
+        .from(prListAssignments)
+        .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
+      assignedListIds = listAssignments.map(la => la.listId);
+    }
+    
+    // 4. Filter lists: created by user OR assigned to user
+    const userLists = allLists.filter(list => 
+      list.createdByUserId === user.id || assignedListIds.includes(list.id)
+    );
     res.json(userLists);
   } catch (error: any) {
     console.error("Error getting guest lists:", error);
@@ -481,7 +514,7 @@ router.delete("/api/pr/guest-lists/:id", requireAuth, requireGestore, async (req
 // ==================== Guest List Entries ====================
 
 // Get entries for a guest list
-// FIX 2026-01-22: PR vede solo i propri ospiti nella lista, Gestore vede tutti
+// FIX 2026-01-25: PR vede tutti gli ospiti se ha creato la lista O se è assegnato ad essa
 router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Request, res: Response) => {
   try {
     const { listId } = req.params;
@@ -493,7 +526,50 @@ router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Reque
       return res.json(allEntries);
     }
     
-    // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
+    // Check if user created the list
+    const list = await prStorage.getGuestList(listId);
+    if (list && list.createdByUserId === user.id) {
+      return res.json(allEntries);
+    }
+    
+    // Check if user is assigned to this list via prListAssignments
+    if (list) {
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      
+      // Build predicates array to avoid passing undefined to or()
+      const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
+      if (sessionPrProfileId) {
+        prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, sessionPrProfileId));
+      }
+      
+      const prAssignments = await db.select()
+        .from(eventPrAssignments)
+        .where(
+          and(
+            eq(eventPrAssignments.eventId, list.eventId),
+            prAssignmentPredicates.length > 1 ? or(...prAssignmentPredicates) : prAssignmentPredicates[0]
+          )
+        );
+      
+      if (prAssignments.length > 0) {
+        const prAssignmentIds = prAssignments.map(a => a.id);
+        const listAssignments = await db.select()
+          .from(prListAssignments)
+          .where(
+            and(
+              inArray(prListAssignments.prAssignmentId, prAssignmentIds),
+              eq(prListAssignments.listId, listId)
+            )
+          );
+        
+        // If user is assigned to this list, show all entries
+        if (listAssignments.length > 0) {
+          return res.json(allEntries);
+        }
+      }
+    }
+    
+    // Otherwise, PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
     const userEntries = allEntries.filter(entry => entry.addedByUserId === user.id);
     res.json(userEntries);
   } catch (error: any) {
