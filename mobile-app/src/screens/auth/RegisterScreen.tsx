@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
@@ -111,13 +111,11 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
           </View>
 
           <View style={styles.header}>
-            <LinearGradient
-              colors={[colors.primary, '#FFA500']}
-              style={styles.logoGradient}
-            >
-              <Text style={styles.logoText}>E4U</Text>
-            </LinearGradient>
-            <Text style={styles.brandName}>EventFourYou</Text>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Crea Account</Text>
             <Text style={styles.subtitle}>Scegli il tipo di account</Text>
           </View>
@@ -194,12 +192,11 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
           </View>
 
           <View style={styles.headerSmall}>
-            <LinearGradient
-              colors={[colors.primary, '#FFA500']}
-              style={styles.logoGradientSmall}
-            >
-              <Text style={styles.logoTextSmall}>E4U</Text>
-            </LinearGradient>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logoSmall}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Registrati come Cliente</Text>
           </View>
 
@@ -374,6 +371,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xxl,
     marginBottom: spacing.lg,
+  },
+  logo: {
+    width: 180,
+    height: 80,
+    marginBottom: spacing.md,
+  },
+  logoSmall: {
+    width: 120,
+    height: 50,
+    marginBottom: spacing.sm,
   },
   logoGradient: {
     width: 70,

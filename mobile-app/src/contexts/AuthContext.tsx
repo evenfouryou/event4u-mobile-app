@@ -8,13 +8,14 @@ interface User {
   firstName: string;
   lastName: string;
   phone?: string;
+  role?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -39,20 +40,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       setIsLoading(true);
-      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-      
-      if (token) {
-        api.setAuthToken(token);
-        const userData = await api.get<User>('/api/customer/profile');
-        setUser(userData);
+      const userData = await api.get<{ user: User }>('/api/auth/user');
+      if (userData && userData.user) {
+        setUser(userData.user);
       } else {
         setUser(null);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.log('Not authenticated');
       setUser(null);
-      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-      api.setAuthToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -62,47 +58,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (identifier: string, password: string) => {
     try {
-      const response = await api.post<{ user: User; token?: string }>('/api/customer/login', {
-        email,
-        password,
-      });
-
-      if (response.token) {
-        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, response.token);
-        api.setAuthToken(response.token);
+      // Detect if it's email, phone, or username
+      const isPhone = identifier.startsWith('+') || /^\d{8,15}$/.test(identifier.replace(/[\s\-()]/g, ''));
+      
+      const body: any = { password };
+      if (isPhone) {
+        body.phone = identifier;
+      } else {
+        body.email = identifier;
       }
 
-      setUser(response.user);
-    } catch (error) {
-      throw error;
+      const response = await api.post<{ user: User; message: string }>('/api/auth/login', body);
+
+      if (response.user) {
+        setUser(response.user);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      throw new Error(error.message || 'Credenziali non valide');
     }
   };
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await api.post<{ user: User; token?: string }>('/api/customer/register', data);
+      const response = await api.post<{ user: User; message: string }>('/api/public/customer/register', {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+      });
 
-      if (response.token) {
-        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, response.token);
-        api.setAuthToken(response.token);
+      if (response.user) {
+        setUser(response.user);
       }
-
-      setUser(response.user);
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      console.error('Register error:', error);
+      throw new Error(error.message || 'Errore durante la registrazione');
     }
   };
 
   const logout = async () => {
     try {
-      await api.post('/api/customer/logout');
+      await api.post('/api/auth/logout', {});
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-      api.setAuthToken(null);
       setUser(null);
     }
   };
@@ -131,5 +134,3 @@ export function useAuth() {
   }
   return context;
 }
-
-export default AuthContext;

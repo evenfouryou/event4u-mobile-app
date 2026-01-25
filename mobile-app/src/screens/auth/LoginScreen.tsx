@@ -104,24 +104,14 @@ export function LoginScreen({
 
           <View style={styles.header}>
             <Image
-              source={{ uri: 'https://manage.eventfouryou.com/logos/logo-vertical-dark.svg' }}
+              source={require('../../../assets/logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
-            <View style={styles.logoFallback}>
-              <LinearGradient
-                colors={[colors.primary, '#FFA500']}
-                style={styles.logoGradient}
-              >
-                <Text style={styles.logoText}>E4U</Text>
-              </LinearGradient>
-              <Text style={styles.brandName}>EventFourYou</Text>
-            </View>
             <Text style={styles.title}>Login</Text>
           </View>
 
           <View style={styles.methodTabs}>
-            <Text style={styles.methodLabel}>Non hai un account?</Text>
             <View style={styles.tabsRow}>
               {(['email', 'username', 'phone'] as LoginMethod[]).map((method) => (
                 <Pressable
@@ -262,37 +252,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   logo: {
-    width: 120,
-    height: 60,
+    width: 180,
+    height: 100,
     marginBottom: spacing.md,
-  },
-  logoFallback: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoGradient: {
-    width: 70,
-    height: 70,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  logoText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#000',
-  },
-  brandName: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: '600',
-    color: colors.foreground,
-    letterSpacing: 1,
   },
   title: {
     fontSize: typography.fontSize['2xl'],
@@ -301,12 +263,6 @@ const styles = StyleSheet.create({
   },
   methodTabs: {
     marginBottom: spacing.lg,
-  },
-  methodLabel: {
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
   },
   tabsRow: {
     flexDirection: 'row',

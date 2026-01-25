@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
@@ -7,6 +7,8 @@ import { Card } from '@/components/Card';
 import { Badge, LiveBadge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { triggerHaptic } from '@/lib/haptics';
+
+const { width } = Dimensions.get('window');
 
 interface LandingScreenProps {
   onNavigateEvents: () => void;
@@ -23,27 +25,41 @@ export function LandingScreen({
   onNavigateVenues,
   onNavigateResales,
 }: LandingScreenProps) {
-  const features = [
+  const upcomingEvents = [
     {
-      icon: 'calendar-outline' as const,
-      title: 'Eventi Esclusivi',
-      description: 'Accedi ai migliori eventi della tua città',
+      id: '1',
+      name: 'Saturday Night Party',
+      venue: 'Club Paradise',
+      date: 'Sab 25 Gen',
+      time: '23:00',
+      price: '15',
+      image: 'https://images.unsplash.com/photo-1571266028243-d220c6a8b0e8?w=400',
     },
     {
-      icon: 'ticket-outline' as const,
-      title: 'Biglietti Sicuri',
-      description: 'Acquista in sicurezza con garanzia SIAE',
+      id: '2',
+      name: 'Deep House Session',
+      venue: 'Warehouse Milano',
+      date: 'Dom 26 Gen',
+      time: '22:00',
+      price: '20',
+      image: 'https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=400',
     },
     {
-      icon: 'location-outline' as const,
-      title: 'Top Venues',
-      description: 'I locali più cool della nightlife',
+      id: '3',
+      name: 'Reggaeton Fever',
+      venue: 'Latino Club',
+      date: 'Ven 31 Gen',
+      time: '23:30',
+      price: '12',
+      image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
     },
-    {
-      icon: 'people-outline' as const,
-      title: 'Lista VIP',
-      description: 'Salta la fila e vivi la notte da protagonista',
-    },
+  ];
+
+  const categories = [
+    { id: '1', name: 'Club', icon: 'musical-notes' as const, color: colors.primary },
+    { id: '2', name: 'Concerti', icon: 'mic' as const, color: colors.teal },
+    { id: '3', name: 'Festival', icon: 'people' as const, color: '#E91E63' },
+    { id: '4', name: 'Aperitivi', icon: 'wine' as const, color: '#FF9800' },
   ];
 
   return (
@@ -59,63 +75,56 @@ export function LandingScreen({
         </View>
 
         <View style={styles.header}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={[colors.primary, '#FFA500']}
-                style={styles.logoBox}
-              >
-                <Text style={styles.logoText}>E4U</Text>
-              </LinearGradient>
-              <Text style={styles.brandName}>EventFourYou</Text>
-            </View>
-            <View style={styles.headerRight}>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={onNavigateLogin}
-                testID="button-login"
-              >
-                Accedi
-              </Button>
-            </View>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <View style={styles.headerButtons}>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={onNavigateLogin}
+              testID="button-login"
+            >
+              Accedi
+            </Button>
           </View>
         </View>
 
         <View style={styles.hero}>
-          <View style={styles.liveBadgeContainer}>
-            <LiveBadge testID="badge-live" />
-            <Text style={styles.liveBadgeText}>Eventi Live Stasera</Text>
-          </View>
-
+          <LiveBadge testID="badge-live" />
           <Text style={styles.heroTitle}>
-            La tua{'\n'}
-            <Text style={styles.heroTitleAccent}>serata</Text>{'\n'}
-            inizia qui
+            Trova il tuo{'\n'}
+            <Text style={styles.heroTitleGold}>evento</Text>
           </Text>
-
           <Text style={styles.heroSubtitle}>
-            Scopri gli eventi più esclusivi, acquista biglietti in sicurezza e vivi notti indimenticabili
+            I migliori eventi della tua città, biglietti sicuri con garanzia SIAE
           </Text>
-
-          <View style={styles.heroCTA}>
+          
+          <View style={styles.heroButtons}>
             <Button
               variant="golden"
               size="lg"
-              onPress={onNavigateEvents}
-              haptic="medium"
+              onPress={() => {
+                triggerHaptic('light');
+                onNavigateEvents();
+              }}
+              style={styles.heroButton}
               testID="button-explore-events"
             >
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>Esplora Eventi</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.primaryForeground} />
-              </View>
+              <Ionicons name="search" size={20} color="#000" />
+              <Text style={styles.heroButtonText}>Esplora Eventi</Text>
             </Button>
-
+            
             <Button
               variant="outline"
               size="lg"
-              onPress={onNavigateRegister}
+              onPress={() => {
+                triggerHaptic('light');
+                onNavigateRegister();
+              }}
+              style={styles.heroButton}
               testID="button-register"
             >
               Registrati Gratis
@@ -123,67 +132,125 @@ export function LandingScreen({
           </View>
         </View>
 
-        <View style={styles.quickLinks}>
-          <Pressable
-            onPress={() => {
-              triggerHaptic('light');
-              onNavigateEvents();
-            }}
-            style={styles.quickLink}
-          >
-            <Ionicons name="calendar" size={20} color={colors.primary} />
-            <Text style={styles.quickLinkText}>Eventi</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              triggerHaptic('light');
-              onNavigateResales();
-            }}
-            style={styles.quickLink}
-          >
-            <Ionicons name="swap-horizontal" size={20} color={colors.primary} />
-            <Text style={styles.quickLinkText}>Rivendite</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              triggerHaptic('light');
-              onNavigateVenues();
-            }}
-            style={styles.quickLink}
-          >
-            <Ionicons name="business" size={20} color={colors.primary} />
-            <Text style={styles.quickLinkText}>Locali</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.features}>
-          <Text style={styles.sectionTitle}>Perché Event4U?</Text>
-          <View style={styles.featuresGrid}>
-            {features.map((feature, index) => (
-              <Card key={index} style={styles.featureCard}>
-                <View style={styles.featureIcon}>
-                  <Ionicons name={feature.icon} size={28} color={colors.primary} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Categorie</Text>
+          <View style={styles.categoriesRow}>
+            {categories.map((cat) => (
+              <Pressable
+                key={cat.id}
+                style={styles.categoryItem}
+                onPress={() => {
+                  triggerHaptic('light');
+                  onNavigateEvents();
+                }}
+              >
+                <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}20` }]}>
+                  <Ionicons name={cat.icon} size={24} color={cat.color} />
                 </View>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-              </Card>
+                <Text style={styles.categoryName}>{cat.name}</Text>
+              </Pressable>
             ))}
           </View>
         </View>
 
-        <View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Eventi in Arrivo</Text>
+            <Pressable onPress={onNavigateEvents}>
+              <Text style={styles.seeAll}>Vedi tutti</Text>
+            </Pressable>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.eventsScroll}
+          >
+            {upcomingEvents.map((event) => (
+              <Pressable
+                key={event.id}
+                style={styles.eventCard}
+                onPress={() => {
+                  triggerHaptic('light');
+                  onNavigateEvents();
+                }}
+              >
+                <Image
+                  source={{ uri: event.image }}
+                  style={styles.eventImage}
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.9)']}
+                  style={styles.eventGradient}
+                >
+                  <Badge variant="golden" size="sm">{event.date}</Badge>
+                  <Text style={styles.eventName}>{event.name}</Text>
+                  <View style={styles.eventInfo}>
+                    <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.eventVenue}>{event.venue}</Text>
+                  </View>
+                  <View style={styles.eventFooter}>
+                    <Text style={styles.eventTime}>{event.time}</Text>
+                    <Text style={styles.eventPrice}>da {event.price}</Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Servizi</Text>
+          <View style={styles.servicesGrid}>
+            <Pressable style={styles.serviceCard} onPress={onNavigateVenues}>
+              <View style={[styles.serviceIcon, { backgroundColor: `${colors.teal}20` }]}>
+                <Ionicons name="business-outline" size={28} color={colors.teal} />
+              </View>
+              <Text style={styles.serviceTitle}>Venues</Text>
+              <Text style={styles.serviceDesc}>Scopri i locali</Text>
+            </Pressable>
+            
+            <Pressable style={styles.serviceCard} onPress={onNavigateResales}>
+              <View style={[styles.serviceIcon, { backgroundColor: `${colors.primary}20` }]}>
+                <Ionicons name="swap-horizontal-outline" size={28} color={colors.primary} />
+              </View>
+              <Text style={styles.serviceTitle}>Rivendita</Text>
+              <Text style={styles.serviceDesc}>Compra e vendi</Text>
+            </Pressable>
+            
+            <Pressable style={styles.serviceCard} onPress={onNavigateEvents}>
+              <View style={[styles.serviceIcon, { backgroundColor: '#E91E6320' }]}>
+                <Ionicons name="heart-outline" size={28} color="#E91E63" />
+              </View>
+              <Text style={styles.serviceTitle}>Liste</Text>
+              <Text style={styles.serviceDesc}>VIP & Guest list</Text>
+            </Pressable>
+            
+            <Pressable style={styles.serviceCard} onPress={onNavigateEvents}>
+              <View style={[styles.serviceIcon, { backgroundColor: '#9C27B020' }]}>
+                <Ionicons name="calendar-outline" size={28} color="#9C27B0" />
+              </View>
+              <Text style={styles.serviceTitle}>Prenotazioni</Text>
+              <Text style={styles.serviceDesc}>Tavoli e aree VIP</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.ctaSection}>
           <LinearGradient
-            colors={['rgba(255, 215, 0, 0.15)', 'rgba(0, 206, 209, 0.1)']}
+            colors={['rgba(255, 215, 0, 0.1)', 'rgba(0, 206, 209, 0.1)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.ctaCard}
           >
-            <View style={styles.ctaLogo}>
-              <Text style={styles.ctaLogoText}>E4U</Text>
-            </View>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.ctaLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.ctaTitle}>Pronto per la notte?</Text>
             <Text style={styles.ctaText}>
-              Unisciti a migliaia di persone che vivono la nightlife con Event4U
+              Crea un account gratuito e scopri tutti gli eventi esclusivi della tua zona
             </Text>
             <Button
               variant="golden"
@@ -192,21 +259,14 @@ export function LandingScreen({
               style={styles.ctaButton}
               testID="button-cta-register"
             >
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>Inizia Ora</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.primaryForeground} />
-              </View>
+              Inizia Ora
             </Button>
           </LinearGradient>
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.footerLogo}>
-            <Text style={styles.footerLogoText}>Event4U</Text>
-          </View>
-          <Text style={styles.footerCopyright}>
-            © {new Date().getFullYear()} Event4U. Tutti i diritti riservati.
-          </Text>
+          <Text style={styles.footerText}>Event4U - La tua app per eventi</Text>
+          <Text style={styles.footerCopyright}>2026 Event4U. Tutti i diritti riservati.</Text>
         </View>
       </ScrollView>
     </SafeArea>
@@ -222,7 +282,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xxl * 2,
   },
   glowContainer: {
     position: 'absolute',
@@ -234,193 +294,221 @@ const styles = StyleSheet.create({
   },
   glowGolden: {
     position: 'absolute',
-    top: -100,
-    right: -50,
+    top: -150,
+    right: -100,
     width: 350,
     height: 350,
     borderRadius: 175,
     backgroundColor: colors.primary,
-    opacity: 0.15,
+    opacity: 0.12,
   },
   glowTeal: {
     position: 'absolute',
     top: 200,
-    left: -100,
+    left: -150,
     width: 300,
     height: 300,
     borderRadius: 150,
     backgroundColor: colors.teal,
-    opacity: 0.1,
+    opacity: 0.08,
   },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  logoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
-  logoContainer: {
+  logo: {
+    width: 140,
+    height: 50,
+  },
+  headerButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.sm,
-  },
-  logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.golden,
-  },
-  logoText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#000',
-  },
-  brandName: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: '700',
-    color: colors.foreground,
-    letterSpacing: 0.5,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   hero: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     marginBottom: spacing.xl,
   },
-  liveBadgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  liveBadgeText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '500',
-    color: colors.teal,
-  },
   heroTitle: {
-    fontSize: typography.fontSize['5xl'],
-    fontWeight: '700',
+    fontSize: 42,
+    fontWeight: '800',
     color: colors.foreground,
-    lineHeight: 56,
+    lineHeight: 50,
+    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
-  heroTitleAccent: {
+  heroTitleGold: {
     color: colors.primary,
   },
   heroSubtitle: {
     fontSize: typography.fontSize.lg,
     color: colors.mutedForeground,
-    lineHeight: 28,
+    lineHeight: 26,
     marginBottom: spacing.xl,
   },
-  heroCTA: {
+  heroButtons: {
     gap: spacing.md,
   },
-  buttonContent: {
+  heroButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
   },
-  buttonText: {
+  heroButtonText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: '#000',
   },
-  quickLinks: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    marginHorizontal: spacing.lg,
+  section: {
     marginBottom: spacing.xl,
   },
-  quickLink: {
+  sectionHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  quickLinkText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '500',
-    color: colors.foreground,
-  },
-  features: {
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
     color: colors.foreground,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
-  featuresGrid: {
+  seeAll: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  categoriesRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
-  featureCard: {
-    width: '48%',
+  categoryItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  categoryIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryName: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: colors.foreground,
+  },
+  eventsScroll: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  eventCard: {
+    width: width * 0.7,
+    height: 220,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    marginRight: spacing.md,
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+  },
+  eventGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: spacing.md,
+    paddingTop: spacing.xl,
+  },
+  eventName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '700',
+    color: colors.foreground,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  eventInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  eventVenue: {
+    fontSize: typography.fontSize.sm,
+    color: colors.mutedForeground,
+  },
+  eventFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  featureIcon: {
-    width: 56,
-    height: 56,
+  eventTime: {
+    fontSize: typography.fontSize.sm,
+    color: colors.mutedForeground,
+  },
+  eventPrice: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  servicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  serviceCard: {
+    width: (width - spacing.lg * 2 - spacing.md) / 2,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  serviceIcon: {
+    width: 52,
+    height: 52,
     borderRadius: 16,
-    backgroundColor: `${colors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  featureTitle: {
+  serviceTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: colors.foreground,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
-  featureDescription: {
+  serviceDesc: {
     fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
-    textAlign: 'center',
+  },
+  ctaSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   ctaCard: {
-    marginHorizontal: spacing.lg,
-    padding: spacing.xl,
     borderRadius: borderRadius.xl,
+    padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: `${colors.primary}30`,
   },
   ctaLogo: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    ...shadows.golden,
-  },
-  ctaLogoText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.primaryForeground,
+    width: 100,
+    height: 50,
+    marginBottom: spacing.md,
   },
   ctaTitle: {
     fontSize: typography.fontSize['2xl'],
@@ -434,22 +522,21 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     textAlign: 'center',
     marginBottom: spacing.lg,
+    lineHeight: 22,
   },
   ctaButton: {
     width: '100%',
   },
   footer: {
     alignItems: 'center',
-    paddingTop: spacing.xxl,
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   },
-  footerLogo: {
-    marginBottom: spacing.md,
-  },
-  footerLogoText: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: '700',
+  footerText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
     color: colors.foreground,
+    marginBottom: spacing.xs,
   },
   footerCopyright: {
     fontSize: typography.fontSize.sm,
