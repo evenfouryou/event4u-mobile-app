@@ -4856,6 +4856,144 @@ router.post("/api/public/account/wallet/topup/confirm", async (req, res) => {
   }
 });
 
+// Crea Stripe Checkout Session per ricarica wallet (per app mobile)
+router.post("/api/public/account/wallet/topup-checkout", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer || !customer.id) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { amount, successUrl, cancelUrl } = req.body;
+    const numAmount = parseFloat(amount);
+    
+    if (isNaN(numAmount) || numAmount < 5) {
+      return res.status(400).json({ message: "Importo minimo €5.00" });
+    }
+
+    const amountInCents = Math.round(numAmount * 100);
+    const stripe = await getUncachableStripeClient();
+    
+    // Create Stripe Checkout Session (hosted payment page)
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: 'Ricarica Wallet Event4U',
+              description: `Ricarica di €${numAmount.toFixed(2)} sul tuo wallet`,
+            },
+            unit_amount: amountInCents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: successUrl || `${process.env.PUBLIC_URL || 'https://manage.eventfouryou.com'}/wallet/topup/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${process.env.PUBLIC_URL || 'https://manage.eventfouryou.com'}/wallet/topup/cancel`,
+      customer_email: customer.email,
+      metadata: {
+        type: "wallet_topup",
+        customerId: customer.id,
+        amount: numAmount.toString(),
+      },
+    });
+
+    res.json({
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      amount: numAmount,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Wallet topup checkout session error:", error);
+    res.status(500).json({ message: "Errore nella creazione della sessione di pagamento" });
+  }
+});
+
+// Conferma ricarica wallet dopo Stripe Checkout Session
+router.post("/api/public/account/wallet/topup-checkout/confirm", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer || !customer.id) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ message: "Session ID non fornito" });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== "paid") {
+      return res.status(400).json({ 
+        message: "Pagamento non completato",
+        status: session.payment_status,
+      });
+    }
+
+    // Verifica che sia un topup per questo cliente
+    if (session.metadata?.type !== "wallet_topup" || 
+        session.metadata?.customerId !== customer.id) {
+      return res.status(400).json({ message: "Sessione non valida" });
+    }
+
+    const amount = parseFloat(session.metadata.amount || "0");
+    if (amount <= 0) {
+      return res.status(400).json({ message: "Importo non valido" });
+    }
+
+    const paymentIntentId = session.payment_intent as string;
+
+    // Verifica che non sia già stato accreditato
+    const existingTx = await db
+      .select()
+      .from(siaeWalletTransactions)
+      .where(eq(siaeWalletTransactions.stripePaymentIntentId, paymentIntentId))
+      .limit(1);
+
+    if (existingTx.length > 0) {
+      // Già accreditato, restituisci successo con i dati esistenti
+      const wallet = await siaeStorage.getOrCreateCustomerWallet(customer.id);
+      return res.json({
+        success: true,
+        alreadyProcessed: true,
+        newBalance: wallet.balance,
+      });
+    }
+
+    // Accredita il wallet
+    const wallet = await siaeStorage.getOrCreateCustomerWallet(customer.id);
+    const currentBalance = parseFloat(wallet.balance || "0");
+    const newBalance = currentBalance + amount;
+
+    await siaeStorage.updateWalletBalance(wallet.id, newBalance.toFixed(2));
+
+    const transaction = await siaeStorage.createWalletTransaction({
+      walletId: wallet.id,
+      customerId: customer.id,
+      type: "credit",
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description: `Ricarica wallet €${amount.toFixed(2)}`,
+      stripePaymentIntentId: paymentIntentId,
+      status: "completed",
+    });
+
+    res.json({
+      success: true,
+      transaction,
+      newBalance: newBalance.toFixed(2),
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Wallet topup checkout confirm error:", error);
+    res.status(500).json({ message: "Errore nella conferma della ricarica" });
+  }
+});
+
 // Richiedi cambio nominativo
 router.post("/api/public/account/name-change", async (req, res) => {
   try {

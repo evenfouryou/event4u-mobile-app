@@ -101,6 +101,29 @@ export interface Customer {
   isVerified: boolean;
 }
 
+export interface PaymentIntentResponse {
+  clientSecret: string;
+  paymentIntentId: string;
+  amount: number;
+}
+
+export interface WalletTopUpConfirmResponse {
+  success: boolean;
+  transaction: WalletTransaction;
+  newBalance: string;
+}
+
+export interface CheckoutPaymentIntentResponse {
+  clientSecret: string;
+  checkoutSessionId: string;
+  totalAmount: number;
+  currency: string;
+}
+
+export interface StripeConfigResponse {
+  publishableKey: string;
+}
+
 class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
@@ -199,6 +222,45 @@ class ApiClient {
 
   async getMe(): Promise<Customer> {
     return this.get<Customer>('/api/public/account/me');
+  }
+
+  async getStripePublishableKey(): Promise<StripeConfigResponse> {
+    return this.get<StripeConfigResponse>('/api/public/stripe/config');
+  }
+
+  async createWalletTopUp(amount: number): Promise<PaymentIntentResponse> {
+    return this.post<PaymentIntentResponse>('/api/public/account/wallet/topup', { amount });
+  }
+
+  async confirmWalletTopUp(paymentIntentId: string): Promise<WalletTopUpConfirmResponse> {
+    return this.post<WalletTopUpConfirmResponse>('/api/public/account/wallet/topup/confirm', { paymentIntentId });
+  }
+
+  async createWalletTopUpCheckout(amount: number): Promise<{ checkoutUrl: string; sessionId: string; amount: number }> {
+    return this.post<{ checkoutUrl: string; sessionId: string; amount: number }>('/api/public/account/wallet/topup-checkout', { 
+      amount,
+      successUrl: 'https://manage.eventfouryou.com/wallet/topup/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://manage.eventfouryou.com/wallet/topup/cancel',
+    });
+  }
+
+  async confirmWalletTopUpCheckout(sessionId: string): Promise<WalletTopUpConfirmResponse> {
+    return this.post<WalletTopUpConfirmResponse>('/api/public/account/wallet/topup-checkout/confirm', { sessionId });
+  }
+
+  async createCheckoutPaymentIntent(eventId: string, tickets: Array<{ sectorId: string; quantity: number }>, participantData?: any): Promise<CheckoutPaymentIntentResponse> {
+    return this.post<CheckoutPaymentIntentResponse>('/api/public/checkout/create-payment-intent', {
+      eventId,
+      tickets,
+      participantData,
+    });
+  }
+
+  async confirmCheckout(checkoutSessionId: string, paymentIntentId: string): Promise<{ success: boolean; tickets: Ticket[] }> {
+    return this.post<{ success: boolean; tickets: Ticket[] }>('/api/public/checkout/confirm', {
+      checkoutSessionId,
+      paymentIntentId,
+    });
   }
 }
 
