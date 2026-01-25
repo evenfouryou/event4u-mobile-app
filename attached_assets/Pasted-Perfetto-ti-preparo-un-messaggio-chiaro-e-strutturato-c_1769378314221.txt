@@ -1,0 +1,68 @@
+Perfetto, ti preparo un messaggio chiaro e strutturato che spiega bene il concetto 👇
+
+⸻
+
+L’idea è questa: vogliamo rendere l’area PR molto più organizzata, intuitiva e soprattutto completa a livello operativo.
+
+Quando il PR accede alla sua area personale, deve visualizzare immediatamente tutti gli eventi a cui è stato assegnato.
+Ogni evento sarà rappresentato con:
+	•	Immagine dell’evento (locandina ufficiale)
+	•	Nome evento
+	•	Data
+	•	Pulsante ben visibile “Scopri di più”
+
+Cliccando su “Scopri di più”, il PR entra nella dashboard dedicata a quell’evento.
+
+All’interno dell’evento troverà diverse sezioni operative:
+
+1️⃣ Sezione Liste & Tavoli
+Qui il PR potrà:
+	•	Inserire nominativi in lista
+	•	Gestire le prenotazioni tavoli
+	•	Inserire direttamente clienti nelle liste tavoli disponibili
+	•	Visualizzare eventuali tavoli cancellati
+	•	Gestire modifiche o aggiornamenti in autonomia
+
+Tutto deve essere collegato in modo chiaro alle liste attive dell’evento, così che il PR possa operare velocemente senza passaggi inutili.
+
+2️⃣ Sezione Biglietti
+Area dedicata alla vendita biglietti.
+Il PR potrà:
+	•	Vendere biglietti direttamente
+	•	Visualizzare lo storico vendite
+	•	Monitorare il numero di biglietti venduti
+
+All’interno della sezione Biglietti sarà presente una sottosezione fondamentale:
+
+🔗 Sezione Link Personale
+Ogni PR avrà un link personale tracciato.
+Questo link servirà per:
+	•	Permettere ai clienti di acquistare online
+	•	Tracciare automaticamente tutte le vendite generate dal PR
+	•	Monitorare in tempo reale le performance
+
+3️⃣ Sezione Cancellazioni
+Qui saranno visibili tutte le cancellazioni effettuate dal PR, sia per:
+	•	Tavoli
+	•	Liste
+
+In modo che ci sia uno storico chiaro e tracciabile di ogni modifica fatta.
+
+4️⃣ Sezione Premi
+Area dedicata agli incentivi.
+Il PR potrà:
+	•	Visualizzare i premi attivi
+	•	Monitorare il proprio andamento
+	•	Vedere eventuali bonus maturati in base a vendite, tavoli o obiettivi raggiunti
+
+⸻
+
+L’obiettivo è creare una vera dashboard professionale per il PR, dove ogni evento è un “contenitore” completo e organizzato, con tutte le funzioni operative divise per sezioni chiare, tracciabili e misurabili.
+
+In questo modo:
+	•	Il PR lavora meglio
+	•	L’organizzatore ha controllo totale
+	•	Tutto è monitorato e tracciato
+	•	Le performance diventano misurabili
+
+Se vuoi posso anche strutturartelo in versione tecnica per sviluppatori (con schema moduli + logica backend in Node/Express visto il vostro stack).
