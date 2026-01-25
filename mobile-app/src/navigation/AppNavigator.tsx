@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { colors } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,12 +11,19 @@ import { ForgotPasswordScreen } from '@/screens/auth/ForgotPasswordScreen';
 import { AccountDashboard } from '@/screens/account/AccountDashboard';
 import { TicketsScreen } from '@/screens/account/TicketsScreen';
 import { TicketDetailScreen } from '@/screens/account/TicketDetailScreen';
+import { WalletScreen } from '@/screens/account/WalletScreen';
+import { WalletTopUpScreen } from '@/screens/account/WalletTopUpScreen';
+import { NameChangeScreen } from '@/screens/account/NameChangeScreen';
+import { SubscriptionsScreen } from '@/screens/account/SubscriptionsScreen';
 
 import { LandingScreen } from '@/screens/public/LandingScreen';
 import { EventsListScreen } from '@/screens/public/EventsListScreen';
 import { EventDetailScreen } from '@/screens/public/EventDetailScreen';
 import { CartScreen } from '@/screens/public/CartScreen';
 import { CheckoutScreen } from '@/screens/public/CheckoutScreen';
+import { VenuesScreen } from '@/screens/public/VenuesScreen';
+import { VenueDetailScreen } from '@/screens/public/VenueDetailScreen';
+import { ResalesScreen } from '@/screens/public/ResalesScreen';
 
 type Screen =
   | { name: 'splash' }
@@ -28,13 +35,16 @@ type Screen =
   | { name: 'eventDetail'; params: { eventId: string } }
   | { name: 'cart' }
   | { name: 'checkout' }
-  | { name: 'checkoutSuccess' }
+  | { name: 'venues' }
+  | { name: 'venueDetail'; params: { venueId: string } }
+  | { name: 'resales' }
   | { name: 'accountDashboard' }
   | { name: 'tickets' }
   | { name: 'ticketDetail'; params: { ticketId: string } }
   | { name: 'wallet' }
-  | { name: 'profile' }
-  | { name: 'settings' };
+  | { name: 'walletTopUp' }
+  | { name: 'nameChange'; params: { ticketId: string } }
+  | { name: 'subscriptions' };
 
 export function AppNavigator() {
   const { isAuthenticated } = useAuth();
@@ -78,8 +88,8 @@ export function AppNavigator() {
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateLogin={() => navigate({ name: 'login' })}
             onNavigateRegister={() => navigate({ name: 'register' })}
-            onNavigateVenues={() => {}}
-            onNavigateResales={() => {}}
+            onNavigateVenues={() => navigate({ name: 'venues' })}
+            onNavigateResales={() => navigate({ name: 'resales' })}
           />
         );
 
@@ -146,15 +156,42 @@ export function AppNavigator() {
           />
         );
 
+      case 'venues':
+        return (
+          <VenuesScreen
+            onBack={goBack}
+            onVenuePress={(venueId) => navigate({ name: 'venueDetail', params: { venueId } })}
+          />
+        );
+
+      case 'venueDetail':
+        return (
+          <VenueDetailScreen
+            venueId={currentScreen.params.venueId}
+            onBack={goBack}
+            onEventPress={(eventId) => navigate({ name: 'eventDetail', params: { eventId } })}
+          />
+        );
+
+      case 'resales':
+        return (
+          <ResalesScreen
+            onBack={goBack}
+            onBuyTicket={(ticketId) => navigate({ name: 'cart' })}
+            onSellTicket={() => navigate({ name: 'tickets' })}
+            isAuthenticated={isAuthenticated}
+          />
+        );
+
       case 'accountDashboard':
         return (
           <AccountDashboard
             onNavigateTickets={() => navigate({ name: 'tickets' })}
-            onNavigateWallet={() => {}}
-            onNavigateProfile={() => {}}
+            onNavigateWallet={() => navigate({ name: 'wallet' })}
+            onNavigateProfile={() => navigate({ name: 'subscriptions' })}
             onNavigateEvents={() => navigate({ name: 'events' })}
-            onNavigateResales={() => {}}
-            onNavigateSettings={() => {}}
+            onNavigateResales={() => navigate({ name: 'resales' })}
+            onNavigateSettings={() => navigate({ name: 'subscriptions' })}
           />
         );
 
@@ -171,8 +208,41 @@ export function AppNavigator() {
           <TicketDetailScreen
             ticketId={currentScreen.params.ticketId}
             onBack={goBack}
-            onResell={() => {}}
-            onNameChange={() => {}}
+            onResell={() => navigate({ name: 'resales' })}
+            onNameChange={() => navigate({ name: 'nameChange', params: { ticketId: currentScreen.params.ticketId } })}
+          />
+        );
+
+      case 'wallet':
+        return (
+          <WalletScreen
+            onBack={goBack}
+            onTopUp={() => navigate({ name: 'walletTopUp' })}
+          />
+        );
+
+      case 'walletTopUp':
+        return (
+          <WalletTopUpScreen
+            onBack={goBack}
+            onSuccess={() => navigate({ name: 'wallet' })}
+          />
+        );
+
+      case 'nameChange':
+        return (
+          <NameChangeScreen
+            ticketId={currentScreen.params.ticketId}
+            onBack={goBack}
+            onSuccess={() => resetTo({ name: 'tickets' })}
+          />
+        );
+
+      case 'subscriptions':
+        return (
+          <SubscriptionsScreen
+            onBack={goBack}
+            onExploreSubscriptions={() => navigate({ name: 'venues' })}
           />
         );
 
@@ -182,8 +252,8 @@ export function AppNavigator() {
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateLogin={() => navigate({ name: 'login' })}
             onNavigateRegister={() => navigate({ name: 'register' })}
-            onNavigateVenues={() => {}}
-            onNavigateResales={() => {}}
+            onNavigateVenues={() => navigate({ name: 'venues' })}
+            onNavigateResales={() => navigate({ name: 'resales' })}
           />
         );
     }

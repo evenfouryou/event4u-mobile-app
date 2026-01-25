@@ -25,12 +25,23 @@ export const colors = {
 };
 
 export const gradients = {
-  golden: ['#FFD700', '#FFA500'],
-  teal: ['#00CED1', '#008B8B'],
-  primary: ['#FFD700', '#FF8C00'],
-  card: ['rgba(17, 24, 39, 0.8)', 'rgba(17, 24, 39, 0.6)'],
-  hero: ['rgba(255, 215, 0, 0.3)', 'transparent'],
-  heroTeal: ['rgba(0, 206, 209, 0.25)', 'transparent'],
+  golden: ['#FFD700', '#FFA500'] as const,
+  goldenLight: ['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)'] as const,
+  teal: ['#00CED1', '#008B8B'] as const,
+  tealLight: ['rgba(0, 206, 209, 0.15)', 'rgba(0, 206, 209, 0.05)'] as const,
+  primary: ['#FFD700', '#FF8C00'] as const,
+  purple: ['#8B5CF6', '#6D28D9'] as const,
+  purpleLight: ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.05)'] as const,
+  blue: ['#3B82F6', '#1D4ED8'] as const,
+  pink: ['#EC4899', '#BE185D'] as const,
+  card: ['rgba(17, 24, 39, 0.8)', 'rgba(17, 24, 39, 0.6)'] as const,
+  cardPurple: ['#4c1d95', '#7c3aed', '#a855f7'] as const,
+  hero: ['rgba(255, 215, 0, 0.3)', 'transparent'] as const,
+  heroTeal: ['rgba(0, 206, 209, 0.25)', 'transparent'] as const,
+  dark: ['transparent', '#0a0e17'] as const,
+  overlay: ['transparent', 'rgba(10, 14, 23, 0.9)'] as const,
+  goldenTeal: ['rgba(255, 215, 0, 0.15)', 'rgba(0, 206, 209, 0.1)'] as const,
+  creditCard: ['#1e3a5f', '#0f2744'] as const,
 };
 
 export const spacing = {
