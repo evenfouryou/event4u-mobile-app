@@ -26,6 +26,8 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
     lastName: '',
     email: '',
     phone: '',
+    birthDate: '',
+    gender: '' as '' | 'M' | 'F',
     password: '',
     confirmPassword: '',
   });
@@ -44,8 +46,17 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
     if (!formData.email || !formData.email.includes('@')) {
       return 'Inserisci una email valida';
     }
-    if (!formData.password || formData.password.length < 6) {
-      return 'La password deve avere almeno 6 caratteri';
+    if (!formData.phone || formData.phone.length < 10) {
+      return 'Inserisci un numero di telefono valido';
+    }
+    if (!formData.birthDate) {
+      return 'Inserisci la data di nascita';
+    }
+    if (!formData.gender) {
+      return 'Seleziona il sesso';
+    }
+    if (!formData.password || formData.password.length < 8) {
+      return 'La password deve avere almeno 8 caratteri';
     }
     if (formData.password !== formData.confirmPassword) {
       return 'Le password non coincidono';
@@ -72,7 +83,9 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        phone: formData.phone || undefined,
+        phone: formData.phone,
+        birthDate: formData.birthDate,
+        gender: formData.gender as 'M' | 'F',
       });
       triggerHaptic('success');
       onRegisterSuccess();
@@ -255,10 +268,76 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
             />
 
             <Input
+              label="Data di Nascita"
+              value={formData.birthDate}
+              onChangeText={(v) => updateField('birthDate', v)}
+              placeholder="AAAA-MM-GG (es. 1990-05-15)"
+              keyboardType="numbers-and-punctuation"
+              leftIcon="calendar-outline"
+              testID="input-birthDate"
+            />
+
+            <View style={styles.genderSection}>
+              <Text style={styles.genderLabel}>Sesso</Text>
+              <View style={styles.genderButtons}>
+                <Pressable
+                  style={[
+                    styles.genderButton,
+                    formData.gender === 'M' && styles.genderButtonActive,
+                  ]}
+                  onPress={() => {
+                    triggerHaptic('light');
+                    updateField('gender', 'M');
+                  }}
+                  testID="button-gender-male"
+                >
+                  <Ionicons
+                    name="male"
+                    size={20}
+                    color={formData.gender === 'M' ? colors.primary : colors.mutedForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.genderText,
+                      formData.gender === 'M' && styles.genderTextActive,
+                    ]}
+                  >
+                    Maschio
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.genderButton,
+                    formData.gender === 'F' && styles.genderButtonActive,
+                  ]}
+                  onPress={() => {
+                    triggerHaptic('light');
+                    updateField('gender', 'F');
+                  }}
+                  testID="button-gender-female"
+                >
+                  <Ionicons
+                    name="female"
+                    size={20}
+                    color={formData.gender === 'F' ? colors.primary : colors.mutedForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.genderText,
+                      formData.gender === 'F' && styles.genderTextActive,
+                    ]}
+                  >
+                    Femmina
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <Input
               label="Password"
               value={formData.password}
               onChangeText={(v) => updateField('password', v)}
-              placeholder="Minimo 6 caratteri"
+              placeholder="Minimo 8 caratteri"
               secureTextEntry
               leftIcon="lock-closed-outline"
               testID="input-password"
@@ -547,6 +626,44 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
     lineHeight: 20,
+  },
+  genderSection: {
+    marginBottom: spacing.md,
+  },
+  genderLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: colors.foreground,
+    marginBottom: spacing.sm,
+  },
+  genderButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  genderButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  genderButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}15`,
+  },
+  genderText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: colors.mutedForeground,
+  },
+  genderTextActive: {
+    color: colors.primary,
   },
   privacyLink: {
     color: colors.primary,

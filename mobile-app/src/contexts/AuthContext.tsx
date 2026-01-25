@@ -26,7 +26,9 @@ interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
-  phone?: string;
+  phone: string;
+  birthDate: string;
+  gender: 'M' | 'F';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,12 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await api.post<{ user: User; message: string }>('/api/public/customer/register', {
+      const response = await api.post<{ user: User; message: string }>('/api/public/customers/register', {
         email: data.email,
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
+        birthDate: data.birthDate,
+        gender: data.gender,
       });
 
       if (response.user) {
