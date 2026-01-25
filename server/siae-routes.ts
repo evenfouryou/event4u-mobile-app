@@ -1256,6 +1256,157 @@ router.post("/api/bridge/send-test-report", async (req: Request, res: Response) 
   }
 });
 
+// ==================== TEST: Send RCA report for a specific ticketed event ====================
+router.post("/api/bridge/send-rca-test/:ticketedEventId", async (req: Request, res: Response) => {
+  try {
+    const { ticketedEventId } = req.params;
+    console.log(`[SIAE-RCA-TEST] Starting RCA transmission for event: ${ticketedEventId}`);
+    
+    const { requestCardEfffData } = await import('./bridge-relay');
+    const { generateRCAXml, autoCorrectSiaeXml, generateSiaeFileName } = await import('./siae-utils');
+    const { sendSiaeTransmissionEmail } = await import('./email-service');
+    
+    // Read EFFF data from smart card
+    console.log('[SIAE-RCA-TEST] Reading EFFF data from smart card...');
+    const efffData = await requestCardEfffData();
+    const systemCode = efffData.systemId || 'P0004010';
+    console.log(`[SIAE-RCA-TEST] EFFF systemId: ${systemCode}`);
+    
+    // Get ticketed event data
+    const [ticketedEvent] = await db.select().from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, ticketedEventId));
+    
+    if (!ticketedEvent) {
+      return res.status(404).json({ success: false, error: 'Ticketed event not found' });
+    }
+    
+    const [event] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
+    const [company] = await db.select().from(companies).where(eq(companies.id, ticketedEvent.companyId));
+    const tickets = await db.select().from(siaeTickets).where(eq(siaeTickets.ticketedEventId, ticketedEventId));
+    
+    console.log(`[SIAE-RCA-TEST] Event: ${event?.name}, Tickets: ${tickets.length}`);
+    
+    const eventDate = event?.endDatetime || new Date();
+    const ticketsForLog = tickets.map((t: any, idx: number) => ({
+      id: t.id, status: t.status, fiscalSealCode: t.fiscalSealCode || null,
+      progressiveNumber: t.progressiveNumber || idx + 1, cardCode: null,
+      emissionChannelCode: 'WEB', emissionDate: t.createdAt || new Date(),
+      ticketTypeCode: t.ticketTypeCode || 'I1', sectorCode: '01',
+      grossAmount: Number(t.ticketPrice) || 0, netAmount: Number(t.ticketPrice) || 0,
+      vatAmount: 0, prevendita: 0, isComplimentary: false, row: null, seatNumber: null,
+      participantFirstName: t.participantFirstName, participantLastName: t.participantLastName,
+      originalTicketId: null, replacedByTicketId: null, originalProgressiveNumber: null,
+      cancellationReasonCode: null, cancellationDate: null, accessDateTime: t.scannedAt,
+      codiceTitolo: 'I1', codiceOrdine: 'P1',
+    }));
+    
+    const progressivo = parseInt(req.query.progressivo as string) || 104;
+    
+    const rcaParams = {
+      companyId: ticketedEvent.companyId,
+      eventId: ticketedEvent.id,
+      event: {
+        id: ticketedEvent.id, name: event?.name || 'Evento', date: eventDate,
+        startTime: '20:00', endTime: '04:00', genreCode: ticketedEvent.genreCode || '61',
+        taxType: 'I', organizerName: company?.name || 'Organizzatore',
+        organizerTaxId: company?.fiscalCode || efffData.contactCodFis || 'EVNFRY80A01H501Z',
+        venueCode: '0001234567890', venueName: 'Locale', eventLocation: 'Via Test',
+      },
+      tickets: ticketsForLog,
+      systemConfig: { 
+        systemCode, 
+        taxId: efffData.partnerCodFis || 'EVNFRY80A01H501Z', 
+        businessName: efffData.partnerName || company?.name || 'Event4U Demo' 
+      },
+      companyName: efffData.partnerName || company?.name || 'Event4U Demo', 
+      taxId: efffData.partnerCodFis || 'EVNFRY80A01H501Z', 
+      progressivo,
+      venueName: 'Locale',
+    };
+    
+    // Generate XML
+    const result = generateRCAXml(rcaParams);
+    if (!result.success) {
+      console.log('[SIAE-RCA-TEST] XML generation failed:', result.errors);
+      return res.status(400).json({ success: false, error: 'XML generation failed', errors: result.errors });
+    }
+    
+    const corrected = autoCorrectSiaeXml(result.xml, ticketedEvent.genreCode);
+    const xmlContent = corrected.correctedXml;
+    console.log(`[SIAE-RCA-TEST] XML generated: ${result.ticketCount} tickets`);
+    
+    const fileName = generateSiaeFileName('rca', eventDate, progressivo, null, systemCode);
+    console.log(`[SIAE-RCA-TEST] File: ${fileName}`);
+    
+    const SIAE_TEST_EMAIL = 'servertest2@batest.siae.it';
+    
+    // Create transmission record
+    const [transmission] = await db.insert(siaeTransmissions).values({
+      companyId: ticketedEvent.companyId,
+      ticketedEventId: ticketedEvent.id,
+      transmissionType: 'rca',
+      fileName,
+      fileContent: xmlContent,
+      status: 'pending',
+      toEmail: SIAE_TEST_EMAIL,
+      ticketCount: result.ticketCount,
+      totalAmount: String(result.totalGrossAmount || 0),
+      reportDate: eventDate,
+      periodDate: eventDate,
+    }).returning();
+    
+    console.log(`[SIAE-RCA-TEST] Transmission ID: ${transmission.id}`);
+    
+    // Send email with S/MIME signature
+    console.log(`[SIAE-RCA-TEST] Sending S/MIME signed email...`);
+    
+    const emailResult = await sendSiaeTransmissionEmail({
+      to: SIAE_TEST_EMAIL,
+      companyName: efffData.partnerName || company?.name || 'Event4U Demo',
+      transmissionType: 'rca',
+      periodDate: eventDate,
+      ticketsCount: result.ticketCount,
+      totalAmount: result.totalGrossAmount || 0,
+      xmlContent,
+      transmissionId: transmission.id,
+      systemCode,
+      sequenceNumber: progressivo,
+      signWithSmime: true,
+      requireSignature: true,
+      explicitFileName: fileName,
+    });
+    
+    if (emailResult.success) {
+      console.log(`[SIAE-RCA-TEST] Email sent: ${emailResult.messageId}`);
+      await db.update(siaeTransmissions)
+        .set({ status: 'sent', sentAt: new Date() })
+        .where(eq(siaeTransmissions.id, transmission.id));
+        
+      res.json({
+        success: true,
+        message: 'RCA sent with S/MIME signature',
+        transmissionId: transmission.id,
+        fileName,
+        ticketCount: result.ticketCount,
+        messageId: emailResult.messageId,
+        efffData: {
+          systemId: systemCode,
+          partnerName: efffData.partnerName,
+          partnerCodFis: efffData.partnerCodFis,
+          siaeEmail: SIAE_TEST_EMAIL,
+        }
+      });
+    } else {
+      console.log(`[SIAE-RCA-TEST] Email failed: ${emailResult.error}`);
+      res.status(500).json({ success: false, error: emailResult.error });
+    }
+    
+  } catch (error: any) {
+    console.error('[SIAE-RCA-TEST] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== TEST: Send report with intentional error for correction flow ====================
 router.post("/api/bridge/send-error-test", async (req: Request, res: Response) => {
   try {
