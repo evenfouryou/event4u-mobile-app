@@ -2,13 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Share, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  interpolate,
-  Easing 
-} from 'react-native-reanimated';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
@@ -32,7 +25,6 @@ export function TicketDetailScreen({
   onNameChange,
 }: TicketDetailScreenProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const flipProgress = useSharedValue(0);
 
   const ticket = {
     id: ticketId,
@@ -84,12 +76,7 @@ export function TicketDetailScreen({
 
   const handleFlip = () => {
     triggerHaptic('medium');
-    const newFlipped = !isFlipped;
-    setIsFlipped(newFlipped);
-    flipProgress.value = withTiming(newFlipped ? 1 : 0, {
-      duration: 500,
-      easing: Easing.inOut(Easing.ease),
-    });
+    setIsFlipped(!isFlipped);
   };
 
   const handleShare = async () => {
@@ -103,22 +90,6 @@ export function TicketDetailScreen({
       console.error('Share error:', error);
     }
   };
-
-  const frontAnimatedStyle = useAnimatedStyle(() => {
-    const rotateY = interpolate(flipProgress.value, [0, 1], [0, 180]);
-    return {
-      transform: [{ perspective: 1000 }, { rotateY: `${rotateY}deg` }],
-      backfaceVisibility: 'hidden',
-    };
-  });
-
-  const backAnimatedStyle = useAnimatedStyle(() => {
-    const rotateY = interpolate(flipProgress.value, [0, 1], [180, 360]);
-    return {
-      transform: [{ perspective: 1000 }, { rotateY: `${rotateY}deg` }],
-      backfaceVisibility: 'hidden',
-    };
-  });
 
   const PerforatedEdge = ({ side }: { side: 'left' | 'right' }) => (
     <View style={[styles.perforatedEdge, side === 'left' ? styles.perforatedLeft : styles.perforatedRight]}>
@@ -209,7 +180,7 @@ export function TicketDetailScreen({
 
               <View style={styles.qrSection}>
                 <View style={styles.flipContainer}>
-                  <Animated.View style={[styles.flipCard, frontAnimatedStyle]}>
+                  {!isFlipped ? (
                     <View style={styles.qrWrapper}>
                       <Image
                         source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.ticketCode)}&bgcolor=FFFFFF&color=000000` }}
@@ -218,9 +189,7 @@ export function TicketDetailScreen({
                         testID="image-qr-code"
                       />
                     </View>
-                  </Animated.View>
-
-                  <Animated.View style={[styles.flipCard, styles.flipCardBack, backAnimatedStyle]}>
+                  ) : (
                     <View style={styles.backContent}>
                       <Text style={styles.backTitle}>Dettagli Biglietto</Text>
                       
@@ -264,7 +233,7 @@ export function TicketDetailScreen({
                         </View>
                       </View>
                     </View>
-                  </Animated.View>
+                  )}
                 </View>
 
                 <Button
@@ -468,19 +437,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   flipContainer: {
-    width: 220,
-    height: 220,
-    position: 'relative',
-  },
-  flipCard: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  flipCardBack: {
-    position: 'absolute',
   },
   qrWrapper: {
     width: 200,
