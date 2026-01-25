@@ -24,12 +24,58 @@ import { like, or, eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
-// Middleware to check authentication
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
-    return res.status(401).json({ error: "Non autenticato" });
+// Helper function to resolve PR identity from session and/or passport user
+// Returns { userId, prProfileId } for use in eventPrAssignments queries
+// Supports both passport login (req.user) and PR session login (/api/pr/login)
+async function resolvePrIdentity(req: Request): Promise<{ userId: string | null; prProfileId: string | null }> {
+  const user = req.user as any;
+  const prSession = (req.session as any)?.prProfile;
+  
+  let userId: string | null = user?.id || null;
+  let prProfileId: string | null = (req as any).prProfileId || prSession?.id || null;
+  
+  // If we have a userId but no prProfileId, try to find linked prProfile
+  if (userId && !prProfileId) {
+    const linkedPrProfile = await db.select({ id: prProfiles.id })
+      .from(prProfiles)
+      .where(eq(prProfiles.userId, userId))
+      .limit(1);
+    if (linkedPrProfile.length > 0) {
+      prProfileId = linkedPrProfile[0].id;
+    }
   }
-  next();
+  
+  // If we have prProfileId but no userId, try to get userId from prProfile
+  if (prProfileId && !userId) {
+    const prProfile = await db.select({ userId: prProfiles.userId })
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    if (prProfile.length > 0 && prProfile[0].userId) {
+      userId = prProfile[0].userId;
+    }
+  }
+  
+  return { userId, prProfileId };
+}
+
+// Middleware to check authentication
+// FIX 2026-01-25: Accept both passport authentication AND PR session authentication
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // Check passport authentication (normal login)
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  
+  // Check PR session authentication (login via /api/pr/login)
+  const prSession = (req.session as any)?.prProfile;
+  if (prSession?.id) {
+    // Attach prProfileId to request for downstream use
+    (req as any).prProfileId = prSession.id;
+    return next();
+  }
+  
+  return res.status(401).json({ error: "Non autenticato" });
 }
 
 // Middleware to check gestore role (company admin)
@@ -51,12 +97,22 @@ function requireCapoStaff(req: Request, res: Response, next: NextFunction) {
 }
 
 // Middleware to check PR role
+// FIX 2026-01-25: Accept both passport users with PR role AND PR session authentication
 function requirePr(req: Request, res: Response, next: NextFunction) {
   const user = req.user as any;
-  if (!user || !['gestore', 'gestore_covisione', 'capo_staff', 'pr', 'super_admin'].includes(user.role)) {
-    return res.status(403).json({ error: "Accesso negato. Richiesto ruolo PR." });
+  
+  // Allow passport users with appropriate roles
+  if (user && ['gestore', 'gestore_covisione', 'capo_staff', 'pr', 'super_admin'].includes(user.role)) {
+    return next();
   }
-  next();
+  
+  // Allow PR session users (logged in via /api/pr/login)
+  const prSession = (req.session as any)?.prProfile;
+  if (prSession?.id) {
+    return next();
+  }
+  
+  return res.status(403).json({ error: "Accesso negato. Richiesto ruolo PR." });
 }
 
 // ==================== Event Staff Assignments ====================
@@ -381,22 +437,30 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
     console.log(`[PR-LISTS] Total lists for event: ${allLists.length}`);
     
     // Gestore/Super Admin vedono tutte le liste
-    if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+    if (user && ['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
       console.log(`[PR-LISTS] Gestore/Admin - returning all ${allLists.length} lists`);
       return res.json(allLists);
     }
     
     // PR/Capo Staff vedono liste proprie + liste assegnate
-    // 1. Get prProfileId from session
-    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
-    console.log(`[PR-LISTS] sessionPrProfileId: ${sessionPrProfileId}`);
-    console.log(`[PR-LISTS] req.session.prProfile:`, (req.session as any)?.prProfile);
+    // FIX 2026-01-25: Use helper to resolve identity from both passport and PR session
+    const { userId, prProfileId } = await resolvePrIdentity(req);
     
-    // 2. Find PR assignment for this event (matching userId OR prProfileId)
-    // Build predicates array to avoid passing undefined to or()
-    const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
-    if (sessionPrProfileId) {
-      prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, sessionPrProfileId));
+    console.log(`[PR-LISTS] Resolved identity: userId=${userId}, prProfileId=${prProfileId}`);
+    
+    // If no identity could be resolved, return empty
+    if (!userId && !prProfileId) {
+      console.log(`[PR-LISTS] No identity resolved, returning empty`);
+      return res.json([]);
+    }
+    
+    // Build predicates array based on available identity
+    const prAssignmentPredicates: any[] = [];
+    if (userId) {
+      prAssignmentPredicates.push(eq(eventPrAssignments.userId, userId));
+    }
+    if (prProfileId) {
+      prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, prProfileId));
     }
     
     const prAssignments = await db.select()
@@ -410,7 +474,7 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
       );
     
     console.log(`[PR-LISTS] Found ${prAssignments.length} PR assignments for this user/event`);
-    console.log(`[PR-LISTS] Searching for userId=${user.id} OR prProfileId=${sessionPrProfileId}`);
+    console.log(`[PR-LISTS] Searching for userId=${userId} OR prProfileId=${prProfileId}`);
     
     // If PR is not assigned to this event, return empty
     if (prAssignments.length === 0) {
@@ -441,7 +505,7 @@ router.get("/api/pr/events/:eventId/guest-lists", requireAuth, async (req: Reque
     
     // Otherwise filter: lists created by user OR specifically assigned
     const userLists = allLists.filter(list => 
-      list.createdByUserId === user.id || assignedListIds.includes(list.id)
+      (userId && list.createdByUserId === userId) || assignedListIds.includes(list.id)
     );
     console.log(`[PR-LISTS] Final result: ${userLists.length} lists (created by user or assigned)`);
     res.json(userLists);
@@ -551,24 +615,28 @@ router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Reque
     const allEntries = await prStorage.getGuestListEntriesByList(listId);
     
     // Gestore/Super Admin vedono tutti gli ospiti
-    if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+    if (user && ['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
       return res.json(allEntries);
     }
     
+    // FIX 2026-01-25: Use helper to resolve identity from both passport and PR session
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
     // Check if user created the list
     const list = await prStorage.getGuestList(listId);
-    if (list && list.createdByUserId === user.id) {
+    if (list && userId && list.createdByUserId === userId) {
       return res.json(allEntries);
     }
     
     // Check if user is assigned to this list via prListAssignments
-    if (list) {
-      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
-      
-      // Build predicates array to avoid passing undefined to or()
-      const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
-      if (sessionPrProfileId) {
-        prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, sessionPrProfileId));
+    if (list && (userId || prProfileId)) {
+      // Build predicates array based on available identity
+      const prAssignmentPredicates: any[] = [];
+      if (userId) {
+        prAssignmentPredicates.push(eq(eventPrAssignments.userId, userId));
+      }
+      if (prProfileId) {
+        prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, prProfileId));
       }
       
       const prAssignments = await db.select()
@@ -599,7 +667,7 @@ router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Reque
     }
     
     // Otherwise, PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
-    const userEntries = allEntries.filter(entry => entry.addedByUserId === user.id);
+    const userEntries = allEntries.filter(entry => userId && entry.addedByUserId === userId);
     res.json(userEntries);
   } catch (error: any) {
     console.error("Error getting guest list entries:", error);
@@ -609,6 +677,7 @@ router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Reque
 
 // Get entries for an event (all lists)
 // FIX 2026-01-22: PR vede solo i propri ospiti, Gestore vede tutti
+// FIX 2026-01-25: Use resolvePrIdentity helper for session support
 router.get("/api/pr/events/:eventId/guest-entries", requireAuth, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
@@ -616,12 +685,15 @@ router.get("/api/pr/events/:eventId/guest-entries", requireAuth, async (req: Req
     const allEntries = await prStorage.getGuestListEntriesByEvent(eventId);
     
     // Gestore/Super Admin vedono tutti gli ospiti
-    if (['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+    if (user && ['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
       return res.json(allEntries);
     }
     
+    // FIX 2026-01-25: Use helper to resolve identity
+    const { userId } = await resolvePrIdentity(req);
+    
     // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
-    const userEntries = allEntries.filter(entry => entry.addedByUserId === user.id);
+    const userEntries = allEntries.filter(entry => userId && entry.addedByUserId === userId);
     res.json(userEntries);
   } catch (error: any) {
     console.error("Error getting event guest entries:", error);
@@ -651,11 +723,24 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
       return res.status(400).json({ error: "Lista piena" });
     }
     
-    // FIX 2026-01-25: Check PR assignment and quota for this list
-    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
-    const prAssignmentPredicates = [eq(eventPrAssignments.userId, user.id)];
-    if (sessionPrProfileId) {
-      prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, sessionPrProfileId));
+    // FIX 2026-01-25: Use helper to resolve identity from both passport and PR session
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
+    // If no identity could be resolved, deny access
+    if (!userId && !prProfileId) {
+      return res.status(403).json({ 
+        error: "Non autorizzato", 
+        message: "Identità PR non riconosciuta" 
+      });
+    }
+    
+    // Build predicates array based on available identity
+    const prAssignmentPredicates: any[] = [];
+    if (userId) {
+      prAssignmentPredicates.push(eq(eventPrAssignments.userId, userId));
+    }
+    if (prProfileId) {
+      prAssignmentPredicates.push(eq(eventPrAssignments.prProfileId, prProfileId));
     }
     
     const prAssignments = await db.select()
@@ -670,7 +755,7 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
     
     // FIX: Verify PR has canAddToLists permission for this event
     const hasListPermission = prAssignments.some(a => a.canAddToLists);
-    const isListCreator = list.createdByUserId === user.id;
+    const isListCreator = userId && list.createdByUserId === userId;
     
     if (!hasListPermission && !isListCreator) {
       return res.status(403).json({ 
@@ -700,13 +785,13 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
         
         // Check quota for this specific list
         const listQuota = listAssignments.find(la => la.listId === listId);
-        if (listQuota && listQuota.quota !== null) {
+        if (listQuota && listQuota.quota !== null && userId) {
           const existingEntries = await db.select({ count: sql<number>`count(*)` })
             .from(listEntries)
             .where(
               and(
                 eq(listEntries.listId, listId),
-                eq(listEntries.addedByUserId, user.id)
+                eq(listEntries.addedByUserId, userId)
               )
             );
           
@@ -727,7 +812,7 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
       listId: listId,
       eventId: list.eventId,
       companyId: list.companyId,
-      addedByUserId: user.id,
+      addedByUserId: userId || user?.id, // Use resolved userId or fallback to user.id
     });
     
     const entry = await prStorage.createGuestListEntry(validated);
