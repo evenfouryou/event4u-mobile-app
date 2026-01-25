@@ -56,8 +56,8 @@ export function Header({
         <View style={styles.center}>
           {showLogo ? (
             <Image
-              source={require('../../assets/logo-white.png')}
-              style={styles.headerLogo}
+              source={require('../../assets/logo.png')}
+              style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
               resizeMode="contain"
             />
           ) : (

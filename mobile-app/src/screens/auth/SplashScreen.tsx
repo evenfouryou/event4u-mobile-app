@@ -25,8 +25,8 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
       
       <View style={styles.logoContainer}>
         <Image
-          source={require('../../../assets/logo-white.png')}
-          style={styles.logo}
+          source={require('../../../assets/logo.png')}
+          style={[styles.logo, { tintColor: '#FFFFFF' }]}
           resizeMode="contain"
         />
       </View>

@@ -219,8 +219,8 @@ export function EventsListScreen({
             <Ionicons name="chevron-back" size={28} color={colors.foreground} />
           </Pressable>
           <Image
-            source={require('../../../assets/logo-white.png')}
-            style={styles.headerLogo}
+            source={require('../../../assets/logo.png')}
+            style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
             resizeMode="contain"
           />
           <View style={styles.headerActions}>

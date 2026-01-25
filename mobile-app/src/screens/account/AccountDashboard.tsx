@@ -81,19 +81,19 @@ export function AccountDashboard({
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Image
-          source={require('../../../assets/logo-white.png')}
-          style={styles.headerLogo}
+          source={require('../../../assets/logo.png')}
+          style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
           resizeMode="contain"
         />
         <Pressable
           onPress={() => {
             triggerHaptic('light');
-            onNavigateSettings();
+            onNavigateTickets();
           }}
           style={styles.settingsButton}
-          testID="button-settings"
+          testID="button-my-tickets"
         >
-          <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
+          <Ionicons name="ticket-outline" size={24} color={colors.mutedForeground} />
         </Pressable>
       </View>
       <ScrollView
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerLogo: {
-    height: 32,
-    width: 120,
+    height: 28,
+    width: 100,
   },
   scrollView: {
     flex: 1,

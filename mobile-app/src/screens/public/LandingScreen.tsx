@@ -80,8 +80,8 @@ export function LandingScreen({
 
         <View style={styles.header}>
           <Image
-            source={require('../../../assets/logo-white.png')}
-            style={styles.logo}
+            source={require('../../../assets/logo.png')}
+            style={[styles.logo, { tintColor: '#FFFFFF' }]}
             resizeMode="contain"
           />
           <View style={styles.headerButtons}>
@@ -224,8 +224,8 @@ export function LandingScreen({
               style={styles.ctaCard}
             >
               <Image
-                source={require('../../../assets/logo-white.png')}
-                style={styles.ctaLogo}
+                source={require('../../../assets/logo.png')}
+                style={[styles.ctaLogo, { tintColor: '#FFFFFF' }]}
                 resizeMode="contain"
               />
               <Text style={styles.ctaTitle}>Pronto per la notte?</Text>

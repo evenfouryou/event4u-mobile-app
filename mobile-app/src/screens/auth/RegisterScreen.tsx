@@ -125,8 +125,8 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 
           <View style={styles.header}>
             <Image
-              source={require('../../../assets/logo-white.png')}
-              style={styles.logo}
+              source={require('../../../assets/logo.png')}
+              style={[styles.logo, { tintColor: '#FFFFFF' }]}
               resizeMode="contain"
             />
             <Text style={styles.title}>Crea Account</Text>
@@ -206,8 +206,8 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 
           <View style={styles.headerSmall}>
             <Image
-              source={require('../../../assets/logo-white.png')}
-              style={styles.logoSmall}
+              source={require('../../../assets/logo.png')}
+              style={[styles.logoSmall, { tintColor: '#FFFFFF' }]}
               resizeMode="contain"
             />
             <Text style={styles.title}>Registrati come Cliente</Text>

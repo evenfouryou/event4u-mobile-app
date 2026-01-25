@@ -195,9 +195,9 @@ export function AppNavigator() {
             onNavigateProfile={() => navigate({ name: 'subscriptions' })}
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
-            onNavigateSettings={() => navigate({ name: 'subscriptions' })}
+            onNavigateSettings={() => navigate({ name: 'tickets' })}
             onLogout={() => resetTo({ name: 'landing' })}
-            onGoBack={() => goBack()}
+            onGoBack={() => resetTo({ name: 'landing' })}
           />
         );
 
