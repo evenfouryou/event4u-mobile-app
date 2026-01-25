@@ -133,7 +133,7 @@ export function SettingsScreen({
             <SettingItem
               icon="id-card-outline"
               label="Cambio Nominativo"
-              sublabel="Modifica l'intestatario dei biglietti"
+              sublabel="Seleziona un biglietto per modificare intestatario"
               onPress={onNavigateNameChange}
               testID="setting-name-change"
             />
