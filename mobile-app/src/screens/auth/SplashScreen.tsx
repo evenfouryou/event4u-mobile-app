@@ -14,7 +14,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     if (!isLoading) {
       const timer = setTimeout(() => {
         onReady(isAuthenticated);
-      }, 1500);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [isLoading, isAuthenticated, onReady]);
