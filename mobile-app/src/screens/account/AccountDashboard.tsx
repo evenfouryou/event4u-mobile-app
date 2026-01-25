@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Avatar } from '@/components/Avatar';
@@ -34,6 +35,7 @@ export function AccountDashboard({
   onGoBack,
 }: AccountDashboardProps) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const walletBalance = 125.0;
   const upcomingTickets = [
@@ -68,7 +70,7 @@ export function AccountDashboard({
   };
 
   return (
-    <SafeArea style={styles.container} edges={['top']}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topHeader}>
         <Pressable
           onPress={() => {
@@ -282,7 +284,7 @@ export function AccountDashboard({
           </View>
         </View>
       </ScrollView>
-    </SafeArea>
+    </View>
   );
 }
 

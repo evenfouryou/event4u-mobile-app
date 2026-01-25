@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -33,6 +34,7 @@ export function EventDetailScreen({
   onAddToCart,
   onGoToCart,
 }: EventDetailScreenProps) {
+  const insets = useSafeAreaInsets();
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [selectedTicketType, setSelectedTicketType] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -130,7 +132,7 @@ export function EventDetailScreen({
 
           <Pressable
             onPress={onBack}
-            style={styles.backButton}
+            style={[styles.backButton, { top: insets.top + spacing.sm }]}
           >
             <View style={styles.backButtonInner}>
               <Ionicons name="chevron-back" size={24} color={colors.foreground} />
@@ -327,7 +329,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: spacing.xl,
     left: spacing.md,
     zIndex: 10,
   },
