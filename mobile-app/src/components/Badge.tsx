@@ -1,11 +1,13 @@
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, borderRadius, spacing, typography } from '@/lib/theme';
 
-type BadgeVariant = 'default' | 'secondary' | 'success' | 'destructive' | 'warning' | 'outline';
+type BadgeVariant = 'default' | 'secondary' | 'success' | 'destructive' | 'warning' | 'outline' | 'golden' | 'teal';
+type BadgeSize = 'sm' | 'md' | 'lg';
 
 interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
+  size?: BadgeSize;
   style?: ViewStyle;
   textStyle?: TextStyle;
   testID?: string;
@@ -14,6 +16,7 @@ interface BadgeProps {
 export function Badge({
   children,
   variant = 'default',
+  size = 'md',
   style,
   textStyle,
   testID,
@@ -43,14 +46,38 @@ export function Badge({
       container: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
       text: { color: colors.foreground },
     },
+    golden: {
+      container: { backgroundColor: colors.primary },
+      text: { color: '#000' },
+    },
+    teal: {
+      container: { backgroundColor: colors.teal },
+      text: { color: '#000' },
+    },
   };
 
-  const currentStyle = variantStyles[variant];
+  const sizeStyles: Record<BadgeSize, { container: ViewStyle; text: TextStyle }> = {
+    sm: {
+      container: { paddingHorizontal: spacing.xs, paddingVertical: 2 },
+      text: { fontSize: typography.fontSize.xs - 2 },
+    },
+    md: {
+      container: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+      text: { fontSize: typography.fontSize.xs },
+    },
+    lg: {
+      container: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+      text: { fontSize: typography.fontSize.sm },
+    },
+  };
+
+  const currentStyle = variantStyles[variant] || variantStyles.default;
+  const currentSize = sizeStyles[size] || sizeStyles.md;
 
   return (
-    <View style={[styles.base, currentStyle.container, style]} testID={testID}>
+    <View style={[styles.base, currentStyle.container, currentSize.container, style]} testID={testID}>
       {typeof children === 'string' ? (
-        <Text style={[styles.text, currentStyle.text, textStyle]}>{children}</Text>
+        <Text style={[styles.text, currentStyle.text, currentSize.text, textStyle]}>{children}</Text>
       ) : (
         children
       )}
