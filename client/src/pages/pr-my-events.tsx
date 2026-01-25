@@ -210,7 +210,6 @@ export default function PrMyEventsPage() {
   const EventCard = ({ event, index }: { event: MyEvent; index: number }) => {
     const eventDate = new Date(event.startDatetime);
     const isEventToday = isToday(eventDate);
-    const hasPermissions = event.permissions && (event.permissions.canManageLists || event.permissions.canManageTables || event.permissions.canAddToLists);
 
     return (
       <motion.div
@@ -221,93 +220,75 @@ export default function PrMyEventsPage() {
         custom={index}
         className="w-full"
       >
-        <Link href={`/pr/events/${event.id}`}>
-          <div 
-            className={`
-              relative min-h-[160px] rounded-2xl overflow-hidden
-              bg-card/80 backdrop-blur-sm border border-border/50
-              active:scale-[0.98] transition-transform
-              ${isEventToday ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : ''}
-            `}
-            data-testid={`card-event-${event.id}`}
-            onClick={() => triggerHaptic('light')}
-          >
-            {isEventToday && (
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary to-transparent" />
-            )}
-
-            <div className="p-5 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-foreground truncate">{event.name}</h3>
-                  <div className="flex items-center gap-2 mt-2 text-muted-foreground">
-                    <Calendar className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-base font-medium">
-                      {format(eventDate, "EEE d MMM", { locale: it })}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-end shrink-0">
-                  {getStatusBadge(event.status)}
-                  {isEventToday && (
-                    <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-bold animate-pulse">
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      {t('pr.today').toUpperCase()}
-                    </Badge>
-                  )}
-                </div>
+        <div 
+          className={`
+            relative rounded-2xl overflow-hidden
+            bg-card/80 backdrop-blur-sm border border-border/50
+            ${isEventToday ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : ''}
+          `}
+          data-testid={`card-event-${event.id}`}
+        >
+          {/* Event Image / Poster */}
+          <div className="relative h-44 overflow-hidden">
+            {event.imageUrl ? (
+              <img
+                src={event.imageUrl}
+                alt={event.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/30 via-purple-500/20 to-blue-500/20 flex items-center justify-center">
+                <PartyPopper className="w-16 h-16 text-primary/50" />
               </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="w-4 h-4 shrink-0" />
-                  <span className="text-base">
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+            
+            {/* Status badges on image */}
+            <div className="absolute top-3 right-3 flex flex-col gap-2">
+              {getStatusBadge(event.status)}
+              {isEventToday && (
+                <Badge className="bg-primary text-primary-foreground text-sm font-bold animate-pulse shadow-lg">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  OGGI
+                </Badge>
+              )}
+            </div>
+            
+            {/* Event name and date overlay */}
+            <div className="absolute bottom-3 left-3 right-3">
+              <h3 className="text-xl font-bold text-white drop-shadow-lg line-clamp-2">{event.name}</h3>
+              <div className="flex items-center gap-3 mt-2 text-white/90">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    {format(eventDate, "EEE d MMM", { locale: it })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm font-medium">
                     {format(eventDate, "HH:mm", { locale: it })}
                   </span>
                 </div>
-                {event.locationId && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="w-4 h-4 shrink-0" />
-                    <span className="text-base truncate">{event.locationId}</span>
-                  </div>
-                )}
               </div>
-
-              {event.assignmentType && (
-                <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{t('pr.tableHeaders.role')}:</span>
-                    {getAssignmentTypeBadge(event.assignmentType)}
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </div>
-              )}
-
-              {hasPermissions && (
-                <div className="flex flex-wrap gap-2">
-                  {event.permissions?.canManageLists && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400">
-                      <ListChecks className="w-4 h-4" />
-                      <span className="text-sm font-medium">{t('pr.lists')}</span>
-                    </div>
-                  )}
-                  {event.permissions?.canManageTables && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400">
-                      <Armchair className="w-4 h-4" />
-                      <span className="text-sm font-medium">{t('pr.tables')}</span>
-                    </div>
-                  )}
-                  {event.permissions?.canAddToLists && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-400">
-                      <ListChecks className="w-4 h-4" />
-                      <span className="text-sm font-medium">{t('pr.addLists')}</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
-        </Link>
+
+          {/* Action area */}
+          <div className="p-4">
+            <Link href={`/pr/events/${event.id}`}>
+              <Button 
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                onClick={() => triggerHaptic('medium')}
+                data-testid={`button-discover-${event.id}`}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Scopri di più
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
       </motion.div>
     );
   };
