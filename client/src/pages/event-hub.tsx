@@ -1405,7 +1405,15 @@ export default function EventHub() {
   
   // Create reward mutation
   const [showCreateRewardDialog, setShowCreateRewardDialog] = useState(false);
-  const [newReward, setNewReward] = useState({ name: '', description: '', type: 'bonus_cash', targetValue: 10, rewardValue: 50, isGlobal: false });
+  const [newReward, setNewReward] = useState({ 
+    name: '', 
+    description: '', 
+    rewardType: 'bonus_cash', 
+    targetType: 'tickets_sold',
+    targetValue: 10, 
+    rewardValue: 50, 
+    isGlobal: false 
+  });
   
   const createRewardMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1415,7 +1423,7 @@ export default function EventHub() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'rewards'] });
       setShowCreateRewardDialog(false);
-      setNewReward({ name: '', description: '', type: 'bonus_cash', targetValue: 10, rewardValue: 50, isGlobal: false });
+      setNewReward({ name: '', description: '', rewardType: 'bonus_cash', targetType: 'tickets_sold', targetValue: 10, rewardValue: 50, isGlobal: false });
       toast({ title: "Premio creato!", description: "Il premio è stato aggiunto con successo" });
     },
     onError: (error: any) => {
@@ -5249,7 +5257,7 @@ export default function EventHub() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Tipo Premio</Label>
-                      <Select value={newReward.type} onValueChange={(v) => setNewReward({...newReward, type: v})}>
+                      <Select value={newReward.rewardType} onValueChange={(v) => setNewReward({...newReward, rewardType: v})}>
                         <SelectTrigger data-testid="select-reward-type">
                           <SelectValue />
                         </SelectTrigger>
@@ -5262,23 +5270,40 @@ export default function EventHub() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Obiettivo (biglietti)</Label>
+                      <Label>Tipo Obiettivo</Label>
+                      <Select value={newReward.targetType} onValueChange={(v) => setNewReward({...newReward, targetType: v})}>
+                        <SelectTrigger data-testid="select-target-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tickets_sold">Biglietti Venduti</SelectItem>
+                          <SelectItem value="guests_added">Ospiti Aggiunti</SelectItem>
+                          <SelectItem value="tables_booked">Tavoli Prenotati</SelectItem>
+                          <SelectItem value="revenue">Fatturato (€)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Valore Obiettivo</Label>
                       <Input 
                         type="number"
                         value={newReward.targetValue} 
                         onChange={(e) => setNewReward({...newReward, targetValue: parseInt(e.target.value) || 0})}
+                        placeholder={newReward.targetType === 'revenue' ? 'Es: 1000' : 'Es: 10'}
                         data-testid="input-reward-target"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <Label>Valore Premio {newReward.type === 'percentage_bonus' ? '(%)' : '(€)'}</Label>
-                    <Input 
-                      type="number"
-                      value={newReward.rewardValue} 
-                      onChange={(e) => setNewReward({...newReward, rewardValue: parseInt(e.target.value) || 0})}
-                      data-testid="input-reward-value"
-                    />
+                    <div>
+                      <Label>Valore Premio {newReward.rewardType === 'percentage_bonus' ? '(%)' : '(€)'}</Label>
+                      <Input 
+                        type="number"
+                        value={newReward.rewardValue} 
+                        onChange={(e) => setNewReward({...newReward, rewardValue: parseInt(e.target.value) || 0})}
+                        data-testid="input-reward-value"
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox 
