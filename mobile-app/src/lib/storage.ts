@@ -15,7 +15,7 @@ export interface QuickActionConfig {
 }
 
 const DEFAULT_CLIENT_ACTIONS: ClientQuickAction[] = ['buy-tickets', 'my-qr', 'wallet', 'resell'];
-const DEFAULT_PR_ACTIONS: PrQuickAction[] = ['events', 'lists', 'wallet', 'profile'];
+const DEFAULT_PR_ACTIONS: PrQuickAction[] = ['events', 'lists', 'scanner', 'wallet'];
 
 export async function getClientQuickActions(): Promise<ClientQuickAction[]> {
   try {
