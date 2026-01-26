@@ -270,6 +270,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
   },
   headerLeft: {
     flexDirection: 'row',
