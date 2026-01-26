@@ -44,8 +44,8 @@ export function Avatar({ source, name, size = 'md', testID }: AvatarProps) {
           width: dimension,
           height: dimension,
           borderRadius: dimension / 2,
-          backgroundColor: `${staticColors.primary}20`,
-          borderColor: `${staticColors.primary}40`,
+          backgroundColor: `${colors.primary}20`,
+          borderColor: `${colors.primary}40`,
         },
       ]}
       testID={testID}
@@ -56,7 +56,7 @@ export function Avatar({ source, name, size = 'md', testID }: AvatarProps) {
           style={[styles.image, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
         />
       ) : (
-        <Text style={[styles.initials, { fontSize, color: staticColors.primary }]}>{getInitials(name)}</Text>
+        <Text style={[styles.initials, { fontSize, color: colors.primary }]}>{getInitials(name)}</Text>
       )}
     </View>
   );

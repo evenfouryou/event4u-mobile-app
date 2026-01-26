@@ -1,5 +1,6 @@
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from '@/lib/theme';
+import { colors as staticColors, spacing, typography } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface LoadingProps {
   size?: 'small' | 'large';
@@ -7,36 +8,39 @@ interface LoadingProps {
   text?: string;
 }
 
-export function Loading({ size = 'large', color = staticColors.primary, text }: LoadingProps) {
+export function Loading({ size = 'large', color, text }: LoadingProps) {
+  const { colors } = useTheme();
   return (
     <View style={styles.container}>
-      <ActivityIndicator size={size} color={color} />
-      {text && <Text style={styles.text}>{text}</Text>}
+      <ActivityIndicator size={size} color={color || colors.primary} />
+      {text && <Text style={[styles.text, { color: colors.mutedForeground }]}>{text}</Text>}
     </View>
   );
 }
 
 export function FullScreenLoading({ text }: { text?: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.fullScreen}>
-      <ActivityIndicator size="large" color={staticColors.primary} />
-      {text && <Text style={styles.text}>{text}</Text>}
+    <View style={[styles.fullScreen, { backgroundColor: colors.background }]}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      {text && <Text style={[styles.text, { color: colors.mutedForeground }]}>{text}</Text>}
     </View>
   );
 }
 
 export function SkeletonCard() {
+  const { colors } = useTheme();
   return (
-    <View style={styles.skeletonCard}>
+    <View style={[styles.skeletonCard, { backgroundColor: colors.card }]}>
       <View style={styles.skeletonHeader}>
-        <View style={styles.skeletonAvatar} />
+        <View style={[styles.skeletonAvatar, { backgroundColor: colors.muted }]} />
         <View style={styles.skeletonLines}>
-          <View style={[styles.skeletonLine, { width: '60%' }]} />
-          <View style={[styles.skeletonLine, { width: '40%' }]} />
+          <View style={[styles.skeletonLine, { width: '60%', backgroundColor: colors.muted }]} />
+          <View style={[styles.skeletonLine, { width: '40%', backgroundColor: colors.muted }]} />
         </View>
       </View>
-      <View style={[styles.skeletonLine, { width: '100%', marginTop: spacing.md }]} />
-      <View style={[styles.skeletonLine, { width: '80%' }]} />
+      <View style={[styles.skeletonLine, { width: '100%', marginTop: spacing.md, backgroundColor: colors.muted }]} />
+      <View style={[styles.skeletonLine, { width: '80%', backgroundColor: colors.muted }]} />
     </View>
   );
 }
@@ -49,17 +53,14 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: staticColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     marginTop: spacing.md,
     fontSize: typography.fontSize.base,
-    color: staticColors.mutedForeground,
   },
   skeletonCard: {
-    backgroundColor: staticColors.card,
     borderRadius: 16,
     padding: spacing.lg,
     marginBottom: spacing.md,
@@ -72,7 +73,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: staticColors.muted,
   },
   skeletonLines: {
     flex: 1,
@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
   },
   skeletonLine: {
     height: 12,
-    backgroundColor: staticColors.muted,
     borderRadius: 6,
     marginBottom: spacing.xs,
   },

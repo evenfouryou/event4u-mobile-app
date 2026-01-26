@@ -44,30 +44,30 @@ export function Input({
   const actualSecure = isPassword ? !showPassword : false;
 
   const borderColor = error 
-    ? staticColors.destructive 
+    ? colors.destructive 
     : isFocused 
-      ? staticColors.primary 
-      : staticColors.border;
+      ? colors.primary 
+      : colors.border;
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={[styles.label, { color: staticColors.foreground }]}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>}
       
       <View
         style={[
           styles.inputContainer,
           { 
             borderColor,
-            backgroundColor: editable ? staticColors.secondary : staticColors.muted,
+            backgroundColor: editable ? colors.secondary : colors.muted,
           },
-          error && { borderColor: staticColors.destructive },
+          error && { borderColor: colors.destructive },
         ]}
       >
         {leftIcon && (
           <Ionicons
             name={leftIcon}
             size={20}
-            color={isFocused ? staticColors.primary : staticColors.mutedForeground}
+            color={isFocused ? colors.primary : colors.mutedForeground}
             style={[styles.leftIcon, !editable && { opacity: 0.5 }]}
           />
         )}
@@ -78,12 +78,12 @@ export function Input({
           secureTextEntry={actualSecure}
           style={[
             styles.input,
-            { color: editable ? staticColors.foreground : staticColors.mutedForeground },
+            { color: editable ? colors.foreground : colors.mutedForeground },
             leftIcon && styles.inputWithLeftIcon,
             (rightIcon || isPassword) && styles.inputWithRightIcon,
             props.style,
           ]}
-          placeholderTextColor={staticColors.mutedForeground}
+          placeholderTextColor={colors.mutedForeground}
           onFocus={handleFocus}
           onBlur={handleBlur}
         />
@@ -93,19 +93,19 @@ export function Input({
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={staticColors.mutedForeground}
+              color={colors.mutedForeground}
             />
           </Pressable>
         )}
         
         {rightIcon && !isPassword && (
           <Pressable onPress={onRightIconPress} style={styles.rightIcon}>
-            <Ionicons name={rightIcon} size={20} color={staticColors.mutedForeground} />
+            <Ionicons name={rightIcon} size={20} color={colors.mutedForeground} />
           </Pressable>
         )}
       </View>
       
-      {error && <Text style={[styles.error, { color: staticColors.destructive }]}>{error}</Text>}
+      {error && <Text style={[styles.error, { color: colors.destructive }]}>{error}</Text>}
     </View>
   );
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/Button';
 import { triggerHaptic } from '@/lib/haptics';
 import { 
@@ -52,6 +53,7 @@ export function CustomizeActionsModal({
   hasPrAccount = false,
   onSave,
 }: CustomizeActionsModalProps) {
+  const { colors } = useTheme();
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -133,30 +135,30 @@ export function CustomizeActionsModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.modal}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Personalizza Azioni</Text>
+        <View style={[styles.modal, { backgroundColor: colors.card }]}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.foreground }]}>Personalizza Azioni</Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={staticColors.foreground} />
+              <Ionicons name="close" size={24} color={colors.foreground} />
             </Pressable>
           </View>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Seleziona da 2 a 4 azioni da mostrare nella home. Usa le frecce per riordinare.
           </Text>
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>Azioni Selezionate ({selectedActions.length}/4)</Text>
+            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Azioni Selezionate ({selectedActions.length}/4)</Text>
             {selectedActions.map((actionId, index) => {
               const action = actionOptions.find(a => a.id === actionId);
               if (!action) return null;
               return (
-                <View key={actionId} style={styles.selectedItem}>
+                <View key={actionId} style={[styles.selectedItem, { backgroundColor: colors.background, borderColor: `${colors.primary}30` }]}>
                   <View style={styles.itemLeft}>
-                    <View style={styles.iconCircle}>
-                      <Ionicons name={action.icon} size={20} color={staticColors.primary} />
+                    <View style={[styles.iconCircle, { backgroundColor: `${colors.primary}20` }]}>
+                      <Ionicons name={action.icon} size={20} color={colors.primary} />
                     </View>
-                    <Text style={styles.itemLabel}>{action.label}</Text>
+                    <Text style={[styles.itemLabel, { color: colors.foreground }]}>{action.label}</Text>
                   </View>
                   <View style={styles.itemActions}>
                     <Pressable
@@ -164,45 +166,45 @@ export function CustomizeActionsModal({
                       style={[styles.arrowButton, index === 0 && styles.arrowDisabled]}
                       disabled={index === 0}
                     >
-                      <Ionicons name="chevron-up" size={20} color={index === 0 ? staticColors.muted : staticColors.foreground} />
+                      <Ionicons name="chevron-up" size={20} color={index === 0 ? colors.muted : colors.foreground} />
                     </Pressable>
                     <Pressable
                       onPress={() => moveAction(actionId, 'down')}
                       style={[styles.arrowButton, index === selectedActions.length - 1 && styles.arrowDisabled]}
                       disabled={index === selectedActions.length - 1}
                     >
-                      <Ionicons name="chevron-down" size={20} color={index === selectedActions.length - 1 ? staticColors.muted : staticColors.foreground} />
+                      <Ionicons name="chevron-down" size={20} color={index === selectedActions.length - 1 ? colors.muted : colors.foreground} />
                     </Pressable>
                     <Pressable
                       onPress={() => toggleAction(actionId)}
                       style={styles.removeButton}
                     >
-                      <Ionicons name="remove-circle" size={24} color={staticColors.destructive} />
+                      <Ionicons name="remove-circle" size={24} color={colors.destructive} />
                     </Pressable>
                   </View>
                 </View>
               );
             })}
 
-            <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>Azioni Disponibili</Text>
+            <Text style={[styles.sectionTitle, { marginTop: spacing.lg, color: colors.mutedForeground }]}>Azioni Disponibili</Text>
             {actionOptions
               .filter(a => !selectedActions.includes(a.id))
               .map(action => (
                 <Pressable
                   key={action.id}
-                  style={styles.availableItem}
+                  style={[styles.availableItem, { backgroundColor: colors.background, borderColor: colors.border }]}
                   onPress={() => toggleAction(action.id)}
                 >
                   <View style={styles.itemLeft}>
-                    <View style={[styles.iconCircle, styles.iconCircleInactive]}>
-                      <Ionicons name={action.icon} size={20} color={staticColors.mutedForeground} />
+                    <View style={[styles.iconCircle, styles.iconCircleInactive, { backgroundColor: `${colors.muted}30` }]}>
+                      <Ionicons name={action.icon} size={20} color={colors.mutedForeground} />
                     </View>
-                    <Text style={styles.itemLabelInactive}>{action.label}</Text>
+                    <Text style={[styles.itemLabelInactive, { color: colors.mutedForeground }]}>{action.label}</Text>
                   </View>
                   <Ionicons 
                     name="add-circle" 
                     size={24} 
-                    color={selectedActions.length >= 4 ? staticColors.muted : staticColors.teal} 
+                    color={selectedActions.length >= 4 ? colors.muted : colors.teal} 
                   />
                 </Pressable>
               ))}
@@ -238,7 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: staticColors.card,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: '85%',
@@ -250,12 +251,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: staticColors.border,
   },
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: staticColors.foreground,
   },
   closeButton: {
     width: 40,
@@ -265,7 +264,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
@@ -276,7 +274,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: staticColors.mutedForeground,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -285,23 +282,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: staticColors.background,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: staticColors.primary + '30',
   },
   availableItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: staticColors.background,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: staticColors.border,
   },
   itemLeft: {
     flexDirection: 'row',
@@ -313,21 +306,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: staticColors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconCircleInactive: {
-    backgroundColor: staticColors.muted + '30',
-  },
+  iconCircleInactive: {},
   itemLabel: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: staticColors.foreground,
   },
   itemLabelInactive: {
     fontSize: typography.fontSize.base,
-    color: staticColors.mutedForeground,
   },
   itemActions: {
     flexDirection: 'row',

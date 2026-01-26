@@ -67,28 +67,28 @@ export function Button({
 
   const variantStyles: Record<ButtonVariant, { container: ViewStyle; text: TextStyle }> = {
     default: {
-      container: { backgroundColor: staticColors.primary },
-      text: { color: staticColors.primaryForeground, fontWeight: '600' },
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.primaryForeground, fontWeight: '600' },
     },
     secondary: {
-      container: { backgroundColor: staticColors.secondary },
-      text: { color: staticColors.secondaryForeground, fontWeight: '600' },
+      container: { backgroundColor: colors.secondary },
+      text: { color: colors.secondaryForeground, fontWeight: '600' },
     },
     outline: {
-      container: { backgroundColor: 'transparent', borderWidth: 1, borderColor: staticColors.border },
-      text: { color: staticColors.foreground, fontWeight: '500' },
+      container: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+      text: { color: colors.foreground, fontWeight: '500' },
     },
     ghost: {
       container: { backgroundColor: 'transparent' },
-      text: { color: staticColors.foreground, fontWeight: '500' },
+      text: { color: colors.foreground, fontWeight: '500' },
     },
     destructive: {
-      container: { backgroundColor: staticColors.destructive },
-      text: { color: staticColors.destructiveForeground, fontWeight: '600' },
+      container: { backgroundColor: colors.destructive },
+      text: { color: colors.destructiveForeground, fontWeight: '600' },
     },
     golden: {
-      container: { backgroundColor: staticColors.primary },
-      text: { color: staticColors.primaryForeground, fontWeight: '700' },
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.primaryForeground, fontWeight: '700' },
     },
   };
 
@@ -116,7 +116,7 @@ export function Button({
           ]}
         >
           {loading ? (
-            <ActivityIndicator color={staticColors.primaryForeground} />
+            <ActivityIndicator color={colors.primaryForeground} />
           ) : typeof children === 'string' || typeof children === 'number' ? (
             <Text style={[styles.text, { fontSize: getTextSize() }, variantStyle.text, textStyle]}>
               {children}

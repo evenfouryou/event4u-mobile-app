@@ -26,35 +26,35 @@ export function Badge({
   
   const variantStyles: Record<BadgeVariant, { container: ViewStyle; text: TextStyle }> = {
     default: {
-      container: { backgroundColor: staticColors.primary },
-      text: { color: staticColors.primaryForeground },
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.primaryForeground },
     },
     secondary: {
-      container: { backgroundColor: staticColors.secondary },
-      text: { color: staticColors.secondaryForeground },
+      container: { backgroundColor: colors.secondary },
+      text: { color: colors.secondaryForeground },
     },
     success: {
-      container: { backgroundColor: staticColors.success },
-      text: { color: staticColors.successForeground },
+      container: { backgroundColor: colors.success },
+      text: { color: colors.successForeground },
     },
     destructive: {
-      container: { backgroundColor: staticColors.destructive },
-      text: { color: staticColors.destructiveForeground },
+      container: { backgroundColor: colors.destructive },
+      text: { color: colors.destructiveForeground },
     },
     warning: {
-      container: { backgroundColor: staticColors.warning },
-      text: { color: staticColors.warningForeground },
+      container: { backgroundColor: colors.warning },
+      text: { color: colors.warningForeground },
     },
     outline: {
-      container: { backgroundColor: 'transparent', borderWidth: 1, borderColor: staticColors.border },
-      text: { color: staticColors.foreground },
+      container: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+      text: { color: colors.foreground },
     },
     golden: {
-      container: { backgroundColor: staticColors.golden },
+      container: { backgroundColor: colors.golden },
       text: { color: '#000' },
     },
     teal: {
-      container: { backgroundColor: staticColors.teal },
+      container: { backgroundColor: colors.teal },
       text: { color: '#000' },
     },
   };
@@ -94,8 +94,8 @@ export function LiveBadge({ testID }: { testID?: string }) {
   return (
     <Badge variant="success" style={styles.liveBadge} testID={testID}>
       <View style={styles.liveContent}>
-        <View style={[styles.liveDot, { backgroundColor: staticColors.successForeground }]} />
-        <Text style={[styles.liveText, { color: staticColors.successForeground }]}>Live</Text>
+        <View style={[styles.liveDot, { backgroundColor: colors.successForeground }]} />
+        <Text style={[styles.liveText, { color: colors.successForeground }]}>Live</Text>
       </View>
     </Badge>
   );
