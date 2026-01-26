@@ -160,30 +160,34 @@ export function PRDashboard({
 
         <Text style={styles.sectionTitle}>Azioni Rapide</Text>
         <View style={styles.actionsGrid}>
-          <ActionCard
-            icon="calendar"
-            label="Eventi"
-            onPress={onNavigateEvents}
-            gradient="purple"
-          />
-          <ActionCard
-            icon="people"
-            label="Liste Ospiti"
-            onPress={onNavigateLists}
-            gradient="blue"
-          />
-          <ActionCard
-            icon="wallet"
-            label="Wallet"
-            onPress={onNavigateWallet}
-            gradient="golden"
-          />
-          <ActionCard
-            icon="person"
-            label="Profilo"
-            onPress={onNavigateProfile}
-            gradient="pink"
-          />
+          <View style={styles.actionRow}>
+            <ActionCard
+              icon="calendar"
+              label="Eventi"
+              onPress={onNavigateEvents}
+              gradient="purple"
+            />
+            <ActionCard
+              icon="people"
+              label="Liste"
+              onPress={onNavigateLists}
+              gradient="blue"
+            />
+          </View>
+          <View style={styles.actionRow}>
+            <ActionCard
+              icon="wallet"
+              label="Wallet"
+              onPress={onNavigateWallet}
+              gradient="golden"
+            />
+            <ActionCard
+              icon="person"
+              label="Profilo"
+              onPress={onNavigateProfile}
+              gradient="pink"
+            />
+          </View>
         </View>
 
         {events.length > 0 && (
@@ -396,10 +400,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
   },
   eventCard: {
     flexDirection: 'row',

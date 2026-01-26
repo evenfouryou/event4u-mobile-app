@@ -175,13 +175,23 @@ export function AccountDashboard({
                   onPress={onNavigateWallet}
                   testID="action-wallet"
                 />
-                <ActionCard
-                  icon="swap-horizontal-outline"
-                  label="Rivendi Biglietti"
-                  gradient="blue"
-                  onPress={onNavigateResales}
-                  testID="action-resell"
-                />
+                {hasPrAccount && onNavigatePrDashboard ? (
+                  <ActionCard
+                    icon="people-outline"
+                    label="Area PR"
+                    gradient="pink"
+                    onPress={onNavigatePrDashboard}
+                    testID="action-pr-area"
+                  />
+                ) : (
+                  <ActionCard
+                    icon="swap-horizontal-outline"
+                    label="Rivendi Biglietti"
+                    gradient="blue"
+                    onPress={onNavigateResales}
+                    testID="action-resell"
+                  />
+                )}
               </View>
             </View>
           </View>
@@ -223,32 +233,6 @@ export function AccountDashboard({
             </Pressable>
           </View>
 
-          {hasPrAccount && onNavigatePrDashboard && (
-            <Pressable
-              onPress={() => {
-                triggerHaptic('medium');
-                onNavigatePrDashboard();
-              }}
-            >
-              <LinearGradient
-                colors={['rgba(139, 92, 246, 0.2)', 'rgba(99, 102, 241, 0.1)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.prBanner}
-              >
-                <View style={styles.prBannerContent}>
-                  <View style={styles.prBannerIcon}>
-                    <Ionicons name="people" size={24} color="#8B5CF6" />
-                  </View>
-                  <View style={styles.prBannerText}>
-                    <Text style={styles.prBannerTitle}>Area PR</Text>
-                    <Text style={styles.prBannerSubtitle}>Gestisci liste ospiti e guadagni</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color={colors.mutedForeground} />
-                </View>
-              </LinearGradient>
-            </Pressable>
-          )}
 
           <View>
             <View style={styles.sectionHeader}>
@@ -454,39 +438,6 @@ const styles = StyleSheet.create({
   walletAction: {
     marginTop: spacing.md,
     alignSelf: 'flex-start',
-  },
-  prBanner: {
-    borderRadius: borderRadius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    marginTop: spacing.lg,
-  },
-  prBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  prBannerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prBannerText: {
-    flex: 1,
-  },
-  prBannerTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '600',
-    color: colors.foreground,
-    marginBottom: 2,
-  },
-  prBannerSubtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
   },
   ticketsList: {
     gap: spacing.md,

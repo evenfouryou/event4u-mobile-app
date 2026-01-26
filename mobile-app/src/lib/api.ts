@@ -407,7 +407,7 @@ class ApiClient {
   async getPrEvents(): Promise<PrEvent[]> {
     const events = await this.get<any[]>('/api/pr/my-events');
     return events.map((e: any) => ({
-      id: e.id,
+      id: e.eventId,
       eventId: e.eventId,
       eventName: e.eventName,
       eventStart: e.eventStart,
