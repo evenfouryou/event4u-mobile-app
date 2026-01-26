@@ -10,6 +10,7 @@ interface InputProps extends TextInputProps {
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightIconPress?: () => void;
   containerStyle?: object;
+  editable?: boolean;
 }
 
 export function Input({
@@ -20,12 +21,14 @@ export function Input({
   onRightIconPress,
   containerStyle,
   secureTextEntry,
+  editable = true,
   ...props
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleFocus = () => {
+    if (!editable) return;
     setIsFocused(true);
     props.onFocus?.({} as any);
   };
@@ -53,6 +56,7 @@ export function Input({
           styles.inputContainer,
           { borderColor },
           error && styles.inputError,
+          !editable && styles.inputDisabled,
         ]}
       >
         {leftIcon && (
@@ -60,17 +64,19 @@ export function Input({
             name={leftIcon}
             size={20}
             color={isFocused ? colors.primary : colors.mutedForeground}
-            style={styles.leftIcon}
+            style={[styles.leftIcon, !editable && styles.iconDisabled]}
           />
         )}
         
         <TextInput
           {...props}
+          editable={editable}
           secureTextEntry={actualSecure}
           style={[
             styles.input,
             leftIcon && styles.inputWithLeftIcon,
             (rightIcon || isPassword) && styles.inputWithRightIcon,
+            !editable && styles.textDisabled,
             props.style,
           ]}
           placeholderTextColor={colors.mutedForeground}
@@ -143,6 +149,16 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.destructive,
+  },
+  inputDisabled: {
+    backgroundColor: colors.muted,
+    opacity: 0.7,
+  },
+  textDisabled: {
+    color: colors.mutedForeground,
+  },
+  iconDisabled: {
+    opacity: 0.5,
   },
   error: {
     fontSize: typography.fontSize.sm,
