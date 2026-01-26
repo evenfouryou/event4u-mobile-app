@@ -113,7 +113,7 @@ export default function PrEventDashboard() {
   const { eventId } = useParams();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { prProfile } = usePrAuth();
+  const { prProfile, isLoading: isLoadingProfile } = usePrAuth();
   const [activeTab, setActiveTab] = useState("liste");
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -229,7 +229,7 @@ export default function PrEventDashboard() {
     }
   };
 
-  if (isLoadingEvent) {
+  if (isLoadingEvent || isLoadingProfile) {
     return (
       <div className="min-h-screen bg-background">
         <Skeleton className="h-64 w-full" />
