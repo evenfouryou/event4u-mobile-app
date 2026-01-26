@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
@@ -137,30 +137,62 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
                 triggerHaptic('light');
                 onSelectEvent(event.id);
               }}
+              style={styles.eventCardWrapper}
             >
-              <Card style={styles.eventCard}>
-                <View style={styles.eventHeader}>
-                  <View style={styles.dateBox}>
-                    <Text style={styles.dateDay}>
-                      {new Date(event.eventStart).getDate()}
-                    </Text>
-                    <Text style={styles.dateMonth}>
-                      {new Date(event.eventStart).toLocaleDateString('it-IT', { month: 'short' })}
-                    </Text>
-                  </View>
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventName}>{event.eventName}</Text>
-                    <View style={styles.eventMeta}>
-                      <Ionicons name="time-outline" size={14} color={staticColors.mutedForeground} />
-                      <Text style={styles.eventMetaText}>{formatTime(event.eventStart)}</Text>
+              <View style={styles.eventCardContainer}>
+                {event.eventImageUrl ? (
+                  <ImageBackground
+                    source={{ uri: event.eventImageUrl }}
+                    style={styles.eventImageBackground}
+                    imageStyle={styles.eventImageStyle}
+                  >
+                    <View style={styles.eventImageOverlay}>
+                      <View style={styles.eventImageContent}>
+                        <View style={styles.dateChip}>
+                          <Text style={styles.dateChipDay}>
+                            {new Date(event.eventStart).getDate()}
+                          </Text>
+                          <Text style={styles.dateChipMonth}>
+                            {new Date(event.eventStart).toLocaleDateString('it-IT', { month: 'short' }).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={styles.eventImageInfo}>
+                          <Text style={styles.eventImageName} numberOfLines={2}>{event.eventName}</Text>
+                          <View style={styles.eventImageMeta}>
+                            <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.eventImageMetaText} numberOfLines={1}>{event.locationName}</Text>
+                            <Text style={styles.eventImageMetaText}>•</Text>
+                            <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.eventImageMetaText}>{formatTime(event.eventStart)}</Text>
+                          </View>
+                        </View>
+                      </View>
                     </View>
-                    <View style={styles.eventMeta}>
-                      <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
-                      <Text style={styles.eventMetaText}>{event.locationName}</Text>
+                  </ImageBackground>
+                ) : (
+                  <View style={styles.eventNoImage}>
+                    <View style={styles.dateChipAlt}>
+                      <Text style={styles.dateChipDayAlt}>
+                        {new Date(event.eventStart).getDate()}
+                      </Text>
+                      <Text style={styles.dateChipMonthAlt}>
+                        {new Date(event.eventStart).toLocaleDateString('it-IT', { month: 'short' }).toUpperCase()}
+                      </Text>
                     </View>
+                    <View style={styles.eventNoImageInfo}>
+                      <Text style={styles.eventNoImageName} numberOfLines={2}>{event.eventName}</Text>
+                      <View style={styles.eventNoImageMeta}>
+                        <Ionicons name="location-outline" size={12} color={staticColors.mutedForeground} />
+                        <Text style={styles.eventNoImageMetaText} numberOfLines={1}>{event.locationName}</Text>
+                      </View>
+                      <View style={styles.eventNoImageMeta}>
+                        <Ionicons name="time-outline" size={12} color={staticColors.mutedForeground} />
+                        <Text style={styles.eventNoImageMetaText}>{formatTime(event.eventStart)}</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
-                </View>
+                )}
                 <View style={styles.eventStats}>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{event.guestCount || 0}</Text>
@@ -179,7 +211,7 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
                     <Text style={styles.statLabel}>Guadagno</Text>
                   </View>
                 </View>
-              </Card>
+              </View>
             </Pressable>
           ))
         )}
@@ -266,54 +298,118 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: 'center',
   },
-  eventCard: {
+  eventCardWrapper: {
     marginBottom: spacing.md,
   },
-  eventHeader: {
+  eventCardContainer: {
+    borderRadius: borderRadius.lg,
+    backgroundColor: staticColors.card,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: staticColors.border,
+  },
+  eventImageBackground: {
+    height: 140,
+  },
+  eventImageStyle: {
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+  },
+  eventImageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  eventImageContent: {
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.md,
+  },
+  dateChip: {
+    width: 48,
+    height: 52,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateChipDay: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
+    color: staticColors.primary,
+  },
+  dateChipMonth: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: staticColors.primary,
+  },
+  eventImageInfo: {
+    flex: 1,
+  },
+  eventImageName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: spacing.xs,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  eventImageMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
+    gap: spacing.xs,
   },
-  dateBox: {
-    width: 50,
-    height: 50,
+  eventImageMetaText: {
+    fontSize: typography.fontSize.xs,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  eventNoImage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  dateChipAlt: {
+    width: 48,
+    height: 52,
     borderRadius: borderRadius.md,
     backgroundColor: staticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateDay: {
+  dateChipDayAlt: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
     color: staticColors.primaryForeground,
   },
-  dateMonth: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '500',
+  dateChipMonthAlt: {
+    fontSize: 10,
+    fontWeight: '600',
     color: staticColors.primaryForeground,
-    textTransform: 'uppercase',
   },
-  eventInfo: {
+  eventNoImageInfo: {
     flex: 1,
   },
-  eventName: {
+  eventNoImageName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
-  eventMeta: {
+  eventNoImageMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  eventMetaText: {
+  eventNoImageMetaText: {
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
   },
   eventStats: {
     flexDirection: 'row',
+    padding: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: staticColors.border,
