@@ -17,13 +17,35 @@ interface PREventDashboardProps {
   onGoBack: () => void;
 }
 
-type TabType = 'guests' | 'tables' | 'stats';
+type TabType = 'guests' | 'tables' | 'stats' | 'prizes' | 'links';
 
 interface BatchGuest {
   firstName: string;
   lastName: string;
   phone: string;
   gender: 'M' | 'F';
+}
+
+interface SearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
+interface Prize {
+  id: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  claimed: number;
+}
+
+interface EventLink {
+  id: string;
+  title: string;
+  url: string;
+  type: 'website' | 'instagram' | 'facebook' | 'tiktok' | 'spotify' | 'other';
 }
 
 export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
@@ -39,8 +61,20 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('guests');
   const [showAddGuest, setShowAddGuest] = useState(false);
   const [showBatchAdd, setShowBatchAdd] = useState(false);
-  const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '' });
+  const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '', gender: 'M' as 'M' | 'F', listId: '' });
   const [adding, setAdding] = useState(false);
+  
+  // Search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [batchSearchQuery, setBatchSearchQuery] = useState('');
+  const [batchSearchResults, setBatchSearchResults] = useState<SearchResult[]>([]);
+  const [batchSearching, setBatchSearching] = useState(false);
+  
+  // Prizes and Links states
+  const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [eventLinks, setEventLinks] = useState<EventLink[]>([]);
   
   const [batchGuests, setBatchGuests] = useState<BatchGuest[]>([
     { firstName: '', lastName: '', phone: '', gender: 'M' }
@@ -60,26 +94,113 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [eventData, guestsData, listsData, tablesData, statsData] = await Promise.all([
+      const [eventData, guestsData, listsData, tablesData, statsData, prizesData, linksData] = await Promise.all([
         api.getPrEventDetail(eventId).catch(() => null),
         api.getPrEventGuests(eventId).catch(() => []),
         api.getPrEventGuestLists(eventId).catch(() => []),
         api.getPrEventTables(eventId).catch(() => []),
         api.getPrEventStats(eventId).catch(() => ({ sold: 0, revenue: 0, commission: 0 })),
+        api.getPrEventPrizes(eventId).catch(() => []),
+        api.getPrEventLinks(eventId).catch(() => []),
       ]);
       setEvent(eventData);
       setGuests(guestsData);
       setGuestLists(listsData);
       setTables(tablesData);
       setStats(statsData);
+      setPrizes(prizesData || []);
+      setEventLinks(linksData || []);
       if (listsData.length > 0 && !selectedListId) {
         setSelectedListId(listsData[0].id);
+      }
+      if (listsData.length > 0 && !newGuest.listId) {
+        setNewGuest(prev => ({ ...prev, listId: listsData[0].id }));
       }
     } catch (error) {
       console.error('Error loading event data:', error);
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Search registered users
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      setSearching(true);
+      const results = await api.searchRegisteredUsers(query).catch(() => []);
+      setSearchResults(results || []);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+  
+  const handleBatchSearch = async (query: string) => {
+    setBatchSearchQuery(query);
+    if (query.length < 2) {
+      setBatchSearchResults([]);
+      return;
+    }
+    try {
+      setBatchSearching(true);
+      const results = await api.searchRegisteredUsers(query).catch(() => []);
+      setBatchSearchResults(results || []);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setBatchSearchResults([]);
+    } finally {
+      setBatchSearching(false);
+    }
+  };
+  
+  const selectSearchResult = (result: SearchResult) => {
+    setNewGuest({
+      ...newGuest,
+      firstName: result.firstName,
+      lastName: result.lastName,
+      phone: result.phone || '',
+    });
+    setSearchQuery('');
+    setSearchResults([]);
+    triggerHaptic('light');
+  };
+  
+  const handleOpenLink = async (url: string) => {
+    try {
+      // Validate URL has valid scheme
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        Alert.alert('Errore', 'Link non valido');
+        return;
+      }
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Errore', 'Impossibile aprire questo link');
+      }
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile aprire il link');
+    }
+  };
+  
+  const selectBatchSearchResult = (result: SearchResult, index: number) => {
+    const updated = [...batchGuests];
+    updated[index] = {
+      ...updated[index],
+      firstName: result.firstName,
+      lastName: result.lastName,
+      phone: result.phone || '',
+    };
+    setBatchGuests(updated);
+    setBatchSearchQuery('');
+    setBatchSearchResults([]);
   };
 
   const onRefresh = async () => {
@@ -93,11 +214,22 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
       Alert.alert('Errore', 'Nome e cognome sono obbligatori');
       return;
     }
+    // Only require listId if lists are available and none selected
+    if (guestLists.length > 0 && !newGuest.listId) {
+      // Auto-select first list if available
+      setNewGuest(prev => ({ ...prev, listId: guestLists[0].id }));
+    }
     try {
       setAdding(true);
-      await api.addPrGuest(eventId, newGuest);
+      await api.addPrGuest(eventId, {
+        firstName: newGuest.firstName,
+        lastName: newGuest.lastName,
+        phone: newGuest.phone,
+        gender: newGuest.gender,
+        listId: newGuest.listId || undefined,
+      });
       await loadData();
-      setNewGuest({ firstName: '', lastName: '', phone: '' });
+      setNewGuest({ firstName: '', lastName: '', phone: '', gender: 'M', listId: guestLists[0]?.id || '' });
       setShowAddGuest(false);
       triggerHaptic('success');
       Alert.alert('Successo', 'Ospite aggiunto alla lista');
@@ -105,6 +237,17 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
       Alert.alert('Errore', error.message || 'Impossibile aggiungere ospite');
     } finally {
       setAdding(false);
+    }
+  };
+  
+  const getLinkIcon = (type: EventLink['type']) => {
+    switch (type) {
+      case 'instagram': return 'logo-instagram';
+      case 'facebook': return 'logo-facebook';
+      case 'tiktok': return 'logo-tiktok';
+      case 'spotify': return 'musical-notes';
+      case 'website': return 'globe-outline';
+      default: return 'link-outline';
     }
   };
 
@@ -361,38 +504,60 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabRow}>
-          <Pressable
-            style={[styles.tab, activeTab === 'guests' && styles.tabActive]}
-            onPress={() => setActiveTab('guests')}
-            testID="tab-guests"
-          >
-            <Ionicons name="people-outline" size={18} color={activeTab === 'guests' ? staticColors.primary : staticColors.mutedForeground} />
-            <Text style={[styles.tabText, activeTab === 'guests' && styles.tabTextActive]}>
-              Ospiti
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.tab, activeTab === 'tables' && styles.tabActive]}
-            onPress={() => setActiveTab('tables')}
-            testID="tab-tables"
-          >
-            <Ionicons name="grid-outline" size={18} color={activeTab === 'tables' ? staticColors.primary : staticColors.mutedForeground} />
-            <Text style={[styles.tabText, activeTab === 'tables' && styles.tabTextActive]}>
-              Tavoli
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.tab, activeTab === 'stats' && styles.tabActive]}
-            onPress={() => setActiveTab('stats')}
-            testID="tab-stats"
-          >
-            <Ionicons name="stats-chart-outline" size={18} color={activeTab === 'stats' ? staticColors.primary : staticColors.mutedForeground} />
-            <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>
-              Statistiche
-            </Text>
-          </Pressable>
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScrollView}>
+          <View style={styles.tabRow}>
+            <Pressable
+              style={[styles.tab, activeTab === 'guests' && styles.tabActive]}
+              onPress={() => setActiveTab('guests')}
+              testID="tab-guests"
+            >
+              <Ionicons name="people-outline" size={18} color={activeTab === 'guests' ? staticColors.primary : staticColors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'guests' && styles.tabTextActive]}>
+                Ospiti
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'tables' && styles.tabActive]}
+              onPress={() => setActiveTab('tables')}
+              testID="tab-tables"
+            >
+              <Ionicons name="grid-outline" size={18} color={activeTab === 'tables' ? staticColors.primary : staticColors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'tables' && styles.tabTextActive]}>
+                Tavoli
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'prizes' && styles.tabActive]}
+              onPress={() => setActiveTab('prizes')}
+              testID="tab-prizes"
+            >
+              <Ionicons name="gift-outline" size={18} color={activeTab === 'prizes' ? staticColors.primary : staticColors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'prizes' && styles.tabTextActive]}>
+                Premi
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'links' && styles.tabActive]}
+              onPress={() => setActiveTab('links')}
+              testID="tab-links"
+            >
+              <Ionicons name="link-outline" size={18} color={activeTab === 'links' ? staticColors.primary : staticColors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'links' && styles.tabTextActive]}>
+                Link
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'stats' && styles.tabActive]}
+              onPress={() => setActiveTab('stats')}
+              testID="tab-stats"
+            >
+              <Ionicons name="stats-chart-outline" size={18} color={activeTab === 'stats' ? staticColors.primary : staticColors.mutedForeground} />
+              <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>
+                Statistiche
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
 
         {/* Guests Tab */}
         {activeTab === 'guests' && (
@@ -439,6 +604,68 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
             {showAddGuest && (
               <Card style={styles.addGuestForm}>
                 <Text style={styles.formTitle}>Nuovo Ospite</Text>
+                
+                {/* Search for registered users */}
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputWrapper}>
+                    <Ionicons name="search" size={18} color={staticColors.mutedForeground} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Cerca utente registrato..."
+                      placeholderTextColor={staticColors.mutedForeground}
+                      value={searchQuery}
+                      onChangeText={handleSearch}
+                      testID="input-search-user"
+                    />
+                    {searching && (
+                      <Ionicons name="sync" size={16} color={staticColors.primary} />
+                    )}
+                  </View>
+                  {searchResults.length > 0 && (
+                    <View style={styles.searchResults}>
+                      {searchResults.slice(0, 5).map((result) => (
+                        <Pressable
+                          key={result.id}
+                          style={styles.searchResultItem}
+                          onPress={() => selectSearchResult(result)}
+                        >
+                          <Ionicons name="person" size={16} color={staticColors.primary} />
+                          <Text style={styles.searchResultText}>
+                            {result.firstName} {result.lastName}
+                          </Text>
+                          {result.phone && (
+                            <Text style={styles.searchResultPhone}>{result.phone}</Text>
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+                
+                {/* List selector */}
+                {guestLists.length > 0 && (
+                  <View style={styles.listSelector}>
+                    <Text style={styles.inputLabel}>Lista:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {guestLists.map(list => (
+                        <Pressable
+                          key={list.id}
+                          style={[
+                            styles.listOption,
+                            newGuest.listId === list.id && styles.listOptionActive
+                          ]}
+                          onPress={() => setNewGuest({ ...newGuest, listId: list.id })}
+                        >
+                          <Text style={[
+                            styles.listOptionText,
+                            newGuest.listId === list.id && styles.listOptionTextActive
+                          ]}>{list.name}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                
                 <TextInput
                   style={styles.input}
                   placeholder="Nome *"
@@ -464,6 +691,28 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   keyboardType="phone-pad"
                   testID="input-phone"
                 />
+                
+                {/* Gender selector */}
+                <View style={styles.genderSelector}>
+                  <Text style={styles.inputLabel}>Sesso:</Text>
+                  <View style={styles.genderButtons}>
+                    <Pressable
+                      style={[styles.genderButton, newGuest.gender === 'M' && styles.genderButtonActive]}
+                      onPress={() => setNewGuest({ ...newGuest, gender: 'M' })}
+                    >
+                      <Ionicons name="male" size={18} color={newGuest.gender === 'M' ? staticColors.primaryForeground : staticColors.primary} />
+                      <Text style={[styles.genderButtonText, newGuest.gender === 'M' && styles.genderButtonTextActive]}>M</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.genderButton, newGuest.gender === 'F' && styles.genderButtonActive]}
+                      onPress={() => setNewGuest({ ...newGuest, gender: 'F' })}
+                    >
+                      <Ionicons name="female" size={18} color={newGuest.gender === 'F' ? staticColors.primaryForeground : staticColors.primary} />
+                      <Text style={[styles.genderButtonText, newGuest.gender === 'F' && styles.genderButtonTextActive]}>F</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                
                 <View style={styles.formButtons}>
                   <Button
                     variant="ghost"
@@ -492,6 +741,46 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   <Badge variant="secondary">
                     <Text style={styles.statusText}>{batchGuests.length}/10</Text>
                   </Badge>
+                </View>
+                
+                {/* Search for registered users */}
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputWrapper}>
+                    <Ionicons name="search" size={18} color={staticColors.mutedForeground} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Cerca utente registrato..."
+                      placeholderTextColor={staticColors.mutedForeground}
+                      value={batchSearchQuery}
+                      onChangeText={handleBatchSearch}
+                      testID="input-batch-search-user"
+                    />
+                    {batchSearching && (
+                      <Ionicons name="sync" size={16} color={staticColors.primary} />
+                    )}
+                  </View>
+                  {batchSearchResults.length > 0 && (
+                    <View style={styles.searchResults}>
+                      {batchSearchResults.slice(0, 5).map((result) => (
+                        <Pressable
+                          key={result.id}
+                          style={styles.searchResultItem}
+                          onPress={() => {
+                            const emptyIndex = batchGuests.findIndex(g => !g.firstName && !g.lastName);
+                            selectBatchSearchResult(result, emptyIndex >= 0 ? emptyIndex : batchGuests.length - 1);
+                          }}
+                        >
+                          <Ionicons name="person" size={16} color={staticColors.primary} />
+                          <Text style={styles.searchResultText}>
+                            {result.firstName} {result.lastName}
+                          </Text>
+                          {result.phone && (
+                            <Text style={styles.searchResultPhone}>{result.phone}</Text>
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 </View>
                 
                 {guestLists.length > 0 && (
@@ -793,6 +1082,91 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
           </>
         )}
 
+        {/* Prizes Tab */}
+        {activeTab === 'prizes' && (
+          <>
+            {prizes.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="gift-outline" size={48} color={staticColors.mutedForeground} />
+                <Text style={styles.emptyText}>Nessun premio disponibile</Text>
+                <Text style={styles.emptySubtext}>I premi dell'evento verranno mostrati qui</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Premi Evento</Text>
+                {prizes.map((prize) => (
+                  <Card key={prize.id} style={styles.prizeCard}>
+                    <View style={styles.prizeHeader}>
+                      <View style={styles.prizeInfo}>
+                        <Ionicons name="gift" size={24} color={staticColors.golden} />
+                        <View style={styles.prizeDetails}>
+                          <Text style={styles.prizeName}>{prize.name}</Text>
+                          {prize.description && (
+                            <Text style={styles.prizeDescription}>{prize.description}</Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.prizeStats}>
+                        <Text style={styles.prizeQuantity}>{prize.claimed}/{prize.quantity}</Text>
+                        <Text style={styles.prizeLabel}>assegnati</Text>
+                      </View>
+                    </View>
+                    <View style={styles.prizeProgressBar}>
+                      <View 
+                        style={[
+                          styles.prizeProgressFill, 
+                          { width: `${Math.min((prize.claimed / prize.quantity) * 100, 100)}%` }
+                        ]} 
+                      />
+                    </View>
+                  </Card>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Links Tab */}
+        {activeTab === 'links' && (
+          <>
+            {eventLinks.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="link-outline" size={48} color={staticColors.mutedForeground} />
+                <Text style={styles.emptyText}>Nessun link disponibile</Text>
+                <Text style={styles.emptySubtext}>I link dell'evento verranno mostrati qui</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Link Evento</Text>
+                {eventLinks.map((link) => (
+                  <Pressable 
+                    key={link.id} 
+                    onPress={() => handleOpenLink(link.url)}
+                    style={styles.linkCard}
+                  >
+                    <Card style={styles.linkCardInner}>
+                      <View style={styles.linkContent}>
+                        <View style={[styles.linkIconContainer, { backgroundColor: `${staticColors.primary}20` }]}>
+                          <Ionicons 
+                            name={getLinkIcon(link.type) as any} 
+                            size={24} 
+                            color={staticColors.primary} 
+                          />
+                        </View>
+                        <View style={styles.linkInfo}>
+                          <Text style={styles.linkTitle}>{link.title}</Text>
+                          <Text style={styles.linkUrl} numberOfLines={1}>{link.url}</Text>
+                        </View>
+                        <Ionicons name="open-outline" size={20} color={staticColors.mutedForeground} />
+                      </View>
+                    </Card>
+                  </Pressable>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
         {/* Stats Tab */}
         {activeTab === 'stats' && (
           <>
@@ -908,6 +1282,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     padding: spacing.lg,
     justifyContent: 'space-between',
+    zIndex: 10,
   },
   heroBackButton: {
     width: 44,
@@ -1356,5 +1731,166 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: staticColors.foreground,
+  },
+  // Search styles
+  searchContainer: {
+    marginBottom: spacing.md,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: staticColors.glass,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+  },
+  searchResults: {
+    marginTop: spacing.xs,
+    backgroundColor: staticColors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    overflow: 'hidden',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  searchResultText: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    color: staticColors.foreground,
+  },
+  searchResultPhone: {
+    fontSize: typography.fontSize.xs,
+    color: staticColors.mutedForeground,
+  },
+  // Gender selector styles
+  genderSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  genderButtonText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: staticColors.primary,
+    marginLeft: spacing.xs,
+  },
+  genderButtonTextActive: {
+    color: staticColors.primaryForeground,
+  },
+  // Tab scroll view
+  tabScrollView: {
+    marginBottom: spacing.md,
+  },
+  // Section title
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    color: staticColors.foreground,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  // Prize styles
+  prizeCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  prizeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  prizeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  prizeDetails: {
+    flex: 1,
+  },
+  prizeName: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: staticColors.foreground,
+  },
+  prizeDescription: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.mutedForeground,
+    marginTop: spacing.xs,
+  },
+  prizeStats: {
+    alignItems: 'flex-end',
+  },
+  prizeQuantity: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '700',
+    color: staticColors.golden,
+  },
+  prizeLabel: {
+    fontSize: typography.fontSize.xs,
+    color: staticColors.mutedForeground,
+  },
+  prizeProgressBar: {
+    height: 4,
+    backgroundColor: staticColors.glass,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  prizeProgressFill: {
+    height: '100%',
+    backgroundColor: staticColors.golden,
+    borderRadius: borderRadius.full,
+  },
+  // Link styles
+  linkCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  linkCardInner: {
+    padding: 0,
+  },
+  linkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  linkIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkInfo: {
+    flex: 1,
+  },
+  linkTitle: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: staticColors.foreground,
+  },
+  linkUrl: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.mutedForeground,
+    marginTop: spacing.xs,
   },
 });

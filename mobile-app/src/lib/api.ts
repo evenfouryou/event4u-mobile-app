@@ -548,7 +548,7 @@ class ApiClient {
     }));
   }
 
-  async addPrGuest(eventId: string, data: { firstName: string; lastName: string; phone?: string }): Promise<PrGuestListEntry> {
+  async addPrGuest(eventId: string, data: { firstName: string; lastName: string; phone?: string; gender?: 'M' | 'F'; listId?: string }): Promise<PrGuestListEntry> {
     const result = await this.post<any>(`/api/pr/events/${eventId}/guests`, data);
     return {
       id: result.id,
@@ -562,6 +562,49 @@ class ApiClient {
 
   async requestPrPayout(): Promise<{ success: boolean; message: string }> {
     return this.post<{ success: boolean; message: string }>('/api/pr/wallet/payout');
+  }
+  
+  async searchRegisteredUsers(query: string): Promise<Array<{ id: string; firstName: string; lastName: string; phone: string }>> {
+    try {
+      const results = await this.get<any[]>(`/api/users/search?q=${encodeURIComponent(query)}`);
+      return (results || []).map(u => ({
+        id: u.id || String(u.userId),
+        firstName: u.firstName || u.first_name || '',
+        lastName: u.lastName || u.last_name || '',
+        phone: u.phone || u.phoneNumber || '',
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+  
+  async getPrEventPrizes(eventId: string): Promise<Array<{ id: string; name: string; description?: string; quantity: number; claimed: number }>> {
+    try {
+      const results = await this.get<any[]>(`/api/pr/events/${eventId}/prizes`);
+      return (results || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        quantity: p.quantity || 0,
+        claimed: p.claimed || 0,
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+  
+  async getPrEventLinks(eventId: string): Promise<Array<{ id: string; title: string; url: string; type: 'website' | 'instagram' | 'facebook' | 'tiktok' | 'spotify' | 'other' }>> {
+    try {
+      const results = await this.get<any[]>(`/api/pr/events/${eventId}/links`);
+      return (results || []).map(l => ({
+        id: l.id,
+        title: l.title || l.name,
+        url: l.url,
+        type: l.type || 'other',
+      }));
+    } catch (error) {
+      return [];
+    }
   }
 }
 
