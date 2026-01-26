@@ -41,9 +41,10 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
 
   const resultAnimation = useRef(new Animated.Value(0)).current;
   const scanCooldownRef = useRef(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    loadEventData();
+    loadEventData(true);
   }, [eventId]);
 
   useEffect(() => {
@@ -69,14 +70,19 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
     }
   }, [lastScan, showResultModal]);
 
-  const loadEventData = async () => {
+  const loadEventData = async (isInitial: boolean = false) => {
     try {
-      setLoading(true);
+      if (isInitial && !initialLoadDone) {
+        setLoading(true);
+      }
       const events = await api.getScannerEvents();
       const currentEvent = events.find(e => e.eventId === eventId);
       if (currentEvent) {
         setEvent(currentEvent);
         setScanCount(currentEvent.checkedIn);
+      }
+      if (isInitial) {
+        setInitialLoadDone(true);
       }
     } catch (error) {
       console.error('Error loading event:', error);

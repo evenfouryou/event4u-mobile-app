@@ -34,20 +34,26 @@ export function ScannerDashboard({
   const [stats, setStats] = useState<ScannerStats>({ totalScans: 0, todayScans: 0, eventsAssigned: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (isInitial: boolean = false) => {
     try {
-      setLoading(true);
+      if (isInitial && !initialLoadDone) {
+        setLoading(true);
+      }
       const [eventsData, statsData] = await Promise.all([
         api.getScannerEvents(),
         api.getScannerStats(),
       ]);
       setEvents(eventsData.slice(0, 3));
       setStats(statsData);
+      if (isInitial) {
+        setInitialLoadDone(true);
+      }
     } catch (error) {
       console.error('Error loading scanner data:', error);
     } finally {

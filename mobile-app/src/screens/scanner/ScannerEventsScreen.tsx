@@ -21,16 +21,22 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
   const [events, setEvents] = useState<ScannerEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    loadEvents();
+    loadEvents(true);
   }, []);
 
-  const loadEvents = async () => {
+  const loadEvents = async (isInitial: boolean = false) => {
     try {
-      setLoading(true);
+      if (isInitial && !initialLoadDone) {
+        setLoading(true);
+      }
       const data = await api.getScannerEvents();
       setEvents(data);
+      if (isInitial) {
+        setInitialLoadDone(true);
+      }
     } catch (error) {
       console.error('Error loading scanner events:', error);
     } finally {
