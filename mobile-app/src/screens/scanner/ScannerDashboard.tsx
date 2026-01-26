@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
-import { Card, GlassCard } from '@/components/Card';
+import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
@@ -123,7 +123,7 @@ export function ScannerDashboard({
           <Text style={[styles.userName, { color: colors.foreground }]}>{user?.firstName || 'Scanner'}</Text>
         </View>
 
-        <GlassCard style={styles.statsCard}>
+        <View style={styles.statsCard}>
           <LinearGradient
             colors={[...gradients.teal]}
             start={{ x: 0, y: 0 }}
@@ -147,7 +147,7 @@ export function ScannerDashboard({
               </View>
             </View>
           </LinearGradient>
-        </GlassCard>
+        </View>
 
         <View style={styles.actionsSection}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Azioni Rapide</Text>
