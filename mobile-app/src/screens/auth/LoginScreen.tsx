@@ -33,6 +33,7 @@ interface LoginScreenProps {
   onNavigateRegister: () => void;
   onNavigateForgotPassword: () => void;
   onLoginSuccessClient: () => void;
+  onLoginSuccessPR: () => void;
   onLoginSuccessScanner: () => void;
   onGoBack?: () => void;
 }
@@ -43,6 +44,7 @@ export function LoginScreen({
   onNavigateRegister,
   onNavigateForgotPassword,
   onLoginSuccessClient,
+  onLoginSuccessPR,
   onLoginSuccessScanner,
   onGoBack,
 }: LoginScreenProps) {
@@ -72,9 +74,15 @@ export function LoginScreen({
       await login(loginIdentifier, password);
       triggerHaptic('success');
       
-      const scannerProfile = await api.getScannerProfile().catch(() => null);
+      const [scannerProfile, prProfile] = await Promise.all([
+        api.getScannerProfile().catch(() => null),
+        api.getPrProfile().catch(() => null),
+      ]);
+      
       if (scannerProfile) {
         onLoginSuccessScanner();
+      } else if (prProfile) {
+        onLoginSuccessPR();
       } else {
         onLoginSuccessClient();
       }
