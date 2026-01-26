@@ -1132,6 +1132,84 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
   }
 });
 
+// Add batch guests to a list (max 10)
+// POST /api/pr/guest-lists/:listId/entries/batch
+router.post("/api/pr/guest-lists/:listId/entries/batch", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { listId } = req.params;
+    const { guests } = req.body;
+    const user = req.user as any;
+    
+    if (!Array.isArray(guests) || guests.length === 0) {
+      return res.status(400).json({ error: "Lista ospiti vuota" });
+    }
+    if (guests.length > 10) {
+      return res.status(400).json({ error: "Massimo 10 ospiti per richiesta" });
+    }
+    
+    // Get the list
+    const list = await prStorage.getGuestList(listId);
+    if (!list) {
+      return res.status(404).json({ error: "Lista non trovata" });
+    }
+    
+    // Check if list is still open
+    if (!list.isActive) {
+      return res.status(400).json({ error: "Lista chiusa" });
+    }
+    
+    // Check max guests
+    if (list.maxCapacity && list.currentCount + guests.length > list.maxCapacity) {
+      return res.status(400).json({ 
+        error: `Limite lista superato. Spazio disponibile: ${list.maxCapacity - list.currentCount}` 
+      });
+    }
+    
+    // Resolve PR identity
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Validate all guests
+    const validated = guests.map((g: any) => 
+      insertListEntrySchema.omit({ qrCode: true }).parse({
+        ...g,
+        listId,
+        eventId: list.eventId,
+        companyId: list.companyId,
+        addedByUserId: userId,
+      })
+    );
+    
+    // Create all entries
+    const created = await prStorage.createGuestListEntriesBatch(validated);
+    
+    // Link to existing users by phone
+    for (const entry of created) {
+      if (entry.phone) {
+        const existingUser = await prStorage.findUserByPhone(entry.phone);
+        if (existingUser) {
+          await prStorage.updateGuestListEntry(entry.id, { clientUserId: existingUser.id });
+        }
+      }
+    }
+    
+    // Update list count
+    await prStorage.updateGuestList(listId, { 
+      currentCount: list.currentCount + created.length 
+    });
+    
+    res.status(201).json(created);
+  } catch (error: any) {
+    console.error("Error creating batch guest list entries:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Add guest directly to an event (auto-selects first available list)
 // POST /api/pr/events/:eventId/guests
 router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req: Request, res: Response) => {

@@ -130,9 +130,11 @@ export interface IPrStorage {
   getGuestListEntry(id: string): Promise<GuestListEntry | undefined>;
   getGuestListEntryByQr(qrCode: string): Promise<GuestListEntry | undefined>;
   createGuestListEntry(entry: Omit<InsertGuestListEntry, 'qrCode'>): Promise<GuestListEntry>;
+  createGuestListEntriesBatch(entries: Omit<InsertGuestListEntry, 'qrCode'>[]): Promise<GuestListEntry[]>;
   updateGuestListEntry(id: string, entry: Partial<GuestListEntry>): Promise<GuestListEntry | undefined>;
   deleteGuestListEntry(id: string): Promise<boolean>;
   markGuestListEntryScanned(id: string, scannedByUserId: string): Promise<GuestListEntry | undefined>;
+  findUserByPhone(phone: string): Promise<{ id: string } | undefined>;
   
   // ==================== PR OTP Attempts ====================
   
@@ -623,6 +625,24 @@ export class PrStorage implements IPrStorage {
         updatedAt: new Date() 
       })
       .where(eq(eventLists.id, entry.listId));
+    
+    return created;
+  }
+
+  async createGuestListEntriesBatch(entries: Omit<InsertGuestListEntry, 'qrCode'>[]): Promise<GuestListEntry[]> {
+    if (entries.length === 0) return [];
+    
+    const withQr = entries.map(e => ({
+      ...e,
+      qrCode: generateQrCode('LST')
+    }));
+    
+    const created = await db.insert(listEntries)
+      .values(withQr)
+      .returning();
+    
+    // Note: List count update should be handled by the caller 
+    // to avoid multiple updates for the same list
     
     return created;
   }
