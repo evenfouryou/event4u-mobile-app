@@ -606,6 +606,155 @@ class ApiClient {
       return [];
     }
   }
+
+  // ==================== SCANNER API ====================
+  
+  async getScannerProfile(): Promise<ScannerProfile | null> {
+    try {
+      return await this.get<ScannerProfile>('/api/e4u/scanner/profile');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getScannerEvents(): Promise<ScannerEvent[]> {
+    try {
+      const results = await this.get<any[]>('/api/e4u/scanner/events');
+      return (results || []).map(e => ({
+        id: e.id,
+        eventId: e.eventId,
+        eventName: e.eventName || e.event?.name,
+        eventImageUrl: e.eventImageUrl || e.event?.imageUrl,
+        eventStart: e.eventStart || e.event?.startDate,
+        eventEnd: e.eventEnd || e.event?.endDate,
+        locationName: e.locationName || e.event?.location?.name,
+        locationAddress: e.locationAddress || e.event?.location?.address,
+        canScanLists: e.canScanLists ?? true,
+        canScanTables: e.canScanTables ?? true,
+        canScanTickets: e.canScanTickets ?? true,
+        totalGuests: e.totalGuests || 0,
+        checkedIn: e.checkedIn || 0,
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getScannerEventDetails(eventId: string): Promise<ScannerEventDetails | null> {
+    try {
+      return await this.get<ScannerEventDetails>(`/api/e4u/scanner/events/${eventId}`);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getScannerStats(): Promise<ScannerStats> {
+    try {
+      return await this.get<ScannerStats>('/api/e4u/scanner/total-stats');
+    } catch (error) {
+      return { totalScans: 0, todayScans: 0, eventsAssigned: 0 };
+    }
+  }
+
+  async scanEntry(eventId: string, code: string): Promise<ScanResult> {
+    return this.post<ScanResult>('/api/reservations/scan', { eventId, code });
+  }
+
+  async searchGuests(eventId: string, query: string): Promise<GuestSearchResult[]> {
+    try {
+      const results = await this.get<any[]>(`/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(query)}`);
+      return (results || []).map(g => ({
+        id: g.id,
+        type: g.type || 'list',
+        firstName: g.firstName,
+        lastName: g.lastName,
+        phone: g.phone,
+        status: g.status,
+        listName: g.listName,
+        tableName: g.tableName,
+        guestCount: g.guestCount,
+        checkedInAt: g.checkedInAt,
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async manualCheckIn(eventId: string, entryId: string, entryType: 'list' | 'table'): Promise<ScanResult> {
+    return this.post<ScanResult>('/api/reservations/scan', { 
+      eventId, 
+      entryId,
+      entryType,
+      manual: true 
+    });
+  }
+
+  async denyAccess(entryId: string, reason?: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/reservations/deny-access/${entryId}`, { reason });
+  }
+}
+
+// Scanner Types
+export interface ScannerProfile {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  companyId: string;
+  companyName: string;
+}
+
+export interface ScannerEvent {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventImageUrl: string | null;
+  eventStart: string;
+  eventEnd: string;
+  locationName: string;
+  locationAddress: string | null;
+  canScanLists: boolean;
+  canScanTables: boolean;
+  canScanTickets: boolean;
+  totalGuests: number;
+  checkedIn: number;
+}
+
+export interface ScannerEventDetails extends ScannerEvent {
+  lists: Array<{ id: string; name: string; totalEntries: number; checkedIn: number }>;
+  tables: Array<{ id: string; name: string; capacity: number; bookedBy: string | null; checkedIn: boolean }>;
+}
+
+export interface ScannerStats {
+  totalScans: number;
+  todayScans: number;
+  eventsAssigned: number;
+}
+
+export interface ScanResult {
+  success: boolean;
+  message: string;
+  entryType?: 'list' | 'table' | 'ticket';
+  guestName?: string;
+  guestCount?: number;
+  listName?: string;
+  tableName?: string;
+  alreadyCheckedIn?: boolean;
+  checkedInAt?: string;
+}
+
+export interface GuestSearchResult {
+  id: string;
+  type: 'list' | 'table';
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  status: string;
+  listName?: string;
+  tableName?: string;
+  guestCount?: number;
+  checkedInAt?: string | null;
 }
 
 export const api = new ApiClient(API_BASE_URL);

@@ -26,6 +26,7 @@ interface AccountDashboardProps {
   onNavigateResales: () => void;
   onNavigateSettings: () => void;
   onNavigatePrDashboard?: () => void;
+  onNavigateScannerDashboard?: () => void;
   onLogout: () => void;
   onGoBack: () => void;
 }
@@ -38,6 +39,7 @@ export function AccountDashboard({
   onNavigateResales,
   onNavigateSettings,
   onNavigatePrDashboard,
+  onNavigateScannerDashboard,
   onLogout,
   onGoBack,
 }: AccountDashboardProps) {
@@ -49,6 +51,7 @@ export function AccountDashboard({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasPrAccount, setHasPrAccount] = useState(false);
+  const [hasScannerAccess, setHasScannerAccess] = useState(false);
   const [quickActions, setQuickActions] = useState<ClientQuickAction[]>(['buy-tickets', 'my-qr', 'wallet', 'resell']);
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
@@ -60,14 +63,16 @@ export function AccountDashboard({
   const loadData = async () => {
     try {
       setLoading(true);
-      const [walletData, ticketsData, prProfile] = await Promise.all([
+      const [walletData, ticketsData, prProfile, scannerProfile] = await Promise.all([
         api.getWallet().catch(() => null),
         api.getMyTickets().catch(() => ({ upcoming: [], past: [], total: 0 })),
         api.getPrProfile().catch(() => null),
+        api.getScannerProfile().catch(() => null),
       ]);
       setWallet(walletData);
       setUpcomingTickets(ticketsData.upcoming?.slice(0, 3) || []);
       setHasPrAccount(!!prProfile);
+      setHasScannerAccess(!!scannerProfile);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -94,6 +99,7 @@ export function AccountDashboard({
       'wallet': { icon: 'wallet-outline', label: 'Ricarica Wallet', gradient: 'purple', onPress: onNavigateWallet },
       'resell': { icon: 'swap-horizontal-outline', label: 'Rivendi Biglietti', gradient: 'blue', onPress: onNavigateResales },
       'pr-area': { icon: 'people-outline', label: 'Area PR', gradient: 'pink', onPress: onNavigatePrDashboard || (() => {}) },
+      'scanner-area': { icon: 'scan', label: 'Area Scanner', gradient: 'teal', onPress: onNavigateScannerDashboard || (() => {}) },
       'events': { icon: 'calendar-outline', label: 'Esplora Eventi', gradient: 'golden', onPress: onNavigateEvents },
       'profile': { icon: 'person-outline', label: 'Profilo', gradient: 'blue', onPress: onNavigateProfile },
     };
@@ -103,6 +109,7 @@ export function AccountDashboard({
   const renderQuickActions = () => {
     const visibleActions = quickActions.filter(a => {
       if (a === 'pr-area' && (!hasPrAccount || !onNavigatePrDashboard)) return false;
+      if (a === 'scanner-area' && (!hasScannerAccess || !onNavigateScannerDashboard)) return false;
       return true;
     });
 
@@ -355,6 +362,7 @@ export function AccountDashboard({
         onClose={() => setShowCustomizeModal(false)}
         mode="client"
         hasPrAccount={hasPrAccount && !!onNavigatePrDashboard}
+        hasScannerAccess={hasScannerAccess && !!onNavigateScannerDashboard}
         onSave={loadQuickActions}
       />
     </View>

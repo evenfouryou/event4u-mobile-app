@@ -26,6 +26,7 @@ const CLIENT_ACTION_OPTIONS: ActionOption[] = [
   { id: 'wallet', label: 'Ricarica Wallet', icon: 'wallet-outline' },
   { id: 'resell', label: 'Rivendi Biglietti', icon: 'swap-horizontal-outline' },
   { id: 'pr-area', label: 'Area PR', icon: 'people-outline' },
+  { id: 'scanner-area', label: 'Area Scanner', icon: 'scan' },
   { id: 'events', label: 'Esplora Eventi', icon: 'calendar-outline' },
   { id: 'profile', label: 'Profilo', icon: 'person-outline' },
 ];
@@ -43,6 +44,7 @@ interface CustomizeActionsModalProps {
   onClose: () => void;
   mode: 'client' | 'pr';
   hasPrAccount?: boolean;
+  hasScannerAccess?: boolean;
   onSave?: () => void;
 }
 
@@ -51,6 +53,7 @@ export function CustomizeActionsModal({
   onClose,
   mode,
   hasPrAccount = false,
+  hasScannerAccess = false,
   onSave,
 }: CustomizeActionsModalProps) {
   const { colors } = useTheme();
@@ -58,7 +61,11 @@ export function CustomizeActionsModal({
   const [loading, setLoading] = useState(false);
 
   const actionOptions = mode === 'client' 
-    ? CLIENT_ACTION_OPTIONS.filter(a => a.id !== 'pr-area' || hasPrAccount)
+    ? CLIENT_ACTION_OPTIONS.filter(a => {
+        if (a.id === 'pr-area' && !hasPrAccount) return false;
+        if (a.id === 'scanner-area' && !hasScannerAccess) return false;
+        return true;
+      })
     : PR_ACTION_OPTIONS;
 
   useEffect(() => {

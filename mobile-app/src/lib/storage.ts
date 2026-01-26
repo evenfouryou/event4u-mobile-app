@@ -5,7 +5,7 @@ const STORAGE_KEYS = {
   PR_QUICK_ACTIONS: 'pr_quick_actions',
 };
 
-export type ClientQuickAction = 'buy-tickets' | 'my-qr' | 'wallet' | 'resell' | 'pr-area' | 'profile' | 'events';
+export type ClientQuickAction = 'buy-tickets' | 'my-qr' | 'wallet' | 'resell' | 'pr-area' | 'scanner-area' | 'profile' | 'events';
 export type PrQuickAction = 'events' | 'lists' | 'wallet' | 'profile' | 'client-switch';
 
 export interface QuickActionConfig {

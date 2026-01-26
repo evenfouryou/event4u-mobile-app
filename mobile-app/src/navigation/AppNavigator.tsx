@@ -34,6 +34,8 @@ import { PREventDashboard } from '@/screens/pr/PREventDashboard';
 import { PRWalletScreen } from '@/screens/pr/PRWalletScreen';
 import { PRProfileScreen } from '@/screens/pr/PRProfileScreen';
 
+import { ScannerDashboard, ScannerEventsScreen, ScannerScanScreen } from '@/screens/scanner';
+
 type Screen =
   | { name: 'splash' }
   | { name: 'landing' }
@@ -60,7 +62,10 @@ type Screen =
   | { name: 'prEvents' }
   | { name: 'prEventDetail'; params: { eventId: string } }
   | { name: 'prWallet' }
-  | { name: 'prProfile' };
+  | { name: 'prProfile' }
+  | { name: 'scannerDashboard' }
+  | { name: 'scannerEvents' }
+  | { name: 'scannerScan'; params: { eventId: string } };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -282,6 +287,7 @@ export function AppNavigator() {
             onNavigateResales={() => navigate({ name: 'resales' })}
             onNavigateSettings={() => navigate({ name: 'settings' })}
             onNavigatePrDashboard={() => resetTo({ name: 'prDashboard' })}
+            onNavigateScannerDashboard={() => resetTo({ name: 'scannerDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
             onGoBack={() => resetTo({ name: 'landing' })}
           />
@@ -405,6 +411,33 @@ export function AppNavigator() {
           <PRProfileScreen
             onGoBack={goBack}
             onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'scannerDashboard':
+        return (
+          <ScannerDashboard
+            onNavigateEvents={() => navigate({ name: 'scannerEvents' })}
+            onNavigateScan={(eventId) => navigate({ name: 'scannerScan', params: { eventId } })}
+            onNavigateProfile={() => navigate({ name: 'profile' })}
+            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'scannerEvents':
+        return (
+          <ScannerEventsScreen
+            onBack={goBack}
+            onEventPress={(eventId) => navigate({ name: 'scannerScan', params: { eventId } })}
+          />
+        );
+
+      case 'scannerScan':
+        return (
+          <ScannerScanScreen
+            eventId={currentScreen.params.eventId}
+            onBack={goBack}
           />
         );
 
