@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -9,6 +9,7 @@ import { Avatar } from '@/components/Avatar';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface ProfileScreenProps {
@@ -17,6 +18,7 @@ interface ProfileScreenProps {
 
 export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const { user, logout } = useAuth();
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -92,14 +94,14 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               size="xl"
               testID="avatar-profile"
             />
-            <Text style={styles.userName}>
+            <Text style={[styles.userName, { color: colors.foreground }]}>
               {formData.firstName} {formData.lastName}
             </Text>
-            <Text style={styles.userEmail}>{formData.email}</Text>
+            <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{formData.email}</Text>
           </View>
 
           <Card style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Informazioni Personali</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Informazioni Personali</Text>
 
             <View style={styles.formRow}>
               <View style={styles.formHalf}>
@@ -150,39 +152,39 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
           </Card>
 
           <Card style={styles.infoCard}>
-            <Text style={styles.sectionTitle}>Informazioni Account</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Informazioni Account</Text>
             
             <View style={styles.infoRow}>
-              <View style={styles.infoIcon}>
+              <View style={[styles.infoIcon, { backgroundColor: `${colors.primary}15` }]}>
                 <Ionicons name="calendar-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Membro dal</Text>
-                <Text style={styles.infoValue}>Gennaio 2026</Text>
+                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Membro dal</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground }]}>Gennaio 2026</Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <View style={styles.infoRow}>
-              <View style={styles.infoIcon}>
+              <View style={[styles.infoIcon, { backgroundColor: `${colors.primary}15` }]}>
                 <Ionicons name="ticket-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Biglietti acquistati</Text>
-                <Text style={styles.infoValue}>12</Text>
+                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Biglietti acquistati</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground }]}>12</Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <View style={styles.infoRow}>
-              <View style={styles.infoIcon}>
+              <View style={[styles.infoIcon, { backgroundColor: `${colors.primary}15` }]}>
                 <Ionicons name="star-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Livello fedeltà</Text>
-                <Text style={styles.infoValue}>Gold Member</Text>
+                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Livello fedeltà</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground }]}>Gold Member</Text>
               </View>
             </View>
           </Card>
@@ -219,7 +221,6 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -238,12 +239,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
     marginTop: spacing.md,
   },
   userEmail: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
     marginTop: spacing.xs,
   },
   formCard: {
@@ -253,7 +252,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
     marginBottom: spacing.lg,
   },
   formRow: {
@@ -276,7 +274,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${colors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -286,17 +283,14 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
   },
   infoValue: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
     marginVertical: spacing.sm,
   },
   buttonRow: {

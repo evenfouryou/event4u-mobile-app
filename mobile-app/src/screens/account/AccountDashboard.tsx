@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image, RefreshControl } 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
+import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -13,6 +13,7 @@ import { GreetingHeader } from '@/components/Header';
 import { ActionCard } from '@/components/ActionCard';
 import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { Wallet, Ticket as ApiTicket, TicketsResponse } from '@/lib/api';
 import { ClientQuickAction, getClientQuickActions } from '@/lib/storage';
@@ -41,6 +42,7 @@ export function AccountDashboard({
   onGoBack,
 }: AccountDashboardProps) {
   const { user, logout } = useAuth();
+  const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [upcomingTickets, setUpcomingTickets] = useState<ApiTicket[]>([]);

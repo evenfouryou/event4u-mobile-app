@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInpu
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
+import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Loading } from '@/components/Loading';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrEventDetail, PrGuestListEntry, PrGuestList, PrEventTable, PrTicketStats } from '@/lib/api';
 
@@ -26,6 +27,7 @@ interface BatchGuest {
 }
 
 export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
+  const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<PrEventDetail | null>(null);
   const [guests, setGuests] = useState<PrGuestListEntry[]>([]);

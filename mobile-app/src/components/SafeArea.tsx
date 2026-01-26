@@ -1,6 +1,6 @@
 import { View, StyleSheet, ViewStyle, StatusBar, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SafeAreaProps {
   children: React.ReactNode;
@@ -13,9 +13,11 @@ export function SafeArea({
   children,
   style,
   edges = ['top', 'bottom'],
-  backgroundColor = colors.background,
+  backgroundColor,
 }: SafeAreaProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const bgColor = backgroundColor ?? colors.background;
 
   const paddingStyle: ViewStyle = {
     paddingTop: edges.includes('top') ? insets.top : 0,
@@ -25,10 +27,10 @@ export function SafeArea({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }, paddingStyle, style]}>
+    <View style={[{ flex: 1, backgroundColor: bgColor }, paddingStyle, style]}>
       <StatusBar
-        barStyle="light-content"
-        backgroundColor={backgroundColor}
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={bgColor}
         translucent={Platform.OS === 'android'}
       />
       {children}
@@ -45,25 +47,20 @@ export function ScreenContainer({
   style?: ViewStyle;
   noPadding?: boolean;
 }) {
+  const { colors } = useTheme();
+  
+  const containerStyle: ViewStyle = {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(noPadding ? {} : { paddingHorizontal: 16 }),
+    ...style,
+  };
+  
   return (
-    <SafeArea style={[styles.screen, !noPadding && styles.padding, style]}>
+    <SafeArea style={containerStyle}>
       {children}
     </SafeArea>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  padding: {
-    paddingHorizontal: 16,
-  },
-});
 
 export default SafeArea;

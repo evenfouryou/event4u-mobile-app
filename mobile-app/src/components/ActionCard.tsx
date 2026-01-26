@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius, spacing, typography, shadows } from '@/lib/theme';
+import { borderRadius, spacing, typography, shadows } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 type GradientType = 'golden' | 'teal' | 'purple' | 'blue' | 'pink';
@@ -15,14 +16,6 @@ interface ActionCardProps {
   testID?: string;
 }
 
-const gradientColors: Record<GradientType, [string, string]> = {
-  golden: ['#FFD700', '#FFA500'],
-  teal: ['#00CED1', '#008B8B'],
-  purple: ['#8B5CF6', '#6366F1'],
-  blue: ['#3B82F6', '#2563EB'],
-  pink: ['#EC4899', '#DB2777'],
-};
-
 export function ActionCard({
   icon,
   label,
@@ -30,11 +23,23 @@ export function ActionCard({
   gradient = 'golden',
   testID,
 }: ActionCardProps) {
+  const { gradients } = useTheme();
   const [pressed, setPressed] = useState(false);
 
   const handlePress = () => {
     triggerHaptic('medium');
     onPress?.();
+  };
+
+  const getGradientColors = (): [string, string] => {
+    switch (gradient) {
+      case 'golden': return [...gradients.golden] as [string, string];
+      case 'teal': return [...gradients.teal] as [string, string];
+      case 'purple': return [...gradients.purple] as [string, string];
+      case 'blue': return [...gradients.blue] as [string, string];
+      case 'pink': return [...gradients.pink] as [string, string];
+      default: return [...gradients.golden] as [string, string];
+    }
   };
 
   return (
@@ -49,7 +54,7 @@ export function ActionCard({
       testID={testID}
     >
       <LinearGradient
-        colors={gradientColors[gradient]}
+        colors={getGradientColors()}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
@@ -99,16 +104,16 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 64,
     height: 64,
-    borderRadius: 20,
+    borderRadius: 32,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   label: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '600',
     color: 'white',
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
     textAlign: 'center',
   },
   row: {
@@ -119,5 +124,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-export default ActionCard;

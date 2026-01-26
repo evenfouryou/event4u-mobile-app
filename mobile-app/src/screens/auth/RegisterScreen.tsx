@@ -2,11 +2,12 @@ import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, gradients } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface RegisterScreenProps {
@@ -19,6 +20,7 @@ type Step = 1 | 2 | 3 | 4;
 
 export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }: RegisterScreenProps) {
   const { register, verifyOtp } = useAuth();
+  const { colors, gradients } = useTheme();
   const [step, setStep] = useState<Step>(1);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);

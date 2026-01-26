@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { colors, borderRadius, spacing, typography } from '@/lib/theme';
+import { borderRadius, spacing, typography } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type BadgeVariant = 'default' | 'secondary' | 'success' | 'destructive' | 'warning' | 'outline' | 'golden' | 'teal';
 type BadgeSize = 'sm' | 'md' | 'lg';
@@ -21,6 +22,8 @@ export function Badge({
   textStyle,
   testID,
 }: BadgeProps) {
+  const { colors } = useTheme();
+  
   const variantStyles: Record<BadgeVariant, { container: ViewStyle; text: TextStyle }> = {
     default: {
       container: { backgroundColor: colors.primary },
@@ -47,7 +50,7 @@ export function Badge({
       text: { color: colors.foreground },
     },
     golden: {
-      container: { backgroundColor: colors.primary },
+      container: { backgroundColor: colors.golden },
       text: { color: '#000' },
     },
     teal: {
@@ -86,11 +89,13 @@ export function Badge({
 }
 
 export function LiveBadge({ testID }: { testID?: string }) {
+  const { colors } = useTheme();
+  
   return (
     <Badge variant="success" style={styles.liveBadge} testID={testID}>
       <View style={styles.liveContent}>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>Live</Text>
+        <View style={[styles.liveDot, { backgroundColor: colors.successForeground }]} />
+        <Text style={[styles.liveText, { color: colors.successForeground }]}>Live</Text>
       </View>
     </Badge>
   );
@@ -120,13 +125,9 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.successForeground,
   },
   liveText: {
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
-    color: colors.successForeground,
   },
 });
-
-export default Badge;

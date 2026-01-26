@@ -1,6 +1,7 @@
 import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { colors, borderRadius, spacing, shadows } from '@/lib/theme';
+import { borderRadius, spacing, shadows } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface CardProps {
@@ -12,6 +13,8 @@ interface CardProps {
 }
 
 export function Card({ children, style, variant = 'default', onPress, testID }: CardProps) {
+  const { colors, isDark } = useTheme();
+  
   const handlePress = () => {
     if (onPress) {
       triggerHaptic('light');
@@ -66,6 +69,8 @@ export function Card({ children, style, variant = 'default', onPress, testID }: 
 }
 
 export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 'variant'>) {
+  const { colors, isDark } = useTheme();
+  
   const handlePress = () => {
     if (onPress) {
       triggerHaptic('light');
@@ -78,23 +83,33 @@ export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 
       <Pressable
         onPress={handlePress}
         style={({ pressed }) => [
-          styles.glassBase,
+          {
+            borderRadius: borderRadius.lg,
+            overflow: 'hidden',
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
+          },
           { opacity: pressed ? 0.95 : 1 },
           style,
         ]}
         testID={testID}
       >
-        <BlurView intensity={20} tint="dark" style={styles.blurView}>
-          <View style={styles.glassContent}>{children}</View>
+        <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.blurView}>
+          <View style={[styles.glassContent, { backgroundColor: colors.glass }]}>{children}</View>
         </BlurView>
       </Pressable>
     );
   }
 
   return (
-    <View style={[styles.glassBase, style]} testID={testID}>
-      <BlurView intensity={20} tint="dark" style={styles.blurView}>
-        <View style={styles.glassContent}>{children}</View>
+    <View style={[{
+      borderRadius: borderRadius.lg,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+    }, style]} testID={testID}>
+      <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.blurView}>
+        <View style={[styles.glassContent, { backgroundColor: colors.glass }]}>{children}</View>
       </BlurView>
     </View>
   );
@@ -102,22 +117,14 @@ export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    overflow: 'hidden',
-  },
-  glassBase: {
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
   },
   blurView: {
     flex: 1,
   },
   glassContent: {
-    padding: spacing.lg,
+    flex: 1,
+    padding: spacing.md,
   },
 });
-
-export default Card;

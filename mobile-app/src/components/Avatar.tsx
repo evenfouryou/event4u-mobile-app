@@ -1,5 +1,6 @@
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { colors, borderRadius, typography } from '@/lib/theme';
+import { typography } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface AvatarProps {
   source?: string | null;
@@ -9,6 +10,8 @@ interface AvatarProps {
 }
 
 export function Avatar({ source, name, size = 'md', testID }: AvatarProps) {
+  const { colors } = useTheme();
+  
   const sizeValues = {
     sm: 32,
     md: 40,
@@ -41,6 +44,8 @@ export function Avatar({ source, name, size = 'md', testID }: AvatarProps) {
           width: dimension,
           height: dimension,
           borderRadius: dimension / 2,
+          backgroundColor: `${colors.primary}20`,
+          borderColor: `${colors.primary}40`,
         },
       ]}
       testID={testID}
@@ -51,7 +56,7 @@ export function Avatar({ source, name, size = 'md', testID }: AvatarProps) {
           style={[styles.image, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
         />
       ) : (
-        <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
+        <Text style={[styles.initials, { fontSize, color: colors.primary }]}>{getInitials(name)}</Text>
       )}
     </View>
   );
@@ -59,17 +64,14 @@ export function Avatar({ source, name, size = 'md', testID }: AvatarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: `${colors.primary}20`,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: `${colors.primary}40`,
   },
   image: {
     resizeMode: 'cover',
   },
   initials: {
-    color: colors.primary,
     fontWeight: '600',
   },
 });

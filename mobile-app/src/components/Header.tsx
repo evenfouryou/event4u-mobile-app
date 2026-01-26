@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography } from '@/lib/theme';
+import { spacing, typography } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface HeaderProps {
@@ -27,6 +28,7 @@ export function Header({
   showLogo = false,
   testID,
 }: HeaderProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const handleBack = () => {
@@ -38,8 +40,11 @@ export function Header({
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top + spacing.sm },
-        transparent && styles.transparent,
+        { 
+          paddingTop: insets.top + spacing.sm,
+          backgroundColor: transparent ? 'transparent' : colors.background,
+          borderBottomColor: transparent ? 'transparent' : colors.border,
+        },
       ]}
       testID={testID}
     >
@@ -57,18 +62,18 @@ export function Header({
           {showLogo ? (
             <Image
               source={require('../../assets/logo.png')}
-              style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
+              style={[styles.headerLogo, { tintColor: isDark ? '#FFFFFF' : colors.foreground }]}
               resizeMode="contain"
             />
           ) : (
             <>
               {title && (
-                <Text style={styles.title} numberOfLines={1}>
+                <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {title}
                 </Text>
               )}
               {subtitle && (
-                <Text style={styles.subtitle} numberOfLines={1}>
+                <Text style={[styles.subtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
                   {subtitle}
                 </Text>
               )}
@@ -93,7 +98,7 @@ export function GreetingHeader({
   avatarElement?: React.ReactNode;
   rightElement?: React.ReactNode;
 }) {
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -107,10 +112,10 @@ export function GreetingHeader({
       <View style={styles.greetingContent}>
         {avatarElement && <View style={styles.avatarWrapper}>{avatarElement}</View>}
         <View style={styles.greetingText}>
-          <Text style={styles.greeting}>
-            {getGreeting()}, <Text style={styles.greetingName}>{name}</Text>
+          <Text style={[styles.greeting, { color: colors.foreground }]}>
+            {getGreeting()}, <Text style={[styles.greetingName, { color: colors.primary }]}>{name}</Text>
           </Text>
-          {email && <Text style={styles.greetingEmail}>{email}</Text>}
+          {email && <Text style={[styles.greetingEmail, { color: colors.mutedForeground }]}>{email}</Text>}
         </View>
       </View>
       {rightElement && <View style={styles.greetingRight}>{rightElement}</View>}
@@ -120,11 +125,7 @@ export function GreetingHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   transparent: {
     backgroundColor: 'transparent',
@@ -134,20 +135,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 56,
   },
   left: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 48,
   },
   center: {
-    flex: 2,
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   right: {
-    flex: 1,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    minWidth: 48,
   },
   backButton: {
     width: 40,
@@ -159,27 +165,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
-    textAlign: 'center',
-  },
-  headerLogo: {
-    height: 28,
-    width: 100,
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
-    textAlign: 'center',
     marginTop: 2,
   },
+  headerLogo: {
+    width: 80,
+    height: 28,
+  },
   greetingContainer: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   greetingContent: {
     flexDirection: 'row',
@@ -194,19 +194,16 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: typography.fontSize.xl,
-    color: colors.foreground,
+    fontWeight: '600',
   },
   greetingName: {
     fontWeight: '700',
   },
   greetingEmail: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
     marginTop: 2,
   },
   greetingRight: {
     marginLeft: spacing.md,
   },
 });
-
-export default Header;

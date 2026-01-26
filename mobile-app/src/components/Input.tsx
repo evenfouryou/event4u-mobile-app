@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, TextInputProps, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius, spacing, typography } from '@/lib/theme';
+import { borderRadius, spacing, typography } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -24,6 +25,7 @@ export function Input({
   editable = true,
   ...props
 }: InputProps) {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,14 +51,16 @@ export function Input({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>}
       
       <View
         style={[
           styles.inputContainer,
-          { borderColor },
-          error && styles.inputError,
-          !editable && styles.inputDisabled,
+          { 
+            borderColor,
+            backgroundColor: editable ? colors.secondary : colors.muted,
+          },
+          error && { borderColor: colors.destructive },
         ]}
       >
         {leftIcon && (
@@ -64,7 +68,7 @@ export function Input({
             name={leftIcon}
             size={20}
             color={isFocused ? colors.primary : colors.mutedForeground}
-            style={[styles.leftIcon, !editable && styles.iconDisabled]}
+            style={[styles.leftIcon, !editable && { opacity: 0.5 }]}
           />
         )}
         
@@ -74,9 +78,9 @@ export function Input({
           secureTextEntry={actualSecure}
           style={[
             styles.input,
+            { color: editable ? colors.foreground : colors.mutedForeground },
             leftIcon && styles.inputWithLeftIcon,
             (rightIcon || isPassword) && styles.inputWithRightIcon,
-            !editable && styles.textDisabled,
             props.style,
           ]}
           placeholderTextColor={colors.mutedForeground}
@@ -101,7 +105,7 @@ export function Input({
         )}
       </View>
       
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <Text style={[styles.error, { color: colors.destructive }]}>{error}</Text>}
     </View>
   );
 }
@@ -113,22 +117,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
     marginBottom: spacing.xs,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     minHeight: 52,
   },
   input: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: 52,
@@ -147,24 +147,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  inputError: {
-    borderColor: colors.destructive,
-  },
-  inputDisabled: {
-    backgroundColor: colors.muted,
-    opacity: 0.7,
-  },
-  textDisabled: {
-    color: colors.mutedForeground,
-  },
-  iconDisabled: {
-    opacity: 0.5,
-  },
   error: {
-    fontSize: typography.fontSize.sm,
-    color: colors.destructive,
+    fontSize: typography.fontSize.xs,
     marginTop: spacing.xs,
   },
 });
-
-export default Input;

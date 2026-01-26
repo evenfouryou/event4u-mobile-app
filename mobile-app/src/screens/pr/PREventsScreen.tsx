@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Loading } from '@/components/Loading';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrEvent } from '@/lib/api';
 
@@ -15,6 +16,7 @@ interface PREventsScreenProps {
 }
 
 export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps) {
+  const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<PrEvent[]>([]);
   const [loading, setLoading] = useState(true);

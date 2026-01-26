@@ -1,6 +1,7 @@
 import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, borderRadius, spacing, typography, shadows, touchableMinHeight } from '@/lib/theme';
+import { borderRadius, spacing, typography, shadows, touchableMinHeight } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic, HapticType } from '@/lib/haptics';
 
 type ButtonVariant = 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'golden';
@@ -31,6 +32,8 @@ export function Button({
   haptic = 'light',
   testID,
 }: ButtonProps) {
+  const { colors, gradients } = useTheme();
+  
   const handlePress = () => {
     if (!disabled && !loading) {
       triggerHaptic(haptic);
@@ -102,7 +105,7 @@ export function Button({
         testID={testID}
       >
         <LinearGradient
-          colors={['#FFD700', '#FFA500']}
+          colors={[...gradients.golden]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -168,5 +171,3 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-
-export default Button;

@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image, I
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
+import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
 import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrProfile, PrWallet, PrEvent } from '@/lib/api';
 import { PrQuickAction, getPrQuickActions } from '@/lib/storage';
@@ -30,6 +31,7 @@ export function PRDashboard({
   onSwitchToClient,
   onLogout,
 }: PRDashboardProps) {
+  const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<PrProfile | null>(null);
   const [wallet, setWallet] = useState<PrWallet | null>(null);

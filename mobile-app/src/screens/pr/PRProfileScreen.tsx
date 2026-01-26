@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Loading } from '@/components/Loading';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrProfile } from '@/lib/api';
 
@@ -16,6 +17,7 @@ interface PRProfileScreenProps {
 }
 
 export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<PrProfile | null>(null);
   const [loading, setLoading] = useState(true);

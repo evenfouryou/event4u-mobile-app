@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image, Modal, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 const PHONE_PREFIXES = [
@@ -43,6 +44,7 @@ export function LoginScreen({
   onGoBack,
 }: LoginScreenProps) {
   const { login } = useAuth();
+  const { colors, gradients } = useTheme();
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');

@@ -2,11 +2,12 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions, Activ
 import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge, LiveBadge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PublicEvent } from '@/lib/api';
 
@@ -43,6 +44,7 @@ export function LandingScreen({
   onNavigateAccount,
   isAuthenticated,
 }: LandingScreenProps) {
+  const { colors, gradients } = useTheme();
   const [events, setEvents] = useState<PublicEvent[]>([]);
   const [loading, setLoading] = useState(true);
 

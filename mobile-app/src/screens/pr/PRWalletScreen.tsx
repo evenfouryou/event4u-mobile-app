@@ -3,10 +3,11 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius, shadows, gradients } from '@/lib/theme';
+import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Loading } from '@/components/Loading';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrWallet, PrTransaction } from '@/lib/api';
 
@@ -16,6 +17,7 @@ interface PRWalletScreenProps {
 }
 
 export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProps) {
+  const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [wallet, setWallet] = useState<PrWallet | null>(null);
   const [transactions, setTransactions] = useState<PrTransaction[]>([]);
