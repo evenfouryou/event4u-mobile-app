@@ -19,8 +19,10 @@ import {
   RefreshCw,
   LogOut,
   Home,
+  ArrowRightLeft,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { usePrAuth } from "@/hooks/usePrAuth";
 
 interface Customer {
   id: string;
@@ -51,7 +53,7 @@ const navItems = [
   { href: "/account/profile", label: "Profilo", icon: User },
 ];
 
-function SidebarContent({ customer, onLogout }: { customer: Customer | null; onLogout: () => void }) {
+function SidebarContent({ customer, onLogout, hasPrProfile, onSwitchToPr }: { customer: Customer | null; onLogout: () => void; hasPrProfile: boolean; onSwitchToPr: () => void }) {
   const [location] = useLocation();
 
   return (
@@ -103,6 +105,17 @@ function SidebarContent({ customer, onLogout }: { customer: Customer | null; onL
       </nav>
 
       <div className="p-4 border-t border-border space-y-2">
+        {hasPrProfile && (
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3"
+            onClick={onSwitchToPr}
+            data-testid="button-switch-to-pr"
+          >
+            <ArrowRightLeft className="w-5 h-5" />
+            Passa a Dashboard PR
+          </Button>
+        )}
         <div className="flex items-center justify-between px-2">
           <span className="text-sm text-muted-foreground">Tema</span>
           <ThemeToggle />
@@ -140,6 +153,14 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     queryKey: ["/api/public/customers/me"],
     retry: false,
   });
+
+  // Check if user has a PR profile
+  const { prProfile } = usePrAuth();
+  const hasPrProfile = !!prProfile;
+
+  const handleSwitchToPr = () => {
+    navigate("/pr/dashboard");
+  };
 
   // Check if profile needs completion
   useEffect(() => {
@@ -296,7 +317,7 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     <div className="min-h-screen bg-background flex">
       <ProfileCompleteDialog />
       <aside className="fixed left-0 top-0 h-full w-72 z-40">
-        <SidebarContent customer={customer || null} onLogout={handleLogout} />
+        <SidebarContent customer={customer || null} onLogout={handleLogout} hasPrProfile={hasPrProfile} onSwitchToPr={handleSwitchToPr} />
       </aside>
       <main className="flex-1 ml-72 p-8">{children}</main>
     </div>

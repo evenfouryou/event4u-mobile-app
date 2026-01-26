@@ -9,6 +9,7 @@ import {
   LogOut,
   ChevronLeft,
   Gift,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
@@ -155,7 +156,17 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
               </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="p-4 border-t">
+            <SidebarFooter className="p-4 border-t space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => navigate("/account/home")}
+                data-testid="button-switch-to-client"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Passa ad Account Cliente
+              </Button>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <Button
@@ -168,9 +179,9 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
-              {(user?.firstName || prProfile?.name) && (
+              {(user?.firstName || prProfile?.firstName) && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  {user?.firstName || prProfile?.name}
+                  {user?.firstName || prProfile?.firstName}
                 </p>
               )}
             </SidebarFooter>
