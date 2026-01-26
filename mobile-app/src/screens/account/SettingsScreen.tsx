@@ -298,8 +298,8 @@ export function SettingsScreen({
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Event4U v1.0.0</Text>
-          <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>© 2026 Event4U. Tutti i diritti riservati.</Text>
+          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Event4U Management System v1.0.0</Text>
+          <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>© 2026 Event4U Management System. Tutti i diritti riservati.</Text>
         </View>
       </ScrollView>
     </SafeArea>
@@ -356,7 +356,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxl * 2,
     gap: spacing.xs,
   },
   versionText: {
