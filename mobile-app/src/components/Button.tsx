@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
   },
   text: {
     textAlign: 'center',
+    width: '100%',
   },
   disabled: {
     opacity: 0.5,
