@@ -384,7 +384,6 @@ router.get("/api/bundles/purchases", async (req, res) => {
       .select({
         id: bundlePurchases.id,
         bundleId: bundlePurchases.bundleId,
-        quantity: bundlePurchases.quantity,
         groupSize: bundlePurchases.groupSize,
         totalPrice: bundlePurchases.totalPrice,
         status: bundlePurchases.status,

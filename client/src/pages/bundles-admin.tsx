@@ -499,7 +499,7 @@ export default function BundlesAdminPage() {
                           {purchase.createdAt && format(new Date(purchase.createdAt), "dd/MM/yyyy HH:mm", { locale: it })}
                         </TableCell>
                         <TableCell>{purchase.bundleId}</TableCell>
-                        <TableCell>{purchase.quantity}</TableCell>
+                        <TableCell>{purchase.groupSize || 1}</TableCell>
                         <TableCell>€{parseFloat(purchase.totalPrice).toFixed(2)}</TableCell>
                         <TableCell>
                           <Badge variant={purchase.status === "completed" ? "default" : "secondary"}>
