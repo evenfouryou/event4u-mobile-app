@@ -19,6 +19,7 @@ interface PRDashboardProps {
   onNavigateWallet: () => void;
   onNavigateProfile: () => void;
   onNavigateLists: () => void;
+  onNavigateScannerDashboard?: () => void;
   onSwitchToClient: () => void;
   onLogout: () => void;
 }
@@ -28,6 +29,7 @@ export function PRDashboard({
   onNavigateWallet,
   onNavigateProfile,
   onNavigateLists,
+  onNavigateScannerDashboard,
   onSwitchToClient,
   onLogout,
 }: PRDashboardProps) {
@@ -38,6 +40,7 @@ export function PRDashboard({
   const [events, setEvents] = useState<PrEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasScannerAccess, setHasScannerAccess] = useState(false);
   const [quickActions, setQuickActions] = useState<PrQuickAction[]>(['events', 'lists', 'wallet', 'profile']);
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
@@ -49,14 +52,16 @@ export function PRDashboard({
   const loadData = async () => {
     try {
       setLoading(true);
-      const [profileData, walletData, eventsData] = await Promise.all([
+      const [profileData, walletData, eventsData, scannerProfile] = await Promise.all([
         api.getPrProfile().catch(() => null),
         api.getPrWallet().catch(() => null),
         api.getPrEvents().catch(() => []),
+        api.getScannerProfile().catch(() => null),
       ]);
       setProfile(profileData);
       setWallet(walletData);
       setEvents(eventsData.slice(0, 3));
+      setHasScannerAccess(!!scannerProfile);
     } catch (error) {
       console.error('Error loading PR dashboard:', error);
     } finally {
@@ -82,13 +87,18 @@ export function PRDashboard({
       'lists': { icon: 'people', label: 'Liste', gradient: 'blue', onPress: onNavigateLists },
       'wallet': { icon: 'wallet', label: 'Wallet', gradient: 'golden', onPress: onNavigateWallet },
       'profile': { icon: 'person', label: 'Profilo', gradient: 'pink', onPress: onNavigateProfile },
+      'scanner': { icon: 'scan', label: 'Scanner', gradient: 'teal', onPress: onNavigateScannerDashboard || (() => {}) },
       'client-switch': { icon: 'swap-horizontal', label: 'Cliente', gradient: 'teal', onPress: onSwitchToClient },
     };
     return configs[actionId];
   };
 
   const renderQuickActions = () => {
-    const visibleActions = quickActions.slice(0, 4);
+    const filteredActions = quickActions.filter(a => {
+      if (a === 'scanner' && (!hasScannerAccess || !onNavigateScannerDashboard)) return false;
+      return true;
+    });
+    const visibleActions = filteredActions.slice(0, 4);
     const rows: PrQuickAction[][] = [];
     for (let i = 0; i < visibleActions.length; i += 2) {
       rows.push(visibleActions.slice(i, i + 2));
@@ -354,6 +364,7 @@ export function PRDashboard({
         visible={showCustomizeModal}
         onClose={() => setShowCustomizeModal(false)}
         mode="pr"
+        hasScannerAccess={hasScannerAccess && !!onNavigateScannerDashboard}
         onSave={loadQuickActions}
       />
     </View>

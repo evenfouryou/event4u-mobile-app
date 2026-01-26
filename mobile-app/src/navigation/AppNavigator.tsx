@@ -368,6 +368,7 @@ export function AppNavigator() {
             onNavigateWallet={() => navigate({ name: 'prWallet' })}
             onNavigateLists={() => navigate({ name: 'prEvents' })}
             onNavigateProfile={() => navigate({ name: 'prProfile' })}
+            onNavigateScannerDashboard={() => resetTo({ name: 'scannerDashboard' })}
             onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />

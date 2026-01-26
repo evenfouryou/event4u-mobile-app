@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
 };
 
 export type ClientQuickAction = 'buy-tickets' | 'my-qr' | 'wallet' | 'resell' | 'pr-area' | 'scanner-area' | 'profile' | 'events';
-export type PrQuickAction = 'events' | 'lists' | 'wallet' | 'profile' | 'client-switch';
+export type PrQuickAction = 'events' | 'lists' | 'wallet' | 'profile' | 'scanner' | 'client-switch';
 
 export interface QuickActionConfig {
   id: string;

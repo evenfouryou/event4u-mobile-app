@@ -36,6 +36,7 @@ const PR_ACTION_OPTIONS: ActionOption[] = [
   { id: 'lists', label: 'Liste Ospiti', icon: 'people' },
   { id: 'wallet', label: 'Wallet', icon: 'wallet' },
   { id: 'profile', label: 'Profilo', icon: 'person' },
+  { id: 'scanner', label: 'Scanner', icon: 'scan' },
   { id: 'client-switch', label: 'Account Cliente', icon: 'swap-horizontal' },
 ];
 
@@ -66,7 +67,10 @@ export function CustomizeActionsModal({
         if (a.id === 'scanner-area' && !hasScannerAccess) return false;
         return true;
       })
-    : PR_ACTION_OPTIONS;
+    : PR_ACTION_OPTIONS.filter(a => {
+        if (a.id === 'scanner' && !hasScannerAccess) return false;
+        return true;
+      });
 
   useEffect(() => {
     if (visible) {
