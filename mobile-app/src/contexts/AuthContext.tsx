@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (identifier: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<{ role?: string }>;
   register: (data: RegisterData) => Promise<{ customerId: string }>;
   verifyOtp: (customerId: string, otpCode: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = async (identifier: string, password: string) => {
+  const login = async (identifier: string, password: string): Promise<{ role?: string }> => {
     try {
       // Detect if it's email, phone, or username
       const isPhone = identifier.startsWith('+') || /^\d{8,15}$/.test(identifier.replace(/[\s\-()]/g, ''));
@@ -77,7 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.user) {
         setUser(response.user);
+        return { role: response.user.role };
       }
+      return { role: 'client' };
     } catch (error: any) {
       console.error('Login error:', error);
       throw new Error(error.message || 'Credenziali non valide');

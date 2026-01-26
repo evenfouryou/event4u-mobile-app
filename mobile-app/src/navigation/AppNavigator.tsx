@@ -185,9 +185,18 @@ export function AppNavigator() {
           <LoginScreen
             onNavigateRegister={() => navigate({ name: 'register' })}
             onNavigateForgotPassword={() => navigate({ name: 'forgotPassword' })}
-            onLoginSuccessClient={() => resetTo({ name: 'accountDashboard' })}
-            onLoginSuccessPR={() => resetTo({ name: 'prDashboard' })}
-            onLoginSuccessScanner={() => resetTo({ name: 'scannerDashboard' })}
+            onLoginSuccess={(role: string) => {
+              switch (role) {
+                case 'scanner':
+                  resetTo({ name: 'scannerDashboard' });
+                  break;
+                case 'pr':
+                  resetTo({ name: 'prDashboard' });
+                  break;
+                default:
+                  resetTo({ name: 'accountDashboard' });
+              }
+            }}
             onGoBack={goBack}
           />
         );

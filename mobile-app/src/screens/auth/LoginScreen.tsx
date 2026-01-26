@@ -32,9 +32,7 @@ const PHONE_PREFIXES = [
 interface LoginScreenProps {
   onNavigateRegister: () => void;
   onNavigateForgotPassword: () => void;
-  onLoginSuccessClient: () => void;
-  onLoginSuccessPR: () => void;
-  onLoginSuccessScanner: () => void;
+  onLoginSuccess: (role: string) => void;
   onGoBack?: () => void;
 }
 
@@ -43,9 +41,7 @@ type LoginMethod = 'email' | 'username' | 'phone';
 export function LoginScreen({
   onNavigateRegister,
   onNavigateForgotPassword,
-  onLoginSuccessClient,
-  onLoginSuccessPR,
-  onLoginSuccessScanner,
+  onLoginSuccess,
   onGoBack,
 }: LoginScreenProps) {
   const { login } = useAuth();
@@ -71,21 +67,9 @@ export function LoginScreen({
       const loginIdentifier = loginMethod === 'phone' 
         ? `${phonePrefix}${identifier.replace(/\s/g, '')}` 
         : identifier;
-      await login(loginIdentifier, password);
+      const result = await login(loginIdentifier, password);
       triggerHaptic('success');
-      
-      const [scannerProfile, prProfile] = await Promise.all([
-        api.getScannerProfile().catch(() => null),
-        api.getPrProfile().catch(() => null),
-      ]);
-      
-      if (scannerProfile) {
-        onLoginSuccessScanner();
-      } else if (prProfile) {
-        onLoginSuccessPR();
-      } else {
-        onLoginSuccessClient();
-      }
+      onLoginSuccess(result.role || 'client');
     } catch (err: any) {
       setError(err.message || 'Credenziali non valide');
       triggerHaptic('error');
