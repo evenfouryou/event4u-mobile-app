@@ -137,7 +137,7 @@ export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutSc
         <View style={styles.successContainer}>
           <View>
             <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.successIcon}>
-              <Ionicons name="checkmark" size={48} color={colors.primaryForeground} />
+              <Ionicons name="checkmark" size={48} color={staticColors.primaryForeground} />
             </LinearGradient>
           </View>
           <View>
@@ -163,7 +163,7 @@ export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutSc
       <SafeArea edges={['bottom']} style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-checkout" />
         <View style={styles.emptyState}>
-          <Ionicons name="bag-outline" size={80} color={colors.mutedForeground} />
+          <Ionicons name="bag-outline" size={80} color={staticColors.mutedForeground} />
           <Text style={styles.emptyTitle}>Carrello vuoto</Text>
           <Text style={styles.emptyText}>
             Aggiungi biglietti per i tuoi eventi preferiti
@@ -201,7 +201,7 @@ export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutSc
             <View key={`${item.ticketedEventId}-${item.sectorId}-${index}`}>
               <Card style={styles.itemCard} testID={`checkout-item-${index}`}>
                 <View style={styles.itemHeader}>
-                  <Ionicons name="ticket" size={24} color={colors.primary} />
+                  <Ionicons name="ticket" size={24} color={staticColors.primary} />
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemEventName}>{item.eventName}</Text>
                     <Text style={styles.itemDate}>{formatDate(item.eventDate)}</Text>
@@ -250,7 +250,7 @@ export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutSc
 
           {step === 'processing' && (
             <View style={styles.processingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={staticColors.primary} />
               <Text style={styles.processingTitle}>Pagamento in corso...</Text>
               <Text style={styles.processingText}>
                 Completa il pagamento nel browser, poi torna qui per confermare.
@@ -273,7 +273,7 @@ export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutSc
 
               <View style={styles.securityBadges}>
                 <View style={styles.securityBadge}>
-                  <Ionicons name="lock-closed" size={16} color={colors.success} />
+                  <Ionicons name="lock-closed" size={16} color={staticColors.success} />
                   <Text style={styles.securityBadgeText}>Pagamento sicuro con Stripe</Text>
                 </View>
               </View>
@@ -288,7 +288,7 @@ export function CheckoutScreen({ onBack, onSuccess, cartItems = [] }: CheckoutSc
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   keyboardView: {
     flex: 1,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.lg,
   },
   emptyState: {
@@ -315,12 +315,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
@@ -344,11 +344,11 @@ const styles = StyleSheet.create({
   itemEventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   itemDate: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   itemDetails: {
@@ -356,20 +356,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   itemDetail: {
     alignItems: 'center',
   },
   itemDetailLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: 2,
   },
   itemDetailValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   itemTotal: {
     flexDirection: 'row',
@@ -378,16 +378,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   itemTotalLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   itemTotalValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   summaryCard: {
     padding: spacing.lg,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   summaryRow: {
@@ -408,26 +408,26 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   summaryValue: {
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   totalLabel: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   totalValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   payButton: {
     marginBottom: spacing.md,
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   securityBadgeText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   processingContainer: {
     alignItems: 'center',
@@ -455,11 +455,11 @@ const styles = StyleSheet.create({
   processingTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   processingText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
   },
@@ -481,19 +481,19 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     textAlign: 'center',
   },
   successAmount: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: '800',
-    color: colors.primary,
+    color: staticColors.primary,
     textAlign: 'center',
     marginVertical: spacing.sm,
   },
   successText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
   },
   successActions: {

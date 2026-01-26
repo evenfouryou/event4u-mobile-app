@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image, Dimensions, Activ
 import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge, LiveBadge } from '@/components/Badge';
@@ -65,8 +65,8 @@ export function LandingScreen({
   };
 
   const categories = [
-    { id: '1', name: 'Club', icon: 'musical-notes' as const, color: colors.primary },
-    { id: '2', name: 'Concerti', icon: 'mic' as const, color: colors.teal },
+    { id: '1', name: 'Club', icon: 'musical-notes' as const, color: staticColors.primary },
+    { id: '2', name: 'Concerti', icon: 'mic' as const, color: staticColors.teal },
     { id: '3', name: 'Festival', icon: 'people' as const, color: '#E91E63' },
     { id: '4', name: 'Aperitivi', icon: 'wine' as const, color: '#FF9800' },
   ];
@@ -184,11 +184,11 @@ export function LandingScreen({
           
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={staticColors.primary} />
             </View>
           ) : events.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
+              <Ionicons name="calendar-outline" size={48} color={staticColors.mutedForeground} />
               <Text style={styles.emptyText}>Nessun evento disponibile</Text>
             </View>
           ) : (
@@ -218,7 +218,7 @@ export function LandingScreen({
                     <Badge variant="golden" size="sm">{formatEventDate(event.eventStart)}</Badge>
                     <Text style={styles.eventName} numberOfLines={2}>{event.eventName}</Text>
                     <View style={styles.eventInfo}>
-                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                      <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
                       <Text style={styles.eventVenue} numberOfLines={1}>{event.locationName}</Text>
                     </View>
                     <View style={styles.eventFooter}>
@@ -276,7 +276,7 @@ export function LandingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   scrollView: {
     flex: 1,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     opacity: 0.12,
   },
   glowTeal: {
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: colors.teal,
+    backgroundColor: staticColors.teal,
     opacity: 0.08,
   },
   header: {
@@ -336,17 +336,17 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 42,
     fontWeight: '800',
-    color: colors.foreground,
+    color: staticColors.foreground,
     lineHeight: 50,
     marginTop: spacing.md,
     marginBottom: spacing.md,
   },
   heroTitleGold: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   heroSubtitle: {
     fontSize: typography.fontSize.lg,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     lineHeight: 26,
     marginBottom: spacing.xl,
   },
@@ -377,13 +377,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   seeAll: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '600',
   },
   categoriesRow: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   eventsScroll: {
     paddingHorizontal: spacing.lg,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.xs,
     marginBottom: spacing.xs,
   },
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   },
   eventVenue: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   eventFooter: {
     flexDirection: 'row',
@@ -455,12 +455,12 @@ const styles = StyleSheet.create({
   },
   eventTime: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   eventPrice: {
     fontSize: typography.fontSize.base,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   servicesGrid: {
     flexDirection: 'row',
@@ -470,11 +470,11 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     width: (width - spacing.lg * 2 - spacing.md) / 2,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   serviceIcon: {
     width: 52,
@@ -487,12 +487,12 @@ const styles = StyleSheet.create({
   serviceTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: 2,
   },
   serviceDesc: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   ctaSection: {
     paddingHorizontal: spacing.lg,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: `${colors.primary}30`,
+    borderColor: `${staticColors.primary}30`,
   },
   ctaLogo: {
     width: 100,
@@ -513,13 +513,13 @@ const styles = StyleSheet.create({
   ctaTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   ctaText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginBottom: spacing.lg,
     lineHeight: 22,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   footer: {
     alignItems: 'center',
@@ -550,12 +550,12 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   footerCopyright: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
 });
 

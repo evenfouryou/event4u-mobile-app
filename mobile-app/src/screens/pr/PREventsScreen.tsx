@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Loading } from '@/components/Loading';
@@ -82,7 +82,7 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
           }}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+          <Ionicons name="arrow-back" size={24} color={staticColors.foreground} />
         </Pressable>
         <Text style={styles.headerTitle}>I Miei Eventi</Text>
         <View style={{ width: 40 }} />
@@ -115,13 +115,13 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
         {filteredEvents.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />
+            <Ionicons name="calendar-outline" size={64} color={staticColors.mutedForeground} />
             <Text style={styles.emptyTitle}>
               {filter === 'upcoming' ? 'Nessun evento in programma' : 'Nessun evento passato'}
             </Text>
@@ -151,15 +151,15 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
                   <View style={styles.eventInfo}>
                     <Text style={styles.eventName}>{event.eventName}</Text>
                     <View style={styles.eventMeta}>
-                      <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                      <Ionicons name="time-outline" size={14} color={staticColors.mutedForeground} />
                       <Text style={styles.eventMetaText}>{formatTime(event.eventStart)}</Text>
                     </View>
                     <View style={styles.eventMeta}>
-                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                      <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
                       <Text style={styles.eventMetaText}>{event.locationName}</Text>
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                  <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
                 </View>
                 <View style={styles.eventStats}>
                   <View style={styles.statItem}>
@@ -173,7 +173,7 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: colors.teal }]}>
+                    <Text style={[styles.statValue, { color: staticColors.teal }]}>
                       €{(event.earnings || 0).toFixed(0)}
                     </Text>
                     <Text style={styles.statLabel}>Guadagno</Text>
@@ -192,7 +192,7 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     width: 40,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   filterRow: {
     flexDirection: 'row',
@@ -225,22 +225,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   filterButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: staticColors.primary,
+    borderColor: staticColors.primary,
   },
   filterText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   filterTextActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   scrollView: {
     flex: 1,
@@ -256,13 +256,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.sm,
     textAlign: 'center',
   },
@@ -279,19 +279,19 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dateDay: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   dateMonth: {
     fontSize: typography.fontSize.xs,
     fontWeight: '500',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     textTransform: 'uppercase',
   },
   eventInfo: {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   eventMeta: {
@@ -310,13 +310,13 @@ const styles = StyleSheet.create({
   },
   eventMetaText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   eventStats: {
     flexDirection: 'row',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   statItem: {
     flex: 1,
@@ -325,16 +325,16 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.xs,
   },
   statDivider: {
     width: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.xs,
   },
 });

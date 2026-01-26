@@ -102,7 +102,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
               <Image source={{ uri: item.imageUrl }} style={styles.venueImage} />
             ) : (
               <View style={styles.venueImagePlaceholder}>
-                <Ionicons name="business" size={40} color={colors.primary} style={{ opacity: 0.3 }} />
+                <Ionicons name="business" size={40} color={staticColors.primary} style={{ opacity: 0.3 }} />
               </View>
             )}
           </View>
@@ -120,7 +120,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
             </View>
 
             <View style={styles.venueLocation}>
-              <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+              <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
               <Text style={styles.venueAddress}>
                 {item.address}, {item.city}
               </Text>
@@ -136,12 +136,12 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
 
             <View style={styles.venueFooter}>
               <View style={styles.venueRating}>
-                <Ionicons name="star" size={16} color={colors.primary} />
+                <Ionicons name="star" size={16} color={staticColors.primary} />
                 <Text style={styles.ratingText}>{item.rating}</Text>
                 <Text style={styles.reviewCount}>({item.reviewCount})</Text>
               </View>
               <View style={styles.venueEvents}>
-                <Ionicons name="calendar" size={16} color={colors.teal} />
+                <Ionicons name="calendar" size={16} color={staticColors.teal} />
                 <Text style={styles.eventsText}>{item.upcomingEvents} eventi</Text>
               </View>
             </View>
@@ -156,12 +156,12 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
       <Header showLogo showBack onBack={onBack} testID="header-venues" />
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.mutedForeground} />
+        <Ionicons name="search" size={20} color={staticColors.mutedForeground} />
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Cerca locali, città..."
-          placeholderTextColor={colors.mutedForeground}
+          placeholderTextColor={staticColors.mutedForeground}
           style={styles.searchInput}
         />
         <Pressable
@@ -174,7 +174,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
           <Ionicons
             name={locationEnabled ? 'location' : 'location-outline'}
             size={20}
-            color={locationEnabled ? colors.primary : colors.mutedForeground}
+            color={locationEnabled ? staticColors.primary : staticColors.mutedForeground}
           />
         </Pressable>
       </View>
@@ -190,7 +190,7 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="business-outline" size={64} color={colors.mutedForeground} />
+              <Ionicons name="business-outline" size={64} color={staticColors.mutedForeground} />
               <Text style={styles.emptyTitle}>Nessun locale trovato</Text>
               <Text style={styles.emptyText}>
                 Prova a modificare la ricerca
@@ -206,12 +206,12 @@ export function VenuesScreen({ onBack, onVenuePress }: VenuesScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     marginHorizontal: spacing.lg,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   locationButton: {
     width: 36,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   locationButtonActive: {
-    backgroundColor: `${colors.primary}20`,
+    backgroundColor: `${staticColors.primary}20`,
   },
   listContent: {
     padding: spacing.lg,
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   venueImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   venueName: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     flex: 1,
   },
   distanceBadge: {
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   venueAddress: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   venueCategories: {
     flexDirection: 'row',
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   venueRating: {
     flexDirection: 'row',
@@ -311,11 +311,11 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   reviewCount: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   venueEvents: {
     flexDirection: 'row',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   eventsText: {
     fontSize: typography.fontSize.sm,
-    color: colors.teal,
+    color: staticColors.teal,
     fontWeight: '500',
   },
   emptyState: {
@@ -335,12 +335,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.sm,
   },
 });

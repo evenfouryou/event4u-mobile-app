@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography, borderRadius } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -73,7 +73,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
           }}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+          <Ionicons name="arrow-back" size={24} color={staticColors.foreground} />
         </Pressable>
         <Text style={styles.headerTitle}>Profilo PR</Text>
         <Pressable
@@ -83,7 +83,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
           }}
           style={styles.editButton}
         >
-          <Ionicons name={editing ? 'close' : 'create-outline'} size={24} color={colors.primary} />
+          <Ionicons name={editing ? 'close' : 'create-outline'} size={24} color={staticColors.primary} />
         </Pressable>
       </View>
 
@@ -111,7 +111,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="person-outline" size={20} color={colors.mutedForeground} />
+              <Ionicons name="person-outline" size={20} color={staticColors.mutedForeground} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Nome Completo</Text>
@@ -121,7 +121,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="call-outline" size={20} color={colors.mutedForeground} />
+              <Ionicons name="call-outline" size={20} color={staticColors.mutedForeground} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Telefono</Text>
@@ -131,7 +131,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="at" size={20} color={colors.mutedForeground} />
+              <Ionicons name="at" size={20} color={staticColors.mutedForeground} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Nome Visualizzato</Text>
@@ -141,7 +141,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
                   value={displayName}
                   onChangeText={setDisplayName}
                   placeholder="Il tuo nome visibile"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                 />
               ) : (
                 <Text style={styles.infoValue}>{profile?.displayName || '-'}</Text>
@@ -151,7 +151,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} />
+              <Ionicons name="mail-outline" size={20} color={staticColors.mutedForeground} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Email</Text>
@@ -161,7 +161,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="La tua email"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -177,7 +177,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="cash-outline" size={20} color={colors.teal} />
+              <Ionicons name="cash-outline" size={20} color={staticColors.teal} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Tipo Commissione</Text>
@@ -189,11 +189,11 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="trending-up" size={20} color={colors.teal} />
+              <Ionicons name="trending-up" size={20} color={staticColors.teal} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Valore Commissione</Text>
-              <Text style={[styles.infoValue, { color: colors.teal }]}>
+              <Text style={[styles.infoValue, { color: staticColors.teal }]}>
                 {profile?.commissionType === 'percentage'
                   ? `${profile?.commissionValue}%`
                   : `€${profile?.commissionValue}`}
@@ -203,7 +203,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.mutedForeground} />
+              <Ionicons name="shield-checkmark-outline" size={20} color={staticColors.mutedForeground} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Stato</Text>
@@ -243,7 +243,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
           style={styles.logoutButton}
         >
           <View style={styles.logoutContent}>
-            <Ionicons name="log-out-outline" size={20} color={colors.destructiveForeground} />
+            <Ionicons name="log-out-outline" size={20} color={staticColors.destructiveForeground} />
             <Text style={styles.logoutText}>Esci</Text>
           </View>
         </Button>
@@ -257,7 +257,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     width: 40,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   scrollView: {
     flex: 1,
@@ -301,26 +301,26 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   profileName: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
   prCodeBadge: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   infoCard: {
     marginBottom: spacing.lg,
@@ -328,11 +328,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   infoRow: {
     flexDirection: 'row',
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -353,23 +353,23 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.xs,
   },
   infoValue: {
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
     fontWeight: '500',
   },
   input: {
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
-    backgroundColor: colors.card,
+    color: staticColors.foreground,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   statusText: {
     fontSize: typography.fontSize.xs,
@@ -389,6 +389,6 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.destructiveForeground,
+    color: staticColors.destructiveForeground,
   },
 });

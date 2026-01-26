@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography } from '@/lib/theme';
+import { colors as staticColors, spacing, typography } from '@/lib/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -42,8 +42,8 @@ export function Header({
         styles.container,
         { 
           paddingTop: insets.top + spacing.sm,
-          backgroundColor: transparent ? 'transparent' : colors.background,
-          borderBottomColor: transparent ? 'transparent' : colors.border,
+          backgroundColor: transparent ? 'transparent' : staticColors.background,
+          borderBottomColor: transparent ? 'transparent' : staticColors.border,
         },
       ]}
       testID={testID}
@@ -52,7 +52,7 @@ export function Header({
         <View style={styles.left}>
           {showBack && onBack && (
             <Pressable onPress={handleBack} style={styles.backButton} testID="button-back">
-              <Ionicons name="chevron-back" size={28} color={colors.foreground} />
+              <Ionicons name="chevron-back" size={28} color={staticColors.foreground} />
             </Pressable>
           )}
           {leftElement}
@@ -62,18 +62,18 @@ export function Header({
           {showLogo ? (
             <Image
               source={require('../../assets/logo.png')}
-              style={[styles.headerLogo, { tintColor: isDark ? '#FFFFFF' : colors.foreground }]}
+              style={[styles.headerLogo, { tintColor: isDark ? '#FFFFFF' : staticColors.foreground }]}
               resizeMode="contain"
             />
           ) : (
             <>
               {title && (
-                <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
+                <Text style={[styles.title, { color: staticColors.foreground }]} numberOfLines={1}>
                   {title}
                 </Text>
               )}
               {subtitle && (
-                <Text style={[styles.subtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
+                <Text style={[styles.subtitle, { color: staticColors.mutedForeground }]} numberOfLines={1}>
                   {subtitle}
                 </Text>
               )}
@@ -112,10 +112,10 @@ export function GreetingHeader({
       <View style={styles.greetingContent}>
         {avatarElement && <View style={styles.avatarWrapper}>{avatarElement}</View>}
         <View style={styles.greetingText}>
-          <Text style={[styles.greeting, { color: colors.foreground }]}>
-            {getGreeting()}, <Text style={[styles.greetingName, { color: colors.primary }]}>{name}</Text>
+          <Text style={[styles.greeting, { color: staticColors.foreground }]}>
+            {getGreeting()}, <Text style={[styles.greetingName, { color: staticColors.primary }]}>{name}</Text>
           </Text>
-          {email && <Text style={[styles.greetingEmail, { color: colors.mutedForeground }]}>{email}</Text>}
+          {email && <Text style={[styles.greetingEmail, { color: staticColors.mutedForeground }]}>{email}</Text>}
         </View>
       </View>
       {rightElement && <View style={styles.greetingRight}>{rightElement}</View>}

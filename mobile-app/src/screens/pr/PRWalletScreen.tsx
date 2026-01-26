@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Loading } from '@/components/Loading';
@@ -64,8 +64,8 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
   };
 
   const getTransactionColor = (type: string, amount: number) => {
-    if (amount > 0) return colors.teal;
-    return colors.destructive;
+    if (amount > 0) return staticColors.teal;
+    return staticColors.destructive;
   };
 
   const formatDate = (dateString: string) => {
@@ -91,7 +91,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
           }}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+          <Ionicons name="arrow-back" size={24} color={staticColors.foreground} />
         </Pressable>
         <Text style={styles.headerTitle}>Wallet PR</Text>
         <View style={{ width: 40 }} />
@@ -105,7 +105,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
@@ -124,7 +124,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
           <Text style={styles.balanceValue}>€{(wallet?.balance || 0).toFixed(2)}</Text>
           <View style={styles.balanceFooter}>
             <View style={styles.pendingInfo}>
-              <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
+              <Ionicons name="time-outline" size={16} color={staticColors.mutedForeground} />
               <Text style={styles.pendingText}>
                 In attesa: €{(wallet?.pendingBalance || 0).toFixed(2)}
               </Text>
@@ -134,12 +134,12 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
 
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
-            <Ionicons name="trending-up" size={24} color={colors.teal} />
+            <Ionicons name="trending-up" size={24} color={staticColors.teal} />
             <Text style={styles.statValue}>€{(wallet?.totalEarnings || 0).toFixed(0)}</Text>
             <Text style={styles.statLabel}>Totale Guadagnato</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Ionicons name="arrow-down-circle" size={24} color={colors.primary} />
+            <Ionicons name="arrow-down-circle" size={24} color={staticColors.primary} />
             <Text style={styles.statValue}>€{(wallet?.totalPaidOut || 0).toFixed(0)}</Text>
             <Text style={styles.statLabel}>Totale Prelevato</Text>
           </Card>
@@ -158,7 +158,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
               end={{ x: 1, y: 0 }}
               style={styles.payoutButton}
             >
-              <Ionicons name="cash-outline" size={20} color={colors.primaryForeground} />
+              <Ionicons name="cash-outline" size={20} color={staticColors.primaryForeground} />
               <Text style={styles.payoutButtonText}>Richiedi Prelievo</Text>
             </LinearGradient>
           </Pressable>
@@ -167,7 +167,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
         <Text style={styles.sectionTitle}>Cronologia</Text>
         {transactions.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
+            <Ionicons name="receipt-outline" size={48} color={staticColors.mutedForeground} />
             <Text style={styles.emptyText}>Nessuna transazione</Text>
           </View>
         ) : (
@@ -205,7 +205,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     width: 40,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   scrollView: {
     flex: 1,
@@ -248,17 +248,17 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   prBadgeText: {
     fontSize: typography.fontSize.xs,
     fontWeight: '700',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   balanceValue: {
     fontSize: typography.fontSize['4xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   balanceFooter: {
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   pendingText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   statsRow: {
     flexDirection: 'row',
@@ -287,12 +287,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.sm,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.xs,
     textAlign: 'center',
   },
@@ -308,12 +308,12 @@ const styles = StyleSheet.create({
   payoutButtonText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   emptyState: {
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.md,
   },
   transactionCard: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -345,11 +345,11 @@ const styles = StyleSheet.create({
   transactionDesc: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   transactionDate: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.xs,
   },
   transactionAmount: {

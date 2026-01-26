@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInpu
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -243,7 +243,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <Pressable onPress={onGoBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+            <Ionicons name="arrow-back" size={24} color={staticColors.foreground} />
           </Pressable>
           <Text style={styles.headerTitle}>Evento non trovato</Text>
           <View style={{ width: 40 }} />
@@ -262,7 +262,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
@@ -321,7 +321,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         {prLink && (
           <Card style={styles.shareCard}>
             <View style={styles.shareHeader}>
-              <Ionicons name="link" size={20} color={colors.primary} />
+              <Ionicons name="link" size={20} color={staticColors.primary} />
               <Text style={styles.shareTitle}>Il tuo link personale</Text>
             </View>
             <Text style={styles.shareLink} numberOfLines={1}>{prLink}</Text>
@@ -333,8 +333,8 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 testID="button-share-link"
               >
                 <View style={styles.buttonContent}>
-                  <Ionicons name="share-social" size={18} color={colors.primaryForeground} />
-                  <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Condividi Link</Text>
+                  <Ionicons name="share-social" size={18} color={staticColors.primaryForeground} />
+                  <Text style={[styles.buttonText, { color: staticColors.primaryForeground }]}>Condividi Link</Text>
                 </View>
               </Button>
             </View>
@@ -344,17 +344,17 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
-            <Ionicons name="people" size={24} color={colors.primary} />
+            <Ionicons name="people" size={24} color={staticColors.primary} />
             <Text style={styles.statValue}>{guests.length}</Text>
             <Text style={styles.statLabel}>Ospiti</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Ionicons name="checkmark-circle" size={24} color={colors.teal} />
+            <Ionicons name="checkmark-circle" size={24} color={staticColors.teal} />
             <Text style={styles.statValue}>{arrivedCount}</Text>
             <Text style={styles.statLabel}>Arrivati</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Ionicons name="cash" size={24} color={colors.golden} />
+            <Ionicons name="cash" size={24} color={staticColors.golden} />
             <Text style={styles.statValue}>€{(event.earnings || stats.commission || 0).toFixed(0)}</Text>
             <Text style={styles.statLabel}>Guadagno</Text>
           </Card>
@@ -367,7 +367,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
             onPress={() => setActiveTab('guests')}
             testID="tab-guests"
           >
-            <Ionicons name="people-outline" size={18} color={activeTab === 'guests' ? colors.primary : colors.mutedForeground} />
+            <Ionicons name="people-outline" size={18} color={activeTab === 'guests' ? staticColors.primary : staticColors.mutedForeground} />
             <Text style={[styles.tabText, activeTab === 'guests' && styles.tabTextActive]}>
               Ospiti
             </Text>
@@ -377,7 +377,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
             onPress={() => setActiveTab('tables')}
             testID="tab-tables"
           >
-            <Ionicons name="grid-outline" size={18} color={activeTab === 'tables' ? colors.primary : colors.mutedForeground} />
+            <Ionicons name="grid-outline" size={18} color={activeTab === 'tables' ? staticColors.primary : staticColors.mutedForeground} />
             <Text style={[styles.tabText, activeTab === 'tables' && styles.tabTextActive]}>
               Tavoli
             </Text>
@@ -387,7 +387,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
             onPress={() => setActiveTab('stats')}
             testID="tab-stats"
           >
-            <Ionicons name="stats-chart-outline" size={18} color={activeTab === 'stats' ? colors.primary : colors.mutedForeground} />
+            <Ionicons name="stats-chart-outline" size={18} color={activeTab === 'stats' ? staticColors.primary : staticColors.mutedForeground} />
             <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>
               Statistiche
             </Text>
@@ -412,7 +412,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   end={{ x: 1, y: 0 }}
                   style={styles.addButtonGradient}
                 >
-                  <Ionicons name="person-add" size={18} color={colors.primaryForeground} />
+                  <Ionicons name="person-add" size={18} color={staticColors.primaryForeground} />
                   <Text style={styles.addButtonText}>Singolo</Text>
                 </LinearGradient>
               </Pressable>
@@ -430,7 +430,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   end={{ x: 1, y: 0 }}
                   style={styles.addButtonGradient}
                 >
-                  <Ionicons name="people" size={18} color={colors.primaryForeground} />
+                  <Ionicons name="people" size={18} color={staticColors.primaryForeground} />
                   <Text style={styles.addButtonText}>Multiplo (max 10)</Text>
                 </LinearGradient>
               </Pressable>
@@ -442,7 +442,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Nome *"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                   value={newGuest.firstName}
                   onChangeText={(text) => setNewGuest({ ...newGuest, firstName: text })}
                   testID="input-first-name"
@@ -450,7 +450,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Cognome *"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                   value={newGuest.lastName}
                   onChangeText={(text) => setNewGuest({ ...newGuest, lastName: text })}
                   testID="input-last-name"
@@ -458,7 +458,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Telefono (opzionale)"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                   value={newGuest.phone}
                   onChangeText={(text) => setNewGuest({ ...newGuest, phone: text })}
                   keyboardType="phone-pad"
@@ -527,14 +527,14 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                         <TextInput
                           style={[styles.input, { flex: 1 }]}
                           placeholder="Nome *"
-                          placeholderTextColor={colors.mutedForeground}
+                          placeholderTextColor={staticColors.mutedForeground}
                           value={guest.firstName}
                           onChangeText={(text) => updateBatchGuest(index, 'firstName', text)}
                         />
                         <TextInput
                           style={[styles.input, { flex: 1 }]}
                           placeholder="Cognome *"
-                          placeholderTextColor={colors.mutedForeground}
+                          placeholderTextColor={staticColors.mutedForeground}
                           value={guest.lastName}
                           onChangeText={(text) => updateBatchGuest(index, 'lastName', text)}
                         />
@@ -543,7 +543,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                         <TextInput
                           style={[styles.input, { flex: 1 }]}
                           placeholder="Telefono *"
-                          placeholderTextColor={colors.mutedForeground}
+                          placeholderTextColor={staticColors.mutedForeground}
                           value={guest.phone}
                           onChangeText={(text) => updateBatchGuest(index, 'phone', text)}
                           keyboardType="phone-pad"
@@ -553,13 +553,13 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                             style={[styles.genderButton, guest.gender === 'M' && styles.genderButtonActive]}
                             onPress={() => updateBatchGuest(index, 'gender', 'M')}
                           >
-                            <Ionicons name="male" size={18} color={guest.gender === 'M' ? colors.primaryForeground : colors.primary} />
+                            <Ionicons name="male" size={18} color={guest.gender === 'M' ? staticColors.primaryForeground : staticColors.primary} />
                           </Pressable>
                           <Pressable
                             style={[styles.genderButton, guest.gender === 'F' && styles.genderButtonActive]}
                             onPress={() => updateBatchGuest(index, 'gender', 'F')}
                           >
-                            <Ionicons name="female" size={18} color={guest.gender === 'F' ? colors.primaryForeground : colors.primary} />
+                            <Ionicons name="female" size={18} color={guest.gender === 'F' ? staticColors.primaryForeground : staticColors.primary} />
                           </Pressable>
                         </View>
                       </View>
@@ -569,7 +569,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                         onPress={() => removeBatchGuest(index)}
                         style={styles.removeGuestButton}
                       >
-                        <Ionicons name="close-circle" size={24} color={colors.destructive} />
+                        <Ionicons name="close-circle" size={24} color={staticColors.destructive} />
                       </Pressable>
                     )}
                   </View>
@@ -577,7 +577,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
                 {batchGuests.length < 10 && (
                   <Pressable onPress={addBatchGuest} style={styles.addMoreButton}>
-                    <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                    <Ionicons name="add-circle-outline" size={20} color={staticColors.primary} />
                     <Text style={styles.addMoreText}>Aggiungi altro ospite</Text>
                   </Pressable>
                 )}
@@ -605,7 +605,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
             {guests.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+                <Ionicons name="people-outline" size={48} color={staticColors.mutedForeground} />
                 <Text style={styles.emptyText}>Nessun ospite nella lista</Text>
                 <Text style={styles.emptySubtext}>Aggiungi ospiti per iniziare</Text>
               </View>
@@ -619,7 +619,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                         onPress={() => Linking.openURL(`tel:${guest.phone}`)}
                         style={styles.guestPhoneRow}
                       >
-                        <Ionicons name="call-outline" size={14} color={colors.primary} />
+                        <Ionicons name="call-outline" size={14} color={staticColors.primary} />
                         <Text style={styles.guestPhone}>{guest.phone}</Text>
                       </Pressable>
                     )}
@@ -646,7 +646,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   end={{ x: 1, y: 0 }}
                   style={styles.addButtonGradient}
                 >
-                  <Ionicons name="add-circle" size={18} color={colors.primaryForeground} />
+                  <Ionicons name="add-circle" size={18} color={staticColors.primaryForeground} />
                   <Text style={styles.addButtonText}>Prenota Tavolo</Text>
                 </LinearGradient>
               </Pressable>
@@ -682,7 +682,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Nome cliente *"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                   value={tableBooking.customerName}
                   onChangeText={(text) => setTableBooking({ ...tableBooking, customerName: text })}
                   testID="input-customer-name"
@@ -690,7 +690,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Telefono cliente"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={staticColors.mutedForeground}
                   value={tableBooking.customerPhone}
                   onChangeText={(text) => setTableBooking({ ...tableBooking, customerPhone: text })}
                   keyboardType="phone-pad"
@@ -700,7 +700,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   <TextInput
                     style={[styles.input, { flex: 1 }]}
                     placeholder="Numero ospiti"
-                    placeholderTextColor={colors.mutedForeground}
+                    placeholderTextColor={staticColors.mutedForeground}
                     value={tableBooking.guestCount}
                     onChangeText={(text) => setTableBooking({ ...tableBooking, guestCount: text.replace(/[^0-9]/g, '') })}
                     keyboardType="number-pad"
@@ -709,7 +709,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   <TextInput
                     style={[styles.input, { flex: 2 }]}
                     placeholder="Note (opzionale)"
-                    placeholderTextColor={colors.mutedForeground}
+                    placeholderTextColor={staticColors.mutedForeground}
                     value={tableBooking.notes}
                     onChangeText={(text) => setTableBooking({ ...tableBooking, notes: text })}
                     testID="input-notes"
@@ -738,7 +738,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
             {tables.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="grid-outline" size={48} color={colors.mutedForeground} />
+                <Ionicons name="grid-outline" size={48} color={staticColors.mutedForeground} />
                 <Text style={styles.emptyText}>Nessun tavolo disponibile</Text>
                 <Text style={styles.emptySubtext}>I tavoli verranno mostrati qui</Text>
               </View>
@@ -752,12 +752,12 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                         <Text style={styles.tableName}>{table.name}</Text>
                         <View style={styles.tableMetaRow}>
                           <View style={styles.tableMetaItem}>
-                            <Ionicons name="people" size={14} color={colors.mutedForeground} />
+                            <Ionicons name="people" size={14} color={staticColors.mutedForeground} />
                             <Text style={styles.tableMetaText}>{table.capacity} posti</Text>
                           </View>
                           {table.minSpend && (
                             <View style={styles.tableMetaItem}>
-                              <Ionicons name="cash" size={14} color={colors.golden} />
+                              <Ionicons name="cash" size={14} color={staticColors.golden} />
                               <Text style={styles.tableMetaText}>Min €{table.minSpend}</Text>
                             </View>
                           )}
@@ -775,7 +775,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                           }}
                         >
                           <Badge variant="outline">
-                            <Text style={[styles.statusText, { color: colors.primary }]}>Prenota</Text>
+                            <Text style={[styles.statusText, { color: staticColors.primary }]}>Prenota</Text>
                           </Badge>
                         </Pressable>
                       )}
@@ -798,7 +798,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
           <>
             <GlassCard style={styles.statsCard}>
               <View style={styles.statsCardHeader}>
-                <Ionicons name="ticket" size={24} color={colors.primary} />
+                <Ionicons name="ticket" size={24} color={staticColors.primary} />
                 <Text style={styles.statsCardTitle}>Biglietti Venduti</Text>
               </View>
               <Text style={styles.statsCardValue}>{stats.sold}</Text>
@@ -807,10 +807,10 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
             <GlassCard style={styles.statsCard}>
               <View style={styles.statsCardHeader}>
-                <Ionicons name="trending-up" size={24} color={colors.teal} />
+                <Ionicons name="trending-up" size={24} color={staticColors.teal} />
                 <Text style={styles.statsCardTitle}>Ricavo Totale</Text>
               </View>
-              <Text style={[styles.statsCardValue, { color: colors.teal }]}>
+              <Text style={[styles.statsCardValue, { color: staticColors.teal }]}>
                 €{stats.revenue.toFixed(2)}
               </Text>
               <Text style={styles.statsCardSubtext}>valore biglietti venduti</Text>
@@ -818,10 +818,10 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
             <GlassCard style={styles.statsCard}>
               <View style={styles.statsCardHeader}>
-                <Ionicons name="wallet" size={24} color={colors.golden} />
+                <Ionicons name="wallet" size={24} color={staticColors.golden} />
                 <Text style={styles.statsCardTitle}>La Tua Commissione</Text>
               </View>
-              <Text style={[styles.statsCardValue, { color: colors.golden }]}>
+              <Text style={[styles.statsCardValue, { color: staticColors.golden }]}>
                 €{stats.commission.toFixed(2)}
               </Text>
               <Text style={styles.statsCardSubtext}>guadagno dalle vendite</Text>
@@ -860,7 +860,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     width: 40,
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: spacing.sm,
@@ -952,14 +952,14 @@ const styles = StyleSheet.create({
   shareTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   shareLink: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.md,
     padding: spacing.sm,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     borderRadius: borderRadius.md,
   },
   shareButtons: {
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -990,18 +990,18 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.xs,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   tabRow: {
     flexDirection: 'row',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     borderRadius: borderRadius.lg,
     padding: spacing.xs,
   },
@@ -1015,15 +1015,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   tabActive: {
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
   },
   tabText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontWeight: '500',
   },
   tabTextActive: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   addGuestForm: {
     marginHorizontal: spacing.lg,
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   listSelector: {
@@ -1069,28 +1069,28 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.xs,
   },
   listOption: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     borderRadius: borderRadius.md,
     marginRight: spacing.sm,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   listOptionActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: staticColors.primary,
+    borderColor: staticColors.primary,
   },
   listOptionText: {
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   listOptionTextActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     fontWeight: '600',
   },
   batchGuestRow: {
@@ -1100,13 +1100,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   batchGuestNumber: {
     width: 28,
     height: 28,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.sm,
@@ -1114,7 +1114,7 @@ const styles = StyleSheet.create({
   batchGuestNumberText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   batchGuestInputs: {
     flex: 1,
@@ -1132,15 +1132,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   genderButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: staticColors.primary,
+    borderColor: staticColors.primary,
   },
   removeGuestButton: {
     padding: spacing.xs,
@@ -1156,19 +1156,19 @@ const styles = StyleSheet.create({
   },
   addMoreText: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   input: {
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   formButtons: {
     flexDirection: 'row',
@@ -1182,12 +1182,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.md,
   },
   emptySubtext: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.xs,
   },
   guestCard: {
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create({
   guestName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   guestPhoneRow: {
     flexDirection: 'row',
@@ -1213,7 +1213,7 @@ const styles = StyleSheet.create({
   },
   guestPhone: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
   },
   statusText: {
     fontSize: typography.fontSize.xs,
@@ -1234,7 +1234,7 @@ const styles = StyleSheet.create({
   tableName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   tableMetaRow: {
@@ -1248,12 +1248,12 @@ const styles = StyleSheet.create({
   },
   tableMetaText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   tableSectionTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     marginTop: spacing.md,
@@ -1261,7 +1261,7 @@ const styles = StyleSheet.create({
   tableOption: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     borderRadius: borderRadius.md,
     marginRight: spacing.sm,
     borderWidth: 1,
@@ -1270,40 +1270,40 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   tableOptionActive: {
-    backgroundColor: colors.golden,
-    borderColor: colors.golden,
+    backgroundColor: staticColors.golden,
+    borderColor: staticColors.golden,
   },
   tableOptionName: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   tableOptionNameActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   tableOptionMeta: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   tableOptionMetaActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     opacity: 0.8,
   },
   bookingInfo: {
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   bookingName: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   bookingGuests: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   statsCard: {
     marginHorizontal: spacing.lg,
@@ -1319,16 +1319,16 @@ const styles = StyleSheet.create({
   statsCardTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   statsCardValue: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   statsCardSubtext: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.xs,
   },
   statsDetailCard: {
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
   statsDetailTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   statsDetailRow: {
@@ -1346,15 +1346,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   statsDetailLabel: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   statsDetailValue: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
 });

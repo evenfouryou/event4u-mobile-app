@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image, I
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -132,7 +132,7 @@ export function PRDashboard({
           }}
           style={styles.switchButton}
         >
-          <Ionicons name="swap-horizontal" size={20} color={colors.primary} />
+          <Ionicons name="swap-horizontal" size={20} color={staticColors.primary} />
         </Pressable>
       </View>
 
@@ -144,7 +144,7 @@ export function PRDashboard({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
@@ -182,7 +182,7 @@ export function PRDashboard({
               end={{ x: 1, y: 1 }}
               style={styles.statGradient}
             >
-              <Ionicons name="wallet" size={24} color={colors.primaryForeground} />
+              <Ionicons name="wallet" size={24} color={staticColors.primaryForeground} />
               <Text style={styles.statValue}>€{walletBalance.toFixed(2)}</Text>
               <Text style={styles.statLabel}>Saldo</Text>
             </LinearGradient>
@@ -201,7 +201,7 @@ export function PRDashboard({
               end={{ x: 1, y: 1 }}
               style={styles.statGradient}
             >
-              <Ionicons name="time" size={24} color={colors.successForeground} />
+              <Ionicons name="time" size={24} color={staticColors.successForeground} />
               <Text style={styles.statValueTeal}>€{pendingBalance.toFixed(2)}</Text>
               <Text style={styles.statLabelTeal}>In Attesa</Text>
             </LinearGradient>
@@ -218,7 +218,7 @@ export function PRDashboard({
             style={styles.customizeButton}
             testID="button-customize-actions"
           >
-            <Ionicons name="settings-outline" size={18} color={colors.primary} />
+            <Ionicons name="settings-outline" size={18} color={staticColors.primary} />
             <Text style={styles.customizeText}>Personalizza</Text>
           </Pressable>
         </View>
@@ -257,17 +257,17 @@ export function PRDashboard({
                       end={{ x: 1, y: 1 }}
                       style={styles.eventImagePlaceholder}
                     >
-                      <Ionicons name="calendar" size={24} color={colors.primaryForeground} />
+                      <Ionicons name="calendar" size={24} color={staticColors.primaryForeground} />
                     </LinearGradient>
                   )}
                   <View style={styles.eventContent}>
                     <View style={styles.eventHeader}>
                       <Text style={styles.eventName} numberOfLines={1}>{event.eventName}</Text>
-                      <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                      <Ionicons name="chevron-forward" size={18} color={staticColors.mutedForeground} />
                     </View>
                     <View style={styles.eventMeta}>
                       <View style={styles.eventMetaItem}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                        <Ionicons name="calendar-outline" size={14} color={staticColors.primary} />
                         <Text style={styles.eventDate}>
                           {new Date(event.eventStart).toLocaleDateString('it-IT', {
                             day: 'numeric',
@@ -276,7 +276,7 @@ export function PRDashboard({
                         </Text>
                       </View>
                       <View style={styles.eventMetaItem}>
-                        <Ionicons name="time-outline" size={14} color={colors.primary} />
+                        <Ionicons name="time-outline" size={14} color={staticColors.primary} />
                         <Text style={styles.eventDate}>
                           {new Date(event.eventStart).toLocaleTimeString('it-IT', {
                             hour: '2-digit',
@@ -286,23 +286,23 @@ export function PRDashboard({
                       </View>
                     </View>
                     <View style={styles.eventMetaItem}>
-                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                      <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
                       <Text style={styles.eventLocation} numberOfLines={1}>{event.locationName}</Text>
                     </View>
                     <View style={styles.eventStatsRow}>
                       <View style={styles.eventStatChip}>
-                        <Ionicons name="people" size={12} color={colors.teal} />
+                        <Ionicons name="people" size={12} color={staticColors.teal} />
                         <Text style={styles.eventStatChipText}>{event.guestCount || 0} ospiti</Text>
                       </View>
                       {(event.tableCount || 0) > 0 && (
                         <View style={styles.eventStatChip}>
-                          <Ionicons name="grid" size={12} color={colors.golden} />
+                          <Ionicons name="grid" size={12} color={staticColors.golden} />
                           <Text style={styles.eventStatChipText}>{event.tableCount} tavoli</Text>
                         </View>
                       )}
                       {(event.earnings || 0) > 0 && (
                         <View style={styles.eventStatChip}>
-                          <Ionicons name="cash" size={12} color={colors.success} />
+                          <Ionicons name="cash" size={12} color={staticColors.success} />
                           <Text style={styles.eventStatChipText}>€{(event.earnings || 0).toFixed(0)}</Text>
                         </View>
                       )}
@@ -323,13 +323,13 @@ export function PRDashboard({
             }}
           >
             <View style={styles.switchCardLeft}>
-              <Ionicons name="swap-horizontal" size={24} color={colors.teal} />
+              <Ionicons name="swap-horizontal" size={24} color={staticColors.teal} />
               <View style={styles.switchCardText}>
                 <Text style={styles.switchCardTitle}>Passa ad Account Cliente</Text>
                 <Text style={styles.switchCardSubtitle}>Acquista biglietti e gestisci il tuo wallet</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+            <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
           </Pressable>
         </Card>
 
@@ -342,7 +342,7 @@ export function PRDashboard({
           style={styles.logoutButton}
         >
           <View style={styles.logoutContent}>
-            <Ionicons name="log-out-outline" size={20} color={colors.destructive} />
+            <Ionicons name="log-out-outline" size={20} color={staticColors.destructive} />
             <Text style={styles.logoutText}>Esci</Text>
           </View>
         </Button>
@@ -363,7 +363,7 @@ export function PRDashboard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   prBadge: {
     paddingHorizontal: spacing.sm,
@@ -391,17 +391,17 @@ const styles = StyleSheet.create({
   prBadgeText: {
     fontSize: typography.fontSize.xs,
     fontWeight: '700',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   switchButton: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: staticColors.primary,
   },
   scrollView: {
     flex: 1,
@@ -421,14 +421,14 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   profileInfo: {
     flex: 1,
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   prCodeText: {
     fontSize: typography.fontSize.xs,
-    color: colors.primary,
+    color: staticColors.primary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -461,29 +461,29 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     marginTop: spacing.sm,
   },
   statLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     opacity: 0.8,
   },
   statValueTeal: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.successForeground,
+    color: staticColors.successForeground,
     marginTop: spacing.sm,
   },
   statLabelTeal: {
     fontSize: typography.fontSize.sm,
-    color: colors.successForeground,
+    color: staticColors.successForeground,
     opacity: 0.8,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -498,12 +498,12 @@ const styles = StyleSheet.create({
   },
   customizeText: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   seeAllText: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   actionsGrid: {
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     flex: 1,
     marginRight: spacing.xs,
   },
@@ -565,11 +565,11 @@ const styles = StyleSheet.create({
   },
   eventDate: {
     fontSize: typography.fontSize.xs,
-    color: colors.primary,
+    color: staticColors.primary,
   },
   eventLocation: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     flex: 1,
   },
   eventStatsRow: {
@@ -583,14 +583,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.glass,
+    backgroundColor: staticColors.glass,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.full,
   },
   eventStatChipText: {
     fontSize: typography.fontSize.xs,
-    color: colors.foreground,
+    color: staticColors.foreground,
     fontWeight: '500',
   },
   switchCard: {
@@ -614,11 +614,11 @@ const styles = StyleSheet.create({
   switchCardTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   switchCardSubtitle: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   logoutButton: {
     marginTop: spacing.md,
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: typography.fontSize.base,
-    color: colors.destructive,
+    color: staticColors.destructive,
     fontWeight: '500',
   },
 });

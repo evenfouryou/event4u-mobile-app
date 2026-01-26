@@ -76,7 +76,7 @@ export function VenueDetailScreen({
 
           <Pressable onPress={onBack} style={styles.backButton}>
             <View style={styles.backButtonInner}>
-              <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+              <Ionicons name="chevron-back" size={24} color={staticColors.foreground} />
             </View>
           </Pressable>
 
@@ -92,7 +92,7 @@ export function VenueDetailScreen({
             <View style={styles.headerInfo}>
               <Text style={styles.venueName}>{venue.name}</Text>
               <View style={styles.rating}>
-                <Ionicons name="star" size={18} color={colors.primary} />
+                <Ionicons name="star" size={18} color={staticColors.primary} />
                 <Text style={styles.ratingValue}>{venue.rating}</Text>
                 <Text style={styles.reviewCount}>({venue.reviewCount} recensioni)</Text>
               </View>
@@ -102,7 +102,7 @@ export function VenueDetailScreen({
           <View style={styles.locationSection}>
             <View style={styles.metaRow}>
               <View style={styles.metaIcon}>
-                <Ionicons name="location" size={20} color={colors.primary} />
+                <Ionicons name="location" size={20} color={staticColors.primary} />
               </View>
               <View style={styles.metaText}>
                 <Text style={styles.metaLabel}>{venue.address}</Text>
@@ -112,7 +112,7 @@ export function VenueDetailScreen({
                 onPress={() => triggerHaptic('light')}
                 style={styles.mapButton}
               >
-                <Ionicons name="navigate" size={18} color={colors.primary} />
+                <Ionicons name="navigate" size={18} color={staticColors.primary} />
               </Pressable>
             </View>
           </View>
@@ -124,12 +124,12 @@ export function VenueDetailScreen({
 
           <View style={styles.infoGrid}>
             <Card style={styles.infoCard}>
-              <Ionicons name="people" size={24} color={colors.primary} />
+              <Ionicons name="people" size={24} color={staticColors.primary} />
               <Text style={styles.infoValue}>{venue.capacity}</Text>
               <Text style={styles.infoLabel}>Capienza</Text>
             </Card>
             <Card style={styles.infoCard}>
-              <Ionicons name="time" size={24} color={colors.teal} />
+              <Ionicons name="time" size={24} color={staticColors.teal} />
               <Text style={styles.infoValue}>23:00</Text>
               <Text style={styles.infoLabel}>Apertura</Text>
             </Card>
@@ -140,7 +140,7 @@ export function VenueDetailScreen({
             <View style={styles.amenitiesList}>
               {venue.amenities.map((amenity, i) => (
                 <View key={i} style={styles.amenityItem}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={16} color={staticColors.success} />
                   <Text style={styles.amenityText}>{amenity}</Text>
                 </View>
               ))}
@@ -170,7 +170,7 @@ export function VenueDetailScreen({
                         {event.date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                    <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
                   </Card>
                 </Pressable>
               </View>
@@ -181,17 +181,17 @@ export function VenueDetailScreen({
             <Text style={styles.sectionTitle}>Contatti</Text>
             <Card style={styles.contactCard}>
               <Pressable style={styles.contactRow}>
-                <Ionicons name="call-outline" size={20} color={colors.mutedForeground} />
+                <Ionicons name="call-outline" size={20} color={staticColors.mutedForeground} />
                 <Text style={styles.contactText}>{venue.phone}</Text>
               </Pressable>
               <View style={styles.contactDivider} />
               <Pressable style={styles.contactRow}>
-                <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} />
+                <Ionicons name="mail-outline" size={20} color={staticColors.mutedForeground} />
                 <Text style={styles.contactText}>{venue.email}</Text>
               </Pressable>
               <View style={styles.contactDivider} />
               <Pressable style={styles.contactRow}>
-                <Ionicons name="globe-outline" size={20} color={colors.mutedForeground} />
+                <Ionicons name="globe-outline" size={20} color={staticColors.mutedForeground} />
                 <Text style={styles.contactText}>{venue.website}</Text>
               </Pressable>
             </Card>
@@ -205,7 +205,7 @@ export function VenueDetailScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   scrollView: {
     flex: 1,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   venueName: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
   },
   rating: {
@@ -279,11 +279,11 @@ const styles = StyleSheet.create({
   ratingValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   reviewCount: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   locationSection: {
     marginBottom: spacing.lg,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -307,17 +307,17 @@ const styles = StyleSheet.create({
   metaLabel: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   metaValue: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   mapButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -327,12 +327,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   descriptionText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     lineHeight: 24,
   },
   infoGrid: {
@@ -348,12 +348,12 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.sm,
   },
   infoLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   amenitiesSection: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   amenityText: {
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   eventsSection: {
     marginBottom: spacing.lg,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.lg,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -395,12 +395,12 @@ const styles = StyleSheet.create({
   eventDay: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   eventMonth: {
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
     marginTop: -2,
   },
   eventInfo: {
@@ -409,11 +409,11 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   eventTime: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   contactSection: {
@@ -430,11 +430,11 @@ const styles = StyleSheet.create({
   },
   contactText: {
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   contactDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
   },
 });
 

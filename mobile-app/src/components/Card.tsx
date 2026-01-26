@@ -26,19 +26,19 @@ export function Card({ children, style, variant = 'default', onPress, testID }: 
     switch (variant) {
       case 'glass':
         return {
-          backgroundColor: colors.glass,
-          borderColor: colors.glassBorder,
+          backgroundColor: staticColors.glass,
+          borderColor: staticColors.glassBorder,
           borderWidth: 1,
         };
       case 'elevated':
         return {
-          backgroundColor: colors.card,
+          backgroundColor: staticColors.card,
           ...shadows.md,
         };
       default:
         return {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
+          backgroundColor: staticColors.card,
+          borderColor: staticColors.border,
           borderWidth: 1,
         };
     }
@@ -87,7 +87,7 @@ export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 
             borderRadius: borderRadius.lg,
             overflow: 'hidden',
             borderWidth: 1,
-            borderColor: colors.glassBorder,
+            borderColor: staticColors.glassBorder,
           },
           { opacity: pressed ? 0.95 : 1 },
           style,
@@ -95,7 +95,7 @@ export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 
         testID={testID}
       >
         <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.blurView}>
-          <View style={[styles.glassContent, { backgroundColor: colors.glass }]}>{children}</View>
+          <View style={[styles.glassContent, { backgroundColor: staticColors.glass }]}>{children}</View>
         </BlurView>
       </Pressable>
     );
@@ -106,10 +106,10 @@ export function GlassCard({ children, style, onPress, testID }: Omit<CardProps, 
       borderRadius: borderRadius.lg,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: staticColors.glassBorder,
     }, style]} testID={testID}>
       <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.blurView}>
-        <View style={[styles.glassContent, { backgroundColor: colors.glass }]}>{children}</View>
+        <View style={[styles.glassContent, { backgroundColor: staticColors.glass }]}>{children}</View>
       </BlurView>
     </View>
   );

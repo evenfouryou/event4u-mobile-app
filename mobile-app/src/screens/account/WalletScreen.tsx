@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, FlatList, RefreshControl
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -90,12 +91,12 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
       case 'topup':
       case 'credit':
       case 'refund':
-        return colors.success;
+        return staticColors.success;
       case 'purchase':
       case 'debit':
-        return colors.foreground;
+        return staticColors.foreground;
       default:
-        return colors.teal;
+        return staticColors.teal;
     }
   };
 
@@ -118,7 +119,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
         <Text
           style={[
             styles.transactionAmount,
-            { color: item.amount >= 0 ? colors.success : colors.foreground },
+            { color: item.amount >= 0 ? staticColors.success : staticColors.foreground },
           ]}
         >
           {item.amount >= 0 ? '+' : ''}€{Math.abs(item.amount).toFixed(2)}
@@ -139,7 +140,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
@@ -152,7 +153,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
           >
             <View style={styles.balanceHeader}>
               <View style={styles.walletIcon}>
-                <Ionicons name="wallet" size={28} color={colors.primaryForeground} />
+                <Ionicons name="wallet" size={28} color={staticColors.primaryForeground} />
               </View>
               <Text style={styles.balanceLabel}>Saldo Disponibile</Text>
             </View>
@@ -162,11 +163,11 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
               size="lg"
               onPress={onTopUp}
               style={styles.topUpButton}
-              textStyle={{ color: colors.primary }}
+              textStyle={{ color: staticColors.primary }}
               testID="button-topup"
             >
               <View style={styles.topUpButtonContent}>
-                <Ionicons name="add-circle" size={20} color={colors.primary} />
+                <Ionicons name="add-circle" size={20} color={staticColors.primary} />
                 <Text style={styles.topUpButtonText}>Ricarica</Text>
               </View>
             </Button>
@@ -208,7 +209,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
               ))
             ) : (
               <View style={styles.emptyTransactions}>
-                <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
+                <Ionicons name="receipt-outline" size={48} color={staticColors.mutedForeground} />
                 <Text style={styles.emptyText}>Nessun movimento</Text>
               </View>
             )}
@@ -217,13 +218,13 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
 
         <View style={styles.infoSection}>
           <View style={styles.infoRow}>
-            <Ionicons name="shield-checkmark" size={20} color={colors.success} />
+            <Ionicons name="shield-checkmark" size={20} color={staticColors.success} />
             <Text style={styles.infoText}>
               Il tuo saldo è protetto e sicuro
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Ionicons name="flash" size={20} color={colors.primary} />
+            <Ionicons name="flash" size={20} color={staticColors.primary} />
             <Text style={styles.infoText}>
               Paga più velocemente con il Wallet
             </Text>
@@ -237,7 +238,7 @@ export function WalletScreen({ onBack, onTopUp }: WalletScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   scrollView: {
     flex: 1,
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
   balanceValue: {
     fontSize: 48,
     fontWeight: '800',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     marginBottom: spacing.lg,
   },
   topUpButton: {
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
   topUpButtonText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   quickTopUp: {
     marginBottom: spacing.xl,
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   topUpGrid: {
@@ -307,17 +308,17 @@ const styles = StyleSheet.create({
   topUpOption: {
     flex: 1,
     minWidth: '30%',
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   topUpAmount: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   transactionsHeader: {
     marginBottom: spacing.md,
@@ -344,11 +345,11 @@ const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   transactionDate: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   transactionAmount: {
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
   },
   transactionDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.xs,
   },
   emptyTransactions: {
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.md,
   },
   infoSection: {
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
 });
 

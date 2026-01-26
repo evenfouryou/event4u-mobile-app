@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -160,14 +161,14 @@ export function SubscriptionsScreen({
             <View style={styles.benefitsList}>
               {item.benefits.map((benefit, i) => (
                 <View key={i} style={styles.benefitItem}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={16} color={staticColors.success} />
                   <Text style={styles.benefitText}>{benefit}</Text>
                 </View>
               ))}
             </View>
 
             <View style={styles.cardFooter}>
-              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+              <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
             </View>
           </Card>
         </Pressable>
@@ -213,7 +214,7 @@ export function SubscriptionsScreen({
           filteredSubscriptions.map((item, index) => renderSubscription(item, index))
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="card-outline" size={64} color={colors.mutedForeground} />
+            <Ionicons name="card-outline" size={64} color={staticColors.mutedForeground} />
             <Text style={styles.emptyTitle}>
               {activeTab === 'active'
                 ? 'Nessun abbonamento attivo'
@@ -244,7 +245,7 @@ export function SubscriptionsScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   tabs: {
     flexDirection: 'row',
@@ -257,19 +258,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
   },
   tabText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   tabTextActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     fontWeight: '600',
   },
   scrollView: {
@@ -301,16 +302,16 @@ const styles = StyleSheet.create({
   subscriptionName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   venueName: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   cardDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   cardDetails: {
@@ -324,12 +325,12 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   detailValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   entriesContainer: {
     flexDirection: 'row',
@@ -339,16 +340,16 @@ const styles = StyleSheet.create({
   entriesUsed: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   entriesSeparator: {
     fontSize: typography.fontSize.lg,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   entriesTotal: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   entriesBadge: {
     marginLeft: spacing.xs,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   cardFooter: {
     alignItems: 'flex-end',
@@ -377,12 +378,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,

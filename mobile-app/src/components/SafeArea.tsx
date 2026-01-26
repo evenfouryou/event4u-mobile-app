@@ -17,7 +17,7 @@ export function SafeArea({
 }: SafeAreaProps) {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const bgColor = backgroundColor ?? colors.background;
+  const bgColor = backgroundColor ?? staticColors.background;
 
   const paddingStyle: ViewStyle = {
     paddingTop: edges.includes('top') ? insets.top : 0,
@@ -51,7 +51,7 @@ export function ScreenContainer({
   
   const containerStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
     ...(noPadding ? {} : { paddingHorizontal: 16 }),
     ...style,
   };

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, borderRadius } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -72,7 +73,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               }}
               testID="button-edit-profile"
             >
-              <Ionicons name="pencil" size={18} color={colors.primary} />
+              <Ionicons name="pencil" size={18} color={staticColors.primary} />
             </Button>
           ) : null
         }
@@ -94,14 +95,14 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               size="xl"
               testID="avatar-profile"
             />
-            <Text style={[styles.userName, { color: colors.foreground }]}>
+            <Text style={[styles.userName, { color: staticColors.foreground }]}>
               {formData.firstName} {formData.lastName}
             </Text>
-            <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{formData.email}</Text>
+            <Text style={[styles.userEmail, { color: staticColors.mutedForeground }]}>{formData.email}</Text>
           </View>
 
           <Card style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Informazioni Personali</Text>
+            <Text style={[styles.sectionTitle, { color: staticColors.foreground }]}>Informazioni Personali</Text>
 
             <View style={styles.formRow}>
               <View style={styles.formHalf}>
@@ -152,39 +153,39 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
           </Card>
 
           <Card style={styles.infoCard}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Informazioni Account</Text>
+            <Text style={[styles.sectionTitle, { color: staticColors.foreground }]}>Informazioni Account</Text>
             
             <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: `${colors.primary}15` }]}>
-                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+              <View style={[styles.infoIcon, { backgroundColor: `${staticColors.primary}15` }]}>
+                <Ionicons name="calendar-outline" size={20} color={staticColors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Membro dal</Text>
-                <Text style={[styles.infoValue, { color: colors.foreground }]}>Gennaio 2026</Text>
+                <Text style={[styles.infoLabel, { color: staticColors.mutedForeground }]}>Membro dal</Text>
+                <Text style={[styles.infoValue, { color: staticColors.foreground }]}>Gennaio 2026</Text>
               </View>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
 
             <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: `${colors.primary}15` }]}>
-                <Ionicons name="ticket-outline" size={20} color={colors.primary} />
+              <View style={[styles.infoIcon, { backgroundColor: `${staticColors.primary}15` }]}>
+                <Ionicons name="ticket-outline" size={20} color={staticColors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Biglietti acquistati</Text>
-                <Text style={[styles.infoValue, { color: colors.foreground }]}>12</Text>
+                <Text style={[styles.infoLabel, { color: staticColors.mutedForeground }]}>Biglietti acquistati</Text>
+                <Text style={[styles.infoValue, { color: staticColors.foreground }]}>12</Text>
               </View>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
 
             <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: `${colors.primary}15` }]}>
-                <Ionicons name="star-outline" size={20} color={colors.primary} />
+              <View style={[styles.infoIcon, { backgroundColor: `${staticColors.primary}15` }]}>
+                <Ionicons name="star-outline" size={20} color={staticColors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Livello fedeltà</Text>
-                <Text style={[styles.infoValue, { color: colors.foreground }]}>Gold Member</Text>
+                <Text style={[styles.infoLabel, { color: staticColors.mutedForeground }]}>Livello fedeltà</Text>
+                <Text style={[styles.infoValue, { color: staticColors.foreground }]}>Gold Member</Text>
               </View>
             </View>
           </Card>

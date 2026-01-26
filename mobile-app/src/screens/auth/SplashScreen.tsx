@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 import { Asset } from 'expo-asset';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, typography, spacing } from '@/lib/theme';
+import { colors as staticColors, typography, spacing } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -207,7 +207,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: typography.fontSize.lg,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontWeight: '500',
     letterSpacing: 0.5,
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
   },
   footer: {
     position: 'absolute',

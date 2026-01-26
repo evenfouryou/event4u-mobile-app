@@ -7,7 +7,7 @@ interface LoadingProps {
   text?: string;
 }
 
-export function Loading({ size = 'large', color = colors.primary, text }: LoadingProps) {
+export function Loading({ size = 'large', color = staticColors.primary, text }: LoadingProps) {
   return (
     <View style={styles.container}>
       <ActivityIndicator size={size} color={color} />
@@ -19,7 +19,7 @@ export function Loading({ size = 'large', color = colors.primary, text }: Loadin
 export function FullScreenLoading({ text }: { text?: string }) {
   return (
     <View style={styles.fullScreen}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator size="large" color={staticColors.primary} />
       {text && <Text style={styles.text}>{text}</Text>}
     </View>
   );
@@ -49,17 +49,17 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     marginTop: spacing.md,
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   skeletonCard: {
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: 16,
     padding: spacing.lg,
     marginBottom: spacing.md,
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.muted,
+    backgroundColor: staticColors.muted,
   },
   skeletonLines: {
     flex: 1,
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   skeletonLine: {
     height: 12,
-    backgroundColor: colors.muted,
+    backgroundColor: staticColors.muted,
     borderRadius: 6,
     marginBottom: spacing.xs,
   },

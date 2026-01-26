@@ -230,7 +230,7 @@ export function ResalesScreen({
               onPress={onSellTicket}
               testID="button-sell"
             >
-              <Ionicons name="add" size={24} color={colors.primary} />
+              <Ionicons name="add" size={24} color={staticColors.primary} />
             </Button>
           ) : undefined
         }
@@ -238,12 +238,12 @@ export function ResalesScreen({
       />
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.mutedForeground} />
+        <Ionicons name="search" size={20} color={staticColors.mutedForeground} />
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Cerca biglietti in vendita..."
-          placeholderTextColor={colors.mutedForeground}
+          placeholderTextColor={staticColors.mutedForeground}
           style={styles.searchInput}
         />
       </View>
@@ -286,7 +286,7 @@ export function ResalesScreen({
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="swap-horizontal-outline" size={64} color={colors.mutedForeground} />
+              <Ionicons name="swap-horizontal-outline" size={64} color={staticColors.mutedForeground} />
               <Text style={styles.emptyTitle}>
                 {activeTab === 'marketplace'
                   ? 'Nessun biglietto in vendita'
@@ -313,7 +313,7 @@ export function ResalesScreen({
       )}
 
       <View style={styles.infoFooter}>
-        <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+        <Ionicons name="shield-checkmark" size={16} color={staticColors.success} />
         <Text style={styles.infoText}>
           Rivendita sicura e conforme alle norme SIAE
         </Text>
@@ -325,12 +325,12 @@ export function ResalesScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     marginHorizontal: spacing.lg,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   tabs: {
     flexDirection: 'row',
@@ -354,19 +354,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
   },
   tabText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   tabTextActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     fontWeight: '600',
   },
   listContent: {
@@ -386,19 +386,19 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: borderRadius.lg,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ticketDay: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   ticketMonth: {
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
     marginTop: -2,
   },
   ticketInfo: {
@@ -407,19 +407,19 @@ const styles = StyleSheet.create({
   ticketEventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: 2,
   },
   ticketMeta: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   discountBadge: {
     alignSelf: 'flex-start',
   },
   ticketDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   ticketFooter: {
@@ -432,17 +432,17 @@ const styles = StyleSheet.create({
   },
   originalPrice: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textDecorationLine: 'line-through',
   },
   resalePrice: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   sellerInfo: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   myResaleFooter: {
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   },
   listedDate: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   emptyState: {
@@ -463,12 +463,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,
@@ -486,13 +486,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     padding: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   infoText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
 });
 

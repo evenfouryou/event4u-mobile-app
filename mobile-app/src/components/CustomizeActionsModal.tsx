@@ -137,7 +137,7 @@ export function CustomizeActionsModal({
           <View style={styles.header}>
             <Text style={styles.title}>Personalizza Azioni</Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.foreground} />
+              <Ionicons name="close" size={24} color={staticColors.foreground} />
             </Pressable>
           </View>
 
@@ -154,7 +154,7 @@ export function CustomizeActionsModal({
                 <View key={actionId} style={styles.selectedItem}>
                   <View style={styles.itemLeft}>
                     <View style={styles.iconCircle}>
-                      <Ionicons name={action.icon} size={20} color={colors.primary} />
+                      <Ionicons name={action.icon} size={20} color={staticColors.primary} />
                     </View>
                     <Text style={styles.itemLabel}>{action.label}</Text>
                   </View>
@@ -164,20 +164,20 @@ export function CustomizeActionsModal({
                       style={[styles.arrowButton, index === 0 && styles.arrowDisabled]}
                       disabled={index === 0}
                     >
-                      <Ionicons name="chevron-up" size={20} color={index === 0 ? colors.muted : colors.foreground} />
+                      <Ionicons name="chevron-up" size={20} color={index === 0 ? staticColors.muted : staticColors.foreground} />
                     </Pressable>
                     <Pressable
                       onPress={() => moveAction(actionId, 'down')}
                       style={[styles.arrowButton, index === selectedActions.length - 1 && styles.arrowDisabled]}
                       disabled={index === selectedActions.length - 1}
                     >
-                      <Ionicons name="chevron-down" size={20} color={index === selectedActions.length - 1 ? colors.muted : colors.foreground} />
+                      <Ionicons name="chevron-down" size={20} color={index === selectedActions.length - 1 ? staticColors.muted : staticColors.foreground} />
                     </Pressable>
                     <Pressable
                       onPress={() => toggleAction(actionId)}
                       style={styles.removeButton}
                     >
-                      <Ionicons name="remove-circle" size={24} color={colors.destructive} />
+                      <Ionicons name="remove-circle" size={24} color={staticColors.destructive} />
                     </Pressable>
                   </View>
                 </View>
@@ -195,14 +195,14 @@ export function CustomizeActionsModal({
                 >
                   <View style={styles.itemLeft}>
                     <View style={[styles.iconCircle, styles.iconCircleInactive]}>
-                      <Ionicons name={action.icon} size={20} color={colors.mutedForeground} />
+                      <Ionicons name={action.icon} size={20} color={staticColors.mutedForeground} />
                     </View>
                     <Text style={styles.itemLabelInactive}>{action.label}</Text>
                   </View>
                   <Ionicons 
                     name="add-circle" 
                     size={24} 
-                    color={selectedActions.length >= 4 ? colors.muted : colors.teal} 
+                    color={selectedActions.length >= 4 ? staticColors.muted : staticColors.teal} 
                   />
                 </Pressable>
               ))}
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: '85%',
@@ -250,12 +250,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   closeButton: {
     width: 40,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -285,23 +285,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: staticColors.primary + '30',
   },
   availableItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   itemLeft: {
     flexDirection: 'row',
@@ -313,21 +313,21 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: staticColors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconCircleInactive: {
-    backgroundColor: colors.muted + '30',
+    backgroundColor: staticColors.muted + '30',
   },
   itemLabel: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   itemLabelInactive: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   itemActions: {
     flexDirection: 'row',

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Share, Image, Dimensions
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
@@ -131,7 +132,7 @@ export function TicketDetailScreen({
       <SafeArea edges={['bottom']} style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-ticket-detail" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={staticColors.primary} />
           <Text style={styles.loadingText}>Caricamento biglietto...</Text>
         </View>
       </SafeArea>
@@ -143,7 +144,7 @@ export function TicketDetailScreen({
       <SafeArea edges={['bottom']} style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-ticket-detail" />
         <View style={styles.loadingContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
+          <Ionicons name="alert-circle-outline" size={48} color={staticColors.mutedForeground} />
           <Text style={styles.loadingText}>Biglietto non trovato</Text>
           <Button variant="outline" onPress={onBack} style={{ marginTop: spacing.md }}>
             Torna indietro
@@ -161,7 +162,7 @@ export function TicketDetailScreen({
         onBack={onBack}
         rightElement={
           <Pressable onPress={handleShare} style={styles.shareButton}>
-            <Ionicons name="share-outline" size={24} color={colors.foreground} />
+            <Ionicons name="share-outline" size={24} color={staticColors.foreground} />
           </Pressable>
         }
         testID="header-ticket-detail"
@@ -175,14 +176,14 @@ export function TicketDetailScreen({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
         <View style={styles.ticketContainer}>
           <View style={styles.ticketCard}>
             <LinearGradient
-              colors={[colors.primary, '#F59E0B']}
+              colors={[staticColors.primary, '#F59E0B']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.ticketHeader}
@@ -203,7 +204,7 @@ export function TicketDetailScreen({
               <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
                   <View style={styles.infoHeader}>
-                    <Ionicons name="calendar" size={14} color={colors.primary} />
+                    <Ionicons name="calendar" size={14} color={staticColors.primary} />
                     <Text style={styles.infoLabel}>DATA</Text>
                   </View>
                   <Text style={styles.infoValue}>{formatDate(ticket.eventDate)}</Text>
@@ -212,7 +213,7 @@ export function TicketDetailScreen({
 
                 <View style={styles.infoItem}>
                   <View style={styles.infoHeader}>
-                    <Ionicons name="location" size={14} color={colors.primary} />
+                    <Ionicons name="location" size={14} color={staticColors.primary} />
                     <Text style={styles.infoLabel}>LUOGO</Text>
                   </View>
                   <Text style={styles.infoValue} numberOfLines={1}>{ticket.location}</Text>
@@ -221,7 +222,7 @@ export function TicketDetailScreen({
 
                 <View style={styles.infoItem}>
                   <View style={styles.infoHeader}>
-                    <Ionicons name="ticket" size={14} color={colors.primary} />
+                    <Ionicons name="ticket" size={14} color={staticColors.primary} />
                     <Text style={styles.infoLabel}>SETTORE</Text>
                   </View>
                   <Text style={styles.infoValue}>{ticket.sectorName}</Text>
@@ -230,7 +231,7 @@ export function TicketDetailScreen({
 
                 <View style={styles.infoItem}>
                   <View style={styles.infoHeader}>
-                    <Ionicons name="person" size={14} color={colors.primary} />
+                    <Ionicons name="person" size={14} color={staticColors.primary} />
                     <Text style={styles.infoLabel}>INTESTATARIO</Text>
                   </View>
                   <Text style={styles.infoValue} numberOfLines={1}>{ticket.holderName}</Text>
@@ -255,7 +256,7 @@ export function TicketDetailScreen({
                       <Text style={styles.backTitle}>Dettagli Biglietto</Text>
                       
                       <View style={styles.backItem}>
-                        <Ionicons name="business" size={14} color={colors.primary} />
+                        <Ionicons name="business" size={14} color={staticColors.primary} />
                         <View style={styles.backItemText}>
                           <Text style={styles.backItemLabel}>Organizzatore</Text>
                           <Text style={styles.backItemValue}>{ticket.organizerCompany}</Text>
@@ -263,7 +264,7 @@ export function TicketDetailScreen({
                       </View>
 
                       <View style={styles.backItem}>
-                        <Ionicons name="storefront" size={14} color={colors.primary} />
+                        <Ionicons name="storefront" size={14} color={staticColors.primary} />
                         <View style={styles.backItemText}>
                           <Text style={styles.backItemLabel}>Biglietteria</Text>
                           <Text style={styles.backItemValue}>{ticket.ticketingManager}</Text>
@@ -271,7 +272,7 @@ export function TicketDetailScreen({
                       </View>
 
                       <View style={styles.backItem}>
-                        <Ionicons name="calendar" size={14} color={colors.primary} />
+                        <Ionicons name="calendar" size={14} color={staticColors.primary} />
                         <View style={styles.backItemText}>
                           <Text style={styles.backItemLabel}>Data Emissione</Text>
                           <Text style={styles.backItemValue}>{formatDateTime(ticket.emissionDateTime)}</Text>
@@ -279,7 +280,7 @@ export function TicketDetailScreen({
                       </View>
 
                       <View style={styles.backItem}>
-                        <Ionicons name="document-text" size={14} color={colors.primary} />
+                        <Ionicons name="document-text" size={14} color={staticColors.primary} />
                         <View style={styles.backItemText}>
                           <Text style={styles.backItemLabel}>Sigillo Fiscale</Text>
                           <Text style={styles.backItemValueSmall}>{ticket.fiscalSealCode}</Text>
@@ -287,7 +288,7 @@ export function TicketDetailScreen({
                       </View>
 
                       <View style={styles.backItem}>
-                        <Ionicons name="barcode" size={14} color={colors.primary} />
+                        <Ionicons name="barcode" size={14} color={staticColors.primary} />
                         <View style={styles.backItemText}>
                           <Text style={styles.backItemLabel}>N. Progressivo</Text>
                           <Text style={styles.backItemValue}>{ticket.progressiveNumber}</Text>
@@ -307,7 +308,7 @@ export function TicketDetailScreen({
                     <Ionicons 
                       name={isFlipped ? "qr-code" : "refresh"} 
                       size={18} 
-                      color={colors.foreground} 
+                      color={staticColors.foreground} 
                     />
                     <Text style={styles.flipButtonText}>
                       {isFlipped ? 'Mostra QR Code' : 'Gira Biglietto'}
@@ -332,7 +333,7 @@ export function TicketDetailScreen({
 
                 <View style={styles.fiscalSection}>
                   <View style={styles.fiscalBadge}>
-                    <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                    <Ionicons name="shield-checkmark" size={14} color={staticColors.primary} />
                     <Text style={styles.fiscalLabel}>Sigillo Fiscale SIAE</Text>
                   </View>
                   <Text style={styles.fiscalCode}>{ticket.fiscalSealCode}</Text>
@@ -353,7 +354,7 @@ export function TicketDetailScreen({
               testID="button-name-change"
             >
               <View style={styles.buttonContent}>
-                <Ionicons name="person-outline" size={20} color={colors.foreground} />
+                <Ionicons name="person-outline" size={20} color={staticColors.foreground} />
                 <Text style={styles.buttonText}>Cambio Nominativo</Text>
               </View>
             </Button>
@@ -367,7 +368,7 @@ export function TicketDetailScreen({
               testID="button-resell"
             >
               <View style={styles.buttonContent}>
-                <Ionicons name="swap-horizontal-outline" size={20} color={colors.foreground} />
+                <Ionicons name="swap-horizontal-outline" size={20} color={staticColors.foreground} />
                 <Text style={styles.buttonText}>Metti in Rivendita</Text>
               </View>
             </Button>
@@ -381,7 +382,7 @@ export function TicketDetailScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   scrollView: {
     flex: 1,
@@ -411,11 +412,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   ticketCard: {
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   ticketBody: {
     paddingHorizontal: spacing.lg,
@@ -482,25 +483,25 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   infoSubvalue: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   dashedDivider: {
     height: 1,
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     marginVertical: spacing.md,
   },
   qrSection: {
@@ -532,10 +533,10 @@ const styles = StyleSheet.create({
   backContent: {
     width: 200,
     height: 200,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     padding: spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   backTitle: {
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     textAlign: 'center',
@@ -563,18 +564,18 @@ const styles = StyleSheet.create({
   },
   backItemLabel: {
     fontSize: 9,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textTransform: 'uppercase',
   },
   backItemValue: {
     fontSize: typography.fontSize.xs,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   backItemValueSmall: {
     fontSize: 9,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
     fontFamily: 'monospace',
   },
   flipButton: {
@@ -589,7 +590,7 @@ const styles = StyleSheet.create({
   flipButtonText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   footer: {
     gap: spacing.md,
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -609,7 +610,7 @@ const styles = StyleSheet.create({
   footerCode: {
     fontSize: typography.fontSize.sm,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     fontFamily: 'monospace',
   },
   footerPrice: {
@@ -618,12 +619,12 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   fiscalSection: {
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   fiscalBadge: {
     flexDirection: 'row',
@@ -633,14 +634,14 @@ const styles = StyleSheet.create({
   },
   fiscalLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   fiscalCode: {
     fontSize: 10,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontFamily: 'monospace',
   },
   ticketShadow: {
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
 });
 

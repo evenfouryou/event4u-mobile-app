@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, FlatList, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -122,19 +123,19 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
                   {item.eventName || 'Evento'}
                 </Text>
                 <View style={styles.ticketMeta}>
-                  <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                  <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
                   <Text style={styles.ticketMetaText} numberOfLines={1}>
                     {item.locationName || '-'}
                   </Text>
                 </View>
                 <View style={styles.ticketMeta}>
-                  <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                  <Ionicons name="time-outline" size={14} color={staticColors.mutedForeground} />
                   <Text style={styles.ticketMetaText}>{formatTime(item.eventStart)}</Text>
                 </View>
               </View>
               <View style={styles.ticketActions}>
                 {getStatusBadge(item.status)}
-                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
               </View>
             </View>
 
@@ -157,7 +158,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
 
             {isValid && (
               <View style={styles.qrHint}>
-                <Ionicons name="qr-code-outline" size={16} color={colors.primary} />
+                <Ionicons name="qr-code-outline" size={16} color={staticColors.primary} />
                 <Text style={styles.qrHintText}>Tocca per vedere il QR Code</Text>
               </View>
             )}
@@ -207,7 +208,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.primary}
+              tintColor={staticColors.primary}
             />
           }
         />
@@ -216,7 +217,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
           <Ionicons
             name={activeTab === 'cancelled' ? 'close-circle-outline' : 'ticket-outline'}
             size={64}
-            color={colors.mutedForeground}
+            color={staticColors.mutedForeground}
           />
           <Text style={styles.emptyTitle}>
             {activeTab === 'upcoming'
@@ -239,7 +240,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   tabs: {
     flexDirection: 'row',
@@ -252,19 +253,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
   },
   tabText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   tabTextActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     fontWeight: '600',
   },
   listContent: {
@@ -284,19 +285,19 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: borderRadius.lg,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ticketDateDay: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   ticketDateMonth: {
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
     marginTop: -2,
   },
   ticketInfo: {
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
   ticketEventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   ticketMeta: {
     flexDirection: 'row',
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   },
   ticketMetaText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     flex: 1,
   },
   ticketActions: {
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
   },
   ticketDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   ticketFooter: {
@@ -336,13 +337,13 @@ const styles = StyleSheet.create({
   },
   ticketDetailLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: 2,
   },
   ticketDetailValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   qrHint: {
     flexDirection: 'row',
@@ -352,11 +353,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   qrHintText: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   emptyState: {
@@ -368,13 +369,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
   },

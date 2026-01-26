@@ -101,7 +101,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
 
       {items.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="bag-outline" size={80} color={colors.mutedForeground} />
+          <Ionicons name="bag-outline" size={80} color={staticColors.mutedForeground} />
           <Text style={styles.emptyTitle}>Carrello vuoto</Text>
           <Text style={styles.emptyText}>
             Aggiungi biglietti per i tuoi eventi preferiti
@@ -123,7 +123,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.timerBanner}>
-              <Ionicons name="time-outline" size={20} color={colors.warning} />
+              <Ionicons name="time-outline" size={20} color={staticColors.warning} />
               <Text style={styles.timerText}>
                 I biglietti sono riservati per <Text style={styles.timerValue}>{getTimeRemaining(items[0].reservedUntil)}</Text>
               </Text>
@@ -136,7 +136,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
                     <View style={styles.itemInfo}>
                       <Text style={styles.itemEventName}>{item.eventName}</Text>
                       <View style={styles.itemMeta}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                        <Ionicons name="calendar-outline" size={14} color={staticColors.mutedForeground} />
                         <Text style={styles.itemMetaText}>
                           {formatDate(item.eventDate)} • {formatTime(item.eventDate)}
                         </Text>
@@ -147,7 +147,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
                       style={styles.removeButton}
                       testID={`button-remove-${item.id}`}
                     >
-                      <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+                      <Ionicons name="trash-outline" size={20} color={staticColors.destructive} />
                     </Pressable>
                   </View>
 
@@ -175,14 +175,14 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
                         style={[styles.quantityButton, item.quantity <= 1 && styles.quantityButtonDisabled]}
                         disabled={item.quantity <= 1}
                       >
-                        <Ionicons name="remove" size={18} color={item.quantity <= 1 ? colors.mutedForeground : colors.foreground} />
+                        <Ionicons name="remove" size={18} color={item.quantity <= 1 ? staticColors.mutedForeground : staticColors.foreground} />
                       </Pressable>
                       <Text style={styles.quantityValue}>{item.quantity}</Text>
                       <Pressable
                         onPress={() => updateQuantity(item.id, 1)}
                         style={styles.quantityButton}
                       >
-                        <Ionicons name="add" size={18} color={colors.foreground} />
+                        <Ionicons name="add" size={18} color={staticColors.foreground} />
                       </Pressable>
                     </View>
                     <Text style={styles.itemTotal}>
@@ -212,7 +212,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
             </Card>
 
             <View style={styles.securityInfo}>
-              <Ionicons name="shield-checkmark" size={20} color={colors.success} />
+              <Ionicons name="shield-checkmark" size={20} color={staticColors.success} />
               <Text style={styles.securityText}>
                 Pagamento sicuro con crittografia SSL
               </Text>
@@ -243,7 +243,7 @@ export function CartScreen({ onBack, onCheckout, onContinueShopping }: CartScree
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   scrollView: {
     flex: 1,
@@ -261,12 +261,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
@@ -278,20 +278,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: `${colors.warning}15`,
+    backgroundColor: `${staticColors.warning}15`,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: `${colors.warning}30`,
+    borderColor: `${staticColors.warning}30`,
   },
   timerText: {
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   timerValue: {
     fontWeight: '700',
-    color: colors.warning,
+    color: staticColors.warning,
   },
   itemCard: {
     padding: spacing.md,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   itemEventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   itemMeta: {
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   itemMetaText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   removeButton: {
     width: 36,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   },
   itemDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   itemDetails: {
@@ -341,13 +341,13 @@ const styles = StyleSheet.create({
   },
   itemDetailLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: 2,
   },
   itemDetailValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   itemFooter: {
     flexDirection: 'row',
@@ -355,12 +355,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.md,
     padding: spacing.xs,
   },
@@ -376,14 +376,14 @@ const styles = StyleSheet.create({
   quantityValue: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     minWidth: 32,
     textAlign: 'center',
   },
   itemTotal: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   summaryCard: {
     padding: spacing.lg,
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   summaryRow: {
@@ -403,26 +403,26 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   summaryValue: {
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   totalLabel: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   totalValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   securityInfo: {
     flexDirection: 'row',
@@ -433,16 +433,16 @@ const styles = StyleSheet.create({
   },
   securityText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
     padding: spacing.lg,
     paddingBottom: spacing.xl,
   },
@@ -454,12 +454,12 @@ const styles = StyleSheet.create({
   },
   footerTotalLabel: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   footerTotalValue: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   checkoutButton: {
     width: '100%',

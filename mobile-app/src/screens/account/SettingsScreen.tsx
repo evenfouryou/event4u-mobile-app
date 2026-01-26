@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, borderRadius } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
@@ -39,23 +40,23 @@ function SettingItem({ icon, label, sublabel, onPress, rightElement, destructive
       style={styles.settingItem}
       testID={testID}
     >
-      <View style={[styles.settingIcon, { backgroundColor: destructive ? `${colors.destructive}15` : `${colors.primary}15` }]}>
+      <View style={[styles.settingIcon, { backgroundColor: destructive ? `${staticColors.destructive}15` : `${staticColors.primary}15` }]}>
         <Ionicons 
           name={icon} 
           size={22} 
-          color={destructive ? colors.destructive : colors.primary} 
+          color={destructive ? staticColors.destructive : staticColors.primary} 
         />
       </View>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingLabel, { color: destructive ? colors.destructive : colors.foreground }]}>
+        <Text style={[styles.settingLabel, { color: destructive ? staticColors.destructive : staticColors.foreground }]}>
           {label}
         </Text>
         {sublabel && (
-          <Text style={[styles.settingSublabel, { color: colors.mutedForeground }]}>{sublabel}</Text>
+          <Text style={[styles.settingSublabel, { color: staticColors.mutedForeground }]}>{sublabel}</Text>
         )}
       </View>
       {rightElement || (
-        onPress && <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+        onPress && <Ionicons name="chevron-forward" size={20} color={staticColors.mutedForeground} />
       )}
     </Pressable>
   );
@@ -141,7 +142,7 @@ export function SettingsScreen({
   };
 
   return (
-    <SafeArea edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeArea edges={['bottom']} style={{ flex: 1, backgroundColor: staticColors.background }}>
       <Header
         title="Impostazioni"
         showBack
@@ -155,7 +156,7 @@ export function SettingsScreen({
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Account</Text>
+          <Text style={[styles.sectionTitle, { color: staticColors.mutedForeground }]}>Account</Text>
           <Card style={styles.settingsCard}>
             <SettingItem
               icon="person-outline"
@@ -165,7 +166,7 @@ export function SettingsScreen({
               testID="setting-profile"
               colors={colors}
             />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
             <SettingItem
               icon="id-card-outline"
               label="Cambio Nominativo"
@@ -178,7 +179,7 @@ export function SettingsScreen({
         </View>
 
         <View>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Aspetto</Text>
+          <Text style={[styles.sectionTitle, { color: staticColors.mutedForeground }]}>Aspetto</Text>
           <Card style={styles.settingsCard}>
             <SettingItem
               icon={isDark ? 'moon-outline' : 'sunny-outline'}
@@ -192,7 +193,7 @@ export function SettingsScreen({
         </View>
 
         <View>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Notifiche</Text>
+          <Text style={[styles.sectionTitle, { color: staticColors.mutedForeground }]}>Notifiche</Text>
           <Card style={styles.settingsCard}>
             <SettingItem
               icon="notifications-outline"
@@ -205,14 +206,14 @@ export function SettingsScreen({
                     triggerHaptic('selection');
                     setNotificationsEnabled(value);
                   }}
-                  trackColor={{ false: colors.muted, true: colors.primary }}
-                  thumbColor={colors.foreground}
+                  trackColor={{ false: staticColors.muted, true: staticColors.primary }}
+                  thumbColor={staticColors.foreground}
                 />
               }
               testID="setting-notifications"
               colors={colors}
             />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
             <SettingItem
               icon="mail-outline"
               label="Notifiche Email"
@@ -224,8 +225,8 @@ export function SettingsScreen({
                     triggerHaptic('selection');
                     setEmailNotifications(value);
                   }}
-                  trackColor={{ false: colors.muted, true: colors.primary }}
-                  thumbColor={colors.foreground}
+                  trackColor={{ false: staticColors.muted, true: staticColors.primary }}
+                  thumbColor={staticColors.foreground}
                 />
               }
               testID="setting-email-notifications"
@@ -235,7 +236,7 @@ export function SettingsScreen({
         </View>
 
         <View>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Supporto</Text>
+          <Text style={[styles.sectionTitle, { color: staticColors.mutedForeground }]}>Supporto</Text>
           <Card style={styles.settingsCard}>
             <SettingItem
               icon="help-circle-outline"
@@ -245,7 +246,7 @@ export function SettingsScreen({
               testID="setting-help"
               colors={colors}
             />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
             <SettingItem
               icon="chatbubble-outline"
               label="Contattaci"
@@ -254,7 +255,7 @@ export function SettingsScreen({
               testID="setting-contact"
               colors={colors}
             />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
             <SettingItem
               icon="document-text-outline"
               label="Termini e Condizioni"
@@ -262,7 +263,7 @@ export function SettingsScreen({
               testID="setting-terms"
               colors={colors}
             />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
             <SettingItem
               icon="shield-outline"
               label="Privacy Policy"
@@ -274,7 +275,7 @@ export function SettingsScreen({
         </View>
 
         <View>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Sicurezza</Text>
+          <Text style={[styles.sectionTitle, { color: staticColors.mutedForeground }]}>Sicurezza</Text>
           <Card style={styles.settingsCard}>
             <SettingItem
               icon="log-out-outline"
@@ -284,7 +285,7 @@ export function SettingsScreen({
               testID="setting-logout"
               colors={colors}
             />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
             <SettingItem
               icon="trash-outline"
               label="Elimina Account"
@@ -298,8 +299,8 @@ export function SettingsScreen({
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Event Four You v1.0.0</Text>
-          <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>© 2026 Event Four You. Tutti i diritti riservati.</Text>
+          <Text style={[styles.versionText, { color: staticColors.mutedForeground }]}>Event Four You v1.0.0</Text>
+          <Text style={[styles.copyrightText, { color: staticColors.mutedForeground }]}>© 2026 Event Four You. Tutti i diritti riservati.</Text>
         </View>
       </ScrollView>
     </SafeArea>

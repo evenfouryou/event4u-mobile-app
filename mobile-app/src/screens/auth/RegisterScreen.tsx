@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, borderRadius } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
@@ -223,7 +223,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
           showsVerticalScrollIndicator={false}
         >
           <Pressable onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+            <Ionicons name="arrow-back" size={24} color={staticColors.foreground} />
           </Pressable>
 
           <View style={styles.glowContainer}>
@@ -290,7 +290,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 
           {error ? (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={20} color={colors.destructive} />
+              <Ionicons name="alert-circle" size={20} color={staticColors.destructive} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -367,7 +367,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
                       <Ionicons
                         name="male"
                         size={24}
-                        color={formData.gender === 'M' ? colors.primary : colors.mutedForeground}
+                        color={formData.gender === 'M' ? staticColors.primary : staticColors.mutedForeground}
                       />
                       <Text
                         style={[
@@ -392,7 +392,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
                       <Ionicons
                         name="female"
                         size={24}
-                        color={formData.gender === 'F' ? colors.primary : colors.mutedForeground}
+                        color={formData.gender === 'F' ? staticColors.primary : staticColors.mutedForeground}
                       />
                       <Text
                         style={[
@@ -539,7 +539,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   keyboardView: {
     flex: 1,
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     opacity: 0.12,
   },
   header: {
@@ -599,46 +599,46 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
   stepCircleActive: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}20`,
+    borderColor: staticColors.primary,
+    backgroundColor: `${staticColors.primary}20`,
   },
   stepCircleCompleted: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: staticColors.primary,
+    borderColor: staticColors.primary,
   },
   stepNumber: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   stepNumberActive: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   stepLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   stepLabelActive: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '600',
   },
   progressBar: {
     height: 4,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     borderRadius: 2,
   },
   stepHeader: {
@@ -647,27 +647,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${colors.destructive}15`,
+    backgroundColor: `${staticColors.destructive}15`,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.destructive}30`,
+    borderColor: `${staticColors.destructive}30`,
     gap: spacing.sm,
   },
   errorText: {
     flex: 1,
-    color: colors.destructive,
+    color: staticColors.destructive,
     fontSize: typography.fontSize.sm,
   },
   form: {
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   genderLabel: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
   },
   genderButtons: {
@@ -696,20 +696,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.card,
   },
   genderButtonActive: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}15`,
+    borderColor: staticColors.primary,
+    backgroundColor: `${staticColors.primary}15`,
   },
   genderText: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   genderTextActive: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   privacyRow: {
     flexDirection: 'row',
@@ -722,23 +722,23 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
   },
   checkboxActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: staticColors.primary,
+    borderColor: staticColors.primary,
   },
   privacyText: {
     flex: 1,
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     lineHeight: 20,
   },
   privacyLink: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   buttonContainer: {
@@ -754,11 +754,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   footerText: {
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontSize: typography.fontSize.base,
   },
   loginLink: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontSize: typography.fontSize.base,
     fontWeight: '600',
   },
@@ -779,13 +779,13 @@ const styles = StyleSheet.create({
   otpTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   otpDescription: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
@@ -800,16 +800,16 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.secondary,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.secondary,
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     textAlign: 'center',
   },
   otpInputFilled: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}10`,
+    borderColor: staticColors.primary,
+    backgroundColor: `${staticColors.primary}10`,
   },
 });
 

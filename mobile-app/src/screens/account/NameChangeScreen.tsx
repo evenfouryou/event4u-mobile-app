@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -88,7 +89,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
         <Header showLogo showBack onBack={onBack} />
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={80} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={80} color={staticColors.success} />
           </View>
           <View>
             <Text style={styles.successTitle}>Richiesta Inviata!</Text>
@@ -124,7 +125,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
           <View>
             <Card style={styles.ticketCard}>
               <View style={styles.ticketHeader}>
-                <Ionicons name="ticket" size={24} color={colors.primary} />
+                <Ionicons name="ticket" size={24} color={staticColors.primary} />
                 <View style={styles.ticketInfo}>
                   <Text style={styles.ticketEventName}>{ticket.eventName}</Text>
                   <Text style={styles.ticketDate}>{formatDate(ticket.eventDate)}</Text>
@@ -196,7 +197,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
               </Card>
 
               <View style={styles.feeInfo}>
-                <Ionicons name="information-circle" size={20} color={colors.mutedForeground} />
+                <Ionicons name="information-circle" size={20} color={staticColors.mutedForeground} />
                 <Text style={styles.feeText}>
                   Commissione cambio nominativo: <Text style={styles.feeAmount}>€{ticket.changeFee.toFixed(2)}</Text>
                 </Text>
@@ -224,7 +225,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                   <Text style={styles.confirmValue}>{ticket.currentHolder}</Text>
                 </View>
                 <View style={styles.confirmArrow}>
-                  <Ionicons name="arrow-down" size={24} color={colors.primary} />
+                  <Ionicons name="arrow-down" size={24} color={staticColors.primary} />
                 </View>
                 <View style={styles.confirmRow}>
                   <Text style={styles.confirmLabel}>A</Text>
@@ -253,7 +254,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
               </Card>
 
               <View style={styles.warningBox}>
-                <Ionicons name="warning" size={20} color={colors.warning} />
+                <Ionicons name="warning" size={20} color={staticColors.warning} />
                 <Text style={styles.warningText}>
                   Questa operazione è irreversibile. Il biglietto sarà trasferito al nuovo intestatario.
                 </Text>
@@ -291,7 +292,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   keyboardView: {
     flex: 1,
@@ -318,15 +319,15 @@ const styles = StyleSheet.create({
   ticketEventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   ticketDate: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   ticketDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.md,
   },
   currentHolder: {
@@ -334,30 +335,30 @@ const styles = StyleSheet.create({
   },
   currentHolderLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.xs,
   },
   currentHolderName: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   errorContainer: {
-    backgroundColor: `${colors.destructive}20`,
+    backgroundColor: `${staticColors.destructive}20`,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.destructive}40`,
+    borderColor: `${staticColors.destructive}40`,
   },
   errorText: {
-    color: colors.destructive,
+    color: staticColors.destructive,
     fontSize: typography.fontSize.sm,
     textAlign: 'center',
   },
@@ -380,11 +381,11 @@ const styles = StyleSheet.create({
   },
   feeText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   feeAmount: {
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   continueButton: {
     marginTop: spacing.md,
@@ -401,12 +402,12 @@ const styles = StyleSheet.create({
   },
   confirmLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   confirmValue: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   confirmArrow: {
     alignItems: 'center',
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
   },
   confirmDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: spacing.sm,
   },
   totalCard: {
@@ -428,28 +429,28 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   totalValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   warningBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: `${colors.warning}15`,
+    backgroundColor: `${staticColors.warning}15`,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: `${colors.warning}30`,
+    borderColor: `${staticColors.warning}30`,
   },
   warningText: {
     flex: 1,
     fontSize: typography.fontSize.sm,
-    color: colors.foreground,
+    color: staticColors.foreground,
     lineHeight: 20,
   },
   confirmActions: {
@@ -474,13 +475,13 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   successText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     lineHeight: 24,
   },

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
+import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api from '@/lib/api';
 
@@ -44,12 +45,12 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
     return (
       <SafeArea style={styles.container}>
         <Pressable onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={colors.foreground} />
+          <Ionicons name="chevron-back" size={28} color={staticColors.foreground} />
         </Pressable>
 
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
-            <Ionicons name="mail-outline" size={64} color={colors.primary} />
+            <Ionicons name="mail-outline" size={64} color={staticColors.primary} />
           </View>
 
           <View>
@@ -86,7 +87,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
         >
           <View style={styles.topHeader}>
             <Pressable onPress={onBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={28} color={colors.foreground} />
+              <Ionicons name="chevron-back" size={28} color={staticColors.foreground} />
             </Pressable>
             <Image
               source={require('../../../assets/logo.png')}
@@ -98,7 +99,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
 
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Ionicons name="key-outline" size={48} color={colors.primary} />
+              <Ionicons name="key-outline" size={48} color={staticColors.primary} />
             </View>
             <Text style={styles.title}>Password Dimenticata?</Text>
             <Text style={styles.subtitle}>
@@ -152,7 +153,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   keyboardView: {
     flex: 1,
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: `${colors.primary}20`,
+    backgroundColor: `${staticColors.primary}20`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
@@ -199,13 +200,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: spacing.lg,
@@ -214,15 +215,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   errorContainer: {
-    backgroundColor: `${colors.destructive}20`,
+    backgroundColor: `${staticColors.destructive}20`,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.destructive}40`,
+    borderColor: `${staticColors.destructive}40`,
   },
   errorText: {
-    color: colors.destructive,
+    color: staticColors.destructive,
     fontSize: typography.fontSize.sm,
     textAlign: 'center',
   },
@@ -236,11 +237,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   footerText: {
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontSize: typography.fontSize.base,
   },
   loginLink: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontSize: typography.fontSize.base,
     fontWeight: '600',
   },
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
@@ -262,24 +263,24 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   successText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: spacing.sm,
   },
   emailHighlight: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '600',
   },
   successHint: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
   },

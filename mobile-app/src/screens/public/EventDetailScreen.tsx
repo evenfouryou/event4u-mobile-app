@@ -122,7 +122,7 @@ export function EventDetailScreen({
     return (
       <SafeArea style={styles.container} edges={['bottom']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={staticColors.primary} />
           <Text style={styles.loadingText}>Caricamento evento...</Text>
         </View>
       </SafeArea>
@@ -133,7 +133,7 @@ export function EventDetailScreen({
     return (
       <SafeArea style={styles.container} edges={['bottom']}>
         <View style={styles.loadingContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
+          <Ionicons name="alert-circle-outline" size={48} color={staticColors.mutedForeground} />
           <Text style={styles.loadingText}>Evento non trovato</Text>
           <Button variant="outline" onPress={onBack} style={{ marginTop: spacing.md }}>
             Torna indietro
@@ -153,7 +153,7 @@ export function EventDetailScreen({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={staticColors.primary}
           />
         }
       >
@@ -169,7 +169,7 @@ export function EventDetailScreen({
             </LinearGradient>
           )}
           <LinearGradient
-            colors={['transparent', colors.background]}
+            colors={['transparent', staticColors.background]}
             style={styles.imageOverlay}
           />
 
@@ -178,7 +178,7 @@ export function EventDetailScreen({
             style={[styles.backButton, { top: insets.top + spacing.sm }]}
           >
             <View style={styles.backButtonInner}>
-              <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+              <Ionicons name="chevron-back" size={24} color={staticColors.foreground} />
             </View>
           </Pressable>
 
@@ -195,7 +195,7 @@ export function EventDetailScreen({
           <View style={styles.eventMeta}>
             <View style={styles.metaRow}>
               <View style={styles.metaIcon}>
-                <Ionicons name="calendar" size={20} color={colors.primary} />
+                <Ionicons name="calendar" size={20} color={staticColors.primary} />
               </View>
               <View>
                 <Text style={styles.metaLabel}>{formatDate(event.startDate)}</Text>
@@ -207,14 +207,14 @@ export function EventDetailScreen({
 
             <View style={styles.metaRow}>
               <View style={styles.metaIcon}>
-                <Ionicons name="location" size={20} color={colors.primary} />
+                <Ionicons name="location" size={20} color={staticColors.primary} />
               </View>
               <View style={styles.metaTextContainer}>
                 <Text style={styles.metaLabel}>{event.location.name}</Text>
                 <Text style={styles.metaValue}>{event.location.address}</Text>
               </View>
               <Pressable style={styles.mapButton}>
-                <Ionicons name="navigate" size={18} color={colors.primary} />
+                <Ionicons name="navigate" size={18} color={staticColors.primary} />
               </Pressable>
             </View>
           </View>
@@ -273,7 +273,7 @@ export function EventDetailScreen({
                             €{ticket.price}
                           </Text>
                           {isSelected && (
-                            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                            <Ionicons name="checkmark-circle" size={24} color={staticColors.primary} />
                           )}
                         </View>
                       </Pressable>
@@ -300,7 +300,7 @@ export function EventDetailScreen({
                 style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]}
                 disabled={quantity <= 1}
               >
-                <Ionicons name="remove" size={20} color={quantity <= 1 ? colors.mutedForeground : colors.foreground} />
+                <Ionicons name="remove" size={20} color={quantity <= 1 ? staticColors.mutedForeground : staticColors.foreground} />
               </Pressable>
               <Text style={styles.quantityValue}>{quantity}</Text>
               <Pressable
@@ -313,7 +313,7 @@ export function EventDetailScreen({
                 style={[styles.quantityButton, quantity >= selectedTicket.available && styles.quantityButtonDisabled]}
                 disabled={quantity >= selectedTicket.available}
               >
-                <Ionicons name="add" size={20} color={quantity >= selectedTicket.available ? colors.mutedForeground : colors.foreground} />
+                <Ionicons name="add" size={20} color={quantity >= selectedTicket.available ? staticColors.mutedForeground : staticColors.foreground} />
               </Pressable>
             </View>
 
@@ -340,7 +340,7 @@ export function EventDetailScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   scrollView: {
     flex: 1,
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.lg,
   },
   eventMeta: {
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -431,18 +431,18 @@ const styles = StyleSheet.create({
   metaLabel: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   metaValue: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   mapButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -452,12 +452,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   descriptionText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     lineHeight: 24,
   },
   ticketsSection: {
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   sectorName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   ticketOption: {
@@ -481,10 +481,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginHorizontal: -spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   ticketOptionSelected: {
-    backgroundColor: `${colors.primary}10`,
+    backgroundColor: `${staticColors.primary}10`,
   },
   ticketOptionDisabled: {
     opacity: 0.5,
@@ -495,14 +495,14 @@ const styles = StyleSheet.create({
   ticketName: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   ticketNameDisabled: {
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   ticketAvailability: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: 2,
   },
   ticketPrice: {
@@ -513,19 +513,19 @@ const styles = StyleSheet.create({
   ticketPriceValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   ticketPriceDisabled: {
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     paddingBottom: spacing.lg,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   quantitySelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.lg,
     padding: spacing.xs,
   },
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   quantityValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     minWidth: 40,
     textAlign: 'center',
   },
@@ -569,12 +569,12 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   totalValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
 });
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image, Modal, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, typography, borderRadius } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
@@ -118,7 +118,7 @@ export function LoginScreen({
         >
           {onGoBack && (
             <Pressable onPress={onGoBack} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+              <Ionicons name="arrow-back" size={24} color={staticColors.foreground} />
             </Pressable>
           )}
 
@@ -168,7 +168,7 @@ export function LoginScreen({
           <View style={styles.form}>
             {error ? (
               <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle" size={20} color={colors.destructive} />
+                <Ionicons name="alert-circle" size={20} color={staticColors.destructive} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
@@ -186,7 +186,7 @@ export function LoginScreen({
                     testID="button-select-prefix"
                   >
                     <Text style={styles.prefixText}>{phonePrefix}</Text>
-                    <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
+                    <Ionicons name="chevron-down" size={16} color={staticColors.mutedForeground} />
                   </Pressable>
                   <View style={styles.phoneInputContainer}>
                     <Input
@@ -263,7 +263,7 @@ export function LoginScreen({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Seleziona Prefisso</Text>
               <Pressable onPress={() => setShowPrefixModal(false)}>
-                <Ionicons name="close" size={24} color={colors.foreground} />
+                <Ionicons name="close" size={24} color={staticColors.foreground} />
               </Pressable>
             </View>
             <FlatList
@@ -289,7 +289,7 @@ export function LoginScreen({
                     {item.label}
                   </Text>
                   {phonePrefix === item.value && (
-                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                    <Ionicons name="checkmark" size={20} color={staticColors.primary} />
                   )}
                 </Pressable>
               )}
@@ -304,7 +304,7 @@ export function LoginScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   keyboardView: {
     flex: 1,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     opacity: 0.15,
   },
   glowTeal: {
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: colors.teal,
+    backgroundColor: staticColors.teal,
     opacity: 0.1,
   },
   header: {
@@ -362,18 +362,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   methodTabs: {
     marginBottom: spacing.lg,
   },
   tabsRow: {
     flexDirection: 'row',
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.md,
     padding: 4,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   methodTab: {
     flex: 1,
@@ -383,12 +383,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   methodTabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
   },
   methodTabText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   methodTabTextActive: {
     color: '#000',
@@ -400,17 +400,17 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${colors.destructive}15`,
+    backgroundColor: `${staticColors.destructive}15`,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.destructive}30`,
+    borderColor: `${staticColors.destructive}30`,
     gap: spacing.sm,
   },
   errorText: {
     flex: 1,
-    color: colors.destructive,
+    color: staticColors.destructive,
     fontSize: typography.fontSize.sm,
   },
   forgotLink: {
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   forgotText: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
   },
@@ -433,18 +433,18 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   footerText: {
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontSize: typography.fontSize.base,
   },
   registerLink: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontSize: typography.fontSize.base,
     fontWeight: '600',
   },
   inputLabel: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   phoneRow: {
@@ -455,10 +455,10 @@ const styles = StyleSheet.create({
   prefixSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     paddingHorizontal: spacing.md,
     height: 52,
     gap: spacing.xs,
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   prefixText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   phoneInputContainer: {
     flex: 1,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: '70%',
@@ -489,12 +489,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   modalTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   prefixOption: {
     flexDirection: 'row',
@@ -504,21 +504,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   prefixOptionActive: {
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
   },
   prefixFlag: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     width: 30,
   },
   prefixOptionText: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   prefixOptionTextActive: {
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '600',
   },
 });

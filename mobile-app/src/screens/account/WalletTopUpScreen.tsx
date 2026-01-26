@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Pl
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '@/lib/theme';
+// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -131,7 +132,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
         <View style={styles.successContainer}>
           <View>
             <LinearGradient colors={gradients.golden} style={styles.successIcon}>
-              <Ionicons name="checkmark" size={48} color={colors.primaryForeground} />
+              <Ionicons name="checkmark" size={48} color={staticColors.primaryForeground} />
             </LinearGradient>
           </View>
           <View>
@@ -171,7 +172,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
               <Text style={styles.balanceValue}>€{currentBalance.toFixed(2)}</Text>
               {selectedValue > 0 && (
                 <View style={styles.newBalance}>
-                  <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                  <Ionicons name="arrow-forward" size={16} color={staticColors.primary} />
                   <Text style={styles.newBalanceValue}>
                     €{(currentBalance + selectedValue).toFixed(2)}
                   </Text>
@@ -226,9 +227,9 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
                 <Text style={styles.sectionTitle}>Metodo di pagamento</Text>
                 <Card style={styles.methodCard}>
                   <View style={styles.methodRow}>
-                    <Ionicons name="card" size={24} color={colors.foreground} />
+                    <Ionicons name="card" size={24} color={staticColors.foreground} />
                     <Text style={styles.methodText}>Carta di credito/debito</Text>
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                    <Ionicons name="checkmark-circle" size={24} color={staticColors.primary} />
                   </View>
                 </Card>
               </View>
@@ -248,7 +249,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
               </Button>
               
               <View style={styles.securityNote}>
-                <Ionicons name="lock-closed" size={14} color={colors.mutedForeground} />
+                <Ionicons name="lock-closed" size={14} color={staticColors.mutedForeground} />
                 <Text style={styles.securityText}>Pagamento sicuro con Stripe</Text>
               </View>
             </View>
@@ -256,7 +257,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
 
           {step === 'processing' && (
             <View style={styles.processingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={staticColors.primary} />
               <Text style={styles.processingTitle}>Pagamento in corso...</Text>
               <Text style={styles.processingText}>
                 Completa il pagamento nel browser, poi torna qui per confermare.
@@ -272,7 +273,7 @@ export function WalletTopUpScreen({ onBack, onSuccess }: WalletTopUpScreenProps)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   keyboardView: {
     flex: 1,
@@ -289,17 +290,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: `${colors.primary}30`,
+    borderColor: `${staticColors.primary}30`,
   },
   balanceLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.xs,
   },
   balanceValue: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   newBalance: {
     flexDirection: 'row',
@@ -310,12 +311,12 @@ const styles = StyleSheet.create({
   newBalanceValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.md,
   },
   amountsGrid: {
@@ -327,30 +328,30 @@ const styles = StyleSheet.create({
   amountOption: {
     width: '31%',
     paddingVertical: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   amountOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}15`,
+    borderColor: staticColors.primary,
+    backgroundColor: `${staticColors.primary}15`,
   },
   amountText: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   amountTextSelected: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   customAmountContainer: {
     marginBottom: spacing.xl,
   },
   customLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginBottom: spacing.sm,
   },
   customInputWrapper: {
@@ -361,14 +362,14 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   customInput: {
     flex: 1,
   },
   minAmount: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.xs,
   },
   paymentMethods: {
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
   methodText: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   continueButton: {
     marginTop: spacing.md,
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
   },
   securityText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   processingContainer: {
     alignItems: 'center',
@@ -410,11 +411,11 @@ const styles = StyleSheet.create({
   processingTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   processingText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
   },
@@ -471,12 +472,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -485,12 +486,12 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   summaryValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   payButton: {
     marginBottom: spacing.md,
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
   payButtonText: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
   },
   backLink: {
     alignItems: 'center',
@@ -511,7 +512,7 @@ const styles = StyleSheet.create({
   },
   backLinkText: {
     fontSize: typography.fontSize.base,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   successContainer: {
@@ -532,20 +533,20 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   successAmount: {
     fontSize: typography.fontSize['4xl'],
     fontWeight: '800',
-    color: colors.primary,
+    color: staticColors.primary,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   successText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
   },
   successActions: {
