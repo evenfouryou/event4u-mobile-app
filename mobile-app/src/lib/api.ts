@@ -160,16 +160,47 @@ export interface PrEvent {
   id: string;
   eventId: string;
   eventName: string;
+  eventImageUrl: string | null;
   eventStart: string;
   eventEnd: string;
   locationName: string;
+  locationAddress?: string;
   guestCount?: number;
   tableCount?: number;
+  ticketsSold?: number;
   earnings?: number;
+  commission?: number;
 }
 
 export interface PrEventDetail extends PrEvent {
-  locationAddress?: string;
+  prCode?: string;
+}
+
+export interface PrGuestList {
+  id: string;
+  name: string;
+  listType: string;
+  currentCount: number;
+  maxCapacity: number | null;
+}
+
+export interface PrEventTable {
+  id: string;
+  name: string;
+  capacity: number;
+  minSpend: number | null;
+  isBooked: boolean;
+  booking?: {
+    guestName: string;
+    guestCount: number;
+    status: string;
+  };
+}
+
+export interface PrTicketStats {
+  sold: number;
+  revenue: number;
+  commission: number;
 }
 
 export interface PrGuestListEntry {
@@ -410,12 +441,16 @@ class ApiClient {
       id: e.eventId,
       eventId: e.eventId,
       eventName: e.eventName,
+      eventImageUrl: e.eventImageUrl || e.imageUrl || null,
       eventStart: e.eventStart,
       eventEnd: e.eventEnd,
       locationName: e.locationName,
-      guestCount: 0,
-      tableCount: 0,
-      earnings: 0,
+      locationAddress: e.locationAddress,
+      guestCount: e.guestCount || 0,
+      tableCount: e.tableCount || 0,
+      ticketsSold: e.ticketsSold || 0,
+      earnings: e.earnings || 0,
+      commission: e.commission || 0,
     }));
   }
 
@@ -423,13 +458,80 @@ class ApiClient {
     const event = await this.get<any>(`/api/pr/events/${eventId}`);
     return {
       id: event.id,
-      eventId: event.id,
-      eventName: event.name,
-      eventStart: event.startDatetime,
-      eventEnd: event.endDatetime,
+      eventId: event.eventId || event.id,
+      eventName: event.eventName || event.name,
+      eventImageUrl: event.eventImageUrl || event.imageUrl || null,
+      eventStart: event.eventStart || event.startDatetime,
+      eventEnd: event.eventEnd || event.endDatetime,
       locationName: event.locationName || 'Location',
       locationAddress: event.locationAddress,
+      guestCount: event.guestCount || 0,
+      tableCount: event.tableCount || 0,
+      ticketsSold: event.ticketsSold || 0,
+      earnings: event.earnings || 0,
+      commission: event.commission || 0,
+      prCode: event.prCode,
     };
+  }
+
+  async getPrEventGuestLists(eventId: string): Promise<PrGuestList[]> {
+    try {
+      const result = await this.get<any>(`/api/pr/events/${eventId}/guest-lists`);
+      const lists = Array.isArray(result) ? result : [];
+      return lists.map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        listType: l.listType || 'default',
+        currentCount: l.currentCount || 0,
+        maxCapacity: l.maxCapacity,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getPrEventTables(eventId: string): Promise<PrEventTable[]> {
+    try {
+      const result = await this.get<any>(`/api/pr/events/${eventId}/tables`);
+      const tables = Array.isArray(result) ? result : [];
+      return tables.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        capacity: t.capacity || 0,
+        minSpend: t.minSpend,
+        isBooked: t.isBooked || false,
+        booking: t.booking,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getPrEventStats(eventId: string): Promise<PrTicketStats> {
+    try {
+      const result = await this.get<any>(`/api/pr/events/${eventId}/ticket-stats`);
+      return {
+        sold: result?.sold || 0,
+        revenue: result?.revenue || 0,
+        commission: result?.commission || 0,
+      };
+    } catch {
+      return { sold: 0, revenue: 0, commission: 0 };
+    }
+  }
+
+  async addPrGuestsBatch(listId: string, eventId: string, guests: Array<{ firstName: string; lastName: string; phone: string; gender?: string; email?: string; plusOnes?: number }>): Promise<{ created: PrGuestListEntry[]; errors: string[] }> {
+    const result = await this.post<any>(`/api/pr/guest-lists/${listId}/entries/batch`, {
+      entries: guests.map(g => ({ ...g, eventId })),
+    });
+    return {
+      created: result.created || [],
+      errors: result.errors || [],
+    };
+  }
+
+  async bookPrTable(eventId: string, data: { tableId: string; customerName: string; customerPhone?: string; guestCount: number; notes?: string }): Promise<any> {
+    return this.post<any>(`/api/pr/events/${eventId}/bookings`, data);
   }
 
   async getPrEventGuests(eventId: string): Promise<PrGuestListEntry[]> {

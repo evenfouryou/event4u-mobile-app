@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -233,26 +233,81 @@ export function PRDashboard({
               </Pressable>
             </View>
             {events.map((event) => (
-              <Card key={event.id} style={styles.eventCard}>
-                <View style={styles.eventInfo}>
-                  <Text style={styles.eventName}>{event.eventName}</Text>
-                  <Text style={styles.eventDate}>
-                    {new Date(event.eventStart).toLocaleDateString('it-IT', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  <Text style={styles.eventLocation}>{event.locationName}</Text>
-                </View>
-                <View style={styles.eventStats}>
-                  <View style={styles.eventStat}>
-                    <Text style={styles.eventStatValue}>{event.guestCount || 0}</Text>
-                    <Text style={styles.eventStatLabel}>Ospiti</Text>
+              <Pressable
+                key={event.id}
+                onPress={() => {
+                  triggerHaptic('light');
+                  onNavigateEvents();
+                }}
+                testID={`event-card-${event.id}`}
+              >
+                <Card style={styles.eventCard}>
+                  {event.eventImageUrl ? (
+                    <Image
+                      source={{ uri: event.eventImageUrl }}
+                      style={styles.eventImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={gradients.purple}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.eventImagePlaceholder}
+                    >
+                      <Ionicons name="calendar" size={24} color={colors.primaryForeground} />
+                    </LinearGradient>
+                  )}
+                  <View style={styles.eventContent}>
+                    <View style={styles.eventHeader}>
+                      <Text style={styles.eventName} numberOfLines={1}>{event.eventName}</Text>
+                      <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                    </View>
+                    <View style={styles.eventMeta}>
+                      <View style={styles.eventMetaItem}>
+                        <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                        <Text style={styles.eventDate}>
+                          {new Date(event.eventStart).toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </Text>
+                      </View>
+                      <View style={styles.eventMetaItem}>
+                        <Ionicons name="time-outline" size={14} color={colors.primary} />
+                        <Text style={styles.eventDate}>
+                          {new Date(event.eventStart).toLocaleTimeString('it-IT', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.eventMetaItem}>
+                      <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                      <Text style={styles.eventLocation} numberOfLines={1}>{event.locationName}</Text>
+                    </View>
+                    <View style={styles.eventStatsRow}>
+                      <View style={styles.eventStatChip}>
+                        <Ionicons name="people" size={12} color={colors.teal} />
+                        <Text style={styles.eventStatChipText}>{event.guestCount || 0} ospiti</Text>
+                      </View>
+                      {(event.tableCount || 0) > 0 && (
+                        <View style={styles.eventStatChip}>
+                          <Ionicons name="grid" size={12} color={colors.golden} />
+                          <Text style={styles.eventStatChipText}>{event.tableCount} tavoli</Text>
+                        </View>
+                      )}
+                      {(event.earnings || 0) > 0 && (
+                        <View style={styles.eventStatChip}>
+                          <Ionicons name="cash" size={12} color={colors.success} />
+                          <Text style={styles.eventStatChipText}>€{(event.earnings || 0).toFixed(0)}</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                </View>
-              </Card>
+                </Card>
+              </Pressable>
             ))}
           </>
         )}
@@ -459,42 +514,82 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: spacing.md,
+    overflow: 'hidden',
+    padding: 0,
   },
-  eventInfo: {
+  eventImage: {
+    width: 100,
+    height: 100,
+    borderTopLeftRadius: borderRadius.lg,
+    borderBottomLeftRadius: borderRadius.lg,
+  },
+  eventImagePlaceholder: {
+    width: 100,
+    height: 100,
+    borderTopLeftRadius: borderRadius.lg,
+    borderBottomLeftRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventContent: {
     flex: 1,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
   },
   eventName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: colors.foreground,
+    flex: 1,
+    marginRight: spacing.xs,
+  },
+  eventMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     marginBottom: spacing.xs,
+  },
+  eventMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   eventDate: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     color: colors.primary,
-    marginBottom: spacing.xs,
   },
   eventLocation: {
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
-  },
-  eventStats: {
-    alignItems: 'center',
-  },
-  eventStat: {
-    alignItems: 'center',
-  },
-  eventStatValue: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: '700',
-    color: colors.teal,
-  },
-  eventStatLabel: {
     fontSize: typography.fontSize.xs,
     color: colors.mutedForeground,
+    flex: 1,
+  },
+  eventStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  eventStatChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.glass,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  eventStatChipText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.foreground,
+    fontWeight: '500',
   },
   switchCard: {
     marginTop: spacing.lg,
