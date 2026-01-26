@@ -650,7 +650,7 @@ class ApiClient {
 
   async getScannerStats(): Promise<ScannerStats> {
     try {
-      return await this.get<ScannerStats>('/api/e4u/scanner/total-stats');
+      return await this.get<ScannerStats>('/api/e4u/scanner/stats');
     } catch (error) {
       return { totalScans: 0, todayScans: 0, eventsAssigned: 0 };
     }

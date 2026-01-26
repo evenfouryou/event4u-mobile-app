@@ -34,7 +34,7 @@ import { PREventDashboard } from '@/screens/pr/PREventDashboard';
 import { PRWalletScreen } from '@/screens/pr/PRWalletScreen';
 import { PRProfileScreen } from '@/screens/pr/PRProfileScreen';
 
-import { ScannerDashboard, ScannerEventsScreen, ScannerScanScreen } from '@/screens/scanner';
+import { ScannerDashboard, ScannerEventsScreen, ScannerScanScreen, ScannerProfileScreen } from '@/screens/scanner';
 
 type Screen =
   | { name: 'splash' }
@@ -65,7 +65,8 @@ type Screen =
   | { name: 'prProfile' }
   | { name: 'scannerDashboard' }
   | { name: 'scannerEvents' }
-  | { name: 'scannerScan'; params: { eventId: string } };
+  | { name: 'scannerScan'; params: { eventId: string } }
+  | { name: 'scannerProfile' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -429,7 +430,15 @@ export function AppNavigator() {
           <ScannerDashboard
             onNavigateEvents={() => navigate({ name: 'scannerEvents' })}
             onNavigateScan={(eventId) => navigate({ name: 'scannerScan', params: { eventId } })}
-            onNavigateProfile={() => navigate({ name: 'profile' })}
+            onNavigateProfile={() => navigate({ name: 'scannerProfile' })}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'scannerProfile':
+        return (
+          <ScannerProfileScreen
+            onBack={goBack}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
