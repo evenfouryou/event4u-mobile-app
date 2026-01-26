@@ -98,7 +98,7 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
                 <ChevronLeft className="h-5 w-5" />
               </Button>
             ) : (
-              <BrandLogo variant="monogram" className="h-8 w-8" />
+              <BrandLogo variant="horizontal" className="h-8" />
             )}
             {title && (
               <h1 className="text-lg font-semibold">{title}</h1>
