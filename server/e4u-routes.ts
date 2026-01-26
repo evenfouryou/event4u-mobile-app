@@ -1852,6 +1852,9 @@ router.get("/api/e4u/scanner/events", requireAuth, async (req: Request, res: Res
     const user = req.user as any;
     const userId = getUserId(user);
     
+    console.log('[Scanner Events] User object:', JSON.stringify(user));
+    console.log('[Scanner Events] Extracted userId:', userId);
+    
     if (!userId) {
       return res.status(401).json({ message: "Utente non autenticato" });
     }
