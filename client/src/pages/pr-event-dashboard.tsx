@@ -1,955 +1,673 @@
 import { useState, useMemo } from "react";
-import { useRoute, Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useLocation, useParams } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
-import { usePrAuth } from "@/hooks/usePrAuth";
-import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  HapticButton,
-  MobileAppLayout,
-  MobileHeader,
-  triggerHaptic,
-} from "@/components/mobile-primitives";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { usePrAuth } from "@/hooks/usePrAuth";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   ArrowLeft,
   Calendar,
-  MapPin,
   Clock,
+  MapPin,
   Users,
-  ListChecks,
-  Armchair,
   Ticket,
-  Link as LinkIcon,
   Copy,
-  Check,
-  TrendingUp,
-  Euro,
-  Award,
-  History,
-  XCircle,
-  ChevronRight,
-  Plus,
-  UserPlus,
   Share2,
-  QrCode,
+  Check,
   Gift,
-  Target,
   Trophy,
-  AlertCircle,
-  CheckCircle2,
+  Target,
+  TrendingUp,
+  Grid3X3,
+  ListChecks,
+  History,
+  Award,
   ExternalLink,
-  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Clock4,
+  UserPlus,
+  Table2,
   Sparkles,
-  Eye,
-  Ban,
-  Timer,
+  Zap,
 } from "lucide-react";
-import { format, isToday, isTomorrow, isPast, formatDistanceToNow } from "date-fns";
-import { it } from "date-fns/locale";
-import type { Event, GuestList, GuestListEntry, EventTable, TableBooking, PrReward, PrRewardProgress, PrActivityLog } from "@shared/schema";
 
-interface EventStats {
-  totalGuests: number;
-  totalTables: number;
-  ticketsSold: number;
-  ticketRevenue: number;
-  commissionEarned: number;
+interface EventDetail {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventImageUrl: string | null;
+  eventStart: string;
+  eventEnd: string;
+  locationName: string;
+  locationAddress?: string;
 }
 
-const springTransition = {
-  type: "spring",
-  stiffness: 400,
-  damping: 30,
-};
+interface GuestList {
+  id: string;
+  name: string;
+  listType: string;
+  currentCount: number;
+  maxCapacity: number | null;
+  guests?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    status: string;
+  }>;
+}
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: springTransition },
-};
+interface EventTable {
+  id: string;
+  name: string;
+  capacity: number;
+  minSpend: number | null;
+  isBooked: boolean;
+  booking?: {
+    guestName: string;
+    guestCount: number;
+    status: string;
+  };
+}
 
-const staggerChildren = {
-  animate: {
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
+interface TicketStats {
+  sold: number;
+  revenue: number;
+  commission: number;
+  conversionRate?: number;
+}
+
+interface Reward {
+  id: string;
+  name: string;
+  description: string | null;
+  targetType: string;
+  targetValue: number;
+  rewardType: string;
+  rewardValue: number;
+  progress: {
+    currentValue: number;
+    targetValue: number;
+    isCompleted: boolean;
+    rewardClaimed: boolean;
+  };
+}
+
+interface ActivityLog {
+  id: string;
+  activityType: string;
+  entityData: string | null;
+  reason: string | null;
+  createdAt: string;
+}
 
 export default function PrEventDashboard() {
-  const [, params] = useRoute("/pr/events/:eventId");
-  const eventId = params?.eventId;
-  const { t } = useTranslation();
+  const { eventId } = useParams();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const isMobile = useIsMobile();
-  const { prProfile, isAuthenticated } = usePrAuth();
-  const [activeTab, setActiveTab] = useState<"liste" | "biglietti" | "cancellazioni" | "premi">("liste");
-  const [copiedLink, setCopiedLink] = useState(false);
-  
-  const handleBack = () => setLocation("/pr");
+  const { prProfile } = usePrAuth();
+  const [activeTab, setActiveTab] = useState("liste");
+  const [linkCopied, setLinkCopied] = useState(false);
 
-  const { data: event, isLoading: loadingEvent, refetch } = useQuery<Event>({
-    queryKey: ["/api/e4u/events", eventId],
-    enabled: !!eventId && isAuthenticated,
+  const { data: event, isLoading: isLoadingEvent } = useQuery<EventDetail>({
+    queryKey: ["/api/pr/events", eventId],
+    enabled: !!eventId && !!prProfile,
   });
 
-  const { data: guestLists = [], isLoading: loadingLists } = useQuery<GuestList[]>({
+  const { data: guestLists = [], isLoading: isLoadingLists } = useQuery<GuestList[]>({
     queryKey: ["/api/pr/events", eventId, "guest-lists"],
-    enabled: !!eventId && isAuthenticated,
+    enabled: !!eventId && !!prProfile,
   });
 
-  const { data: tables = [], isLoading: loadingTables } = useQuery<EventTable[]>({
+  const { data: tables = [], isLoading: isLoadingTables } = useQuery<EventTable[]>({
     queryKey: ["/api/pr/events", eventId, "tables"],
-    enabled: !!eventId && isAuthenticated,
+    enabled: !!eventId && !!prProfile,
   });
 
-  const { data: bookings = [] } = useQuery<TableBooking[]>({
-    queryKey: ["/api/pr/events", eventId, "bookings"],
-    enabled: !!eventId && isAuthenticated,
-  });
-
-  const { data: ticketStats } = useQuery<{ sold: number; revenue: number; commission: number }>({
+  const { data: ticketStats, isLoading: isLoadingStats } = useQuery<TicketStats>({
     queryKey: ["/api/pr/events", eventId, "ticket-stats"],
-    enabled: !!eventId && isAuthenticated,
+    enabled: !!eventId && !!prProfile,
   });
 
-  const { data: rewards = [] } = useQuery<(PrReward & { progress?: PrRewardProgress })[]>({
+  const { data: rewards = [], isLoading: isLoadingRewards } = useQuery<Reward[]>({
     queryKey: ["/api/pr/events", eventId, "rewards"],
-    enabled: !!eventId && isAuthenticated,
+    enabled: !!eventId && !!prProfile,
   });
 
-  const { data: activityLogs = [] } = useQuery<PrActivityLog[]>({
+  const { data: activityLogs = [], isLoading: isLoadingLogs } = useQuery<ActivityLog[]>({
     queryKey: ["/api/pr/events", eventId, "activity-logs"],
-    enabled: !!eventId && isAuthenticated,
+    enabled: !!eventId && !!prProfile,
   });
 
   const prLink = useMemo(() => {
     if (!event || !prProfile?.prCode) return null;
     const baseUrl = window.location.origin;
-    return {
-      url: `${baseUrl}/e/${event.id}?pr=${prProfile.prCode}`,
-      prCode: prProfile.prCode,
-      clicks: 0,
-      conversions: ticketStats?.sold || 0,
-    };
-  }, [event, prProfile, ticketStats]);
+    return `${baseUrl}/e/${event.eventId || event.id}?pr=${prProfile.prCode}`;
+  }, [event, prProfile]);
 
-  const stats = useMemo<EventStats>(() => {
-    const totalGuests = guestLists.reduce((acc, list) => acc + (list.currentCount || 0), 0);
-    const totalTables = bookings.filter(b => b.status === 'confirmed' || b.status === 'approved').length;
-    return {
-      totalGuests,
-      totalTables,
-      ticketsSold: ticketStats?.sold || 0,
-      ticketRevenue: ticketStats?.revenue || 0,
-      commissionEarned: ticketStats?.commission || 0,
-    };
-  }, [guestLists, bookings, ticketStats]);
+  const stats = useMemo(() => ({
+    totalGuests: guestLists.reduce((acc, list) => acc + (list.currentCount || 0), 0),
+    totalTables: tables.filter(t => t.isBooked).length,
+    ticketsSold: ticketStats?.sold || 0,
+    commission: ticketStats?.commission || 0,
+  }), [guestLists, tables, ticketStats]);
 
-  const cancellations = useMemo(() => {
-    return activityLogs.filter(log => 
-      log.activityType === 'list_entry_cancelled' || 
-      log.activityType === 'table_cancelled' ||
-      log.activityType === 'ticket_cancelled'
-    );
-  }, [activityLogs]);
+  const cancellations = useMemo(() => 
+    activityLogs.filter(log => 
+      log.activityType.includes('cancelled') || log.activityType.includes('removed')
+    ),
+    [activityLogs]
+  );
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 60) return `${diffMins} min fa`;
+    if (diffHours < 24) return `${diffHours} ore fa`;
+    return `${diffDays} giorni fa`;
+  };
+
+  const isToday = (dateString: string) => {
+    const eventDate = new Date(dateString);
+    const today = new Date();
+    return eventDate.toDateString() === today.toDateString();
+  };
 
   const handleCopyLink = async () => {
     if (!prLink) return;
     try {
-      await navigator.clipboard.writeText(prLink.url);
-      setCopiedLink(true);
-      triggerHaptic('light');
-      toast({ title: "Link copiato!", description: "Ora puoi condividerlo con i tuoi clienti" });
-      setTimeout(() => setCopiedLink(false), 2000);
+      await navigator.clipboard.writeText(prLink);
+      setLinkCopied(true);
+      toast({ title: "Link copiato!", description: "Il tuo link è stato copiato negli appunti." });
+      setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
-      toast({ title: "Errore", description: "Non è stato possibile copiare il link", variant: "destructive" });
+      toast({ title: "Errore", description: "Impossibile copiare il link.", variant: "destructive" });
     }
   };
 
-  const handleShare = async () => {
+  const handleShareLink = async () => {
     if (!prLink || !event) return;
-    triggerHaptic('medium');
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: event.name,
-          text: `Acquista il tuo biglietto per ${event.name}!`,
-          url: prLink.url,
-        });
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          handleCopyLink();
-        }
-      }
-    } else {
+    try {
+      await navigator.share({
+        title: event.eventName,
+        text: `Acquista il tuo biglietto per ${event.eventName}!`,
+        url: prLink,
+      });
+    } catch (err) {
       handleCopyLink();
     }
   };
 
-  const StatCard = ({ icon: Icon, value, label, color, subValue }: {
-    icon: React.ElementType;
-    value: string | number;
-    label: string;
-    color: string;
-    subValue?: string;
-  }) => (
-    <motion.div variants={fadeInUp} className="flex-1 min-w-0">
-      <Card className={`${color} border-0`}>
-        <CardContent className="p-3 text-center">
-          <Icon className="w-5 h-5 mx-auto mb-1 opacity-80" />
-          <p className="text-lg font-bold">{value}</p>
-          <p className="text-xs opacity-70 truncate">{label}</p>
-          {subValue && <p className="text-[10px] opacity-50 mt-0.5">{subValue}</p>}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-
-  if (loadingEvent) {
-    return isMobile ? (
-      <MobileAppLayout>
-        <MobileHeader title="Caricamento..." showBackButton onBack={handleBack} />
+  if (isLoadingEvent) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Skeleton className="h-64 w-full" />
         <div className="p-4 space-y-4">
-          <Skeleton className="h-48 w-full rounded-2xl" />
-          <div className="grid grid-cols-4 gap-2">
-            {[1,2,3,4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <div className="grid grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}
           </div>
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
-      </MobileAppLayout>
-    ) : (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-12 w-64" />
-        <Skeleton className="h-64 w-full rounded-2xl" />
       </div>
     );
   }
 
   if (!event) {
-    return isMobile ? (
-      <MobileAppLayout>
-        <MobileHeader title="Evento non trovato" showBackButton onBack={handleBack} />
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-          <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-bold mb-2">Evento non trovato</h3>
-          <p className="text-muted-foreground mb-6">L'evento potrebbe essere stato rimosso.</p>
-          <Link href="/pr">
-            <Button data-testid="button-back-pr">Torna agli eventi</Button>
-          </Link>
-        </div>
-      </MobileAppLayout>
-    ) : (
-      <div className="container mx-auto p-6">
-        <Card className="max-w-md mx-auto text-center p-8">
-          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-bold mb-2">Evento non trovato</h3>
-          <p className="text-muted-foreground mb-6">L'evento potrebbe essere stato rimosso.</p>
-          <Link href="/pr">
-            <Button>Torna agli eventi</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
-
-  const eventDate = new Date(event.startDatetime);
-  const isEventToday = isToday(eventDate);
-  const isEventPast = isPast(eventDate);
-
-  const EventHeader = () => (
-    <div className="relative overflow-hidden">
-      <div className="relative h-52 md:h-64">
-        {event.imageUrl ? (
-          <img
-            src={event.imageUrl}
-            alt={event.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-purple-500/20 to-blue-500/20" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        
-        <div className="absolute top-4 right-4 flex flex-col gap-2">
-          {isEventToday && (
-            <Badge className="bg-primary text-primary-foreground font-bold animate-pulse shadow-lg">
-              <Sparkles className="w-3 h-3 mr-1" />
-              OGGI
-            </Badge>
-          )}
-          {isEventPast && (
-            <Badge variant="outline" className="bg-background/80 backdrop-blur-sm">
-              Concluso
-            </Badge>
-          )}
-        </div>
-        
-        <div className="absolute bottom-4 left-4 right-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground drop-shadow-lg mb-2">
-            {event.name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-foreground/80">
-            <div className="flex items-center gap-1.5 bg-background/30 backdrop-blur-sm rounded-full px-3 py-1">
-              <Calendar className="w-4 h-4" />
-              <span className="font-medium">{format(eventDate, "EEE d MMMM yyyy", { locale: it })}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-background/30 backdrop-blur-sm rounded-full px-3 py-1">
-              <Clock className="w-4 h-4" />
-              <span className="font-medium">{format(eventDate, "HH:mm")}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const StatsRow = () => (
-    <motion.div 
-      variants={staggerChildren}
-      initial="hidden"
-      animate="animate"
-      className="grid grid-cols-4 gap-2 md:gap-4"
-    >
-      <StatCard 
-        icon={Users} 
-        value={stats.totalGuests} 
-        label="Ospiti" 
-        color="bg-emerald-500/10 text-emerald-400"
-      />
-      <StatCard 
-        icon={Armchair} 
-        value={stats.totalTables} 
-        label="Tavoli" 
-        color="bg-blue-500/10 text-blue-400"
-      />
-      <StatCard 
-        icon={Ticket} 
-        value={stats.ticketsSold} 
-        label="Biglietti" 
-        color="bg-purple-500/10 text-purple-400"
-      />
-      <StatCard 
-        icon={Euro} 
-        value={`€${stats.commissionEarned.toFixed(0)}`} 
-        label="Guadagno" 
-        color="bg-primary/10 text-primary"
-      />
-    </motion.div>
-  );
-
-  const ListeSection = () => (
-    <motion.div 
-      variants={staggerChildren}
-      initial="hidden"
-      animate="animate"
-      className="space-y-4"
-    >
-      <motion.div variants={fadeInUp}>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <ListChecks className="w-4 h-4 text-emerald-400" />
-              </div>
-              Liste & Tavoli
-            </CardTitle>
-            <CardDescription>Gestisci liste ospiti e prenotazioni tavoli per questo evento</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href={`/events/${eventId}/panel`}>
-              <Button className="w-full justify-between" variant="outline" data-testid="button-manage-lists">
-                <span className="flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-emerald-400" />
-                  Aggiungi ospiti alle liste
-                </span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link href={`/events/${eventId}/panel`}>
-              <Button className="w-full justify-between" variant="outline" data-testid="button-manage-tables">
-                <span className="flex items-center gap-2">
-                  <Armchair className="w-4 h-4 text-blue-400" />
-                  Gestisci prenotazioni tavoli
-                </span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {guestLists.length > 0 && (
-        <motion.div variants={fadeInUp}>
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span>Le tue liste ({guestLists.length})</span>
-                <Badge variant="outline">{stats.totalGuests} ospiti</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {guestLists.map((list) => (
-                  <div 
-                    key={list.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <ListChecks className="w-5 h-5 text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{list.name}</p>
-                        <p className="text-sm text-muted-foreground">{list.currentCount || 0} ospiti inseriti</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="capitalize">{list.listType}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {tables.length > 0 && (
-        <motion.div variants={fadeInUp}>
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span>Tavoli ({tables.length})</span>
-                <Badge variant="outline">{stats.totalTables} prenotati</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {tables.slice(0, 6).map((table) => {
-                  const tableBookings = bookings.filter(b => b.tableId === table.id);
-                  const isBooked = tableBookings.some(b => b.status === 'confirmed' || b.status === 'approved');
-                  return (
-                    <div 
-                      key={table.id}
-                      className={cn(
-                        "p-3 rounded-xl border text-center transition-colors",
-                        isBooked 
-                          ? "bg-emerald-500/10 border-emerald-500/30" 
-                          : "bg-muted/20 border-border/30"
-                      )}
-                    >
-                      <Armchair className={cn("w-5 h-5 mx-auto mb-1", isBooked ? "text-emerald-400" : "text-muted-foreground")} />
-                      <p className="font-bold text-sm">{table.name}</p>
-                      <p className="text-xs text-muted-foreground">{table.capacity} posti</p>
-                      {isBooked && (
-                        <Badge className="mt-1.5 bg-emerald-500/20 text-emerald-400 text-[10px]">
-                          <CheckCircle2 className="w-3 h-3 mr-0.5" />
-                          Prenotato
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {tables.length > 6 && (
-                <Button variant="ghost" className="w-full mt-3 text-muted-foreground">
-                  Vedi tutti ({tables.length})
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-
-  const BigliettiSection = () => (
-    <motion.div 
-      variants={staggerChildren}
-      initial="hidden"
-      animate="animate"
-      className="space-y-4"
-    >
-      <motion.div variants={fadeInUp}>
-        <Card className="bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-primary/5 border-purple-500/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <LinkIcon className="w-4 h-4 text-purple-400" />
-              </div>
-              Il tuo Link Personale
-            </CardTitle>
-            <CardDescription>Condividi questo link per tracciare automaticamente le tue vendite</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {prLink ? (
-              <>
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-background/50 border border-border/50">
-                  <div className="flex-1 overflow-hidden">
-                    <Input
-                      value={prLink.url}
-                      readOnly
-                      className="bg-transparent border-0 text-sm font-mono p-0 h-auto focus-visible:ring-0"
-                      data-testid="input-pr-link"
-                    />
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleCopyLink}
-                    className="shrink-0"
-                    data-testid="button-copy-link"
-                  >
-                    {copiedLink ? (
-                      <Check className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={handleShare} data-testid="button-share-link">
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Condividi
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <a href={prLink.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Anteprima
-                    </a>
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="p-4 rounded-xl bg-purple-500/10 text-center">
-                    <p className="text-2xl font-bold text-purple-400">{prLink.conversions}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Biglietti venduti</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-primary/10 text-center">
-                    <p className="text-2xl font-bold text-primary">€{stats.commissionEarned.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Commissione totale</p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-6">
-                <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Link non disponibile</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div variants={fadeInUp}>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-blue-400" />
-              </div>
-              Storico Vendite
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.ticketsSold > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                      <Ticket className="w-5 h-5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Biglietti venduti</p>
-                      <p className="text-sm text-muted-foreground">Tramite il tuo link</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-500/20 text-emerald-400 text-lg px-3">{stats.ticketsSold}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-4 rounded-xl bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Euro className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Revenue generato</p>
-                      <p className="text-sm text-muted-foreground">Incasso totale</p>
-                    </div>
-                  </div>
-                  <span className="font-bold text-primary text-lg">€{stats.ticketRevenue.toFixed(2)}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-4">
-                  <Ticket className="w-8 h-8 text-muted-foreground/50" />
-                </div>
-                <p className="text-muted-foreground font-medium">Nessun biglietto venduto ancora</p>
-                <p className="text-sm text-muted-foreground/70 mt-1">Condividi il tuo link per iniziare!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.div>
-  );
-
-  const CancellazioniSection = () => (
-    <motion.div variants={fadeInUp} initial="hidden" animate="visible">
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <History className="w-4 h-4 text-amber-400" />
-            </div>
-            Storico Cancellazioni
-          </CardTitle>
-          <CardDescription>Tracciamento di tutte le cancellazioni e modifiche</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {cancellations.length > 0 ? (
-            <div className="space-y-3">
-              {cancellations.map((log) => {
-                const data = log.entityData ? JSON.parse(log.entityData) : {};
-                const getIcon = () => {
-                  switch (log.activityType) {
-                    case 'list_entry_cancelled': return <Users className="w-4 h-4" />;
-                    case 'table_cancelled': return <Armchair className="w-4 h-4" />;
-                    case 'ticket_cancelled': return <Ticket className="w-4 h-4" />;
-                    default: return <Ban className="w-4 h-4" />;
-                  }
-                };
-                const getColor = () => {
-                  switch (log.activityType) {
-                    case 'list_entry_cancelled': return "bg-red-500/10 text-red-400 border-red-500/20";
-                    case 'table_cancelled': return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-                    case 'ticket_cancelled': return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-                    default: return "bg-muted/20 text-muted-foreground border-border/30";
-                  }
-                };
-                const getLabel = () => {
-                  switch (log.activityType) {
-                    case 'list_entry_cancelled': return 'Ospite rimosso dalla lista';
-                    case 'table_cancelled': return 'Prenotazione tavolo annullata';
-                    case 'ticket_cancelled': return 'Biglietto annullato';
-                    default: return 'Cancellazione';
-                  }
-                };
-                
-                return (
-                  <div 
-                    key={log.id}
-                    className={cn("flex items-start gap-3 p-4 rounded-xl border", getColor())}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-current/10 flex items-center justify-center shrink-0">
-                      {getIcon()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{getLabel()}</p>
-                      {data.name && (
-                        <p className="text-sm opacity-70 truncate">{data.name}</p>
-                      )}
-                      {log.reason && (
-                        <p className="text-xs opacity-50 mt-1">Motivo: {log.reason}</p>
-                      )}
-                      <div className="flex items-center gap-1 mt-2 text-xs opacity-50">
-                        <Timer className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(log.createdAt!), { addSuffix: true, locale: it })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400/50" />
-              </div>
-              <p className="text-muted-foreground font-medium">Nessuna cancellazione</p>
-              <p className="text-sm text-muted-foreground/70 mt-1">Tutto in ordine!</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-
-  const PremiSection = () => (
-    <motion.div variants={fadeInUp} initial="hidden" animate="visible">
-      <Card className="bg-gradient-to-br from-primary/10 via-amber-500/5 to-purple-500/5 border-primary/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Trophy className="w-4 h-4 text-primary" />
-            </div>
-            Obiettivi & Premi
-          </CardTitle>
-          <CardDescription>Raggiungi gli obiettivi per sbloccare bonus e premi</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rewards.length > 0 ? (
-            <div className="space-y-4">
-              {rewards.map((reward) => {
-                const progress = reward.progress;
-                const percentage = progress 
-                  ? Math.min((progress.currentValue / progress.targetValue) * 100, 100)
-                  : 0;
-                const isCompleted = progress?.isCompleted;
-
-                return (
-                  <div 
-                    key={reward.id}
-                    className={cn(
-                      "p-4 rounded-xl border transition-all",
-                      isCompleted 
-                        ? "bg-emerald-500/10 border-emerald-500/30" 
-                        : "bg-muted/20 border-border/30"
-                    )}
-                  >
-                    <div className="flex items-start justify-between mb-3 gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center",
-                          isCompleted ? "bg-emerald-500/20" : "bg-primary/20"
-                        )}>
-                          {isCompleted ? (
-                            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                          ) : (
-                            <Target className="w-6 h-6 text-primary" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-bold">{reward.name}</p>
-                          {reward.description && (
-                            <p className="text-sm text-muted-foreground">{reward.description}</p>
-                          )}
-                        </div>
-                      </div>
-                      <Badge 
-                        className={cn(
-                          "shrink-0",
-                          isCompleted 
-                            ? "bg-emerald-500/20 text-emerald-400" 
-                            : "bg-primary/20 text-primary"
-                        )}
-                      >
-                        {reward.rewardType === 'bonus_cash' && `+€${reward.rewardValue}`}
-                        {reward.rewardType === 'percentage_bonus' && `+${reward.rewardValue}%`}
-                        {reward.rewardType === 'gift' && 'Premio'}
-                        {reward.rewardType === 'badge' && 'Badge'}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {reward.targetType === 'tickets_sold' && 'Biglietti venduti'}
-                          {reward.targetType === 'guests_added' && 'Ospiti in lista'}
-                          {reward.targetType === 'tables_booked' && 'Tavoli prenotati'}
-                          {reward.targetType === 'revenue' && 'Revenue generato'}
-                        </span>
-                        <span className="font-medium">
-                          {progress?.currentValue || 0} / {reward.targetValue}
-                        </span>
-                      </div>
-                      <Progress value={percentage} className="h-2" />
-                    </div>
-
-                    {isCompleted && !progress?.rewardClaimed && (
-                      <Button 
-                        className="w-full mt-4" 
-                        size="sm"
-                        data-testid={`button-claim-${reward.id}`}
-                      >
-                        <Gift className="w-4 h-4 mr-2" />
-                        Riscuoti Premio
-                      </Button>
-                    )}
-                    {progress?.rewardClaimed && (
-                      <div className="flex items-center justify-center gap-2 mt-4 text-emerald-400 text-sm">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Premio già riscosso
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-4">
-                <Award className="w-8 h-8 text-muted-foreground/50" />
-              </div>
-              <p className="text-muted-foreground font-medium">Nessun premio attivo</p>
-              <p className="text-sm text-muted-foreground/70 mt-1">Gli obiettivi saranno disponibili a breve</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-
-  const tabContent = {
-    liste: <ListeSection />,
-    biglietti: <BigliettiSection />,
-    cancellazioni: <CancellazioniSection />,
-    premi: <PremiSection />,
-  };
-
-  if (isMobile) {
     return (
-      <MobileAppLayout>
-        <MobileHeader 
-          title="" 
-          showBackButton
-          onBack={handleBack}
-          className="absolute top-0 left-0 right-0 z-10 bg-transparent"
-          rightAction={
-            <Button size="icon" variant="ghost" onClick={() => refetch()} className="bg-background/30 backdrop-blur-sm">
-              <RefreshCw className="w-4 h-4" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-12 text-center">
+            <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-foreground mb-2">Evento non trovato</h3>
+            <p className="text-muted-foreground mb-4">L'evento richiesto non esiste o non sei autorizzato.</p>
+            <Button onClick={() => navigate("/pr/events")} data-testid="button-back-events">
+              Torna agli eventi
             </Button>
-          }
-        />
-        
-        <div className="pb-24">
-          <EventHeader />
-          
-          <div className="px-4 pt-4 space-y-4">
-            <StatsRow />
-            
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-              <TabsList className="grid w-full grid-cols-4 h-12">
-                <TabsTrigger value="liste" className="text-xs px-1" data-testid="tab-liste">
-                  <ListChecks className="w-4 h-4 md:mr-1" />
-                  <span className="hidden sm:inline">Liste</span>
-                </TabsTrigger>
-                <TabsTrigger value="biglietti" className="text-xs px-1" data-testid="tab-biglietti">
-                  <Ticket className="w-4 h-4 md:mr-1" />
-                  <span className="hidden sm:inline">Biglietti</span>
-                </TabsTrigger>
-                <TabsTrigger value="cancellazioni" className="text-xs px-1" data-testid="tab-cancellazioni">
-                  <History className="w-4 h-4 md:mr-1" />
-                  <span className="hidden sm:inline">Storico</span>
-                </TabsTrigger>
-                <TabsTrigger value="premi" className="text-xs px-1" data-testid="tab-premi">
-                  <Trophy className="w-4 h-4 md:mr-1" />
-                  <span className="hidden sm:inline">Premi</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={springTransition}
-              >
-                {tabContent[activeTab]}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-      </MobileAppLayout>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
+
+  const eventIsToday = event ? isToday(event.eventStart) : false;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{event.name}</h1>
-            <p className="text-muted-foreground">
-              {format(eventDate, "EEEE d MMMM yyyy 'alle' HH:mm", { locale: it })}
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Aggiorna
-          </Button>
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Hero Section */}
+      <div className="relative">
+        <div className="relative h-56 md:h-72 overflow-hidden">
+          {event.eventImageUrl ? (
+            <img
+              src={event.eventImageUrl}
+              alt={event.eventName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <Card className="overflow-hidden">
-              <div className="aspect-video relative">
-                {event.imageUrl ? (
-                  <img src={event.imageUrl} alt={event.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-500/20" />
-                )}
-                {isEventToday && (
-                  <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground animate-pulse">
-                    OGGI
-                  </Badge>
-                )}
-              </div>
-            </Card>
-            
-            <div className="mt-4">
-              <StatsRow />
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 left-4 bg-background/50 backdrop-blur-sm"
+          onClick={() => navigate("/pr/events")}
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+
+        {/* Today Badge */}
+        {eventIsToday && (
+          <Badge className="absolute top-4 right-4 bg-primary text-primary-foreground shadow-lg">
+            <Sparkles className="h-3 w-3 mr-1" />
+            OGGI
+          </Badge>
+        )}
+
+        {/* Event Info */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl md:text-3xl font-bold text-foreground mb-2"
+          >
+            {event.eventName}
+          </motion.h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span>{formatDate(event.eventStart)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-4 w-4 text-primary" />
+              <span>{formatTime(event.eventStart)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              <span className="truncate max-w-[200px]">{event.locationName}</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="lg:col-span-2">
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-4">
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-                  <TabsList className="w-full mb-4">
-                    <TabsTrigger value="liste" className="flex-1" data-testid="tab-liste-desktop">
-                      <ListChecks className="w-4 h-4 mr-2" />
-                      Liste & Tavoli
-                    </TabsTrigger>
-                    <TabsTrigger value="biglietti" className="flex-1" data-testid="tab-biglietti-desktop">
-                      <Ticket className="w-4 h-4 mr-2" />
-                      Biglietti
-                    </TabsTrigger>
-                    <TabsTrigger value="cancellazioni" className="flex-1" data-testid="tab-cancellazioni-desktop">
-                      <History className="w-4 h-4 mr-2" />
-                      Cancellazioni
-                    </TabsTrigger>
-                    <TabsTrigger value="premi" className="flex-1" data-testid="tab-premi-desktop">
-                      <Trophy className="w-4 h-4 mr-2" />
-                      Premi
-                    </TabsTrigger>
-                  </TabsList>
+      {/* Stats Bar */}
+      <div className="px-4 md:px-6 -mt-2">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-4 gap-2 md:gap-3"
+        >
+          <Card className="bg-violet-500/10 border-violet-500/20">
+            <CardContent className="p-3 text-center">
+              <Users className="h-5 w-5 text-violet-500 mx-auto mb-1" />
+              <p className="text-lg md:text-xl font-bold text-foreground">{stats.totalGuests}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Ospiti</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-blue-500/10 border-blue-500/20">
+            <CardContent className="p-3 text-center">
+              <Grid3X3 className="h-5 w-5 text-blue-500 mx-auto mb-1" />
+              <p className="text-lg md:text-xl font-bold text-foreground">{stats.totalTables}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Tavoli</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-emerald-500/10 border-emerald-500/20">
+            <CardContent className="p-3 text-center">
+              <Ticket className="h-5 w-5 text-emerald-500 mx-auto mb-1" />
+              <p className="text-lg md:text-xl font-bold text-foreground">{stats.ticketsSold}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Biglietti</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-amber-500/10 border-amber-500/20">
+            <CardContent className="p-3 text-center">
+              <TrendingUp className="h-5 w-5 text-amber-500 mx-auto mb-1" />
+              <p className="text-lg md:text-xl font-bold text-foreground">€{stats.commission}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Guadagno</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
 
-                  <ScrollArea className="h-[600px] pr-4">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={springTransition}
-                      >
-                        {tabContent[activeTab]}
-                      </motion.div>
-                    </AnimatePresence>
-                  </ScrollArea>
-                </Tabs>
+      {/* Tabs */}
+      <div className="px-4 md:px-6 mt-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-4 w-full h-auto p-1 bg-muted/50">
+            <TabsTrigger value="liste" className="text-xs md:text-sm py-2.5 data-[state=active]:bg-background" data-testid="tab-liste">
+              <ListChecks className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Liste</span>
+            </TabsTrigger>
+            <TabsTrigger value="biglietti" className="text-xs md:text-sm py-2.5 data-[state=active]:bg-background" data-testid="tab-biglietti">
+              <Ticket className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Biglietti</span>
+            </TabsTrigger>
+            <TabsTrigger value="storico" className="text-xs md:text-sm py-2.5 data-[state=active]:bg-background" data-testid="tab-storico">
+              <History className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Storico</span>
+            </TabsTrigger>
+            <TabsTrigger value="premi" className="text-xs md:text-sm py-2.5 data-[state=active]:bg-background" data-testid="tab-premi">
+              <Trophy className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Premi</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Liste Tab */}
+          <TabsContent value="liste" className="mt-4 space-y-4">
+            <Card className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-500/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserPlus className="h-5 w-5 text-emerald-500" />
+                  Liste Ospiti
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isLoadingLists ? (
+                  <Skeleton className="h-16 w-full" />
+                ) : guestLists.length > 0 ? (
+                  guestLists.map(list => (
+                    <div key={list.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/50">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                          <Users className="h-4 w-4 text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{list.name}</p>
+                          <p className="text-sm text-muted-foreground">{list.currentCount || 0} ospiti</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">{list.listType}</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-4">Nessuna lista disponibile</p>
+                )}
+
+                <Button className="w-full" variant="outline" data-testid="button-add-guest">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Aggiungi ospite
+                </Button>
               </CardContent>
             </Card>
-          </div>
-        </div>
+
+            <Card className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Table2 className="h-5 w-5 text-blue-500" />
+                  Prenotazioni Tavoli
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingTables ? (
+                  <Skeleton className="h-24 w-full" />
+                ) : tables.length > 0 ? (
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                    {tables.map(table => (
+                      <div
+                        key={table.id}
+                        className={`p-3 rounded-lg border text-center ${
+                          table.isBooked
+                            ? "bg-emerald-500/10 border-emerald-500/30"
+                            : "bg-muted/30 border-border/50"
+                        }`}
+                      >
+                        <Grid3X3 className={`h-5 w-5 mx-auto mb-1 ${table.isBooked ? "text-emerald-500" : "text-muted-foreground"}`} />
+                        <p className="font-medium text-sm text-foreground">{table.name}</p>
+                        <p className="text-xs text-muted-foreground">{table.capacity} posti</p>
+                        {table.isBooked && (
+                          <Badge variant="secondary" className="mt-1 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                            Prenotato
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-4">Nessun tavolo disponibile</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Biglietti Tab */}
+          <TabsContent value="biglietti" className="mt-4 space-y-4">
+            <Card className="bg-gradient-to-br from-violet-500/10 to-purple-500/5 border-violet-500/20 overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ExternalLink className="h-5 w-5 text-violet-500" />
+                  Il tuo Link Personale
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Condividi per tracciare le tue vendite</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {prLink && (
+                  <>
+                    <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border/50">
+                      <Input
+                        value={prLink}
+                        readOnly
+                        className="bg-transparent border-0 text-sm font-mono focus-visible:ring-0"
+                        data-testid="input-pr-link"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCopyLink}
+                        data-testid="button-copy-link"
+                      >
+                        {linkCopied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button onClick={handleCopyLink} variant="outline" data-testid="button-copy">
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copia link
+                      </Button>
+                      <Button onClick={handleShareLink} data-testid="button-share">
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Condividi
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/50">
+                  <div className="text-center p-4 bg-emerald-500/10 rounded-lg">
+                    <p className="text-3xl font-bold text-emerald-500">{ticketStats?.sold || 0}</p>
+                    <p className="text-sm text-muted-foreground">Biglietti venduti</p>
+                  </div>
+                  <div className="text-center p-4 bg-amber-500/10 rounded-lg">
+                    <p className="text-3xl font-bold text-amber-500">€{ticketStats?.commission || 0}</p>
+                    <p className="text-sm text-muted-foreground">Commissione</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Storico Tab */}
+          <TabsContent value="storico" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <History className="h-5 w-5 text-amber-500" />
+                  Storico Cancellazioni
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingLogs ? (
+                  <Skeleton className="h-24 w-full" />
+                ) : cancellations.length > 0 ? (
+                  <div className="space-y-3">
+                    {cancellations.map(log => {
+                      const data = log.entityData ? JSON.parse(log.entityData) : {};
+                      return (
+                        <div key={log.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border-l-2 border-destructive/50">
+                          <XCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm">
+                              {log.activityType.includes("guest") ? "Ospite rimosso" : 
+                               log.activityType.includes("table") ? "Prenotazione annullata" :
+                               log.activityType.includes("ticket") ? "Biglietto cancellato" : "Cancellazione"}
+                            </p>
+                            {data.name && <p className="text-sm text-muted-foreground">{data.name}</p>}
+                            {log.reason && <p className="text-xs text-muted-foreground mt-1">Motivo: {log.reason}</p>}
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <Clock4 className="h-3 w-3" />
+                              {formatTimeAgo(log.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+                    <p className="font-medium text-foreground">Nessuna cancellazione</p>
+                    <p className="text-sm text-muted-foreground">Tutto in ordine!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Premi Tab */}
+          <TabsContent value="premi" className="mt-4">
+            <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  Obiettivi & Premi
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Raggiungi gli obiettivi per sbloccare bonus</p>
+              </CardHeader>
+              <CardContent>
+                {isLoadingRewards ? (
+                  <Skeleton className="h-32 w-full" />
+                ) : rewards.length > 0 ? (
+                  <div className="space-y-4">
+                    {rewards.map(reward => {
+                      const percentage = Math.min((reward.progress.currentValue / reward.progress.targetValue) * 100, 100);
+                      const isCompleted = reward.progress.isCompleted;
+                      
+                      return (
+                        <div
+                          key={reward.id}
+                          className={`p-4 rounded-lg border ${
+                            isCompleted
+                              ? "bg-emerald-500/10 border-emerald-500/30"
+                              : "bg-background/50 border-border/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${isCompleted ? "bg-emerald-500/20" : "bg-amber-500/20"}`}>
+                                {isCompleted ? (
+                                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                ) : (
+                                  <Target className="h-5 w-5 text-amber-500" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{reward.name}</p>
+                                {reward.description && (
+                                  <p className="text-sm text-muted-foreground">{reward.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant={isCompleted ? "default" : "secondary"} className={isCompleted ? "bg-emerald-500" : ""}>
+                              {reward.rewardType === "bonus_cash" && `+€${reward.rewardValue}`}
+                              {reward.rewardType === "percentage_bonus" && `+${reward.rewardValue}%`}
+                              {reward.rewardType === "gift" && "Premio"}
+                              {reward.rewardType === "badge" && "Badge"}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {reward.targetType === "tickets_sold" && "Biglietti venduti"}
+                                {reward.targetType === "guests_added" && "Ospiti in lista"}
+                                {reward.targetType === "tables_booked" && "Tavoli prenotati"}
+                                {reward.targetType === "revenue" && "Revenue generato"}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                {reward.progress.currentValue} / {reward.targetValue}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <motion.div
+                                className={`h-full rounded-full ${isCompleted ? "bg-emerald-500" : "bg-amber-500"}`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percentage}%` }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+
+                          {isCompleted && !reward.progress.rewardClaimed && (
+                            <Button className="w-full mt-3" size="sm" data-testid={`button-claim-${reward.id}`}>
+                              <Gift className="h-4 w-4 mr-2" />
+                              Riscuoti Premio
+                            </Button>
+                          )}
+                          {reward.progress.rewardClaimed && (
+                            <div className="flex items-center justify-center gap-2 mt-3 text-emerald-500 text-sm">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Premio già riscosso
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Award className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="font-medium text-foreground">Nessun premio attivo</p>
+                    <p className="text-sm text-muted-foreground">Gli obiettivi saranno disponibili a breve</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

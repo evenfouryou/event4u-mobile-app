@@ -88,14 +88,12 @@ import AccountNameChange from "@/pages/account-name-change";
 import AccountTicketResale from "@/pages/account-ticket-resale";
 import AccountResaleSuccess from "@/pages/account-resale-success";
 import { AccountLayout } from "@/components/account-layout";
-import PrGuestLists from "@/pages/pr-guest-lists";
-import PrTables from "@/pages/pr-tables";
-import PrStaff from "@/pages/pr-staff";
-import PrMyEvents from "@/pages/pr-my-events";
+import PrDashboard from "@/pages/pr-dashboard";
 import PrEvents from "@/pages/pr-events";
 import PrEventDashboard from "@/pages/pr-event-dashboard";
-import StaffApp from "@/pages/staff-app";
 import PrWallet from "@/pages/pr-wallet";
+import PrProfile from "@/pages/pr-profile";
+import StaffApp from "@/pages/staff-app";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
 import SchoolBadgeLanding from "@/pages/school-badge-landing";
@@ -120,9 +118,6 @@ import ScannerScan from "@/pages/scanner-scan";
 import ScannerScanned from "@/pages/scanner-scanned";
 import ScannerTickets from "@/pages/scanner-tickets";
 import ClientWallet from "@/pages/client-wallet";
-import StaffPrHome from "@/pages/staff-pr-home";
-import StaffPrEventPanel from "@/pages/staff-pr-event-panel";
-import PrDashboard from "@/pages/pr-dashboard";
 import CassaBiglietti from "@/pages/cassa-biglietti";
 import CashierManagement from "@/pages/cashier-management";
 import CashierDashboard from "@/pages/cashier-dashboard";
@@ -263,16 +258,11 @@ function Router() {
             </header>
             <main className="flex-1 overflow-auto pb-20 md:pb-0">
               <Switch>
-                <Route path="/pr/guest-lists" component={PrGuestLists} />
-                <Route path="/pr/tables" component={PrTables} />
-                <Route path="/pr/staff" component={PrStaff} />
-                <Route path="/pr/my-events" component={PrMyEvents} />
-                <Route path="/pr/events" component={PrEvents} />
+                <Route path="/pr/dashboard" component={PrDashboard} />
                 <Route path="/pr/events/:eventId" component={PrEventDashboard} />
-                <Route path="/pr-wallet" component={PrWallet} />
-                <Route path="/pr-dashboard" component={PrDashboard} />
-                <Route path="/events/:id/panel" component={StaffPrEventPanel} />
-                <Route path="/staff-pr-home" component={StaffPrHome} />
+                <Route path="/pr/events" component={PrEvents} />
+                <Route path="/pr/wallet" component={PrWallet} />
+                <Route path="/pr/profile" component={PrProfile} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/scanner/scan/:eventId" component={ScannerScan} />
                 <Route path="/scanner/scanned/:eventId" component={ScannerScanned} />
@@ -280,7 +270,7 @@ function Router() {
                 <Route path="/scanner/stats/:eventId?" component={ScannerStats} />
                 <Route path="/scanner" component={ScannerHome} />
                 <Route path="/">
-                  <Redirect to="/pr/my-events" />
+                  <Redirect to="/pr/dashboard" />
                 </Route>
                 <Route component={NotFound} />
               </Switch>
@@ -406,13 +396,11 @@ function Router() {
               <Route path="/siae/reports/c1/:id" component={SiaeReportC1} />
               <Route path="/siae/reports/c2/:id" component={SiaeReportC2} />
               <Route path="/siae-approvals" component={SiaeApprovals} />
-              <Route path="/pr/guest-lists" component={PrGuestLists} />
-              <Route path="/pr/tables" component={PrTables} />
-              <Route path="/pr/staff" component={PrStaff} />
-              <Route path="/pr/my-events" component={PrMyEvents} />
-              <Route path="/pr/events" component={PrEvents} />
+              <Route path="/pr/dashboard" component={PrDashboard} />
               <Route path="/pr/events/:eventId" component={PrEventDashboard} />
-              <Route path="/pr-wallet" component={PrWallet} />
+              <Route path="/pr/events" component={PrEvents} />
+              <Route path="/pr/wallet" component={PrWallet} />
+              <Route path="/pr/profile" component={PrProfile} />
               <Route path="/staff-app" component={StaffApp} />
               <Route path="/marketing/email" component={MarketingEmailPage} />
               <Route path="/loyalty/admin" component={LoyaltyAdminPage} />
@@ -454,9 +442,6 @@ function Router() {
               <Route path="/scanner/history" component={ScannerHistory} />
               <Route path="/scanner" component={ScannerHome} />
               <Route path="/wallet" component={ClientWallet} />
-              <Route path="/staff-pr-home" component={StaffPrHome} />
-              <Route path="/pr-dashboard" component={PrDashboard} />
-              <Route path="/events/:id/panel" component={StaffPrEventPanel} />
               <Route path="/cassa-biglietti" component={CassaBiglietti} />
               <Route path="/cashier/management" component={CashierManagement} />
               <Route path="/cashier/dashboard" component={CashierDashboard} />
