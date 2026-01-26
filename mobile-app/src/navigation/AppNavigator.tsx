@@ -277,7 +277,7 @@ export function AppNavigator() {
           <AccountDashboard
             onNavigateTickets={() => navigate({ name: 'tickets' })}
             onNavigateWallet={() => navigate({ name: 'wallet' })}
-            onNavigateProfile={() => navigate({ name: 'subscriptions' })}
+            onNavigateProfile={() => navigate({ name: 'profile' })}
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
             onNavigateSettings={() => navigate({ name: 'settings' })}
