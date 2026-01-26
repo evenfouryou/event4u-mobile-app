@@ -209,6 +209,7 @@ export function AppNavigator() {
             onEventPress={(eventId) => navigate({ name: 'eventDetail', params: { eventId } })}
             onCartPress={() => navigate({ name: 'cart' })}
             onLoginPress={() => navigate({ name: 'login' })}
+            onProfilePress={() => navigate({ name: 'profile' })}
             isAuthenticated={isAuthenticated}
           />
         );
@@ -415,6 +416,8 @@ export function AppNavigator() {
             onNavigateRegister={() => navigate({ name: 'register' })}
             onNavigateVenues={() => navigate({ name: 'venues' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
+            onNavigateAccount={() => navigate({ name: 'accountDashboard' })}
+            isAuthenticated={isAuthenticated}
           />
         );
     }

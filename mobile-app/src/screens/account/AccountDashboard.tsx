@@ -192,12 +192,16 @@ export function AccountDashboard({
           <Pressable
             onPress={() => {
               triggerHaptic('light');
-              onNavigateSettings();
+              onNavigateProfile();
             }}
-            style={styles.settingsButton}
-            testID="button-settings"
+            style={styles.avatarButton}
+            testID="button-profile-avatar"
           >
-            <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
+            <Avatar
+              name={`${user?.firstName || ''} ${user?.lastName || ''}`}
+              size="sm"
+              testID="avatar-header"
+            />
           </Pressable>
         </View>
       </View>
@@ -393,6 +397,12 @@ const styles = StyleSheet.create({
   settingsButton: {
     width: 44,
     height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarButton: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

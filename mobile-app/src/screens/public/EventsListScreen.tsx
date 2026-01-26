@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
@@ -9,6 +9,8 @@ import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { Avatar } from '@/components/Avatar';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PublicEvent } from '@/lib/api';
 
@@ -19,6 +21,7 @@ interface EventsListScreenProps {
   onEventPress: (eventId: string) => void;
   onCartPress: () => void;
   onLoginPress: () => void;
+  onProfilePress?: () => void;
   isAuthenticated?: boolean;
 }
 
@@ -27,8 +30,11 @@ export function EventsListScreen({
   onEventPress,
   onCartPress,
   onLoginPress,
+  onProfilePress,
   isAuthenticated = false,
 }: EventsListScreenProps) {
+  const { colors } = useTheme();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
@@ -244,11 +250,19 @@ export function EventsListScreen({
             resizeMode="contain"
           />
           <View style={styles.headerActions}>
-            <Pressable onPress={onCartPress} style={styles.iconButton}>
+            <Pressable onPress={onCartPress} style={styles.iconButton} testID="button-cart">
               <Ionicons name="bag-outline" size={24} color={colors.foreground} />
             </Pressable>
-            {!isAuthenticated && (
-              <Pressable onPress={onLoginPress} style={styles.iconButton}>
+            {isAuthenticated && user ? (
+              <Pressable onPress={onProfilePress} style={styles.avatarButton} testID="button-profile-avatar">
+                <Avatar
+                  name={`${user.firstName || ''} ${user.lastName || ''}`}
+                  size="sm"
+                  testID="avatar-header"
+                />
+              </Pressable>
+            ) : (
+              <Pressable onPress={onLoginPress} style={styles.iconButton} testID="button-login">
                 <Ionicons name="person-outline" size={24} color={colors.foreground} />
               </Pressable>
             )}
@@ -346,13 +360,13 @@ export function EventsListScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   headerTop: {
     flexDirection: 'row',
@@ -381,10 +395,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     height: 48,
@@ -393,7 +413,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   locationButton: {
     width: 36,
@@ -403,7 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   locationButtonActive: {
-    backgroundColor: `${colors.primary}20`,
+    backgroundColor: `${staticColors.primary}20`,
   },
   filtersContainer: {
     paddingHorizontal: spacing.lg,
@@ -416,20 +436,20 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     borderRadius: borderRadius.full,
     marginRight: spacing.sm,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
   },
   filterPillText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   filterPillTextActive: {
-    color: colors.primaryForeground,
+    color: staticColors.primaryForeground,
     fontWeight: '600',
   },
   listContent: {
@@ -452,7 +472,7 @@ const styles = StyleSheet.create({
   eventImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.secondary,
+    backgroundColor: staticColors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -477,7 +497,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.success,
+    backgroundColor: staticColors.success,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
@@ -503,7 +523,7 @@ const styles = StyleSheet.create({
   soldOutText: {
     fontSize: typography.fontSize.xl,
     fontWeight: '800',
-    color: colors.destructive,
+    color: staticColors.destructive,
     letterSpacing: 2,
   },
   eventContent: {
@@ -512,7 +532,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.sm,
   },
   eventMeta: {
@@ -526,7 +546,7 @@ const styles = StyleSheet.create({
   },
   eventMetaText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     flex: 1,
   },
   distanceBadge: {
@@ -539,7 +559,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -548,17 +568,17 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   priceValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   availabilityContainer: {},
   availabilityText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   emptyState: {
     flex: 1,
@@ -569,12 +589,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.lg,
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     marginTop: spacing.sm,
   },
 });
