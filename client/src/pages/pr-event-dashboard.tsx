@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { usePrAuth } from "@/hooks/usePrAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { PrLayout, PrPageContainer } from "@/components/pr-layout";
 import {
   ArrowLeft,
   Calendar,
@@ -263,7 +264,7 @@ export default function PrEventDashboard() {
   const eventIsToday = event ? isToday(event.eventStart) : false;
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <PrLayout showBackButton title={eventDetail?.eventName}>
       {/* Hero Section */}
       <div className="relative">
         <div className="relative h-56 md:h-72 overflow-hidden">
@@ -669,6 +670,6 @@ export default function PrEventDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </PrLayout>
   );
 }

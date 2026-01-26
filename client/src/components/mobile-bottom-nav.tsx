@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Calendar, Wine, Warehouse, User, Plus, Package, BarChart3, Ticket, Store, ListChecks, Armchair, ScanLine, Users, QrCode } from "lucide-react";
+import { Home, Calendar, Wine, Warehouse, User, Plus, Package, BarChart3, Ticket, Store, ListChecks, Armchair, ScanLine, Users, QrCode, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,22 +104,22 @@ export function MobileBottomNav() {
       { icon: QrCode, label: "Scanner", href: "/scanner" },
     ];
   } else if (isCapoStaff) {
-    // Menu specifico per Capo Staff (senza scanner)
+    // Capo Staff now uses PrLayout - this is legacy fallback
     navItems = [
-      { icon: Home, label: "Home", href: "/staff-pr-home" },
-      { icon: Calendar, label: "Eventi", href: "/staff-pr-home" },
-      { icon: ListChecks, label: "Liste", href: "/pr/guest-lists", isFab: true },
-      { icon: Users, label: "Team", href: "/pr/staff" },
-      { icon: User, label: "Profilo", href: "/settings" },
+      { icon: Home, label: "Home", href: "/pr/dashboard" },
+      { icon: Calendar, label: "Eventi", href: "/pr/events" },
+      { icon: ListChecks, label: "Liste", href: "/pr/lists", isFab: true },
+      { icon: Wallet, label: "Wallet", href: "/pr/wallet" },
+      { icon: User, label: "Profilo", href: "/pr/profile" },
     ];
   } else if (isPr) {
-    // Menu specifico per PR
+    // PR now uses PrLayout - this is legacy fallback
     navItems = [
-      { icon: Home, label: "Home", href: "/staff-pr-home" },
-      { icon: Calendar, label: "Eventi", href: "/staff-pr-home" },
-      { icon: ListChecks, label: "Aggiungi", href: "/staff-pr-home", isFab: true },
-      { icon: Armchair, label: "Tavoli", href: "/staff-pr-home" },
-      { icon: User, label: "Profilo", href: "/settings" },
+      { icon: Home, label: "Home", href: "/pr/dashboard" },
+      { icon: Calendar, label: "Eventi", href: "/pr/events" },
+      { icon: ListChecks, label: "Liste", href: "/pr/lists", isFab: true },
+      { icon: Wallet, label: "Wallet", href: "/pr/wallet" },
+      { icon: User, label: "Profilo", href: "/pr/profile" },
     ];
   } else {
     // Default organizer view - always 5 items for balanced layout

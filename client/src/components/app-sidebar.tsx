@@ -41,6 +41,7 @@ import {
   Share2,
   PackageOpen,
   ArrowLeftRight,
+  User,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -493,85 +494,73 @@ export function AppSidebar() {
     );
   }
 
-  // Capo Staff menu - pannello dedicato (senza scanner - assegnato solo se necessario)
+  // Capo Staff menu - now uses PrLayout (legacy fallback)
   if (isCapoStaff) {
     menuItems.push(
       {
         title: t('nav.dashboard'),
         icon: Home,
-        url: "/staff-pr-home",
+        url: "/pr/dashboard",
         group: t('nav.groups.board'),
       },
       {
         title: t('nav.myEvents'),
         icon: Calendar,
-        url: "/staff-pr-home",
+        url: "/pr/events",
         group: t('nav.groups.management'),
       },
       {
         title: t('nav.lists'),
         icon: ListChecks,
-        url: "/pr/guest-lists",
-        group: t('nav.groups.prManagement'),
-      },
-      {
-        title: t('nav.eventTables'),
-        icon: Armchair,
-        url: "/pr/tables",
-        group: t('nav.groups.prManagement'),
-      },
-      {
-        title: t('nav.prTeam'),
-        icon: Users,
-        url: "/pr/staff",
-        group: t('nav.groups.prManagement'),
-      },
-      {
-        title: t('nav.settings'),
-        icon: Settings,
-        url: "/settings",
-        group: t('nav.groups.system'),
-      }
-    );
-  }
-
-  // PR menu - pannello dedicato
-  if (isPr) {
-    menuItems.push(
-      {
-        title: t('nav.dashboard'),
-        icon: Home,
-        url: "/staff-pr-home",
-        group: t('nav.groups.board'),
-      },
-      {
-        title: t('nav.myEvents'),
-        icon: Calendar,
-        url: "/pr/my-events",
-        group: t('nav.groups.management'),
-      },
-      {
-        title: t('nav.lists'),
-        icon: ListChecks,
-        url: "/pr/guest-lists",
-        group: t('nav.groups.prManagement'),
-      },
-      {
-        title: t('nav.eventTables'),
-        icon: Armchair,
-        url: "/pr/tables",
+        url: "/pr/lists",
         group: t('nav.groups.prManagement'),
       },
       {
         title: t('nav.wallet'),
         icon: Wallet,
-        url: "/pr-wallet",
+        url: "/pr/wallet",
         group: t('nav.groups.earnings'),
       },
       {
-        title: t('nav.settings'),
-        icon: Settings,
-        url: "/settings",
+        title: t('nav.profile'),
+        icon: User,
+        url: "/pr/profile",
+        group: t('nav.groups.system'),
+      }
+    );
+  }
+
+  // PR menu - now uses PrLayout (legacy fallback)
+  if (isPr) {
+    menuItems.push(
+      {
+        title: t('nav.dashboard'),
+        icon: Home,
+        url: "/pr/dashboard",
+        group: t('nav.groups.board'),
+      },
+      {
+        title: t('nav.myEvents'),
+        icon: Calendar,
+        url: "/pr/events",
+        group: t('nav.groups.management'),
+      },
+      {
+        title: t('nav.lists'),
+        icon: ListChecks,
+        url: "/pr/lists",
+        group: t('nav.groups.prManagement'),
+      },
+      {
+        title: t('nav.wallet'),
+        icon: Wallet,
+        url: "/pr/wallet",
+        group: t('nav.groups.earnings'),
+      },
+      {
+        title: t('nav.profile'),
+        icon: User,
+        url: "/pr/profile",
         group: t('nav.groups.system'),
       }
     );

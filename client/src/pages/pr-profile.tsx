@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { PrLayout, PrPageContainer } from "@/components/pr-layout";
 import {
   Form,
   FormControl,
@@ -153,7 +154,7 @@ export default function PrProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <PrLayout>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 md:px-6 py-4">
@@ -492,6 +493,6 @@ export default function PrProfile() {
           </Button>
         </motion.div>
       </div>
-    </div>
+    </PrLayout>
   );
 }

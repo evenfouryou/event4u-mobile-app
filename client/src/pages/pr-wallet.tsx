@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { usePrAuth } from "@/hooks/usePrAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { PrLayout, PrPageContainer } from "@/components/pr-layout";
 import {
   ArrowLeft,
   Wallet,
@@ -168,7 +169,7 @@ export default function PrWallet() {
   const canRequestPayout = balance >= 50;
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <PrLayout>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 md:px-6 py-4">
@@ -456,6 +457,6 @@ export default function PrWallet() {
           </Tabs>
         </motion.div>
       </div>
-    </div>
+    </PrLayout>
   );
 }

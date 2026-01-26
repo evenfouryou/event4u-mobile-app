@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrAuth } from "@/hooks/usePrAuth";
+import { PrLayout, PrPageContainer } from "@/components/pr-layout";
 import {
   Calendar,
   Clock,
@@ -129,7 +130,7 @@ export default function PrEvents() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <PrLayout>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 md:px-6 py-4">
@@ -366,6 +367,6 @@ export default function PrEvents() {
           </motion.div>
         )}
       </div>
-    </div>
+    </PrLayout>
   );
 }

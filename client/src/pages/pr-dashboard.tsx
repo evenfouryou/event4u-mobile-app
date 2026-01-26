@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrAuth } from "@/hooks/usePrAuth";
+import { PrLayout, PrPageContainer } from "@/components/pr-layout";
 import {
   Users,
   Ticket,
@@ -166,7 +167,7 @@ export default function PrDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <PrLayout>
       {/* Hero Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-purple-500/10 to-blue-500/10 border-b border-border/50">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNHMxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyIvPjwvZz48L3N2Zz4=')] opacity-30" />
@@ -580,6 +581,6 @@ export default function PrDashboard() {
           </motion.div>
         )}
       </div>
-    </div>
+    </PrLayout>
   );
 }

@@ -93,6 +93,7 @@ import PrEvents from "@/pages/pr-events";
 import PrEventDashboard from "@/pages/pr-event-dashboard";
 import PrWallet from "@/pages/pr-wallet";
 import PrProfile from "@/pages/pr-profile";
+import PrLists from "@/pages/pr-lists";
 import StaffApp from "@/pages/staff-app";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
@@ -232,9 +233,9 @@ function Router() {
     );
   }
 
-  // PR and Capo Staff dedicated routes - Mobile-first interface
+  // PR and Capo Staff dedicated routes - Clean mobile-first interface without system sidebar/nav
   if ((user as any)?.role === 'pr' || (user as any)?.role === 'capo_staff') {
-    // For /staff-app route, render without sidebar/header for clean mobile experience
+    // For /staff-app route, render old StaffApp for backward compatibility
     if (location.startsWith('/staff-app')) {
       return (
         <div className="min-h-screen bg-background">
@@ -243,42 +244,20 @@ function Router() {
       );
     }
     
-    // Other PR routes use full layout with sidebar
+    // PR routes use dedicated layout (no system sidebar/nav) - each page includes PrLayout
     return (
-      <SidebarProvider style={style}>
-        <div className="flex h-screen w-full">
-          <AppSidebar />
-          <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-between p-4 border-b gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <div className="flex items-center gap-3">
-                <LanguageSelector />
-                <ThemeToggle />
-              </div>
-            </header>
-            <main className="flex-1 overflow-auto pb-20 md:pb-0">
-              <Switch>
-                <Route path="/pr/dashboard" component={PrDashboard} />
-                <Route path="/pr/events/:eventId" component={PrEventDashboard} />
-                <Route path="/pr/events" component={PrEvents} />
-                <Route path="/pr/wallet" component={PrWallet} />
-                <Route path="/pr/profile" component={PrProfile} />
-                <Route path="/settings" component={Settings} />
-                <Route path="/scanner/scan/:eventId" component={ScannerScan} />
-                <Route path="/scanner/scanned/:eventId" component={ScannerScanned} />
-                <Route path="/scanner/tickets/:eventId" component={ScannerTickets} />
-                <Route path="/scanner/stats/:eventId?" component={ScannerStats} />
-                <Route path="/scanner" component={ScannerHome} />
-                <Route path="/">
-                  <Redirect to="/pr/dashboard" />
-                </Route>
-                <Route component={NotFound} />
-              </Switch>
-            </main>
-            {isMobile && <MobileBottomNav />}
-          </div>
-        </div>
-      </SidebarProvider>
+      <Switch>
+        <Route path="/pr/dashboard" component={PrDashboard} />
+        <Route path="/pr/events/:eventId" component={PrEventDashboard} />
+        <Route path="/pr/events" component={PrEvents} />
+        <Route path="/pr/lists" component={PrLists} />
+        <Route path="/pr/wallet" component={PrWallet} />
+        <Route path="/pr/profile" component={PrProfile} />
+        <Route path="/">
+          <Redirect to="/pr/dashboard" />
+        </Route>
+        <Route component={NotFound} />
+      </Switch>
     );
   }
 
