@@ -8,6 +8,7 @@ import {
   insertEventFloorplanSchema,
   insertEventTableSchema,
   insertTableBookingSchema,
+  insertTableBookingParticipantSchema,
   insertEventListSchema,
   insertListEntrySchema,
   siaeCustomers,
@@ -507,6 +508,223 @@ router.delete("/api/pr/bookings/:id", requireAuth, requireGestore, async (req: R
     res.status(204).send();
   } catch (error: any) {
     console.error("Error deleting booking:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Table Booking Approval (Gestore only) ====================
+
+// Get bookings pending approval
+router.get("/api/pr/bookings/pending-approval", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const bookings = await prStorage.getBookingsPendingApproval(user.companyId);
+    res.json(bookings);
+  } catch (error: any) {
+    console.error("Error getting pending bookings:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve booking
+router.post("/api/pr/bookings/:id/approve", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    
+    const booking = await prStorage.getTableBooking(id);
+    if (!booking) {
+      return res.status(404).json({ error: "Prenotazione non trovata" });
+    }
+    if (booking.companyId !== user.companyId) {
+      return res.status(403).json({ error: "Non autorizzato" });
+    }
+    if (booking.approvalStatus !== 'pending_approval') {
+      return res.status(400).json({ error: "Prenotazione già processata" });
+    }
+    
+    const approved = await prStorage.approveTableBooking(id, user.id);
+    res.json(approved);
+  } catch (error: any) {
+    console.error("Error approving booking:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reject booking
+router.post("/api/pr/bookings/:id/reject", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const user = req.user as any;
+    
+    if (!reason) {
+      return res.status(400).json({ error: "Motivo del rifiuto obbligatorio" });
+    }
+    
+    const booking = await prStorage.getTableBooking(id);
+    if (!booking) {
+      return res.status(404).json({ error: "Prenotazione non trovata" });
+    }
+    if (booking.companyId !== user.companyId) {
+      return res.status(403).json({ error: "Non autorizzato" });
+    }
+    if (booking.approvalStatus !== 'pending_approval') {
+      return res.status(400).json({ error: "Prenotazione già processata" });
+    }
+    
+    // Restore table status
+    await prStorage.updateEventTable(booking.tableId, { status: 'available' });
+    
+    const rejected = await prStorage.rejectTableBooking(id, user.id, reason);
+    res.json(rejected);
+  } catch (error: any) {
+    console.error("Error rejecting booking:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Table Booking Participants ====================
+
+// Get participants for a booking
+router.get("/api/pr/bookings/:bookingId/participants", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { bookingId } = req.params;
+    const participants = await prStorage.getParticipantsByBooking(bookingId);
+    res.json(participants);
+  } catch (error: any) {
+    console.error("Error getting participants:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add single participant
+router.post("/api/pr/bookings/:bookingId/participants", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { bookingId } = req.params;
+    const user = req.user as any;
+    
+    const booking = await prStorage.getTableBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: "Prenotazione non trovata" });
+    }
+    
+    const validated = insertTableBookingParticipantSchema.omit({ qrCode: true }).parse({
+      ...req.body,
+      bookingId,
+      eventId: booking.eventId,
+      companyId: booking.companyId,
+    });
+    
+    const participant = await prStorage.createParticipant(validated);
+    
+    // Try to link to existing user by phone
+    const existingUser = await prStorage.findUserByPhone(participant.phone);
+    if (existingUser) {
+      await prStorage.linkParticipantToUser(participant.id, existingUser.id);
+    }
+    
+    // Update guests count on booking
+    const participants = await prStorage.getParticipantsByBooking(bookingId);
+    await prStorage.updateTableBooking(bookingId, { guestsCount: participants.length });
+    
+    res.status(201).json(participant);
+  } catch (error: any) {
+    console.error("Error creating participant:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add batch participants (max 10)
+router.post("/api/pr/bookings/:bookingId/participants/batch", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { bookingId } = req.params;
+    const { participants: participantsData } = req.body;
+    
+    if (!Array.isArray(participantsData) || participantsData.length === 0) {
+      return res.status(400).json({ error: "Lista partecipanti vuota" });
+    }
+    if (participantsData.length > 10) {
+      return res.status(400).json({ error: "Massimo 10 partecipanti per richiesta" });
+    }
+    
+    const booking = await prStorage.getTableBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: "Prenotazione non trovata" });
+    }
+    
+    const validated = participantsData.map((p: any) => 
+      insertTableBookingParticipantSchema.omit({ qrCode: true }).parse({
+        ...p,
+        bookingId,
+        eventId: booking.eventId,
+        companyId: booking.companyId,
+      })
+    );
+    
+    const created = await prStorage.createParticipantsBatch(validated);
+    
+    // Try to link each to existing users
+    for (const participant of created) {
+      const existingUser = await prStorage.findUserByPhone(participant.phone);
+      if (existingUser) {
+        await prStorage.linkParticipantToUser(participant.id, existingUser.id);
+      }
+    }
+    
+    // Update guests count on booking
+    const allParticipants = await prStorage.getParticipantsByBooking(bookingId);
+    await prStorage.updateTableBooking(bookingId, { guestsCount: allParticipants.length });
+    
+    res.status(201).json(created);
+  } catch (error: any) {
+    console.error("Error creating batch participants:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update participant
+router.patch("/api/pr/participants/:id", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updated = await prStorage.updateParticipant(id, req.body);
+    if (!updated) {
+      return res.status(404).json({ error: "Partecipante non trovato" });
+    }
+    res.json(updated);
+  } catch (error: any) {
+    console.error("Error updating participant:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete participant
+router.delete("/api/pr/participants/:id", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const participant = await prStorage.getParticipant(id);
+    if (!participant) {
+      return res.status(404).json({ error: "Partecipante non trovato" });
+    }
+    
+    const deleted = await prStorage.deleteParticipant(id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Partecipante non trovato" });
+    }
+    
+    // Update guests count on booking
+    const participants = await prStorage.getParticipantsByBooking(participant.bookingId);
+    await prStorage.updateTableBooking(participant.bookingId, { guestsCount: participants.length });
+    
+    res.status(204).send();
+  } catch (error: any) {
+    console.error("Error deleting participant:", error);
     res.status(500).json({ error: error.message });
   }
 });

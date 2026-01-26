@@ -4,9 +4,11 @@ import {
   eventFloorplans,
   eventTables,
   tableBookings,
+  tableBookingParticipants,
   eventLists,
   listEntries,
   prOtpAttempts,
+  users,
   type EventStaffAssignment,
   type InsertEventStaffAssignment,
   type EventFloorplan,
@@ -15,6 +17,8 @@ import {
   type InsertEventTable,
   type TableBooking,
   type InsertTableBooking,
+  type TableBookingParticipant,
+  type InsertTableBookingParticipant,
   type EventList,
   type InsertEventList,
   type ListEntry,
@@ -87,6 +91,24 @@ export interface IPrStorage {
   updateTableBooking(id: string, booking: Partial<TableBooking>): Promise<TableBooking | undefined>;
   deleteTableBooking(id: string): Promise<boolean>;
   markTableBookingScanned(id: string, scannedByUserId: string): Promise<TableBooking | undefined>;
+  approveTableBooking(id: string, approvedByUserId: string): Promise<TableBooking | undefined>;
+  rejectTableBooking(id: string, approvedByUserId: string, reason: string): Promise<TableBooking | undefined>;
+  getBookingsPendingApproval(companyId: string): Promise<TableBooking[]>;
+  
+  // ==================== Table Booking Participants ====================
+  
+  getParticipantsByBooking(bookingId: string): Promise<TableBookingParticipant[]>;
+  getParticipantsByEvent(eventId: string): Promise<TableBookingParticipant[]>;
+  getParticipant(id: string): Promise<TableBookingParticipant | undefined>;
+  getParticipantByQr(qrCode: string): Promise<TableBookingParticipant | undefined>;
+  getParticipantsByPhone(phone: string): Promise<TableBookingParticipant[]>;
+  createParticipant(participant: Omit<InsertTableBookingParticipant, 'qrCode'>): Promise<TableBookingParticipant>;
+  createParticipantsBatch(participants: Omit<InsertTableBookingParticipant, 'qrCode'>[]): Promise<TableBookingParticipant[]>;
+  updateParticipant(id: string, data: Partial<TableBookingParticipant>): Promise<TableBookingParticipant | undefined>;
+  deleteParticipant(id: string): Promise<boolean>;
+  markParticipantScanned(id: string, scannedByUserId: string): Promise<TableBookingParticipant | undefined>;
+  linkParticipantToUser(id: string, userId: string): Promise<TableBookingParticipant | undefined>;
+  markParticipantNotified(id: string, method: string): Promise<TableBookingParticipant | undefined>;
   
   // ==================== Guest Lists ====================
   
@@ -344,6 +366,151 @@ export class PrStorage implements IPrStorage {
       .where(eq(tableBookings.id, id))
       .returning();
     return updated;
+  }
+
+  async approveTableBooking(id: string, approvedByUserId: string): Promise<TableBooking | undefined> {
+    const [updated] = await db.update(tableBookings)
+      .set({
+        approvalStatus: 'approved',
+        approvedByUserId,
+        approvedAt: new Date(),
+        status: 'confirmed',
+        confirmedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(tableBookings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async rejectTableBooking(id: string, approvedByUserId: string, reason: string): Promise<TableBooking | undefined> {
+    const [updated] = await db.update(tableBookings)
+      .set({
+        approvalStatus: 'rejected',
+        approvedByUserId,
+        approvedAt: new Date(),
+        rejectionReason: reason,
+        status: 'cancelled',
+        updatedAt: new Date()
+      })
+      .where(eq(tableBookings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getBookingsPendingApproval(companyId: string): Promise<TableBooking[]> {
+    return await db.select().from(tableBookings)
+      .where(and(
+        eq(tableBookings.companyId, companyId),
+        eq(tableBookings.approvalStatus, 'pending_approval')
+      ))
+      .orderBy(desc(tableBookings.createdAt));
+  }
+
+  // ==================== Table Booking Participants ====================
+
+  async getParticipantsByBooking(bookingId: string): Promise<TableBookingParticipant[]> {
+    return await db.select().from(tableBookingParticipants)
+      .where(eq(tableBookingParticipants.bookingId, bookingId))
+      .orderBy(desc(tableBookingParticipants.createdAt));
+  }
+
+  async getParticipantsByEvent(eventId: string): Promise<TableBookingParticipant[]> {
+    return await db.select().from(tableBookingParticipants)
+      .where(eq(tableBookingParticipants.eventId, eventId))
+      .orderBy(desc(tableBookingParticipants.createdAt));
+  }
+
+  async getParticipant(id: string): Promise<TableBookingParticipant | undefined> {
+    const [participant] = await db.select().from(tableBookingParticipants)
+      .where(eq(tableBookingParticipants.id, id));
+    return participant;
+  }
+
+  async getParticipantByQr(qrCode: string): Promise<TableBookingParticipant | undefined> {
+    const [participant] = await db.select().from(tableBookingParticipants)
+      .where(eq(tableBookingParticipants.qrCode, qrCode));
+    return participant;
+  }
+
+  async getParticipantsByPhone(phone: string): Promise<TableBookingParticipant[]> {
+    return await db.select().from(tableBookingParticipants)
+      .where(eq(tableBookingParticipants.phone, phone))
+      .orderBy(desc(tableBookingParticipants.createdAt));
+  }
+
+  async createParticipant(participant: Omit<InsertTableBookingParticipant, 'qrCode'>): Promise<TableBookingParticipant> {
+    const qrCode = generateQrCode('TBL');
+    const [created] = await db.insert(tableBookingParticipants)
+      .values({ ...participant, qrCode })
+      .returning();
+    return created;
+  }
+
+  async createParticipantsBatch(participants: Omit<InsertTableBookingParticipant, 'qrCode'>[]): Promise<TableBookingParticipant[]> {
+    if (participants.length === 0) return [];
+    const withQr = participants.map(p => ({
+      ...p,
+      qrCode: generateQrCode('TBL')
+    }));
+    return await db.insert(tableBookingParticipants)
+      .values(withQr)
+      .returning();
+  }
+
+  async updateParticipant(id: string, data: Partial<TableBookingParticipant>): Promise<TableBookingParticipant | undefined> {
+    const [updated] = await db.update(tableBookingParticipants)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tableBookingParticipants.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteParticipant(id: string): Promise<boolean> {
+    const result = await db.delete(tableBookingParticipants)
+      .where(eq(tableBookingParticipants.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async markParticipantScanned(id: string, scannedByUserId: string): Promise<TableBookingParticipant | undefined> {
+    const [updated] = await db.update(tableBookingParticipants)
+      .set({
+        qrScannedAt: new Date(),
+        qrScannedByUserId: scannedByUserId,
+        status: 'arrived',
+        arrivedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(tableBookingParticipants.id, id))
+      .returning();
+    return updated;
+  }
+
+  async linkParticipantToUser(id: string, userId: string): Promise<TableBookingParticipant | undefined> {
+    const [updated] = await db.update(tableBookingParticipants)
+      .set({ linkedUserId: userId, updatedAt: new Date() })
+      .where(eq(tableBookingParticipants.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markParticipantNotified(id: string, method: string): Promise<TableBookingParticipant | undefined> {
+    const [updated] = await db.update(tableBookingParticipants)
+      .set({
+        notificationSentAt: new Date(),
+        notificationMethod: method,
+        updatedAt: new Date()
+      })
+      .where(eq(tableBookingParticipants.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Helper: Find user by phone
+  async findUserByPhone(phone: string): Promise<{ id: string } | undefined> {
+    const [user] = await db.select({ id: users.id }).from(users)
+      .where(eq(users.phone, phone));
+    return user;
   }
 
   // ==================== Guest Lists ====================
