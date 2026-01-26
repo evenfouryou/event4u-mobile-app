@@ -70,6 +70,7 @@ import SiaeNumberedSeats from "@/pages/siae-numbered-seats";
 import SiaeReportC1 from "@/pages/siae-report-c1";
 import SiaeReportC2 from "@/pages/siae-report-c2";
 import SiaeApprovals from "@/pages/siae-approvals";
+import TableBookingApprovals from "@/pages/table-booking-approvals";
 // siae-card-reader merged into siae-activation-cards
 import PublicEvents from "@/pages/public-events";
 import PublicEventDetail from "@/pages/public-event-detail";
@@ -378,6 +379,8 @@ function Router() {
               <Route path="/siae/reports/c1/:id" component={SiaeReportC1} />
               <Route path="/siae/reports/c2/:id" component={SiaeReportC2} />
               <Route path="/siae-approvals" component={SiaeApprovals} />
+              <Route path="/table-booking-approvals" component={TableBookingApprovals} />
+              <Route path="/table-booking-approvals/:eventId" component={TableBookingApprovals} />
               <Route path="/pr/dashboard" component={PrDashboard} />
               <Route path="/pr/events/:eventId" component={PrEventDashboard} />
               <Route path="/pr/events" component={PrEvents} />

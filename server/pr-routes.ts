@@ -514,12 +514,55 @@ router.delete("/api/pr/bookings/:id", requireAuth, requireGestore, async (req: R
 
 // ==================== Table Booking Approval (Gestore only) ====================
 
-// Get bookings pending approval
+// Get bookings pending approval with enriched data
 router.get("/api/pr/bookings/pending-approval", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    const bookings = await prStorage.getBookingsPendingApproval(user.companyId);
-    res.json(bookings);
+    const { eventId } = req.query;
+    
+    let bookings = await prStorage.getBookingsPendingApproval(user.companyId);
+    
+    // Filter by event if specified
+    if (eventId && typeof eventId === 'string') {
+      bookings = bookings.filter(b => b.eventId === eventId);
+    }
+    
+    // Enrich with event, table, PR and participant data
+    const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
+      const [table, event, participants, prUser] = await Promise.all([
+        prStorage.getEventTable(booking.tableId),
+        db.select({ name: events.name, startDate: events.startDate })
+          .from(events)
+          .where(eq(events.id, booking.eventId))
+          .then(r => r[0]),
+        prStorage.getParticipantsByBooking(booking.id),
+        booking.bookedByUserId 
+          ? db.select({ firstName: users.firstName, lastName: users.lastName })
+              .from(users)
+              .where(eq(users.id, booking.bookedByUserId))
+              .then(r => r[0])
+          : null
+      ]);
+      
+      return {
+        ...booking,
+        tableName: table?.name || 'Sconosciuto',
+        tableCapacity: table?.capacity || 0,
+        eventName: event?.name || 'Evento',
+        eventDate: event?.startDate?.toISOString() || booking.createdAt,
+        prName: prUser ? `${prUser.firstName || ''} ${prUser.lastName || ''}`.trim() : null,
+        participants: participants.map(p => ({
+          id: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          phone: p.phone,
+          gender: p.gender,
+          isBooker: p.isBooker,
+        })),
+      };
+    }));
+    
+    res.json(enrichedBookings);
   } catch (error: any) {
     console.error("Error getting pending bookings:", error);
     res.status(500).json({ error: error.message });
