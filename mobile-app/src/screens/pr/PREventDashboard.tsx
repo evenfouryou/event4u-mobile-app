@@ -432,18 +432,22 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
             style={styles.heroOverlay}
           />
           <View style={styles.heroContent}>
-            <Pressable
-              onPress={() => {
-                triggerHaptic('light');
-                onGoBack();
-              }}
-              style={styles.heroBackButton}
-              testID="button-back"
-            >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </Pressable>
-            <View style={styles.heroInfo}>
+            <View style={styles.heroTop}>
+              <Pressable
+                onPress={() => {
+                  triggerHaptic('light');
+                  onGoBack();
+                }}
+                style={styles.heroBackButton}
+                testID="button-back"
+              >
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={styles.heroCenter}>
               <Text style={styles.heroTitle} numberOfLines={2}>{event.eventName}</Text>
+            </View>
+            <View style={styles.heroInfo}>
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
                   <Ionicons name="calendar" size={16} color="#fff" />
@@ -1376,6 +1380,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 10,
   },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   heroBackButton: {
     width: 44,
     height: 44,
@@ -1384,13 +1392,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
   heroInfo: {
     gap: spacing.sm,
   },
   heroTitle: {
-    fontSize: typography.fontSize['2xl'],
+    fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
     color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   heroMeta: {
     flexDirection: 'row',
@@ -1468,21 +1485,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    backgroundColor: staticColors.glass,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xs,
+    gap: spacing.sm,
+    paddingRight: spacing.lg,
   },
   tab: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: staticColors.glass,
+    borderWidth: 1,
+    borderColor: staticColors.border,
   },
   tabActive: {
     backgroundColor: staticColors.card,
+    borderColor: staticColors.primary,
   },
   tabText: {
     fontSize: typography.fontSize.sm,
@@ -1989,6 +2009,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     marginBottom: spacing.md,
+    marginHorizontal: spacing.lg,
   },
   modeButton: {
     flex: 1,
