@@ -50,6 +50,7 @@ import {
   User,
   Loader2,
 } from "lucide-react";
+import { TableBookingDialog } from "@/components/pr/table-booking-dialog";
 
 interface EventDetail {
   id: string;
@@ -228,10 +229,7 @@ export default function PrEventDashboard() {
   // Add guest mutation
   const addGuestMutation = useMutation({
     mutationFn: async (data: GuestFormData) => {
-      return apiRequest(`/api/pr/events/${eventId}/guests`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", `/api/pr/events/${eventId}/guests`, data);
     },
     onSuccess: () => {
       toast({ title: "Ospite aggiunto!", description: "L'ospite è stato aggiunto alla lista." });
@@ -254,10 +252,7 @@ export default function PrEventDashboard() {
   // Book table mutation
   const bookTableMutation = useMutation({
     mutationFn: async (data: TableBookingData) => {
-      return apiRequest(`/api/pr/events/${eventId}/bookings`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", `/api/pr/events/${eventId}/bookings`, data);
     },
     onSuccess: () => {
       toast({ title: "Prenotazione effettuata!", description: "Il tavolo è stato prenotato." });
@@ -1056,140 +1051,13 @@ export default function PrEventDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Book Table Dialog */}
-      <Dialog open={showBookTableDialog} onOpenChange={setShowBookTableDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Prenota Tavolo</DialogTitle>
-            <DialogDescription>
-              Seleziona un tavolo e inserisci i dati del cliente
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...tableBookingForm}>
-            <form onSubmit={tableBookingForm.handleSubmit(onSubmitTableBooking)} className="space-y-4">
-              <FormField
-                control={tableBookingForm.control}
-                name="tableId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tavolo *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-table">
-                          <SelectValue placeholder="Seleziona tavolo..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableTables.map((table) => (
-                          <SelectItem key={table.id} value={table.id}>
-                            {table.name} ({table.capacity} posti)
-                            {table.minSpend && ` - Min. ${table.minSpend}€`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={tableBookingForm.control}
-                name="customerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Cliente *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome del cliente" {...field} data-testid="input-booking-name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={tableBookingForm.control}
-                  name="customerPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefono</FormLabel>
-                      <FormControl>
-                        <Input placeholder="+39 333..." {...field} data-testid="input-booking-phone" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={tableBookingForm.control}
-                  name="guestCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>N. Ospiti *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                          data-testid="input-booking-guests"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={tableBookingForm.control}
-                name="customerEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="cliente@example.com" type="email" {...field} data-testid="input-booking-email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={tableBookingForm.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Note</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Note opzionali..." {...field} data-testid="input-booking-notes" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowBookTableDialog(false)}>
-                  Annulla
-                </Button>
-                <Button type="submit" disabled={bookTableMutation.isPending} data-testid="button-submit-booking">
-                  {bookTableMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Prenotazione...
-                    </>
-                  ) : (
-                    "Prenota Tavolo"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {/* Book Table Dialog - Multi-step with participants */}
+      <TableBookingDialog
+        open={showBookTableDialog}
+        onOpenChange={setShowBookTableDialog}
+        eventId={eventId || ""}
+        tables={tables}
+      />
     </PrLayout>
   );
 }
