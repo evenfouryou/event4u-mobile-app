@@ -94,6 +94,7 @@ import PrEventDashboard from "@/pages/pr-event-dashboard";
 import PrWallet from "@/pages/pr-wallet";
 import PrProfile from "@/pages/pr-profile";
 import PrLists from "@/pages/pr-lists";
+import PrRewards from "@/pages/pr-rewards";
 import StaffApp from "@/pages/staff-app";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
@@ -252,6 +253,7 @@ function Router() {
         <Route path="/pr/events" component={PrEvents} />
         <Route path="/pr/lists" component={PrLists} />
         <Route path="/pr/wallet" component={PrWallet} />
+        <Route path="/pr/rewards" component={PrRewards} />
         <Route path="/pr/profile" component={PrProfile} />
         <Route path="/">
           <Redirect to="/pr/dashboard" />
@@ -378,7 +380,9 @@ function Router() {
               <Route path="/pr/dashboard" component={PrDashboard} />
               <Route path="/pr/events/:eventId" component={PrEventDashboard} />
               <Route path="/pr/events" component={PrEvents} />
+              <Route path="/pr/lists" component={PrLists} />
               <Route path="/pr/wallet" component={PrWallet} />
+              <Route path="/pr/rewards" component={PrRewards} />
               <Route path="/pr/profile" component={PrProfile} />
               <Route path="/staff-app" component={StaffApp} />
               <Route path="/marketing/email" component={MarketingEmailPage} />

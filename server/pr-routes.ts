@@ -2025,4 +2025,269 @@ router.delete("/api/rewards/:rewardId", requireAuth, requireGestore, async (req:
   }
 });
 
+// ==================== PR Dashboard APIs ====================
+
+// Get PR's assigned events (for PR dashboard)
+router.get("/api/pr/my-events", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const { locations, eventPrAssignments } = await import("@shared/schema");
+    
+    // Get PR profile to get companyId
+    const prProfile = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (prProfile.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const companyId = prProfile[0].companyId;
+    
+    // Get events assigned to this PR via eventPrAssignments
+    const assignments = await db.select({
+      id: eventPrAssignments.id,
+      eventId: eventPrAssignments.eventId,
+      canAddToLists: eventPrAssignments.canAddToLists,
+      canProposeTables: eventPrAssignments.canProposeTables,
+    })
+      .from(eventPrAssignments)
+      .where(and(
+        eq(eventPrAssignments.companyId, companyId),
+        eq(eventPrAssignments.isActive, true),
+        or(
+          eq(eventPrAssignments.prProfileId, prProfileId),
+          userId ? eq(eventPrAssignments.userId, userId) : sql`false`
+        )
+      ));
+    
+    if (assignments.length === 0) {
+      return res.json([]);
+    }
+    
+    const eventIds = assignments.map(a => a.eventId);
+    
+    // Get full event details with location
+    const eventsList = await db.select({
+      id: events.id,
+      name: events.name,
+      description: events.description,
+      startDatetime: events.startDatetime,
+      endDatetime: events.endDatetime,
+      imageUrl: events.imageUrl,
+      status: events.status,
+      locationId: events.locationId,
+      locationName: locations.name,
+      locationAddress: locations.address,
+    })
+      .from(events)
+      .leftJoin(locations, eq(events.locationId, locations.id))
+      .where(inArray(events.id, eventIds))
+      .orderBy(desc(events.startDatetime));
+    
+    // Combine with assignment permissions
+    const eventsWithPermissions = eventsList.map(event => {
+      const assignment = assignments.find(a => a.eventId === event.id);
+      return {
+        id: assignment?.id || event.id,
+        eventId: event.id,
+        eventName: event.name,
+        eventDescription: event.description,
+        eventImageUrl: event.imageUrl,
+        eventStart: event.startDatetime,
+        eventEnd: event.endDatetime,
+        eventStatus: event.status,
+        locationName: event.locationName || "Location non specificata",
+        locationAddress: event.locationAddress,
+        canAddToLists: assignment?.canAddToLists ?? true,
+        canProposeTables: assignment?.canProposeTables ?? true,
+      };
+    });
+    
+    res.json(eventsWithPermissions);
+  } catch (error: any) {
+    console.error("Error getting PR events:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get PR stats (for PR dashboard)
+router.get("/api/pr/stats", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const { tableBookings, eventPrAssignments, siaeTickets } = await import("@shared/schema");
+    
+    // Get PR profile
+    const prProfile = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (prProfile.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const companyId = prProfile[0].companyId;
+    
+    // Count active events assigned to this PR
+    const activeEventsCount = await db.select({ count: sql<number>`count(*)` })
+      .from(eventPrAssignments)
+      .innerJoin(events, eq(eventPrAssignments.eventId, events.id))
+      .where(and(
+        eq(eventPrAssignments.companyId, companyId),
+        eq(eventPrAssignments.isActive, true),
+        or(
+          eq(eventPrAssignments.prProfileId, prProfileId),
+          userId ? eq(eventPrAssignments.userId, userId) : sql`false`
+        ),
+        sql`${events.startDatetime} >= NOW()`
+      ));
+    
+    // Get PR profile's linked userId for guest/table counting
+    const prLinkedUserId = prProfile[0].userId;
+    
+    // Count total guests from list entries (added by this PR via userId)
+    const guestCount = prLinkedUserId 
+      ? await db.select({ count: sql<number>`count(*)` })
+          .from(listEntries)
+          .where(eq(listEntries.addedByUserId, prLinkedUserId))
+      : [{ count: 0 }];
+    
+    // Count table bookings (booked by this PR via userId)
+    const tableCount = prLinkedUserId
+      ? await db.select({ count: sql<number>`count(*)` })
+          .from(tableBookings)
+          .where(eq(tableBookings.bookedByUserId, prLinkedUserId))
+      : [{ count: 0 }];
+    
+    // Count tickets sold with PR code
+    const ticketStats = await db.select({
+      count: sql<number>`count(*)`,
+      revenue: sql<number>`COALESCE(SUM(CAST(${siaeTickets.grossAmount} AS DECIMAL)), 0)`,
+      commission: sql<number>`COALESCE(SUM(CAST(${siaeTickets.prCommissionAmount} AS DECIMAL)), 0)`,
+    })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.prProfileId, prProfileId));
+    
+    const stats = {
+      totalGuests: Number(guestCount[0]?.count || 0),
+      totalTables: Number(tableCount[0]?.count || 0),
+      ticketsSold: Number(ticketStats[0]?.count || 0),
+      totalRevenue: Number(ticketStats[0]?.revenue || 0),
+      commissionEarned: Number(prProfile[0].totalEarnings || 0),
+      activeEvents: Number(activeEventsCount[0]?.count || 0),
+    };
+    
+    res.json(stats);
+  } catch (error: any) {
+    console.error("Error getting PR stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get PR wallet info
+router.get("/api/pr/wallet", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Get PR profile with earnings
+    const prProfile = await db.select({
+      totalEarnings: prProfiles.totalEarnings,
+      pendingEarnings: prProfiles.pendingEarnings,
+    })
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (prProfile.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const wallet = {
+      balance: prProfile[0].totalEarnings || "0",
+      pendingPayout: prProfile[0].pendingEarnings || "0",
+      currency: "EUR",
+    };
+    
+    res.json(wallet);
+  } catch (error: any) {
+    console.error("Error getting PR wallet:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all rewards for PR (across all assigned events)
+router.get("/api/pr/rewards", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const { prRewards, prRewardProgress } = await import("@shared/schema");
+    
+    // Get PR profile to get companyId
+    const prProfile = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (prProfile.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const companyId = prProfile[0].companyId;
+    
+    // Get all active rewards for this company
+    const rewardsList = await db.select()
+      .from(prRewards)
+      .where(and(
+        eq(prRewards.companyId, companyId),
+        eq(prRewards.isActive, true)
+      ))
+      .orderBy(prRewards.name);
+    
+    // Get progress for each reward
+    const rewardsWithProgress = await Promise.all(
+      rewardsList.map(async (reward) => {
+        const progress = await db.select()
+          .from(prRewardProgress)
+          .where(and(
+            eq(prRewardProgress.rewardId, reward.id),
+            eq(prRewardProgress.prProfileId, prProfileId)
+          ))
+          .limit(1);
+        
+        return {
+          ...reward,
+          progress: progress[0] || null,
+          currentProgress: progress[0]?.currentValue || 0,
+          isClaimed: progress[0]?.rewardClaimed || false,
+        };
+      })
+    );
+    
+    res.json(rewardsWithProgress);
+  } catch (error: any) {
+    console.error("Error getting PR rewards:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
