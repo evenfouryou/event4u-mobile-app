@@ -125,7 +125,10 @@ router.get("/api/pr/events/:eventId", requireAuth, requirePr, async (req: Reques
     const { eventId } = req.params;
     const { userId, prProfileId } = await resolvePrIdentity(req);
     
+    console.log("[PR Event] Getting event:", eventId, "for userId:", userId, "prProfileId:", prProfileId);
+    
     if (!prProfileId && !userId) {
+      console.log("[PR Event] No profile found");
       return res.status(403).json({ error: "Profilo PR non trovato" });
     }
     
@@ -147,7 +150,10 @@ router.get("/api/pr/events/:eventId", requireAuth, requirePr, async (req: Reques
       ))
       .limit(1);
     
+    console.log("[PR Event] Assignment found:", assignment.length > 0, assignment);
+    
     if (assignment.length === 0) {
+      console.log("[PR Event] No assignment found for this event");
       return res.status(404).json({ error: "Evento non trovato o accesso non autorizzato" });
     }
     
@@ -160,10 +166,10 @@ router.get("/api/pr/events/:eventId", requireAuth, requirePr, async (req: Reques
         eventName: events.name,
         imageUrl: events.imageUrl,
         eventImageUrl: events.imageUrl,
-        startDate: events.startDate,
-        eventStart: events.startDate,
-        endDate: events.endDate,
-        eventEnd: events.endDate,
+        startDate: events.startDatetime,
+        eventStart: events.startDatetime,
+        endDate: events.endDatetime,
+        eventEnd: events.endDatetime,
         status: events.status,
         locationId: events.locationId,
       })
