@@ -3570,12 +3570,70 @@ export const tableBookings = pgTable("table_bookings", {
   status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, confirmed, arrived, completed, cancelled, no_show
   confirmedAt: timestamp("confirmed_at"),
   arrivedAt: timestamp("arrived_at"),
+  // Workflow approvazione (solo Gestore può approvare)
+  approvalStatus: varchar("approval_status", { length: 20 }).notNull().default('pending_approval'), // pending_approval, approved, rejected
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const tableBookingsRelations = relations(tableBookings, ({ one }) => ({
+// Partecipanti Tavolo - Ogni partecipante con QR univoco
+export const tableBookingParticipants = pgTable("table_booking_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookingId: varchar("booking_id").notNull().references(() => tableBookings.id, { onDelete: 'cascade' }),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  // Dati partecipante (tutti obbligatori)
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  gender: varchar("gender", { length: 1 }).notNull(), // 'M' o 'F'
+  email: varchar("email", { length: 255 }),
+  // Collegamento account utente (se registrato)
+  linkedUserId: varchar("linked_user_id").references(() => users.id),
+  // QR Code univoco per questo partecipante
+  qrCode: varchar("qr_code", { length: 100 }).notNull().unique(),
+  qrScannedAt: timestamp("qr_scanned_at"),
+  qrScannedByUserId: varchar("qr_scanned_by_user_id").references(() => users.id),
+  // Notifica QR inviata
+  notificationSentAt: timestamp("notification_sent_at"),
+  notificationMethod: varchar("notification_method", { length: 20 }), // email, sms, both
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, confirmed, arrived, cancelled, no_show
+  arrivedAt: timestamp("arrived_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const tableBookingParticipantsRelations = relations(tableBookingParticipants, ({ one }) => ({
+  booking: one(tableBookings, {
+    fields: [tableBookingParticipants.bookingId],
+    references: [tableBookings.id],
+  }),
+  event: one(events, {
+    fields: [tableBookingParticipants.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [tableBookingParticipants.companyId],
+    references: [companies.id],
+  }),
+  linkedUser: one(users, {
+    fields: [tableBookingParticipants.linkedUserId],
+    references: [users.id],
+  }),
+  scannedByUser: one(users, {
+    fields: [tableBookingParticipants.qrScannedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const tableBookingsRelations = relations(tableBookings, ({ one, many }) => ({
+  participants: many(tableBookingParticipants),
   table: one(eventTables, {
     fields: [tableBookings.tableId],
     references: [eventTables.id],
@@ -3658,6 +3716,11 @@ export const guestListEntries = pgTable("guest_list_entries", {
   qrScannedByUserId: varchar("qr_scanned_by_user_id").references(() => users.id),
   // Biglietto SIAE collegato (se acquistato)
   ticketId: varchar("ticket_id").references(() => siaeTickets.id),
+  // Collegamento account utente (se registrato)
+  linkedUserId: varchar("linked_user_id").references(() => users.id),
+  // Notifica QR inviata
+  notificationSentAt: timestamp("notification_sent_at"),
+  notificationMethod: varchar("notification_method", { length: 20 }), // email, sms, both
   // Stato
   status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, confirmed, arrived, cancelled, no_show
   confirmedAt: timestamp("confirmed_at"),
@@ -3668,6 +3731,10 @@ export const guestListEntries = pgTable("guest_list_entries", {
 });
 
 export const guestListEntriesRelations = relations(guestListEntries, ({ one }) => ({
+  linkedUser: one(users, {
+    fields: [guestListEntries.linkedUserId],
+    references: [users.id],
+  }),
   guestList: one(guestLists, {
     fields: [guestListEntries.guestListId],
     references: [guestLists.id],
@@ -3757,6 +3824,13 @@ export const insertTableBookingSchema = createInsertSchema(tableBookings).omit({
 });
 export const updateTableBookingSchema = insertTableBookingSchema.partial().omit({ tableId: true, eventId: true, companyId: true });
 
+export const insertTableBookingParticipantSchema = createInsertSchema(tableBookingParticipants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateTableBookingParticipantSchema = insertTableBookingParticipantSchema.partial().omit({ bookingId: true, eventId: true, companyId: true });
+
 export const insertGuestListSchema = createInsertSchema(guestLists).omit({
   id: true,
   createdAt: true,
@@ -3797,6 +3871,10 @@ export type UpdateEventTable = z.infer<typeof updateEventTableSchema>;
 export type TableBooking = typeof tableBookings.$inferSelect;
 export type InsertTableBooking = z.infer<typeof insertTableBookingSchema>;
 export type UpdateTableBooking = z.infer<typeof updateTableBookingSchema>;
+
+export type TableBookingParticipant = typeof tableBookingParticipants.$inferSelect;
+export type InsertTableBookingParticipant = z.infer<typeof insertTableBookingParticipantSchema>;
+export type UpdateTableBookingParticipant = z.infer<typeof updateTableBookingParticipantSchema>;
 
 export type GuestList = typeof guestLists.$inferSelect;
 export type InsertGuestList = z.infer<typeof insertGuestListSchema>;
