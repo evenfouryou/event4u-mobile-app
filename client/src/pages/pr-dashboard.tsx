@@ -508,15 +508,15 @@ export default function PrDashboard() {
                 
                 return (
                   <motion.div
-                    key={event.id}
+                    key={event.eventId}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 + index * 0.1 }}
                   >
                     <Card 
                       className="cursor-pointer hover-elevate"
-                      onClick={() => navigate(`/pr/events/${event.id}`)}
-                      data-testid={`event-row-${event.id}`}
+                      onClick={() => navigate(`/pr/events/${event.eventId}`)}
+                      data-testid={`event-row-${event.eventId}`}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
                         <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">

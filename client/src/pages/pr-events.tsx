@@ -226,8 +226,8 @@ export default function PrEvents() {
                       className={`overflow-hidden cursor-pointer hover-elevate group ${
                         isPast ? "opacity-75" : ""
                       }`}
-                      onClick={() => navigate(`/pr/events/${event.id}`)}
-                      data-testid={`event-card-${event.id}`}
+                      onClick={() => navigate(`/pr/events/${event.eventId}`)}
+                      data-testid={`event-card-${event.eventId}`}
                     >
                       {/* Event Image */}
                       <div className="relative aspect-[16/9] overflow-hidden">
