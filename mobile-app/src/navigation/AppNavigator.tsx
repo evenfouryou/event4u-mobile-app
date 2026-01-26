@@ -287,7 +287,6 @@ export function AppNavigator() {
             onNavigateResales={() => navigate({ name: 'resales' })}
             onNavigateSettings={() => navigate({ name: 'settings' })}
             onNavigatePrDashboard={() => resetTo({ name: 'prDashboard' })}
-            onNavigateScannerDashboard={() => resetTo({ name: 'scannerDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
             onGoBack={() => resetTo({ name: 'landing' })}
           />
