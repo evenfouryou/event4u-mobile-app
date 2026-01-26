@@ -526,6 +526,8 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingContainer: {
     height: 200,
