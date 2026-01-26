@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -156,7 +156,15 @@ export function ScannerDashboard({
               icon="scan"
               label="Scansiona"
               gradient="golden"
-              onPress={() => events[0] && onNavigateScan(events[0].eventId)}
+              onPress={() => {
+                if (events.length === 0) {
+                  Alert.alert('Nessun Evento', 'Non hai eventi assegnati. Contatta il gestore per essere assegnato a un evento.');
+                } else if (events.length === 1) {
+                  onNavigateScan(events[0].eventId);
+                } else {
+                  onNavigateEvents();
+                }
+              }}
               testID="action-scan"
             />
             <ActionCard
