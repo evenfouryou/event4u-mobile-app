@@ -9,6 +9,7 @@ import { SafeArea } from '@/components/SafeArea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api from '@/lib/api';
 
 const PHONE_PREFIXES = [
   { value: '+39', label: 'IT +39', flag: 'IT' },
@@ -31,7 +32,8 @@ const PHONE_PREFIXES = [
 interface LoginScreenProps {
   onNavigateRegister: () => void;
   onNavigateForgotPassword: () => void;
-  onLoginSuccess: () => void;
+  onLoginSuccessClient: () => void;
+  onLoginSuccessScanner: () => void;
   onGoBack?: () => void;
 }
 
@@ -40,7 +42,8 @@ type LoginMethod = 'email' | 'username' | 'phone';
 export function LoginScreen({
   onNavigateRegister,
   onNavigateForgotPassword,
-  onLoginSuccess,
+  onLoginSuccessClient,
+  onLoginSuccessScanner,
   onGoBack,
 }: LoginScreenProps) {
   const { login } = useAuth();
@@ -68,7 +71,13 @@ export function LoginScreen({
         : identifier;
       await login(loginIdentifier, password);
       triggerHaptic('success');
-      onLoginSuccess();
+      
+      const scannerProfile = await api.getScannerProfile().catch(() => null);
+      if (scannerProfile) {
+        onLoginSuccessScanner();
+      } else {
+        onLoginSuccessClient();
+      }
     } catch (err: any) {
       setError(err.message || 'Credenziali non valide');
       triggerHaptic('error');
