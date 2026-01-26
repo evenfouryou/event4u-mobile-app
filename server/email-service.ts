@@ -985,3 +985,118 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     };
   }
 }
+
+// ==================== QR Code Notification Emails ====================
+
+interface QrNotificationEmailOptions {
+  to: string;
+  firstName: string;
+  lastName: string;
+  eventName: string;
+  eventDate: string;
+  eventLocation: string;
+  qrCode: string;
+  type: 'guest_list' | 'table_booking';
+  tableInfo?: {
+    tableName: string;
+    guests: number;
+  };
+  registrationRequired?: boolean;
+  registrationLink?: string;
+}
+
+export async function sendQrNotificationEmail(options: QrNotificationEmailOptions): Promise<{ success: boolean; error?: string }> {
+  const { 
+    to, firstName, lastName, eventName, eventDate, eventLocation, 
+    qrCode, type, tableInfo, registrationRequired, registrationLink 
+  } = options;
+
+  const typeLabel = type === 'guest_list' ? 'Lista Ospiti' : 'Prenotazione Tavolo';
+  
+  const tableSection = tableInfo ? `
+    <div style="background-color: #1a1f2e; border-radius: 8px; padding: 15px; margin: 15px 0;">
+      <p style="color: #FFD700; font-weight: bold; margin: 0 0 8px 0;">Dettagli Tavolo</p>
+      <p style="color: #ffffff; margin: 4px 0;">Tavolo: ${tableInfo.tableName}</p>
+      <p style="color: #94A3B8; margin: 4px 0;">Ospiti: ${tableInfo.guests}</p>
+    </div>
+  ` : '';
+
+  const registrationSection = registrationRequired ? `
+    <div style="background-color: #2d1a1a; border: 1px solid #ff6b6b; border-radius: 8px; padding: 15px; margin: 20px 0;">
+      <p style="color: #ff6b6b; font-weight: bold; margin: 0 0 10px 0;">Registrazione Richiesta</p>
+      <p style="color: #94A3B8; margin: 0 0 15px 0;">Per visualizzare il tuo QR code nell'app, devi prima registrarti con questo numero di telefono.</p>
+      <div style="text-align: center;">
+        <a href="${registrationLink}" 
+           style="display: inline-block; background-color: #00CED1; color: #0a0e17; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+          Registrati Ora
+        </a>
+      </div>
+    </div>
+  ` : '';
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0e17; color: #ffffff; margin: 0; padding: 0;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div style="font-size: 32px; font-weight: bold; color: #FFD700; margin-bottom: 10px;">Event4U</div>
+      <div style="font-size: 20px; color: #00CED1;">${typeLabel}</div>
+    </div>
+
+    <div style="background-color: #151922; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+      <p style="color: #ffffff; margin-top: 0; font-size: 18px;">Ciao ${firstName} ${lastName}!</p>
+      <p style="color: #94A3B8;">Sei stato aggiunto ${type === 'guest_list' ? 'alla lista ospiti' : 'alla prenotazione tavolo'} per:</p>
+      
+      <div style="background-color: #1a1f2e; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+        <p style="color: #FFD700; font-size: 24px; font-weight: bold; margin: 0 0 10px 0;">${eventName}</p>
+        <p style="color: #ffffff; margin: 5px 0;">${eventDate}</p>
+        <p style="color: #94A3B8; margin: 5px 0;">${eventLocation}</p>
+      </div>
+
+      ${tableSection}
+
+      <div style="text-align: center; margin: 30px 0;">
+        <p style="color: #ffffff; margin-bottom: 15px;">Il tuo codice QR personale:</p>
+        <div style="background-color: #ffffff; padding: 20px; border-radius: 12px; display: inline-block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}" 
+               alt="QR Code" style="display: block;" width="200" height="200" />
+        </div>
+        <p style="color: #94A3B8; font-size: 12px; margin-top: 10px;">Codice: ${qrCode}</p>
+      </div>
+
+      ${registrationSection}
+
+      <p style="color: #94A3B8; font-size: 14px; text-align: center;">
+        Presenta questo QR code all'ingresso dell'evento.
+      </p>
+    </div>
+
+    <div style="text-align: center; padding-top: 20px; border-top: 1px solid #1e2533;">
+      <p style="color: #94A3B8; font-size: 12px;">&copy; ${new Date().getFullYear()} Event4U - Tutti i diritti riservati</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || `"Event4U" <${process.env.SMTP_USER || 'noreply@event4u.it'}>`,
+    to,
+    subject: `${typeLabel} - ${eventName}`,
+    html: htmlBody,
+  };
+
+  try {
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`[EMAIL-SERVICE] QR notification email sent successfully to ${to}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[EMAIL-SERVICE] Failed to send QR notification email:', error);
+    return { success: false, error: error.message };
+  }
+}

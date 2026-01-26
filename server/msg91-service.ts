@@ -280,3 +280,98 @@ export function generatePrPassword(): string {
   }
   return password;
 }
+
+// ==================== QR Notification SMS ====================
+
+const QR_NOTIFICATION_TEMPLATE_ID = process.env.MSG91_QR_TEMPLATE_ID || process.env.MSG91_TEMPLATE_ID;
+
+interface QrNotificationSmsOptions {
+  phone: string;
+  firstName: string;
+  eventName: string;
+  qrCode: string;
+  type: 'guest_list' | 'table_booking';
+  eventDate?: string;
+}
+
+interface QrNotificationResult {
+  success: boolean;
+  message: string;
+  requestId?: string;
+}
+
+export async function sendQrNotificationSMS(options: QrNotificationSmsOptions): Promise<QrNotificationResult> {
+  const { phone, firstName, eventName, qrCode, type, eventDate } = options;
+  const authkey = getMSG91Authkey();
+  
+  console.log(`[MSG91] ======= QR NOTIFICATION SMS =======`);
+  console.log(`[MSG91] Phone: "${phone}"`);
+  console.log(`[MSG91] Name: "${firstName}"`);
+  console.log(`[MSG91] Event: "${eventName}"`);
+  console.log(`[MSG91] QR: "${qrCode}"`);
+  console.log(`[MSG91] Type: "${type}"`);
+  
+  if (!authkey) {
+    console.error("[MSG91] Missing AUTHKEY for QR notification");
+    return { success: false, message: "Configurazione MSG91 mancante" };
+  }
+
+  const formattedPhone = formatPhoneNumber(phone);
+  const typeLabel = type === 'guest_list' ? 'Lista' : 'Tavolo';
+  
+  const payload = {
+    flow_id: QR_NOTIFICATION_TEMPLATE_ID,
+    recipients: [
+      {
+        mobiles: formattedPhone,
+        name: firstName,
+        event: eventName.substring(0, 30),
+        qr: qrCode,
+        type: typeLabel,
+        date: eventDate || ''
+      }
+    ]
+  };
+
+  console.log(`[MSG91] Payload:`, JSON.stringify(payload, null, 2));
+
+  try {
+    const response = await fetch(MSG91_FLOW_URL, {
+      method: 'POST',
+      headers: {
+        'authkey': authkey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const rawResponse = await response.text();
+    console.log(`[MSG91] Response: ${rawResponse}`);
+    
+    let data: MSG91Response;
+    try {
+      data = JSON.parse(rawResponse);
+    } catch (e) {
+      console.error(`[MSG91] Failed to parse response`);
+      return { success: false, message: "Risposta MSG91 non valida" };
+    }
+
+    if (data.type === 'success') {
+      console.log(`[MSG91] QR SMS sent successfully`);
+      return { 
+        success: true, 
+        message: "QR inviato via SMS",
+        requestId: data.message
+      };
+    } else {
+      console.error(`[MSG91] QR SMS failed: ${data.message}`);
+      return { 
+        success: false, 
+        message: data.message || "Errore nell'invio SMS" 
+      };
+    }
+  } catch (error: any) {
+    console.error("[MSG91] QR notification SMS error:", error);
+    return { success: false, message: "Errore di connessione al servizio SMS" };
+  }
+}

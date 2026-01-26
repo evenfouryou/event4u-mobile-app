@@ -688,6 +688,14 @@ export class PrStorage implements IPrStorage {
     return updated;
   }
 
+  async findUserByPhone(phone: string): Promise<{ id: string } | undefined> {
+    const [user] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.phone, phone))
+      .limit(1);
+    return user;
+  }
+
   // ==================== PR OTP Attempts ====================
 
   async createPrOtpAttempt(phone: string, userId?: string): Promise<PrOtpAttempt> {
