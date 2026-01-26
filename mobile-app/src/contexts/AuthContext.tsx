@@ -16,7 +16,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData) => Promise<{ customerId: string }>;
+  verifyOtp: (customerId: string, otpCode: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -83,9 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (data: RegisterData) => {
+  const register = async (data: RegisterData): Promise<{ customerId: string }> => {
     try {
-      const response = await api.post<{ user: User; message: string }>('/api/public/customers/register', {
+      const response = await api.post<{ customerId: string; message: string }>('/api/public/customers/register', {
         email: data.email,
         password: data.password,
         firstName: data.firstName,
@@ -95,12 +96,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         gender: data.gender,
       });
 
+      return { customerId: response.customerId };
+    } catch (error: any) {
+      console.error('Register error:', error);
+      throw new Error(error.message || 'Errore durante la registrazione');
+    }
+  };
+
+  const verifyOtp = async (customerId: string, otpCode: string) => {
+    try {
+      const response = await api.post<{ user: User; message: string }>('/api/public/customers/verify-otp', {
+        customerId,
+        otpCode,
+      });
+
       if (response.user) {
         setUser(response.user);
       }
     } catch (error: any) {
-      console.error('Register error:', error);
-      throw new Error(error.message || 'Errore durante la registrazione');
+      console.error('Verify OTP error:', error);
+      throw new Error(error.message || 'Codice OTP non valido');
     }
   };
 
@@ -122,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        verifyOtp,
         logout,
         checkAuth,
       }}

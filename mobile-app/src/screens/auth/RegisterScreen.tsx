@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { colors, spacing, typography, borderRadius, gradients } from '@/lib/theme';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
@@ -15,11 +15,14 @@ interface RegisterScreenProps {
   onGoBack?: () => void;
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }: RegisterScreenProps) {
-  const { register } = useAuth();
+  const { register, verifyOtp } = useAuth();
   const [step, setStep] = useState<Step>(1);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+  const otpInputs = useRef<(TextInput | null)[]>([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -122,7 +125,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
     try {
       setLoading(true);
       setError('');
-      await register({
+      const result = await register({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -131,10 +134,49 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
         birthDate: formData.birthDate,
         gender: formData.gender as 'M' | 'F',
       });
+      setCustomerId(result.customerId);
+      setStep(4);
+      triggerHaptic('success');
+    } catch (err: any) {
+      setError(err.message || 'Errore durante la registrazione');
+      triggerHaptic('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (value: string, index: number) => {
+    const newOtp = [...otpCode];
+    newOtp[index] = value;
+    setOtpCode(newOtp);
+
+    if (value && index < 5) {
+      otpInputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !otpCode[index] && index > 0) {
+      otpInputs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = otpCode.join('');
+    if (code.length !== 6 || !customerId) {
+      setError('Inserisci il codice OTP completo');
+      triggerHaptic('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      await verifyOtp(customerId, code);
       triggerHaptic('success');
       onRegisterSuccess();
     } catch (err: any) {
-      setError(err.message || 'Errore durante la registrazione');
+      setError(err.message || 'Codice OTP non valido');
       triggerHaptic('error');
     } finally {
       setLoading(false);
@@ -149,6 +191,8 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
         return 'Contatti';
       case 3:
         return 'Sicurezza';
+      case 4:
+        return 'Verifica Telefono';
     }
   };
 
@@ -160,6 +204,8 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
         return 'Come possiamo contattarti?';
       case 3:
         return 'Proteggi il tuo account';
+      case 4:
+        return `Inserisci il codice inviato a ${formData.phone}`;
     }
   };
 
@@ -397,6 +443,44 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
                 </Pressable>
               </>
             )}
+
+            {step === 4 && (
+              <View style={styles.otpContainer}>
+                <View style={styles.otpIconContainer}>
+                  <LinearGradient
+                    colors={gradients.teal}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.otpIconGradient}
+                  >
+                    <Ionicons name="shield-checkmark" size={40} color="#fff" />
+                  </LinearGradient>
+                </View>
+                <Text style={styles.otpTitle}>Verifica il tuo numero</Text>
+                <Text style={styles.otpDescription}>
+                  Abbiamo inviato un codice a 6 cifre al numero {formData.phone}
+                </Text>
+                <View style={styles.otpInputContainer}>
+                  {otpCode.map((digit, index) => (
+                    <TextInput
+                      key={index}
+                      ref={(ref) => { otpInputs.current[index] = ref; }}
+                      style={[
+                        styles.otpInput,
+                        digit ? styles.otpInputFilled : null,
+                      ]}
+                      value={digit}
+                      onChangeText={(value) => handleOtpChange(value.slice(-1), index)}
+                      onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, index)}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      selectTextOnFocus
+                      testID={`input-otp-${index}`}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.buttonContainer}>
@@ -410,7 +494,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
               >
                 Continua
               </Button>
-            ) : (
+            ) : step === 3 ? (
               <Button
                 variant="golden"
                 size="lg"
@@ -421,15 +505,29 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
               >
                 Crea Account
               </Button>
+            ) : (
+              <Button
+                variant="golden"
+                size="lg"
+                onPress={handleVerifyOtp}
+                loading={loading}
+                disabled={otpCode.join('').length !== 6}
+                style={styles.nextButton}
+                testID="button-verify-otp"
+              >
+                Verifica
+              </Button>
             )}
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Hai già un account?</Text>
-            <Pressable onPress={onNavigateLogin}>
-              <Text style={styles.loginLink}>Accedi</Text>
-            </Pressable>
-          </View>
+          {step < 4 && (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Hai già un account?</Text>
+              <Pressable onPress={onNavigateLogin}>
+                <Text style={styles.loginLink}>Accedi</Text>
+              </Pressable>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeArea>
@@ -661,6 +759,55 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.fontSize.base,
     fontWeight: '600',
+  },
+  otpContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  otpIconContainer: {
+    marginBottom: spacing.lg,
+  },
+  otpIconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
+    color: colors.foreground,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  otpDescription: {
+    fontSize: typography.fontSize.base,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  otpInputContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+  },
+  otpInput: {
+    width: 48,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.secondary,
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '700',
+    color: colors.foreground,
+    textAlign: 'center',
+  },
+  otpInputFilled: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}10`,
   },
 });
 
