@@ -102,30 +102,30 @@ export function AccountDashboard({
     const visibleActions = quickActions.filter(a => {
       if (a === 'pr-area' && (!hasPrAccount || !onNavigatePrDashboard)) return false;
       return true;
-    }).slice(0, 4);
+    });
 
-    const rows: ClientQuickAction[][] = [];
-    for (let i = 0; i < visibleActions.length; i += 2) {
-      rows.push(visibleActions.slice(i, i + 2));
-    }
-
-    return rows.map((row, rowIndex) => (
-      <View key={rowIndex} style={styles.actionRow}>
-        {row.map(actionId => {
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.actionsScrollContent}
+      >
+        {visibleActions.map(actionId => {
           const config = getActionConfig(actionId);
           return (
-            <ActionCard
-              key={actionId}
-              icon={config.icon}
-              label={config.label}
-              gradient={config.gradient}
-              onPress={config.onPress}
-              testID={`action-${actionId}`}
-            />
+            <View key={actionId} style={styles.actionCardWrapper}>
+              <ActionCard
+                icon={config.icon}
+                label={config.label}
+                gradient={config.gradient}
+                onPress={config.onPress}
+                testID={`action-${actionId}`}
+              />
+            </View>
           );
         })}
-      </View>
-    ));
+      </ScrollView>
+    );
   };
 
   const walletBalance = wallet?.balance || 0;
@@ -455,12 +455,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionsGrid: {
-    gap: spacing.md,
     marginBottom: spacing.lg,
+    marginHorizontal: -spacing.lg,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
+  actionsScrollContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  actionCardWrapper: {
+    width: 140,
   },
   walletCard: {
     borderRadius: borderRadius.xl,
