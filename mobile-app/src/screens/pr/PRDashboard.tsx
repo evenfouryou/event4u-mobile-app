@@ -52,16 +52,15 @@ export function PRDashboard({
   const loadData = async () => {
     try {
       setLoading(true);
-      const [profileData, walletData, eventsData, scannerProfile] = await Promise.all([
+      const [profileData, walletData, eventsData] = await Promise.all([
         api.getPrProfile().catch(() => null),
         api.getPrWallet().catch(() => null),
         api.getPrEvents().catch(() => []),
-        api.getScannerProfile().catch(() => null),
       ]);
       setProfile(profileData);
       setWallet(walletData);
       setEvents(eventsData.slice(0, 3));
-      setHasScannerAccess(!!scannerProfile);
+      setHasScannerAccess(true);
     } catch (error) {
       console.error('Error loading PR dashboard:', error);
     } finally {
