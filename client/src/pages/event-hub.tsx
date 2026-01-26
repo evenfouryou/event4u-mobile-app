@@ -2912,6 +2912,75 @@ export default function EventHub() {
 
           {/* Biglietteria Tab with Sub-tabs */}
           <TabsContent value="biglietteria" className="space-y-6">
+            {/* Check if SIAE ticketing is not activated or not approved */}
+            {!ticketedEvent ? (
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-amber-500/10 w-fit mb-4">
+                    <Lock className="h-12 w-12 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-xl">Biglietteria SIAE Non Attiva</CardTitle>
+                  <CardDescription className="text-base">
+                    Per emettere biglietti e gestire la vendita online devi prima attivare la biglietteria SIAE.
+                    La richiesta verrà inviata all'amministratore per l'approvazione.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Button 
+                    size="lg" 
+                    onClick={() => setIsActivateTicketingOpen(true)}
+                    className="gap-2"
+                    data-testid="button-request-siae-activation"
+                  >
+                    <Ticket className="h-5 w-5" />
+                    Richiedi Attivazione Biglietteria
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (ticketedEvent as any)?.approvalStatus === 'pending' ? (
+              <Card className="border-blue-500/30 bg-blue-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-blue-500/10 w-fit mb-4">
+                    <Clock className="h-12 w-12 text-blue-500" />
+                  </div>
+                  <CardTitle className="text-xl">Richiesta in Attesa di Approvazione</CardTitle>
+                  <CardDescription className="text-base">
+                    La tua richiesta di attivazione biglietteria SIAE è stata inviata e 
+                    è in attesa di approvazione da parte dell'amministratore.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Badge variant="outline" className="text-blue-400 border-blue-500/30 px-4 py-2">
+                    <Clock className="h-4 w-4 mr-2" />
+                    In Attesa di Approvazione
+                  </Badge>
+                </CardContent>
+              </Card>
+            ) : (ticketedEvent as any)?.approvalStatus === 'rejected' ? (
+              <Card className="border-red-500/30 bg-red-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-red-500/10 w-fit mb-4">
+                    <XCircle className="h-12 w-12 text-red-500" />
+                  </div>
+                  <CardTitle className="text-xl">Richiesta Rifiutata</CardTitle>
+                  <CardDescription className="text-base">
+                    La richiesta di attivazione biglietteria è stata rifiutata. 
+                    Contatta l'amministratore per maggiori informazioni.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsActivateTicketingOpen(true)}
+                    className="gap-2"
+                    data-testid="button-retry-siae-activation"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Invia Nuova Richiesta
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
             <Tabs defaultValue="biglietti" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="biglietti" data-testid="subtab-biglietti">
@@ -4085,6 +4154,7 @@ export default function EventHub() {
                 </div>
               </TabsContent>
             </Tabs>
+            )}
           </TabsContent>
 
           {/* Name Changes Tab */}
@@ -4266,15 +4336,67 @@ export default function EventHub() {
                   </CardContent>
                 </Card>
               </>
+            ) : (ticketedEvent as any)?.approvalStatus === 'pending' ? (
+              <Card className="border-blue-500/30 bg-blue-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-blue-500/10 w-fit mb-4">
+                    <Clock className="h-12 w-12 text-blue-500" />
+                  </div>
+                  <CardTitle className="text-xl">Richiesta in Attesa di Approvazione</CardTitle>
+                  <CardDescription className="text-base">
+                    La tua richiesta di attivazione biglietteria SIAE è stata inviata e 
+                    è in attesa di approvazione da parte dell'amministratore.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Badge variant="outline" className="text-blue-400 border-blue-500/30 px-4 py-2">
+                    <Clock className="h-4 w-4 mr-2" />
+                    In Attesa di Approvazione
+                  </Badge>
+                </CardContent>
+              </Card>
+            ) : (ticketedEvent as any)?.approvalStatus === 'rejected' ? (
+              <Card className="border-red-500/30 bg-red-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-red-500/10 w-fit mb-4">
+                    <XCircle className="h-12 w-12 text-red-500" />
+                  </div>
+                  <CardTitle className="text-xl">Richiesta Rifiutata</CardTitle>
+                  <CardDescription className="text-base">
+                    La richiesta di attivazione biglietteria è stata rifiutata. 
+                    Contatta l'amministratore per maggiori informazioni.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab('biglietteria')}
+                    className="gap-2"
+                    data-testid="button-go-to-ticketing-from-name-changes"
+                  >
+                    Vai alla Biglietteria
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <UserCog className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Biglietteria SIAE non attiva</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Attiva la biglietteria SIAE per gestire i cambi nominativi.
-                  </p>
-                  <Button onClick={() => setActiveTab('biglietteria')} variant="default">
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-amber-500/10 w-fit mb-4">
+                    <Lock className="h-12 w-12 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-xl">Biglietteria SIAE Non Attiva</CardTitle>
+                  <CardDescription className="text-base">
+                    Per gestire i cambi nominativi devi prima attivare la biglietteria SIAE.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Button 
+                    size="lg" 
+                    onClick={() => setActiveTab('biglietteria')}
+                    className="gap-2"
+                    data-testid="button-go-to-ticketing-from-name-changes"
+                  >
+                    <Ticket className="h-5 w-5" />
                     Vai alla Biglietteria
                   </Button>
                 </CardContent>
@@ -4482,15 +4604,67 @@ export default function EventHub() {
                   </CardContent>
                 </Card>
               </>
+            ) : (ticketedEvent as any)?.approvalStatus === 'pending' ? (
+              <Card className="border-blue-500/30 bg-blue-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-blue-500/10 w-fit mb-4">
+                    <Clock className="h-12 w-12 text-blue-500" />
+                  </div>
+                  <CardTitle className="text-xl">Richiesta in Attesa di Approvazione</CardTitle>
+                  <CardDescription className="text-base">
+                    La tua richiesta di attivazione biglietteria SIAE è stata inviata e 
+                    è in attesa di approvazione da parte dell'amministratore.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Badge variant="outline" className="text-blue-400 border-blue-500/30 px-4 py-2">
+                    <Clock className="h-4 w-4 mr-2" />
+                    In Attesa di Approvazione
+                  </Badge>
+                </CardContent>
+              </Card>
+            ) : (ticketedEvent as any)?.approvalStatus === 'rejected' ? (
+              <Card className="border-red-500/30 bg-red-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-red-500/10 w-fit mb-4">
+                    <XCircle className="h-12 w-12 text-red-500" />
+                  </div>
+                  <CardTitle className="text-xl">Richiesta Rifiutata</CardTitle>
+                  <CardDescription className="text-base">
+                    La richiesta di attivazione biglietteria è stata rifiutata. 
+                    Contatta l'amministratore per maggiori informazioni.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab('biglietteria')}
+                    className="gap-2"
+                    data-testid="button-go-to-ticketing-from-resales"
+                  >
+                    Vai alla Biglietteria
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <RefreshCw className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Biglietteria SIAE non attiva</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Attiva la biglietteria SIAE per gestire la rivendita.
-                  </p>
-                  <Button onClick={() => setActiveTab('biglietteria')} variant="default">
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardHeader className="text-center">
+                  <div className="mx-auto p-4 rounded-full bg-amber-500/10 w-fit mb-4">
+                    <Lock className="h-12 w-12 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-xl">Biglietteria SIAE Non Attiva</CardTitle>
+                  <CardDescription className="text-base">
+                    Per gestire la rivendita devi prima attivare la biglietteria SIAE.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <Button 
+                    size="lg" 
+                    onClick={() => setActiveTab('biglietteria')}
+                    className="gap-2"
+                    data-testid="button-go-to-ticketing-from-resales"
+                  >
+                    <Ticket className="h-5 w-5" />
                     Vai alla Biglietteria
                   </Button>
                 </CardContent>
@@ -9687,21 +9861,74 @@ export default function EventHub() {
 
           <TabsContent value="cashiers">
             <div className="space-y-4 sm:space-y-6">
-              {ticketedEvent ? (
+              {ticketedEvent && (ticketedEvent as any)?.approvalStatus === 'approved' ? (
                 <EventCashierAllocations 
                   eventId={id || ''} 
                   siaeEventId={ticketedEvent?.id}
                 />
-              ) : (
-                <Card className="glass-card">
-                  <CardContent className="py-12">
-                    <div className="text-center">
-                      <Banknote className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <h3 className="font-semibold mb-2">Biglietteria Non Attiva</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Attiva la biglietteria per assegnare i cassieri
-                      </p>
+              ) : (ticketedEvent as any)?.approvalStatus === 'pending' ? (
+                <Card className="border-blue-500/30 bg-blue-500/5">
+                  <CardHeader className="text-center">
+                    <div className="mx-auto p-4 rounded-full bg-blue-500/10 w-fit mb-4">
+                      <Clock className="h-12 w-12 text-blue-500" />
                     </div>
+                    <CardTitle className="text-xl">Richiesta in Attesa di Approvazione</CardTitle>
+                    <CardDescription className="text-base">
+                      La tua richiesta di attivazione biglietteria SIAE è stata inviata e 
+                      è in attesa di approvazione da parte dell'amministratore.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <Badge variant="outline" className="text-blue-400 border-blue-500/30 px-4 py-2">
+                      <Clock className="h-4 w-4 mr-2" />
+                      In Attesa di Approvazione
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ) : (ticketedEvent as any)?.approvalStatus === 'rejected' ? (
+                <Card className="border-red-500/30 bg-red-500/5">
+                  <CardHeader className="text-center">
+                    <div className="mx-auto p-4 rounded-full bg-red-500/10 w-fit mb-4">
+                      <XCircle className="h-12 w-12 text-red-500" />
+                    </div>
+                    <CardTitle className="text-xl">Richiesta Rifiutata</CardTitle>
+                    <CardDescription className="text-base">
+                      La richiesta di attivazione biglietteria è stata rifiutata. 
+                      Contatta l'amministratore per maggiori informazioni.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setActiveTab('biglietteria')}
+                      className="gap-2"
+                      data-testid="button-go-to-ticketing-from-cashiers"
+                    >
+                      Vai alla Biglietteria
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-amber-500/30 bg-amber-500/5">
+                  <CardHeader className="text-center">
+                    <div className="mx-auto p-4 rounded-full bg-amber-500/10 w-fit mb-4">
+                      <Lock className="h-12 w-12 text-amber-500" />
+                    </div>
+                    <CardTitle className="text-xl">Biglietteria SIAE Non Attiva</CardTitle>
+                    <CardDescription className="text-base">
+                      Per assegnare i cassieri devi prima attivare la biglietteria SIAE.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <Button 
+                      size="lg" 
+                      onClick={() => setActiveTab('biglietteria')}
+                      className="gap-2"
+                      data-testid="button-go-to-ticketing-from-cashiers"
+                    >
+                      <Ticket className="h-5 w-5" />
+                      Vai alla Biglietteria
+                    </Button>
                   </CardContent>
                 </Card>
               )}
