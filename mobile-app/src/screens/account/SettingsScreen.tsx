@@ -298,8 +298,8 @@ export function SettingsScreen({
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Event4U Management System v1.0.0</Text>
-          <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>© 2026 Event4U Management System. Tutti i diritti riservati.</Text>
+          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Event Four You v1.0.0</Text>
+          <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>© 2026 Event Four You. Tutti i diritti riservati.</Text>
         </View>
       </ScrollView>
     </SafeArea>

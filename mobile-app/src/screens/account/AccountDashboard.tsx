@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image, RefreshControl } 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, typography, borderRadius, shadows } from '@/lib/theme';
+import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -364,7 +364,7 @@ export function AccountDashboard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   topHeader: {
     flexDirection: 'row',
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     width: 44,
@@ -425,24 +425,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -8,
-    backgroundColor: colors.card,
+    backgroundColor: staticColors.card,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: colors.golden,
+    borderColor: staticColors.golden,
     minWidth: 20,
     alignItems: 'center',
   },
   walletBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.golden,
+    color: staticColors.golden,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -458,12 +458,12 @@ const styles = StyleSheet.create({
   },
   customizeText: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   seeAllLink: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: staticColors.primary,
     fontWeight: '500',
   },
   actionsGrid: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: `${colors.primary}30`,
+    borderColor: `${staticColors.primary}30`,
   },
   walletHeader: {
     flexDirection: 'row',
@@ -493,24 +493,24 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: `${colors.primary}20`,
+    backgroundColor: `${staticColors.primary}20`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   walletLabel: {
     fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     fontWeight: '500',
   },
   walletBalance: {
     fontSize: typography.fontSize['4xl'],
     fontWeight: '700',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   walletSubtext: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   walletAction: {
     marginTop: spacing.md,
@@ -531,19 +531,19 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: borderRadius.lg,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${staticColors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ticketDay: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: staticColors.primary,
   },
   ticketMonth: {
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: staticColors.primary,
     marginTop: -2,
   },
   ticketInfo: {
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   ticketName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginBottom: spacing.xs,
   },
   ticketMeta: {
@@ -562,10 +562,10 @@ const styles = StyleSheet.create({
   },
   ticketMetaText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   ticketMetaDot: {
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
   },
   emptyCard: {
     padding: spacing.xl,
@@ -576,13 +576,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: colors.foreground,
+    color: staticColors.foreground,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   emptyText: {
     fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: typography.fontSize.base,
     fontWeight: '500',
-    color: colors.foreground,
+    color: staticColors.foreground,
   },
 });
 
