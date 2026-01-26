@@ -252,6 +252,7 @@ function Router() {
         <Route path="/pr/events/:eventId" component={PrEventDashboard} />
         <Route path="/pr/events" component={PrEvents} />
         <Route path="/pr/lists" component={PrLists} />
+        <Route path="/pr/guest-lists" component={PrLists} />
         <Route path="/pr/wallet" component={PrWallet} />
         <Route path="/pr/rewards" component={PrRewards} />
         <Route path="/pr/profile" component={PrProfile} />
@@ -381,6 +382,7 @@ function Router() {
               <Route path="/pr/events/:eventId" component={PrEventDashboard} />
               <Route path="/pr/events" component={PrEvents} />
               <Route path="/pr/lists" component={PrLists} />
+              <Route path="/pr/guest-lists" component={PrLists} />
               <Route path="/pr/wallet" component={PrWallet} />
               <Route path="/pr/rewards" component={PrRewards} />
               <Route path="/pr/profile" component={PrProfile} />
