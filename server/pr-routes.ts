@@ -21,6 +21,9 @@ import {
   prProfiles,
   companies,
   eventStaffAssignments,
+  tableBookingParticipants,
+  tableBookings,
+  locations,
 } from "@shared/schema";
 import { z } from "zod";
 import { like, or, eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
@@ -2876,6 +2879,121 @@ router.get("/api/pr/rewards", requireAuth, requirePr, async (req: Request, res: 
     res.json(rewardsWithProgress);
   } catch (error: any) {
     console.error("Error getting PR rewards:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== User QR Codes (I Miei QR) ====================
+
+// Get user's table reservations
+router.get("/api/my/table-reservations", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    if (!user?.id) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+
+    // Find all participants linked to this user or with their phone/email
+    const userParticipants = await db.select({
+      participant: tableBookingParticipants,
+      booking: tableBookings,
+    })
+      .from(tableBookingParticipants)
+      .innerJoin(tableBookings, eq(tableBookingParticipants.bookingId, tableBookings.id))
+      .where(eq(tableBookingParticipants.clientUserId, user.id));
+
+    // Enrich with event and table data
+    const reservations = await Promise.all(userParticipants.map(async ({ participant, booking }) => {
+      const [table, event] = await Promise.all([
+        prStorage.getEventTable(booking.tableId),
+        db.select({ name: events.name, startDate: events.startDate, locationId: events.locationId })
+          .from(events)
+          .where(eq(events.id, booking.eventId))
+          .then(r => r[0]),
+      ]);
+
+      let venueName = 'Location';
+      if (event?.locationId) {
+        const location = await db.select({ name: locations.name })
+          .from(locations)
+          .where(eq(locations.id, event.locationId))
+          .then(r => r[0]);
+        venueName = location?.name || 'Location';
+      }
+
+      return {
+        id: booking.id,
+        eventName: event?.name || 'Evento',
+        eventDate: event?.startDate?.toISOString() || booking.createdAt,
+        tableName: table?.name || 'Tavolo',
+        venueName,
+        approvalStatus: booking.approvalStatus,
+        qrCode: participant.qrCode,
+        participantId: participant.id,
+        isBooker: participant.isBooker || false,
+        firstName: participant.firstName,
+        lastName: participant.lastName,
+      };
+    }));
+
+    res.json(reservations);
+  } catch (error: any) {
+    console.error("Error getting user table reservations:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user's guest list entries
+router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    if (!user?.id) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+
+    const { eventLists, listEntries: listEntriesTable } = await import("@shared/schema");
+
+    // Find all list entries linked to this user
+    const userEntries = await db.select({
+      entry: listEntriesTable,
+      list: eventLists,
+    })
+      .from(listEntriesTable)
+      .innerJoin(eventLists, eq(listEntriesTable.listId, eventLists.id))
+      .where(eq(listEntriesTable.clientUserId, user.id));
+
+    // Enrich with event data
+    const entries = await Promise.all(userEntries.map(async ({ entry, list }) => {
+      const event = await db.select({ name: events.name, startDate: events.startDate, locationId: events.locationId })
+        .from(events)
+        .where(eq(events.id, list.eventId))
+        .then(r => r[0]);
+
+      let venueName = 'Location';
+      if (event?.locationId) {
+        const location = await db.select({ name: locations.name })
+          .from(locations)
+          .where(eq(locations.id, event.locationId))
+          .then(r => r[0]);
+        venueName = location?.name || 'Location';
+      }
+
+      return {
+        id: entry.id,
+        eventName: event?.name || 'Evento',
+        eventDate: event?.startDate?.toISOString() || entry.createdAt,
+        listName: list.name,
+        venueName,
+        qrCode: entry.qrCode,
+        status: entry.status || 'pending',
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+      };
+    }));
+
+    res.json(entries);
+  } catch (error: any) {
+    console.error("Error getting user guest list entries:", error);
     res.status(500).json({ error: error.message });
   }
 });

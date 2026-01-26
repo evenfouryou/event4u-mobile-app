@@ -13,6 +13,7 @@ import AccountTicketDetail from "@/pages/account-ticket-detail";
 import AccountNameChange from "@/pages/account-name-change";
 import AccountWallet from "@/pages/account-wallet";
 import AccountResales from "@/pages/account-resales";
+import MyQrCodes from "@/pages/my-qr-codes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +35,7 @@ import {
   Home,
   LogOut,
   ChevronLeft,
+  QrCode,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -48,6 +50,7 @@ interface Customer {
 const getNavItems = (t: (key: string) => string) => [
   { href: "/account/home", label: t('account.nav.home'), icon: Home },
   { href: "/account/tickets", label: t('account.nav.ticketsSubscriptions'), icon: Ticket },
+  { href: "/account/my-qr", label: "I Miei QR", icon: QrCode },
   { href: "/account/wallet", label: t('account.nav.wallet'), icon: Wallet },
   { href: "/account/resales", label: t('account.nav.resale'), icon: RefreshCw },
   { href: "/account/profile", label: t('account.nav.profile'), icon: User },
@@ -344,6 +347,7 @@ export default function AccountPage() {
                 <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
                 <Route path="/account/tickets/:id" component={AccountTicketDetail} />
                 <Route path="/account/tickets" component={AccountTickets} />
+                <Route path="/account/my-qr" component={MyQrCodes} />
                 <Route path="/account/wallet" component={AccountWallet} />
                 <Route path="/account/resales" component={AccountResales} />
               </Switch>
@@ -377,6 +381,7 @@ export default function AccountPage() {
             <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
             <Route path="/account/tickets/:id" component={AccountTicketDetail} />
             <Route path="/account/tickets" component={AccountTickets} />
+            <Route path="/account/my-qr" component={MyQrCodes} />
             <Route path="/account/wallet" component={AccountWallet} />
             <Route path="/account/resales" component={AccountResales} />
           </Switch>
