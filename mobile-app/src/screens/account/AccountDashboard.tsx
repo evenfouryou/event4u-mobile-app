@@ -166,16 +166,38 @@ export function AccountDashboard({
           style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
           resizeMode="contain"
         />
-        <Pressable
-          onPress={() => {
-            triggerHaptic('light');
-            onNavigateSettings();
-          }}
-          style={styles.settingsButton}
-          testID="button-settings"
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
-        </Pressable>
+        <View style={styles.headerRightActions}>
+          <Pressable
+            onPress={() => {
+              triggerHaptic('light');
+              onNavigateWallet();
+            }}
+            style={styles.walletIconButton}
+            testID="button-wallet-icon"
+          >
+            <LinearGradient
+              colors={gradients.golden}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.walletIconGradient}
+            >
+              <Ionicons name="wallet" size={18} color={colors.primaryForeground} />
+            </LinearGradient>
+            <View style={styles.walletBadge}>
+              <Text style={styles.walletBadgeText}>{walletBalance.toFixed(0)}</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              triggerHaptic('light');
+              onNavigateSettings();
+            }}
+            style={styles.settingsButton}
+            testID="button-settings"
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -222,42 +244,6 @@ export function AccountDashboard({
             </View>
           </View>
 
-          <View>
-            <Pressable
-              onPress={() => {
-                triggerHaptic('light');
-                onNavigateWallet();
-              }}
-            >
-              <LinearGradient
-                colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.walletCard}
-              >
-                <View style={styles.walletHeader}>
-                  <View style={styles.walletIcon}>
-                    <Ionicons name="wallet" size={24} color={colors.primary} />
-                  </View>
-                  <Text style={styles.walletLabel}>Wallet</Text>
-                </View>
-                <Text style={styles.walletBalance}>
-                  € {walletBalance.toFixed(2)}
-                </Text>
-                <Text style={styles.walletSubtext}>Saldo disponibile</Text>
-                <View style={styles.walletAction}>
-                  <Button
-                    variant="golden"
-                    size="sm"
-                    onPress={onNavigateWallet}
-                    testID="button-recharge"
-                  >
-                    Ricarica
-                  </Button>
-                </View>
-              </LinearGradient>
-            </Pressable>
-          </View>
 
 
           <View>
@@ -407,6 +393,39 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  walletIconButton: {
+    position: 'relative',
+  },
+  walletIconGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: colors.golden,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  walletBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.golden,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
