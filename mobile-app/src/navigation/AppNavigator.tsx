@@ -1,7 +1,8 @@
 import { useState, createContext, useContext } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { colors } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
 
 import { SplashScreen } from '@/screens/auth/SplashScreen';
 import { LoginScreen } from '@/screens/auth/LoginScreen';
@@ -27,6 +28,12 @@ import { VenuesScreen } from '@/screens/public/VenuesScreen';
 import { VenueDetailScreen } from '@/screens/public/VenueDetailScreen';
 import { ResalesScreen } from '@/screens/public/ResalesScreen';
 
+import { PRDashboard } from '@/screens/pr/PRDashboard';
+import { PREventsScreen } from '@/screens/pr/PREventsScreen';
+import { PREventDashboard } from '@/screens/pr/PREventDashboard';
+import { PRWalletScreen } from '@/screens/pr/PRWalletScreen';
+import { PRProfileScreen } from '@/screens/pr/PRProfileScreen';
+
 type Screen =
   | { name: 'splash' }
   | { name: 'landing' }
@@ -48,7 +55,12 @@ type Screen =
   | { name: 'nameChange'; params: { ticketId: string } }
   | { name: 'subscriptions' }
   | { name: 'settings' }
-  | { name: 'profile' };
+  | { name: 'profile' }
+  | { name: 'prDashboard' }
+  | { name: 'prEvents' }
+  | { name: 'prEventDetail'; params: { eventId: string } }
+  | { name: 'prWallet' }
+  | { name: 'prProfile' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -268,6 +280,7 @@ export function AppNavigator() {
             onNavigateEvents={() => navigate({ name: 'events' })}
             onNavigateResales={() => navigate({ name: 'resales' })}
             onNavigateSettings={() => navigate({ name: 'settings' })}
+            onNavigatePrDashboard={() => resetTo({ name: 'prDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
             onGoBack={() => resetTo({ name: 'landing' })}
           />
@@ -338,6 +351,59 @@ export function AppNavigator() {
         return (
           <ProfileScreen
             onBack={goBack}
+          />
+        );
+
+      case 'prDashboard':
+        return (
+          <PRDashboard
+            onNavigateEvents={() => navigate({ name: 'prEvents' })}
+            onNavigateWallet={() => navigate({ name: 'prWallet' })}
+            onNavigateLists={() => navigate({ name: 'prEvents' })}
+            onNavigateProfile={() => navigate({ name: 'prProfile' })}
+            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'prEvents':
+        return (
+          <PREventsScreen
+            onGoBack={goBack}
+            onSelectEvent={(eventId) => navigate({ name: 'prEventDetail', params: { eventId } })}
+          />
+        );
+
+      case 'prEventDetail':
+        return (
+          <PREventDashboard
+            eventId={currentScreen.params.eventId}
+            onGoBack={goBack}
+          />
+        );
+
+      case 'prWallet':
+        return (
+          <PRWalletScreen
+            onGoBack={goBack}
+            onRequestPayout={async () => {
+              try {
+                const result = await api.requestPrPayout();
+                if (result.success) {
+                  Alert.alert('Richiesta Inviata', result.message);
+                }
+              } catch (error: any) {
+                Alert.alert('Errore', error.message || 'Errore nella richiesta');
+              }
+            }}
+          />
+        );
+
+      case 'prProfile':
+        return (
+          <PRProfileScreen
+            onGoBack={goBack}
+            onLogout={() => resetTo({ name: 'landing' })}
           />
         );
 

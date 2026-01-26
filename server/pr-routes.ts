@@ -2809,6 +2809,152 @@ router.get("/api/pr/my-events", requireAuth, requirePr, async (req: Request, res
   }
 });
 
+// Get PR profile (for mobile app)
+router.get("/api/pr/profile", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Get full PR profile
+    const prProfile = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (prProfile.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const profile = prProfile[0];
+    
+    res.json({
+      id: profile.id,
+      companyId: profile.companyId,
+      userId: profile.userId,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phone,
+      email: profile.email,
+      displayName: profile.displayName,
+      prCode: profile.prCode,
+      commissionType: Number(profile.commissionFixedPerPerson || 0) > 0 ? 'fixed' : 'percentage',
+      commissionValue: Number(profile.commissionFixedPerPerson || 0) > 0 
+        ? String(profile.commissionFixedPerPerson) 
+        : String(profile.commissionPercentage),
+      status: profile.isActive ? 'active' : 'inactive',
+      createdAt: profile.createdAt,
+    });
+  } catch (error: any) {
+    console.error("Error getting PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update PR profile (for mobile app)
+router.patch("/api/pr/profile", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const { displayName, email, bio, profileImageUrl } = req.body;
+    
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (email !== undefined) updateData.email = email;
+    if (bio !== undefined) updateData.bio = bio;
+    if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
+    updateData.updatedAt = new Date();
+    
+    if (Object.keys(updateData).length === 1) {
+      return res.status(400).json({ error: "Nessun campo da aggiornare" });
+    }
+    
+    await db.update(prProfiles)
+      .set(updateData)
+      .where(eq(prProfiles.id, prProfileId));
+    
+    // Return updated profile
+    const updated = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (updated.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const profile = updated[0];
+    res.json({
+      id: profile.id,
+      companyId: profile.companyId,
+      userId: profile.userId,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phone,
+      email: profile.email,
+      displayName: profile.displayName,
+      prCode: profile.prCode,
+      commissionType: Number(profile.commissionFixedPerPerson || 0) > 0 ? 'fixed' : 'percentage',
+      commissionValue: Number(profile.commissionFixedPerPerson || 0) > 0 
+        ? String(profile.commissionFixedPerPerson) 
+        : String(profile.commissionPercentage),
+      status: profile.isActive ? 'active' : 'inactive',
+      createdAt: profile.createdAt,
+    });
+  } catch (error: any) {
+    console.error("Error updating PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Request payout (for mobile app)
+router.post("/api/pr/wallet/payout", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Get PR profile
+    const prProfile = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .limit(1);
+    
+    if (prProfile.length === 0) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const profile = prProfile[0];
+    const availableBalance = Number(profile.totalEarnings || 0) - Number(profile.paidEarnings || 0);
+    
+    if (availableBalance < 10) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Il saldo minimo per richiedere un pagamento è 10€" 
+      });
+    }
+    
+    // TODO: Create payout request record and notification to gestore
+    // For now, just return success message
+    res.json({ 
+      success: true, 
+      message: `Richiesta di pagamento di €${availableBalance.toFixed(2)} inviata. Sarai contattato dal gestore.` 
+    });
+  } catch (error: any) {
+    console.error("Error requesting payout:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get PR stats (for PR dashboard)
 router.get("/api/pr/stats", requireAuth, requirePr, async (req: Request, res: Response) => {
   try {

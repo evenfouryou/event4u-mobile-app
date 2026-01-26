@@ -124,6 +124,64 @@ export interface StripeConfigResponse {
   publishableKey: string;
 }
 
+export interface PrProfile {
+  id: string;
+  companyId: string;
+  userId?: string | null;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string | null;
+  displayName?: string | null;
+  prCode: string;
+  commissionType?: string;
+  commissionValue?: string;
+  status?: string;
+  createdAt?: string;
+}
+
+export interface PrWallet {
+  balance: number;
+  pendingBalance: number;
+  totalEarnings: number;
+  totalPaidOut: number;
+}
+
+export interface PrTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+  status: string;
+}
+
+export interface PrEvent {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventStart: string;
+  eventEnd: string;
+  locationName: string;
+  guestCount?: number;
+  tableCount?: number;
+  earnings?: number;
+}
+
+export interface PrEventDetail extends PrEvent {
+  locationAddress?: string;
+}
+
+export interface PrGuestListEntry {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+  status: string;
+  checkedInAt?: string;
+}
+
 class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
@@ -294,6 +352,114 @@ class ApiClient {
       checkoutSessionId,
       paymentIntentId,
     });
+  }
+
+  // PR API Methods
+  async getPrProfile(): Promise<PrProfile | null> {
+    try {
+      return await this.get<PrProfile>('/api/pr/profile');
+    } catch {
+      return null;
+    }
+  }
+
+  async getPrStats(): Promise<{
+    totalGuests: number;
+    totalTables: number;
+    ticketsSold: number;
+    totalRevenue: number;
+    commissionEarned: number;
+    activeEvents: number;
+  }> {
+    return this.get('/api/pr/stats');
+  }
+
+  async updatePrProfile(data: { displayName?: string; email?: string }): Promise<PrProfile> {
+    return this.patch<PrProfile>('/api/pr/profile', data);
+  }
+
+  async getPrWallet(): Promise<PrWallet> {
+    const result = await this.get<{
+      totalEarnings: string;
+      pendingEarnings: string;
+      paidOutEarnings: string;
+    }>('/api/pr/wallet');
+    return {
+      balance: Number(result.totalEarnings || 0) - Number(result.paidOutEarnings || 0),
+      pendingBalance: Number(result.pendingEarnings || 0),
+      totalEarnings: Number(result.totalEarnings || 0),
+      totalPaidOut: Number(result.paidOutEarnings || 0),
+    };
+  }
+
+  async getPrTransactions(): Promise<PrTransaction[]> {
+    const rewards = await this.get<any[]>('/api/pr/rewards');
+    return rewards.map((r: any) => ({
+      id: r.id,
+      type: 'reward',
+      amount: Number(r.currentProgress || 0),
+      description: r.name || 'Premio',
+      createdAt: r.createdAt || new Date().toISOString(),
+      status: r.isClaimed ? 'claimed' : 'pending',
+    }));
+  }
+
+  async getPrEvents(): Promise<PrEvent[]> {
+    const events = await this.get<any[]>('/api/pr/my-events');
+    return events.map((e: any) => ({
+      id: e.id,
+      eventId: e.eventId,
+      eventName: e.eventName,
+      eventStart: e.eventStart,
+      eventEnd: e.eventEnd,
+      locationName: e.locationName,
+      guestCount: 0,
+      tableCount: 0,
+      earnings: 0,
+    }));
+  }
+
+  async getPrEventDetail(eventId: string): Promise<PrEventDetail> {
+    const event = await this.get<any>(`/api/pr/events/${eventId}`);
+    return {
+      id: event.id,
+      eventId: event.id,
+      eventName: event.name,
+      eventStart: event.startDatetime,
+      eventEnd: event.endDatetime,
+      locationName: event.locationName || 'Location',
+      locationAddress: event.locationAddress,
+    };
+  }
+
+  async getPrEventGuests(eventId: string): Promise<PrGuestListEntry[]> {
+    const result = await this.get<any>(`/api/pr/events/${eventId}/guest-entries`);
+    const entries = Array.isArray(result) ? result : (result?.entries || []);
+    return entries.map((e: any) => ({
+      id: e.id,
+      firstName: e.firstName || '',
+      lastName: e.lastName || '',
+      phone: e.phone,
+      email: e.email,
+      status: e.status || 'pending',
+      checkedInAt: e.checkedInAt,
+    }));
+  }
+
+  async addPrGuest(eventId: string, data: { firstName: string; lastName: string; phone?: string }): Promise<PrGuestListEntry> {
+    const result = await this.post<any>(`/api/pr/events/${eventId}/guests`, data);
+    return {
+      id: result.id,
+      firstName: result.firstName || data.firstName,
+      lastName: result.lastName || data.lastName,
+      phone: result.phone || data.phone,
+      email: result.email,
+      status: result.status || 'pending',
+    };
+  }
+
+  async requestPrPayout(): Promise<{ success: boolean; message: string }> {
+    return this.post<{ success: boolean; message: string }>('/api/pr/wallet/payout');
   }
 }
 
