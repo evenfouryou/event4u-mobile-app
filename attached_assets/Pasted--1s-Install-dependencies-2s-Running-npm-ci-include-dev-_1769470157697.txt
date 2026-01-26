@@ -1,0 +1,47 @@
+
+1s
+
+
+Install dependencies
+
+2s
+
+
+Running "npm ci --include=dev" in /Users/expo/workingdir/build/mobile-app directory
+npm error code EUSAGE
+npm error
+npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+npm error
+npm error Invalid: lock file's babel-preset-expo@13.2.4 does not satisfy babel-preset-expo@54.0.10
+npm error Invalid: lock file's expo-splash-screen@0.30.10 does not satisfy expo-splash-screen@31.0.13
+npm error Invalid: lock file's react-native-worklets@0.7.2 does not satisfy react-native-worklets@0.5.2
+npm error Invalid: lock file's @react-native/babel-preset@0.79.6 does not satisfy @react-native/babel-preset@0.81.5
+npm error Invalid: lock file's babel-plugin-react-compiler@19.0.0-beta-ebf51a3-20250411 does not satisfy babel-plugin-react-compiler@1.0.0
+npm error Invalid: lock file's babel-plugin-react-native-web@0.19.13 does not satisfy babel-plugin-react-native-web@0.21.2
+npm error Invalid: lock file's babel-plugin-syntax-hermes-parser@0.25.1 does not satisfy babel-plugin-syntax-hermes-parser@0.29.1
+npm error Invalid: lock file's @react-native/babel-plugin-codegen@0.79.6 does not satisfy @react-native/babel-plugin-codegen@0.81.5
+npm error Invalid: lock file's @react-native/codegen@0.79.6 does not satisfy @react-native/codegen@0.81.5
+npm error Invalid: lock file's hermes-parser@0.25.1 does not satisfy hermes-parser@0.29.1
+npm error Invalid: lock file's @expo/prebuild-config@9.0.12 does not satisfy @expo/prebuild-config@54.0.8
+npm error Invalid: lock file's @react-native/normalize-colors@0.79.6 does not satisfy @react-native/normalize-colors@0.81.5
+npm error Invalid: lock file's hermes-estree@0.25.1 does not satisfy hermes-estree@0.29.1
+npm error Invalid: lock file's semver@7.7.3 does not satisfy semver@7.7.2
+npm error
+npm error Clean install a project
+npm error
+npm error Usage:
+npm error npm ci
+npm error
+npm error Options:
+npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm error [--no-bin-links] [--no-fund] [--dry-run]
+npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm error A complete log of this run can be found in:
