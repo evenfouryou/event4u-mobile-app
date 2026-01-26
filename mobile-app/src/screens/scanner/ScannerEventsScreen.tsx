@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
-import { Card } from '@/components/Card';
+import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
-import { SafeArea } from '@/components/SafeArea';
-import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -17,7 +16,8 @@ interface ScannerEventsScreenProps {
 }
 
 export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScreenProps) {
-  const { colors } = useTheme();
+  const { colors, gradients } = useTheme();
+  const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<ScannerEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,9 +47,9 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', { 
-      weekday: 'long', 
+      weekday: 'short', 
       day: 'numeric', 
-      month: 'long' 
+      month: 'short' 
     });
   };
 
@@ -86,45 +86,51 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
         testID={`event-${item.id}`}
       >
         <Card style={styles.eventCard}>
-          {item.eventImageUrl ? (
-            <Image source={{ uri: item.eventImageUrl }} style={styles.eventImage} />
-          ) : (
-            <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.secondary }]}>
-              <Ionicons name="calendar" size={32} color={colors.mutedForeground} />
-            </View>
-          )}
-          
-          <View style={styles.eventContent}>
-            <View style={styles.eventHeader}>
-              <Text style={[styles.eventName, { color: colors.foreground }]} numberOfLines={2}>
-                {item.eventName}
-              </Text>
-              {status === 'live' && (
-                <Badge variant="destructive">
-                  <View style={styles.liveBadge}>
-                    <View style={styles.liveDot} />
-                    <Text style={styles.liveText}>LIVE</Text>
-                  </View>
-                </Badge>
-              )}
-            </View>
-
-            <View style={styles.eventMeta}>
-              <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={16} color={colors.mutedForeground} />
+          <View style={styles.eventHeader}>
+            {item.eventImageUrl ? (
+              <Image source={{ uri: item.eventImageUrl }} style={styles.eventImage} />
+            ) : (
+              <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.secondary }]}>
+                <Ionicons name="calendar" size={28} color={colors.mutedForeground} />
+              </View>
+            )}
+            <View style={styles.eventTitleSection}>
+              <View style={styles.eventTitleRow}>
+                <Text style={[styles.eventName, { color: colors.foreground }]} numberOfLines={2}>
+                  {item.eventName}
+                </Text>
+                {status === 'live' && (
+                  <Badge variant="destructive">
+                    <View style={styles.liveBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveText}>LIVE</Text>
+                    </View>
+                  </Badge>
+                )}
+              </View>
+              <View style={styles.eventMeta}>
+                <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
                 <Text style={[styles.metaText, { color: colors.mutedForeground }]} numberOfLines={1}>
                   {item.locationName}
                 </Text>
               </View>
-              <View style={styles.metaRow}>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={colors.mutedForeground} />
+          </View>
+          
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <View style={styles.eventDetails}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
                 <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
-                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                <Text style={[styles.detailText, { color: colors.foreground }]}>
                   {formatDate(item.eventStart)}
                 </Text>
               </View>
-              <View style={styles.metaRow}>
+              <View style={styles.detailItem}>
                 <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
-                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                <Text style={[styles.detailText, { color: colors.foreground }]}>
                   {formatTime(item.eventStart)}
                 </Text>
               </View>
@@ -133,24 +139,24 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
             <View style={styles.permissionsRow}>
               {item.canScanLists && (
                 <Badge variant="secondary">
-                  <Text style={styles.permissionText}>Liste</Text>
+                  <Text style={[styles.permissionText, { color: colors.foreground }]}>Liste</Text>
                 </Badge>
               )}
               {item.canScanTables && (
                 <Badge variant="secondary">
-                  <Text style={styles.permissionText}>Tavoli</Text>
+                  <Text style={[styles.permissionText, { color: colors.foreground }]}>Tavoli</Text>
                 </Badge>
               )}
               {item.canScanTickets && (
                 <Badge variant="secondary">
-                  <Text style={styles.permissionText}>Biglietti</Text>
+                  <Text style={[styles.permissionText, { color: colors.foreground }]}>Biglietti</Text>
                 </Badge>
               )}
             </View>
 
             <View style={styles.progressSection}>
               <View style={styles.progressHeader}>
-                <Text style={[styles.progressLabel, { color: colors.foreground }]}>
+                <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
                   Check-in: {item.checkedIn}/{item.totalGuests}
                 </Text>
                 <Text style={[styles.progressPercentage, { color: colors.primary }]}>
@@ -170,10 +176,6 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
               </View>
             </View>
           </View>
-
-          <View style={styles.chevron}>
-            <Ionicons name="chevron-forward" size={24} color={colors.mutedForeground} />
-          </View>
         </Card>
       </Pressable>
     );
@@ -184,13 +186,14 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
   }
 
   return (
-    <SafeArea edges={['bottom']} style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
-      <Header
-        title="I miei Eventi"
-        showBack
-        onBack={onBack}
-        testID="header-scanner-events"
-      />
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Pressable onPress={onBack} style={styles.backButton} testID="button-back">
+          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>I miei Eventi</Text>
+        <View style={styles.headerRight} />
+      </View>
 
       {events.length === 0 ? (
         <View style={styles.emptyState}>
@@ -218,7 +221,7 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
           }
         />
       )}
-    </SafeArea>
+    </View>
   );
 }
 
@@ -226,33 +229,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+  },
+  headerRight: {
+    width: 40,
+  },
   listContent: {
     padding: spacing.lg,
     gap: spacing.md,
   },
   eventCard: {
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  eventImage: {
-    width: 100,
-    height: '100%',
-    minHeight: 140,
-  },
-  eventImagePlaceholder: {
-    width: 100,
-    minHeight: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eventContent: {
-    flex: 1,
-    padding: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   eventHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  eventImage: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+  },
+  eventImagePlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventTitleSection: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  eventTitleRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
@@ -278,9 +304,6 @@ const styles = StyleSheet.create({
     color: staticColors.primaryForeground,
   },
   eventMeta: {
-    gap: spacing.xs,
-  },
-  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -289,17 +312,35 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
     flex: 1,
   },
+  divider: {
+    height: 1,
+  },
+  eventDetails: {
+    gap: spacing.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  detailText: {
+    fontSize: typography.fontSize.sm,
+  },
   permissionsRow: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: spacing.sm,
     flexWrap: 'wrap',
   },
   permissionText: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.secondaryForeground,
+    fontWeight: '500',
   },
   progressSection: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -307,25 +348,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressLabel: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '500',
+    fontSize: typography.fontSize.sm,
   },
   progressPercentage: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography.fontSize.sm,
     fontWeight: '600',
   },
   progressBar: {
-    height: 4,
-    borderRadius: 2,
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 2,
-  },
-  chevron: {
-    justifyContent: 'center',
-    paddingRight: spacing.sm,
+    borderRadius: 3,
   },
   emptyState: {
     flex: 1,

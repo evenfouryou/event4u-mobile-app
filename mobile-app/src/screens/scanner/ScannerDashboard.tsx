@@ -1,15 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
-import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
-import { SafeArea } from '@/components/SafeArea';
-import { GreetingHeader } from '@/components/Header';
+import { ActionCard } from '@/components/ActionCard';
 import { Loading } from '@/components/Loading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -20,7 +18,6 @@ interface ScannerDashboardProps {
   onNavigateEvents: () => void;
   onNavigateScan: (eventId: string) => void;
   onNavigateProfile: () => void;
-  onSwitchToClient: () => void;
   onLogout: () => void;
 }
 
@@ -28,11 +25,10 @@ export function ScannerDashboard({
   onNavigateEvents,
   onNavigateScan,
   onNavigateProfile,
-  onSwitchToClient,
   onLogout,
 }: ScannerDashboardProps) {
   const { user, logout } = useAuth();
-  const { colors, gradients } = useTheme();
+  const { colors, gradients, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<ScannerEvent[]>([]);
   const [stats, setStats] = useState<ScannerStats>({ totalScans: 0, todayScans: 0, eventsAssigned: 0 });
@@ -93,8 +89,26 @@ export function ScannerDashboard({
   }
 
   return (
-    <SafeArea edges={['bottom']} style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Badge variant="teal" style={styles.scannerBadge}>
+            <Text style={styles.scannerBadgeText}>SCANNER</Text>
+          </Badge>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Dashboard</Text>
+        </View>
+        <Pressable
+          onPress={onNavigateProfile}
+          style={[styles.profileButton, { backgroundColor: colors.card }]}
+          testID="button-profile"
+        >
+          <Ionicons name="person" size={20} color={colors.foreground} />
+        </Pressable>
+      </View>
+
       <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -104,158 +118,145 @@ export function ScannerDashboard({
           />
         }
       >
-        <GreetingHeader
-          name={user?.firstName || 'Scanner'}
-          email="Scanner Dashboard"
-        />
+        <View style={styles.welcomeSection}>
+          <Text style={[styles.welcomeText, { color: colors.mutedForeground }]}>Ciao,</Text>
+          <Text style={[styles.userName, { color: colors.foreground }]}>{user?.firstName || 'Scanner'}</Text>
+        </View>
 
-        <View style={styles.content}>
-          <GlassCard style={styles.statsCard}>
-            <LinearGradient
-              colors={[...gradients.teal]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.statsGradient}
-            >
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stats.todayScans}</Text>
-                  <Text style={styles.statLabel}>Scansioni Oggi</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stats.totalScans}</Text>
-                  <Text style={styles.statLabel}>Totale Scansioni</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stats.eventsAssigned}</Text>
-                  <Text style={styles.statLabel}>Eventi</Text>
-                </View>
+        <GlassCard style={styles.statsCard}>
+          <LinearGradient
+            colors={[...gradients.teal]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statsGradient}
+          >
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{stats.todayScans}</Text>
+                <Text style={styles.statLabel}>Oggi</Text>
               </View>
-            </LinearGradient>
-          </GlassCard>
-
-          <View style={styles.quickActions}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Azioni Rapide</Text>
-            <View style={styles.actionGrid}>
-              <Pressable
-                style={styles.actionCard}
-                onPress={() => events[0] && onNavigateScan(events[0].eventId)}
-              >
-                <LinearGradient
-                  colors={[...gradients.golden]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.actionGradient}
-                >
-                  <Ionicons name="scan" size={32} color={staticColors.primaryForeground} />
-                  <Text style={styles.actionLabel}>Scansiona</Text>
-                </LinearGradient>
-              </Pressable>
-
-              <Pressable style={styles.actionCard} onPress={onNavigateEvents}>
-                <LinearGradient
-                  colors={[...gradients.purple]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.actionGradient}
-                >
-                  <Ionicons name="calendar" size={32} color={staticColors.primaryForeground} />
-                  <Text style={styles.actionLabel}>Eventi</Text>
-                </LinearGradient>
-              </Pressable>
-
-              <Pressable style={styles.actionCard} onPress={onNavigateProfile}>
-                <LinearGradient
-                  colors={[...gradients.blue]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.actionGradient}
-                >
-                  <Ionicons name="person" size={32} color={staticColors.primaryForeground} />
-                  <Text style={styles.actionLabel}>Profilo</Text>
-                </LinearGradient>
-              </Pressable>
-
-              <Pressable style={styles.actionCard} onPress={onSwitchToClient}>
-                <LinearGradient
-                  colors={[...gradients.pink]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.actionGradient}
-                >
-                  <Ionicons name="swap-horizontal" size={32} color={staticColors.primaryForeground} />
-                  <Text style={styles.actionLabel}>Area Cliente</Text>
-                </LinearGradient>
-              </Pressable>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{stats.totalScans}</Text>
+                <Text style={styles.statLabel}>Totali</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{stats.eventsAssigned}</Text>
+                <Text style={styles.statLabel}>Eventi</Text>
+              </View>
             </View>
+          </LinearGradient>
+        </GlassCard>
+
+        <View style={styles.actionsSection}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Azioni Rapide</Text>
+          <View style={styles.actionRow}>
+            <ActionCard
+              icon="scan"
+              label="Scansiona"
+              gradient="golden"
+              onPress={() => events[0] && onNavigateScan(events[0].eventId)}
+              testID="action-scan"
+            />
+            <ActionCard
+              icon="calendar"
+              label="Eventi"
+              gradient="purple"
+              onPress={onNavigateEvents}
+              testID="action-events"
+            />
           </View>
-
-          {events.length > 0 && (
-            <View style={styles.eventsSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Prossimi Eventi</Text>
-                <Pressable onPress={onNavigateEvents}>
-                  <Text style={[styles.seeAll, { color: colors.primary }]}>Vedi tutti</Text>
-                </Pressable>
-              </View>
-
-              {events.map((event) => (
-                <Pressable
-                  key={event.id}
-                  onPress={() => {
-                    triggerHaptic('light');
-                    onNavigateScan(event.eventId);
-                  }}
-                >
-                  <Card style={styles.eventCard}>
-                    <View style={styles.eventContent}>
-                      {event.eventImageUrl ? (
-                        <Image source={{ uri: event.eventImageUrl }} style={styles.eventImage} />
-                      ) : (
-                        <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.secondary }]}>
-                          <Ionicons name="calendar" size={24} color={colors.mutedForeground} />
-                        </View>
-                      )}
-                      <View style={styles.eventInfo}>
-                        <Text style={[styles.eventName, { color: colors.foreground }]} numberOfLines={1}>
-                          {event.eventName}
-                        </Text>
-                        <View style={styles.eventMeta}>
-                          <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-                          <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]} numberOfLines={1}>
-                            {event.locationName}
-                          </Text>
-                        </View>
-                        <View style={styles.eventMeta}>
-                          <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-                          <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]}>
-                            {formatDate(event.eventStart)} - {formatTime(event.eventStart)}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.eventStats}>
-                        <Badge variant="success">
-                          <Text style={styles.badgeText}>{event.checkedIn}/{event.totalGuests}</Text>
-                        </Badge>
-                        <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-                      </View>
-                    </View>
-                  </Card>
-                </Pressable>
-              ))}
-            </View>
-          )}
-
-          <View style={styles.logoutSection}>
-            <Button variant="ghost" onPress={handleLogout} testID="button-logout">
-              <Text style={[styles.logoutText, { color: colors.destructive }]}>Esci</Text>
-            </Button>
+          <View style={styles.actionRow}>
+            <ActionCard
+              icon="person"
+              label="Profilo"
+              gradient="blue"
+              onPress={onNavigateProfile}
+              testID="action-profile"
+            />
+            <ActionCard
+              icon="log-out"
+              label="Esci"
+              gradient="pink"
+              onPress={handleLogout}
+              testID="action-logout"
+            />
           </View>
         </View>
+
+        {events.length > 0 && (
+          <View style={styles.eventsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Prossimi Eventi</Text>
+              <Pressable onPress={onNavigateEvents}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>Vedi tutti</Text>
+              </Pressable>
+            </View>
+
+            {events.map((event) => (
+              <Pressable
+                key={event.id}
+                onPress={() => {
+                  triggerHaptic('light');
+                  onNavigateScan(event.eventId);
+                }}
+                testID={`event-${event.id}`}
+              >
+                <Card style={styles.eventCard}>
+                  <View style={styles.eventContent}>
+                    {event.eventImageUrl ? (
+                      <Image source={{ uri: event.eventImageUrl }} style={styles.eventImage} />
+                    ) : (
+                      <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.secondary }]}>
+                        <Ionicons name="calendar" size={24} color={colors.mutedForeground} />
+                      </View>
+                    )}
+                    <View style={styles.eventInfo}>
+                      <Text style={[styles.eventName, { color: colors.foreground }]} numberOfLines={1}>
+                        {event.eventName}
+                      </Text>
+                      <View style={styles.eventMeta}>
+                        <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                        <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]} numberOfLines={1}>
+                          {event.locationName}
+                        </Text>
+                      </View>
+                      <View style={styles.eventMeta}>
+                        <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                        <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]}>
+                          {formatDate(event.eventStart)} - {formatTime(event.eventStart)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.eventStats}>
+                      <Badge variant="success">
+                        <Text style={styles.badgeText}>{event.checkedIn}/{event.totalGuests}</Text>
+                      </Badge>
+                      <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                    </View>
+                  </View>
+                </Card>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {events.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color={colors.mutedForeground} />
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              Nessun evento assegnato
+            </Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              Contatta il gestore per essere assegnato a un evento
+            </Text>
+          </View>
+        )}
+
+        <View style={{ height: spacing.xl * 2 }} />
       </ScrollView>
-    </SafeArea>
+    </View>
   );
 }
 
@@ -263,9 +264,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    padding: spacing.lg,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  scannerBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  scannerBadgeText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: '700',
+    color: staticColors.primaryForeground,
+  },
+  headerTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
     gap: spacing.xl,
+  },
+  welcomeSection: {
+    gap: spacing.xs,
+  },
+  welcomeText: {
+    fontSize: typography.fontSize.sm,
+  },
+  userName: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '700',
   },
   statsCard: {
     overflow: 'hidden',
@@ -284,50 +330,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: typography.fontSize['2xl'],
+    fontSize: typography.fontSize['3xl'],
     fontWeight: '700',
     color: staticColors.primaryForeground,
   },
   statLabel: {
-    fontSize: typography.fontSize.xs,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: typography.fontSize.sm,
+    color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.xs,
     textAlign: 'center',
   },
   statDivider: {
     width: 1,
-    height: 40,
+    height: 48,
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  quickActions: {
+  actionsSection: {
     gap: spacing.md,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
   },
-  actionGrid: {
+  actionRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.md,
-  },
-  actionCard: {
-    width: '47%',
-    aspectRatio: 1.3,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  actionGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  actionLabel: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '600',
-    color: staticColors.primaryForeground,
   },
   eventsSection: {
     gap: spacing.md,
@@ -387,12 +414,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: staticColors.primaryForeground,
   },
-  logoutSection: {
+  emptyState: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    justifyContent: 'center',
+    paddingVertical: spacing.xl * 2,
+    gap: spacing.md,
   },
-  logoutText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '500',
+  emptyTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: typography.fontSize.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
   },
 });

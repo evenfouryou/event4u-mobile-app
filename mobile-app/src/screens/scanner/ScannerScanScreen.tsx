@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, TextInput, FlatList, Vibration, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, TextInput, FlatList, Vibration, Animated, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
-import { SafeArea } from '@/components/SafeArea';
-import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -22,6 +21,7 @@ interface ScannerScanScreenProps {
 
 export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
   const { colors, gradients } = useTheme();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>('scan');
   const [event, setEvent] = useState<ScannerEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -206,16 +206,16 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
         {!isCheckedIn && !isDenied && (
           <View style={styles.guestActions}>
             <Pressable
-              style={[styles.actionButton, styles.checkInButton]}
+              style={[styles.actionButton, { backgroundColor: staticColors.success }]}
               onPress={() => handleManualCheckIn(item)}
             >
-              <Ionicons name="checkmark-circle" size={24} color={staticColors.primaryForeground} />
+              <Ionicons name="checkmark" size={20} color={staticColors.primaryForeground} />
             </Pressable>
             <Pressable
-              style={[styles.actionButton, styles.denyButton]}
+              style={[styles.actionButton, { backgroundColor: staticColors.destructive }]}
               onPress={() => handleDenyAccess(item)}
             >
-              <Ionicons name="close-circle" size={24} color={staticColors.primaryForeground} />
+              <Ionicons name="close" size={20} color={staticColors.primaryForeground} />
             </Pressable>
           </View>
         )}
@@ -224,20 +224,20 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
   };
 
   return (
-    <SafeArea edges={['bottom']} style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
-      <Header
-        title={event?.eventName || 'Scanner'}
-        showBack
-        onBack={onBack}
-        rightElement={
-          <View style={styles.headerStats}>
-            <Badge variant="success">
-              <Text style={styles.badgeText}>{scanCount} entrati</Text>
-            </Badge>
-          </View>
-        }
-        testID="header-scanner"
-      />
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Pressable onPress={onBack} style={styles.backButton} testID="button-back">
+          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+        </Pressable>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+            {event?.eventName || 'Scanner'}
+          </Text>
+        </View>
+        <Badge variant="success">
+          <Text style={styles.badgeText}>{scanCount}</Text>
+        </Badge>
+      </View>
 
       <View style={styles.tabs}>
         {(['scan', 'search', 'stats'] as TabType[]).map((tab) => (
@@ -247,91 +247,84 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
               triggerHaptic('selection');
               setActiveTab(tab);
             }}
-            style={StyleSheet.flatten([
+            style={[
               styles.tab,
-              { backgroundColor: activeTab === tab ? colors.primary : colors.secondary }
-            ])}
+              { 
+                backgroundColor: activeTab === tab ? colors.primary : colors.card,
+                borderColor: activeTab === tab ? colors.primary : colors.border,
+              }
+            ]}
             testID={`tab-${tab}`}
           >
             <Ionicons
               name={tab === 'scan' ? 'scan' : tab === 'search' ? 'search' : 'stats-chart'}
-              size={18}
+              size={16}
               color={activeTab === tab ? staticColors.primaryForeground : colors.mutedForeground}
             />
             <Text style={[
               styles.tabText,
               { color: activeTab === tab ? staticColors.primaryForeground : colors.mutedForeground }
             ]}>
-              {tab === 'scan' ? 'Scansiona' : tab === 'search' ? 'Cerca' : 'Statistiche'}
+              {tab === 'scan' ? 'Scansiona' : tab === 'search' ? 'Cerca' : 'Stats'}
             </Text>
           </Pressable>
         ))}
       </View>
 
       {activeTab === 'scan' && (
-        <View style={styles.scanContainer}>
-          <View style={styles.manualScanSection}>
-            <GlassCard style={styles.scanCard}>
-              <View style={styles.scanIconContainer}>
-                <LinearGradient
-                  colors={[...gradients.golden]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.scanIconGradient}
-                >
-                  <Ionicons name="scan" size={64} color={staticColors.primaryForeground} />
-                </LinearGradient>
-              </View>
-              
-              <Text style={[styles.scanTitle, { color: colors.foreground }]}>
-                Inserisci Codice QR
-              </Text>
-              <Text style={[styles.scanSubtitle, { color: colors.mutedForeground }]}>
-                Inserisci manualmente il codice del biglietto o usa la ricerca ospiti
-              </Text>
-
-              <View style={[styles.codeInputContainer, { backgroundColor: colors.secondary }]}>
-                <Ionicons name="qr-code-outline" size={20} color={colors.mutedForeground} />
-                <TextInput
-                  style={[styles.codeInput, { color: colors.foreground }]}
-                  placeholder="Codice QR..."
-                  placeholderTextColor={colors.mutedForeground}
-                  value={manualCode}
-                  onChangeText={setManualCode}
-                  onSubmitEditing={handleManualScan}
-                  returnKeyType="done"
-                  autoCapitalize="characters"
-                  testID="input-manual-code"
-                />
-                {manualCode.length > 0 && (
-                  <Pressable onPress={() => setManualCode('')}>
-                    <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
-                  </Pressable>
-                )}
-              </View>
-
-              <Button
-                onPress={handleManualScan}
-                loading={isScanning}
-                disabled={!manualCode.trim()}
-                testID="button-scan"
-              >
-                Verifica Accesso
-              </Button>
-            </GlassCard>
-
-            <View style={styles.quickSearchHint}>
-              <Pressable
-                style={styles.hintButton}
-                onPress={() => setActiveTab('search')}
-              >
-                <Ionicons name="search" size={20} color={colors.primary} />
-                <Text style={[styles.hintText, { color: colors.primary }]}>
-                  Usa la ricerca per trovare ospiti per nome
-                </Text>
-              </Pressable>
+        <ScrollView style={styles.tabContent} contentContainerStyle={styles.scanContent}>
+          <GlassCard style={styles.scanCard}>
+            <View style={[styles.scanIconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="scan" size={48} color={colors.primary} />
             </View>
-          </View>
+            
+            <Text style={[styles.scanTitle, { color: colors.foreground }]}>
+              Inserisci Codice
+            </Text>
+            <Text style={[styles.scanSubtitle, { color: colors.mutedForeground }]}>
+              Inserisci il codice del biglietto o QR
+            </Text>
+
+            <View style={[styles.codeInputContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <Ionicons name="qr-code-outline" size={20} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.codeInput, { color: colors.foreground }]}
+                placeholder="Codice..."
+                placeholderTextColor={colors.mutedForeground}
+                value={manualCode}
+                onChangeText={setManualCode}
+                onSubmitEditing={handleManualScan}
+                returnKeyType="done"
+                autoCapitalize="characters"
+                testID="input-manual-code"
+              />
+              {manualCode.length > 0 && (
+                <Pressable onPress={() => setManualCode('')}>
+                  <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+                </Pressable>
+              )}
+            </View>
+
+            <Button
+              onPress={handleManualScan}
+              loading={isScanning}
+              disabled={!manualCode.trim()}
+              style={styles.scanButton}
+              testID="button-scan"
+            >
+              Verifica Accesso
+            </Button>
+          </GlassCard>
+
+          <Pressable
+            style={styles.searchHint}
+            onPress={() => setActiveTab('search')}
+          >
+            <Ionicons name="search" size={18} color={colors.primary} />
+            <Text style={[styles.searchHintText, { color: colors.primary }]}>
+              Cerca ospiti per nome
+            </Text>
+          </Pressable>
 
           {lastScan && (
             <Animated.View
@@ -342,62 +335,66 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
                   transform: [{
                     translateY: resultAnimation.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [50, 0],
+                      outputRange: [20, 0],
                     }),
                   }],
                 },
               ]}
             >
-              <GlassCard style={StyleSheet.flatten([
+              <Card style={StyleSheet.flatten([
                 styles.resultContent,
                 { borderColor: lastScan.success ? staticColors.success : staticColors.destructive }
               ])}>
                 <Ionicons
                   name={lastScan.success ? 'checkmark-circle' : 'close-circle'}
-                  size={48}
+                  size={40}
                   color={lastScan.success ? staticColors.success : staticColors.destructive}
                 />
-                <Text style={[styles.resultTitle, { color: colors.foreground }]}>
-                  {lastScan.success ? 'Check-in Completato' : 'Accesso Negato'}
-                </Text>
-                {lastScan.guestName && (
-                  <Text style={[styles.resultName, { color: colors.foreground }]}>
-                    {lastScan.guestName}
+                <View style={styles.resultInfo}>
+                  <Text style={[styles.resultTitle, { color: colors.foreground }]}>
+                    {lastScan.success ? 'Check-in OK' : 'Negato'}
                   </Text>
-                )}
-                <Text style={[styles.resultMessage, { color: colors.mutedForeground }]}>
-                  {lastScan.message}
-                </Text>
-              </GlassCard>
+                  {lastScan.guestName && (
+                    <Text style={[styles.resultName, { color: colors.foreground }]}>
+                      {lastScan.guestName}
+                    </Text>
+                  )}
+                  <Text style={[styles.resultMessage, { color: colors.mutedForeground }]}>
+                    {lastScan.message}
+                  </Text>
+                </View>
+              </Card>
             </Animated.View>
           )}
-        </View>
+        </ScrollView>
       )}
 
       {activeTab === 'search' && (
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.secondary }]}>
-            <Ionicons name="search" size={20} color={colors.mutedForeground} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.foreground }]}
-              placeholder="Cerca per nome o telefono..."
-              placeholderTextColor={colors.mutedForeground}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-              testID="input-search-guest"
-            />
-            {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
-              </Pressable>
-            )}
-          </View>
+        <View style={styles.tabContent}>
+          <View style={styles.searchSection}>
+            <View style={[styles.searchInputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="search" size={20} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.foreground }]}
+                placeholder="Nome o telefono..."
+                placeholderTextColor={colors.mutedForeground}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
+                testID="input-search-guest"
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+                </Pressable>
+              )}
+            </View>
 
-          <Button onPress={handleSearch} loading={searching} testID="button-search">
-            Cerca
-          </Button>
+            <Button onPress={handleSearch} loading={searching} testID="button-search">
+              Cerca
+            </Button>
+          </View>
 
           {searchResults.length > 0 ? (
             <FlatList
@@ -419,36 +416,34 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
       )}
 
       {activeTab === 'stats' && event && (
-        <View style={styles.statsContainer}>
-          <GlassCard style={styles.statsCard}>
+        <ScrollView style={styles.tabContent} contentContainerStyle={styles.statsContent}>
+          <GlassCard style={styles.mainStatsCard}>
             <LinearGradient
               colors={[...gradients.teal]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.statsGradient}
+              style={styles.mainStatsGradient}
             >
-              <View style={styles.mainStat}>
-                <Text style={styles.mainStatValue}>{scanCount}</Text>
-                <Text style={styles.mainStatLabel}>Check-in Effettuati</Text>
-              </View>
+              <Text style={styles.mainStatValue}>{scanCount}</Text>
+              <Text style={styles.mainStatLabel}>Check-in Effettuati</Text>
             </LinearGradient>
           </GlassCard>
 
           <View style={styles.statsGrid}>
             <Card style={styles.statCard}>
               <Text style={[styles.statValue, { color: colors.foreground }]}>{event.totalGuests}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Ospiti Totali</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Totali</Text>
             </Card>
             <Card style={styles.statCard}>
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {event.totalGuests - scanCount}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Da Entrare</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Da entrare</Text>
             </Card>
           </View>
 
           <Card style={styles.progressCard}>
-            <Text style={[styles.progressTitle, { color: colors.foreground }]}>Progresso Check-in</Text>
+            <Text style={[styles.progressCardTitle, { color: colors.foreground }]}>Progresso</Text>
             <View style={[styles.progressBar, { backgroundColor: colors.secondary }]}>
               <View
                 style={[
@@ -460,13 +455,13 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
                 ]}
               />
             </View>
-            <Text style={[styles.progressPercentage, { color: colors.primary }]}>
+            <Text style={[styles.progressPercent, { color: colors.primary }]}>
               {event.totalGuests > 0 ? Math.round((scanCount / event.totalGuests) * 100) : 0}%
             </Text>
           </Card>
 
-          <View style={styles.permissionsInfo}>
-            <Text style={[styles.permissionsTitle, { color: colors.foreground }]}>I tuoi permessi</Text>
+          <Card style={styles.permissionsCard}>
+            <Text style={[styles.permissionsTitle, { color: colors.foreground }]}>Permessi</Text>
             <View style={styles.permissionsList}>
               <View style={styles.permissionItem}>
                 <Ionicons
@@ -474,7 +469,7 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
                   size={20}
                   color={event.canScanLists ? staticColors.success : staticColors.destructive}
                 />
-                <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Scansione Liste</Text>
+                <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Liste</Text>
               </View>
               <View style={styles.permissionItem}>
                 <Ionicons
@@ -482,7 +477,7 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
                   size={20}
                   color={event.canScanTables ? staticColors.success : staticColors.destructive}
                 />
-                <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Scansione Tavoli</Text>
+                <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Tavoli</Text>
               </View>
               <View style={styles.permissionItem}>
                 <Ionicons
@@ -490,13 +485,13 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
                   size={20}
                   color={event.canScanTickets ? staticColors.success : staticColors.destructive}
                 />
-                <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Scansione Biglietti</Text>
+                <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Biglietti</Text>
               </View>
             </View>
-          </View>
-        </View>
+          </Card>
+        </ScrollView>
       )}
-    </SafeArea>
+    </View>
   );
 }
 
@@ -504,9 +499,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerStats: {
+  header: {
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
   },
   badgeText: {
     fontSize: typography.fontSize.xs,
@@ -516,7 +527,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     gap: spacing.sm,
   },
   tab: {
@@ -525,37 +536,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.lg,
     gap: spacing.xs,
+    borderWidth: 1,
   },
   tabText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
   },
-  scanContainer: {
+  tabContent: {
     flex: 1,
-    padding: spacing.lg,
   },
-  manualScanSection: {
-    flex: 1,
+  scanContent: {
+    padding: spacing.lg,
     gap: spacing.lg,
   },
   scanCard: {
     alignItems: 'center',
     padding: spacing.xl,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   scanIconContainer: {
-    marginBottom: spacing.md,
-  },
-  scanIconGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.golden,
+    marginBottom: spacing.sm,
   },
   scanTitle: {
     fontSize: typography.fontSize.xl,
@@ -565,7 +572,6 @@ const styles = StyleSheet.create({
   scanSubtitle: {
     fontSize: typography.fontSize.sm,
     textAlign: 'center',
-    paddingHorizontal: spacing.lg,
   },
   codeInputContainer: {
     flexDirection: 'row',
@@ -575,53 +581,54 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     gap: spacing.sm,
     width: '100%',
+    borderWidth: 1,
   },
   codeInput: {
     flex: 1,
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.base,
     paddingVertical: spacing.sm,
     fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
-  quickSearchHint: {
-    alignItems: 'center',
+  scanButton: {
+    width: '100%',
   },
-  hintButton: {
+  searchHint: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
     padding: spacing.md,
   },
-  hintText: {
+  searchHintText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
   },
   resultCard: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    left: spacing.lg,
-    right: spacing.lg,
+    marginTop: spacing.md,
   },
   resultContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
     borderWidth: 2,
   },
+  resultInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
   resultTitle: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.base,
     fontWeight: '600',
   },
   resultName: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
     fontWeight: '700',
   },
   resultMessage: {
     fontSize: typography.fontSize.sm,
-    textAlign: 'center',
   },
-  searchContainer: {
-    flex: 1,
+  searchSection: {
     padding: spacing.lg,
     gap: spacing.md,
   },
@@ -632,6 +639,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.lg,
     gap: spacing.sm,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
@@ -639,8 +647,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   searchResults: {
+    padding: spacing.lg,
+    paddingTop: 0,
     gap: spacing.sm,
-    paddingBottom: spacing.xl,
   },
   guestCard: {
     flexDirection: 'row',
@@ -655,6 +664,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   guestName: {
     fontSize: typography.fontSize.base,
@@ -669,58 +679,49 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   guestMetaText: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography.fontSize.sm,
   },
   guestActions: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
   actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkInButton: {
-    backgroundColor: staticColors.success,
-  },
-  denyButton: {
-    backgroundColor: staticColors.destructive,
   },
   noResults: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.md,
+    padding: spacing.xl,
   },
   noResultsText: {
     fontSize: typography.fontSize.base,
   },
-  statsContainer: {
-    flex: 1,
+  statsContent: {
     padding: spacing.lg,
     gap: spacing.lg,
   },
-  statsCard: {
+  mainStatsCard: {
     overflow: 'hidden',
     borderRadius: borderRadius.xl,
   },
-  statsGradient: {
+  mainStatsGradient: {
     padding: spacing.xl,
     alignItems: 'center',
   },
-  mainStat: {
-    alignItems: 'center',
-  },
   mainStatValue: {
-    fontSize: 64,
+    fontSize: typography.fontSize['4xl'],
     fontWeight: '700',
     color: staticColors.primaryForeground,
   },
   mainStatLabel: {
     fontSize: typography.fontSize.base,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.xs,
   },
   statsGrid: {
@@ -742,9 +743,9 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  progressTitle: {
+  progressCardTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
   },
@@ -757,12 +758,13 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 4,
   },
-  progressPercentage: {
+  progressPercent: {
     fontSize: typography.fontSize.lg,
-    fontWeight: '700',
+    fontWeight: '600',
     textAlign: 'center',
   },
-  permissionsInfo: {
+  permissionsCard: {
+    padding: spacing.lg,
     gap: spacing.md,
   },
   permissionsTitle: {
@@ -778,6 +780,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   permissionLabel: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.base,
   },
 });

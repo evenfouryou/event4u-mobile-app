@@ -430,7 +430,6 @@ export function AppNavigator() {
             onNavigateEvents={() => navigate({ name: 'scannerEvents' })}
             onNavigateScan={(eventId) => navigate({ name: 'scannerScan', params: { eventId } })}
             onNavigateProfile={() => navigate({ name: 'profile' })}
-            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
