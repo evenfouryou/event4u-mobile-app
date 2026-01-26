@@ -264,7 +264,7 @@ export default function PrEventDashboard() {
   const eventIsToday = event ? isToday(event.eventStart) : false;
 
   return (
-    <PrLayout showBackButton title={eventDetail?.eventName}>
+    <PrLayout showBackButton title={event?.eventName}>
       {/* Hero Section */}
       <div className="relative">
         <div className="relative h-56 md:h-72 overflow-hidden">

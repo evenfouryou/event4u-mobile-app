@@ -117,6 +117,86 @@ function requirePr(req: Request, res: Response, next: NextFunction) {
   return res.status(403).json({ error: "Accesso negato. Richiesto ruolo PR." });
 }
 
+// ==================== Single Event Detail for PR ====================
+
+// Get single event detail for PR dashboard
+router.get("/api/pr/events/:eventId", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
+    if (!prProfileId && !userId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // First check if PR has access to this event via assignment
+    const assignmentConditions = [];
+    if (prProfileId) {
+      assignmentConditions.push(eq(eventPrAssignments.prProfileId, prProfileId));
+    }
+    if (userId) {
+      assignmentConditions.push(eq(eventPrAssignments.userId, userId));
+    }
+    
+    const assignment = await db
+      .select()
+      .from(eventPrAssignments)
+      .where(and(
+        eq(eventPrAssignments.eventId, eventId),
+        or(...assignmentConditions)
+      ))
+      .limit(1);
+    
+    if (assignment.length === 0) {
+      return res.status(404).json({ error: "Evento non trovato o accesso non autorizzato" });
+    }
+    
+    // Get event details
+    const [event] = await db
+      .select({
+        id: events.id,
+        eventId: events.id,
+        name: events.name,
+        eventName: events.name,
+        imageUrl: events.imageUrl,
+        eventImageUrl: events.imageUrl,
+        startDate: events.startDate,
+        eventStart: events.startDate,
+        endDate: events.endDate,
+        eventEnd: events.endDate,
+        status: events.status,
+        locationId: events.locationId,
+      })
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1);
+    
+    if (!event) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Get location details if available
+    let locationName = "";
+    let locationAddress = "";
+    if (event.locationId) {
+      const location = await storage.getLocation(event.locationId);
+      if (location) {
+        locationName = location.name;
+        locationAddress = location.address || "";
+      }
+    }
+    
+    res.json({
+      ...event,
+      locationName,
+      locationAddress,
+    });
+  } catch (error: any) {
+    console.error("Error getting event detail for PR:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== Event Staff Assignments ====================
 
 // Get staff assignments for an event
