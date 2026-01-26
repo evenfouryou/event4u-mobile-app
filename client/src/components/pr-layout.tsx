@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
 import { 
   Home, 
   Calendar, 
@@ -9,6 +8,7 @@ import {
   User,
   LogOut,
   ChevronLeft,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
@@ -18,6 +18,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePrAuth } from "@/hooks/usePrAuth";
 import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 interface PrLayoutProps {
   children: ReactNode;
@@ -31,7 +44,6 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   href: string;
-  isActive: boolean;
 }
 
 export function PrLayout({ children, showBackButton, onBack, title, hideNav }: PrLayoutProps) {
@@ -42,35 +54,48 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
   const navItems: NavItem[] = [
     { 
       icon: Home, 
-      label: "Home", 
+      label: "Dashboard", 
       href: "/pr/dashboard",
-      isActive: location === "/pr/dashboard" || location === "/pr",
     },
     { 
       icon: Calendar, 
       label: "Eventi", 
       href: "/pr/events",
-      isActive: location === "/pr/events" || location.startsWith("/pr/events/"),
     },
     { 
       icon: Users, 
-      label: "Liste", 
-      href: "/pr/lists",
-      isActive: location === "/pr/lists",
+      label: "Liste Ospiti", 
+      href: "/pr/guest-lists",
     },
     { 
       icon: Wallet, 
       label: "Wallet", 
       href: "/pr/wallet",
-      isActive: location === "/pr/wallet",
+    },
+    { 
+      icon: Gift, 
+      label: "Rewards", 
+      href: "/pr/rewards",
     },
     { 
       icon: User, 
       label: "Profilo", 
       href: "/pr/profile",
-      isActive: location === "/pr/profile",
     },
   ];
+
+  const isActive = (href: string) => {
+    if (href === "/pr/dashboard") {
+      return location === "/pr/dashboard" || location === "/pr";
+    }
+    if (href === "/pr/events") {
+      return location === "/pr/events" || location.startsWith("/pr/events/");
+    }
+    if (href === "/pr/guest-lists") {
+      return location === "/pr/guest-lists" || location === "/pr/lists";
+    }
+    return location === href;
+  };
 
   const handleLogout = async () => {
     try {
@@ -82,100 +107,108 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
     }
   };
 
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-3">
-            {showBackButton ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack || (() => window.history.back())}
-                data-testid="button-back"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-            ) : (
-              <BrandLogo variant="horizontal" className="h-8" />
-            )}
-            {title && (
-              <h1 className="text-lg font-semibold">{title}</h1>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {prProfile?.prCode && (
-              <Badge variant="outline" className="hidden sm:flex bg-primary/10 text-primary border-primary/30">
-                {prProfile.prCode}
-              </Badge>
-            )}
-            <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="text-muted-foreground hover:text-destructive"
-              data-testid="button-logout"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        {!hideNav && (
+          <Sidebar className="border-r">
+            <SidebarHeader className="p-4 border-b">
+              <div className="flex items-center gap-2">
+                <BrandLogo variant="horizontal" className="h-8" />
+              </div>
+              {prProfile?.prCode && (
+                <Badge variant="outline" className="mt-2 bg-primary/10 text-primary border-primary/30 w-fit">
+                  PR: {prProfile.prCode}
+                </Badge>
+              )}
+            </SidebarHeader>
+            
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navItems.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.href);
+                      return (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={active}
+                            tooltip={item.label}
+                          >
+                            <Link href={item.href}>
+                              <Icon className="h-5 w-5" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+
+            <SidebarFooter className="p-4 border-t">
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="text-muted-foreground hover:text-destructive"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
+              {(user?.firstName || prProfile?.name) && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {user?.firstName || prProfile?.name}
+                </p>
+              )}
+            </SidebarFooter>
+          </Sidebar>
+        )}
+
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center gap-3 px-4 h-14">
+              {!hideNav && <SidebarTrigger data-testid="button-sidebar-toggle" />}
+              {showBackButton && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onBack || (() => window.history.back())}
+                  data-testid="button-back"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              )}
+              {title && (
+                <h1 className="text-lg font-semibold">{title}</h1>
+              )}
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto pb-20">
-        {children}
-      </main>
-
-      {/* Bottom Navigation */}
-      {!hideNav && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-area-bottom">
-          <div className="flex items-center justify-around h-16 px-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href}>
-                  <motion.div
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-colors min-w-[64px]",
-                      item.isActive 
-                        ? "text-primary" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    whileTap={{ scale: 0.95 }}
-                    data-testid={`nav-${item.label.toLowerCase()}`}
-                  >
-                    <div className={cn(
-                      "p-1.5 rounded-lg transition-colors",
-                      item.isActive && "bg-primary/10"
-                    )}>
-                      <Icon className={cn(
-                        "h-5 w-5",
-                        item.isActive && "text-primary"
-                      )} />
-                    </div>
-                    <span className={cn(
-                      "text-[10px] font-medium",
-                      item.isActive && "text-primary"
-                    )}>
-                      {item.label}
-                    </span>
-                  </motion.div>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-      )}
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
 
 export function PrPageContainer({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("px-4 py-4 max-w-4xl mx-auto", className)}>
+    <div className={cn("px-4 py-4 max-w-6xl mx-auto", className)}>
       {children}
     </div>
   );
