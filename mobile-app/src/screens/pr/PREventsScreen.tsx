@@ -19,7 +19,8 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
   const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<PrEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'upcoming' | 'past'>('upcoming');
 
@@ -27,15 +28,25 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
     loadEvents();
   }, []);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadEvents = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const eventsData = await api.getPrEvents();
       setEvents(eventsData);
     } catch (error) {
       console.error('Error loading PR events:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -68,7 +79,7 @@ export function PREventsScreen({ onGoBack, onSelectEvent }: PREventsScreenProps)
     });
   };
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento eventi..." />;
   }
 

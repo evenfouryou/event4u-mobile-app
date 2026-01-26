@@ -21,16 +21,27 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
   const insets = useSafeAreaInsets();
   const [wallet, setWallet] = useState<PrWallet | null>(null);
   const [transactions, setTransactions] = useState<PrTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadData = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const [walletData, txData] = await Promise.all([
         api.getPrWallet().catch(() => null),
         api.getPrTransactions().catch(() => []),
@@ -40,7 +51,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
     } catch (error) {
       console.error('Error loading PR wallet:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -77,7 +88,7 @@ export function PRWalletScreen({ onGoBack, onRequestPayout }: PRWalletScreenProp
     });
   };
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento wallet..." />;
   }
 

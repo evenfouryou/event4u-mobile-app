@@ -21,7 +21,8 @@ interface TicketsScreenProps {
 
 export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [ticketsData, setTicketsData] = useState<TicketsResponse>({ upcoming: [], past: [], cancelled: [], total: 0 });
 
@@ -29,15 +30,25 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
     loadTickets();
   }, []);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadTickets = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const data = await api.getMyTickets();
       setTicketsData(data);
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 

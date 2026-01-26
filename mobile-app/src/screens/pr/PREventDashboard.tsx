@@ -56,7 +56,8 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const [guestLists, setGuestLists] = useState<PrGuestList[]>([]);
   const [tables, setTables] = useState<PrEventTable[]>([]);
   const [stats, setStats] = useState<PrTicketStats>({ sold: 0, revenue: 0, commission: 0 });
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('guests');
   const [showAddGuest, setShowAddGuest] = useState(false);
@@ -93,9 +94,19 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
     loadData();
   }, [eventId]);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadData = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const [eventData, guestsData, listsData, tablesData, statsData, prizesData, linksData] = await Promise.all([
         api.getPrEventDetail(eventId).catch(() => null),
         api.getPrEventGuests(eventId).catch(() => []),
@@ -121,7 +132,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
     } catch (error) {
       console.error('Error loading event data:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   
@@ -379,7 +390,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
   const arrivedCount = guests.filter(g => g.status === 'arrived').length;
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento evento..." />;
   }
 

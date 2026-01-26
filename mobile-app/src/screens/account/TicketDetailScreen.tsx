@@ -28,22 +28,33 @@ export function TicketDetailScreen({
 }: TicketDetailScreenProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [ticketData, setTicketData] = useState<ApiTicket | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadTicketData();
   }, [ticketId]);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadTicketData = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const data = await api.getTicketById(ticketId);
       setTicketData(data);
     } catch (error) {
       console.error('Error loading ticket:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -127,7 +138,7 @@ export function TicketDetailScreen({
     </View>
   );
 
-  if (loading) {
+  if (showLoader) {
     return (
       <SafeArea edges={['bottom']} style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-ticket-detail" />

@@ -40,22 +40,33 @@ export function EventDetailScreen({
   const [selectedTicketType, setSelectedTicketType] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [eventData, setEventData] = useState<ApiEvent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadEventData();
   }, [eventId]);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadEventData = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const data = await api.getPublicEventById(eventId);
       setEventData(data);
     } catch (error) {
       console.error('Error loading event:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -118,7 +129,7 @@ export function EventDetailScreen({
     }
   };
 
-  if (loading) {
+  if (showLoader) {
     return (
       <SafeArea style={styles.container} edges={['bottom']}>
         <View style={styles.loadingContainer}>

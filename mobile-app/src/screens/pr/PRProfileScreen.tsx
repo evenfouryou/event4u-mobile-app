@@ -20,7 +20,8 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<PrProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,9 +31,19 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
     loadProfile();
   }, []);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const loadProfile = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const profileData = await api.getPrProfile();
       setProfile(profileData);
       setDisplayName(profileData?.displayName || '');
@@ -40,7 +51,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
     } catch (error) {
       console.error('Error loading PR profile:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -59,7 +70,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
     }
   };
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento profilo..." />;
   }
 
