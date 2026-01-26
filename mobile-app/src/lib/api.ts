@@ -619,9 +619,7 @@ class ApiClient {
 
   async getScannerEvents(): Promise<ScannerEvent[]> {
     try {
-      console.log('[API] Fetching scanner events from:', this.baseUrl + '/api/e4u/scanner/events');
       const results = await this.get<any[]>('/api/e4u/scanner/events');
-      console.log('[API] Scanner events response:', results);
       return (results || []).map(e => ({
         id: e.id,
         eventId: e.eventId,
@@ -638,7 +636,6 @@ class ApiClient {
         checkedIn: e.checkedIn || 0,
       }));
     } catch (error) {
-      console.error('[API] Error fetching scanner events:', error);
       return [];
     }
   }
