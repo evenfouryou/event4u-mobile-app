@@ -51,6 +51,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { TableBookingDialog } from "@/components/pr/table-booking-dialog";
+import { GuestListBatchDialog } from "@/components/pr/guest-list-batch-dialog";
 
 interface EventDetail {
   id: string;
@@ -165,6 +166,7 @@ export default function PrEventDashboard() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
   const [showBookTableDialog, setShowBookTableDialog] = useState(false);
+  const [showBatchGuestDialog, setShowBatchGuestDialog] = useState(false);
   const [phoneSearch, setPhoneSearch] = useState("");
   const [searchResults, setSearchResults] = useState<PhoneSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -593,15 +595,26 @@ export default function PrEventDashboard() {
                   <p className="text-center text-muted-foreground py-4">Nessuna lista disponibile</p>
                 )}
 
-                <Button 
-                  className="w-full" 
-                  variant="outline" 
-                  data-testid="button-add-guest"
-                  onClick={() => setShowAddGuestDialog(true)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Aggiungi ospite
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    className="flex-1" 
+                    variant="outline" 
+                    data-testid="button-add-guest"
+                    onClick={() => setShowAddGuestDialog(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Singolo
+                  </Button>
+                  <Button 
+                    className="flex-1" 
+                    variant="default" 
+                    data-testid="button-add-guests-batch"
+                    onClick={() => setShowBatchGuestDialog(true)}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Multipli
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -1050,6 +1063,14 @@ export default function PrEventDashboard() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Guest List Batch Dialog */}
+      <GuestListBatchDialog
+        open={showBatchGuestDialog}
+        onOpenChange={setShowBatchGuestDialog}
+        eventId={eventId || ""}
+        guestLists={guestLists}
+      />
 
       {/* Book Table Dialog - Multi-step with participants */}
       <TableBookingDialog
