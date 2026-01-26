@@ -257,16 +257,16 @@ export function LandingScreen({
                 onPress={onNavigateRegister}
                 style={styles.ctaButton}
                 testID="button-cta-register"
-            >
-              Inizia Ora
+              >
+                Inizia Ora
               </Button>
             </LinearGradient>
           </View>
         )}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Event4U - La tua app per eventi</Text>
-          <Text style={styles.footerCopyright}>2026 Event4U. Tutti i diritti riservati.</Text>
+          <Text style={styles.footerText}>Event Four You - La tua app per eventi</Text>
+          <Text style={styles.footerCopyright}>2026 Event Four You. Tutti i diritti riservati.</Text>
         </View>
       </ScrollView>
     </SafeArea>
