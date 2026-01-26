@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
 };
 
 export type ClientQuickAction = 'buy-tickets' | 'my-qr' | 'wallet' | 'resell' | 'pr-area' | 'scanner-area' | 'profile' | 'events';
-export type PrQuickAction = 'events' | 'lists' | 'wallet' | 'profile' | 'scanner' | 'client-switch';
+export type PrQuickAction = 'events' | 'lists' | 'wallet' | 'profile' | 'client-switch';
 
 export interface QuickActionConfig {
   id: string;
@@ -15,7 +15,7 @@ export interface QuickActionConfig {
 }
 
 const DEFAULT_CLIENT_ACTIONS: ClientQuickAction[] = ['buy-tickets', 'my-qr', 'wallet', 'resell'];
-const DEFAULT_PR_ACTIONS: PrQuickAction[] = ['events', 'lists', 'scanner', 'wallet'];
+const DEFAULT_PR_ACTIONS: PrQuickAction[] = ['events', 'lists', 'wallet', 'profile'];
 
 export async function getClientQuickActions(): Promise<ClientQuickAction[]> {
   try {
