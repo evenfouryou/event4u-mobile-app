@@ -61,6 +61,8 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('guests');
   const [showAddGuest, setShowAddGuest] = useState(false);
   const [showBatchAdd, setShowBatchAdd] = useState(false);
+  const [listViewMode, setListViewMode] = useState<'list' | 'add'>('list');
+  const [tableViewMode, setTableViewMode] = useState<'list' | 'add'>('list');
   const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '', gender: 'M' as 'M' | 'F', listId: '' });
   const [adding, setAdding] = useState(false);
   
@@ -511,9 +513,9 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               onPress={() => setActiveTab('guests')}
               testID="tab-guests"
             >
-              <Ionicons name="people-outline" size={18} color={activeTab === 'guests' ? staticColors.primary : staticColors.mutedForeground} />
+              <Ionicons name="list-outline" size={18} color={activeTab === 'guests' ? staticColors.primary : staticColors.mutedForeground} />
               <Text style={[styles.tabText, activeTab === 'guests' && styles.tabTextActive]}>
-                Ospiti
+                Liste
               </Text>
             </Pressable>
             <Pressable
@@ -562,46 +564,89 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         {/* Guests Tab */}
         {activeTab === 'guests' && (
           <>
-            <View style={styles.actionButtonsRow}>
+            {/* Mode Toggle: Vedi Lista / Aggiungi */}
+            <View style={styles.modeToggleRow}>
               <Pressable
                 onPress={() => {
-                  setShowAddGuest(!showAddGuest);
+                  setListViewMode('list');
+                  setShowAddGuest(false);
                   setShowBatchAdd(false);
+                  triggerHaptic('light');
                 }}
-                style={[styles.addButton, { flex: 1 }]}
-                testID="button-add-guest"
+                style={[styles.modeButton, listViewMode === 'list' && styles.modeButtonActive]}
+                testID="button-view-list"
               >
-                <LinearGradient
-                  colors={gradients.golden}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addButtonGradient}
-                >
-                  <Ionicons name="person-add" size={18} color={staticColors.primaryForeground} />
-                  <Text style={styles.addButtonText}>Singolo</Text>
-                </LinearGradient>
+                <Ionicons 
+                  name="eye-outline" 
+                  size={20} 
+                  color={listViewMode === 'list' ? staticColors.primary : staticColors.mutedForeground} 
+                />
+                <Text style={[styles.modeButtonText, listViewMode === 'list' && styles.modeButtonTextActive]}>
+                  Vedi Lista
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => {
-                  setShowBatchAdd(!showBatchAdd);
-                  setShowAddGuest(false);
+                  setListViewMode('add');
+                  triggerHaptic('light');
                 }}
-                style={[styles.addButton, { flex: 1 }]}
-                testID="button-batch-add"
+                style={[styles.modeButton, listViewMode === 'add' && styles.modeButtonActive]}
+                testID="button-add-mode"
               >
-                <LinearGradient
-                  colors={gradients.purple}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addButtonGradient}
-                >
-                  <Ionicons name="people" size={18} color={staticColors.primaryForeground} />
-                  <Text style={styles.addButtonText}>Multiplo (max 10)</Text>
-                </LinearGradient>
+                <Ionicons 
+                  name="add-circle-outline" 
+                  size={20} 
+                  color={listViewMode === 'add' ? staticColors.primary : staticColors.mutedForeground} 
+                />
+                <Text style={[styles.modeButtonText, listViewMode === 'add' && styles.modeButtonTextActive]}>
+                  Aggiungi
+                </Text>
               </Pressable>
             </View>
 
-            {showAddGuest && (
+            {/* Add Mode: Show Singolo/Multiplo buttons */}
+            {listViewMode === 'add' && (
+              <View style={styles.actionButtonsRow}>
+                <Pressable
+                  onPress={() => {
+                    setShowAddGuest(!showAddGuest);
+                    setShowBatchAdd(false);
+                  }}
+                  style={[styles.addButton, { flex: 1 }]}
+                  testID="button-add-guest"
+                >
+                  <LinearGradient
+                    colors={gradients.golden}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.addButtonGradient}
+                  >
+                    <Ionicons name="person-add" size={18} color={staticColors.primaryForeground} />
+                    <Text style={styles.addButtonText}>Singolo</Text>
+                  </LinearGradient>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setShowBatchAdd(!showBatchAdd);
+                    setShowAddGuest(false);
+                  }}
+                  style={[styles.addButton, { flex: 1 }]}
+                  testID="button-batch-add"
+                >
+                  <LinearGradient
+                    colors={gradients.purple}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.addButtonGradient}
+                  >
+                    <Ionicons name="people" size={18} color={staticColors.primaryForeground} />
+                    <Text style={styles.addButtonText}>Multiplo (max 10)</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+            )}
+
+            {listViewMode === 'add' && showAddGuest && (
               <Card style={styles.addGuestForm}>
                 <Text style={styles.formTitle}>Nuovo Ospite</Text>
                 
@@ -734,7 +779,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               </Card>
             )}
 
-            {showBatchAdd && (
+            {listViewMode === 'add' && showBatchAdd && (
               <Card style={styles.addGuestForm}>
                 <View style={styles.batchHeader}>
                   <Text style={styles.formTitle}>Aggiungi Multipli</Text>
@@ -892,30 +937,33 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               </Card>
             )}
 
-            {guests.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="people-outline" size={48} color={staticColors.mutedForeground} />
-                <Text style={styles.emptyText}>Nessun ospite nella lista</Text>
-                <Text style={styles.emptySubtext}>Aggiungi ospiti per iniziare</Text>
-              </View>
-            ) : (
-              guests.map((guest) => (
-                <Card key={guest.id} style={styles.guestCard}>
-                  <View style={styles.guestInfo}>
-                    <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
-                    {guest.phone && (
-                      <Pressable 
-                        onPress={() => Linking.openURL(`tel:${guest.phone}`)}
-                        style={styles.guestPhoneRow}
-                      >
-                        <Ionicons name="call-outline" size={14} color={staticColors.primary} />
-                        <Text style={styles.guestPhone}>{guest.phone}</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                  {getStatusBadge(guest.status)}
-                </Card>
-              ))
+            {/* Guest List - only show in list mode */}
+            {listViewMode === 'list' && (
+              guests.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="people-outline" size={48} color={staticColors.mutedForeground} />
+                  <Text style={styles.emptyText}>Nessun ospite nella lista</Text>
+                  <Text style={styles.emptySubtext}>Aggiungi ospiti per iniziare</Text>
+                </View>
+              ) : (
+                guests.map((guest) => (
+                  <Card key={guest.id} style={styles.guestCard}>
+                    <View style={styles.guestInfo}>
+                      <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
+                      {guest.phone && (
+                        <Pressable 
+                          onPress={() => Linking.openURL(`tel:${guest.phone}`)}
+                          style={styles.guestPhoneRow}
+                        >
+                          <Ionicons name="call-outline" size={14} color={staticColors.primary} />
+                          <Text style={styles.guestPhone}>{guest.phone}</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                    {getStatusBadge(guest.status)}
+                  </Card>
+                ))
+              )
             )}
           </>
         )}
@@ -923,7 +971,47 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         {/* Tables Tab */}
         {activeTab === 'tables' && (
           <>
-            {availableTables.length > 0 && (
+            {/* Mode Toggle: Vedi Tavoli / Prenota */}
+            <View style={styles.modeToggleRow}>
+              <Pressable
+                onPress={() => {
+                  setTableViewMode('list');
+                  setShowBookTable(false);
+                  triggerHaptic('light');
+                }}
+                style={[styles.modeButton, tableViewMode === 'list' && styles.modeButtonActive]}
+                testID="button-view-tables"
+              >
+                <Ionicons 
+                  name="eye-outline" 
+                  size={20} 
+                  color={tableViewMode === 'list' ? staticColors.primary : staticColors.mutedForeground} 
+                />
+                <Text style={[styles.modeButtonText, tableViewMode === 'list' && styles.modeButtonTextActive]}>
+                  Vedi Tavoli
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setTableViewMode('add');
+                  triggerHaptic('light');
+                }}
+                style={[styles.modeButton, tableViewMode === 'add' && styles.modeButtonActive]}
+                testID="button-add-table"
+              >
+                <Ionicons 
+                  name="add-circle-outline" 
+                  size={20} 
+                  color={tableViewMode === 'add' ? staticColors.primary : staticColors.mutedForeground} 
+                />
+                <Text style={[styles.modeButtonText, tableViewMode === 'add' && styles.modeButtonTextActive]}>
+                  Prenota
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Add Mode: Show booking button */}
+            {tableViewMode === 'add' && availableTables.length > 0 && (
               <Pressable
                 onPress={() => setShowBookTable(!showBookTable)}
                 style={styles.addButton}
@@ -941,7 +1029,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               </Pressable>
             )}
 
-            {showBookTable && availableTables.length > 0 && (
+            {tableViewMode === 'add' && showBookTable && availableTables.length > 0 && (
               <Card style={styles.addGuestForm}>
                 <Text style={styles.formTitle}>Nuova Prenotazione</Text>
                 
@@ -1025,59 +1113,63 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               </Card>
             )}
 
-            {tables.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="grid-outline" size={48} color={staticColors.mutedForeground} />
-                <Text style={styles.emptyText}>Nessun tavolo disponibile</Text>
-                <Text style={styles.emptySubtext}>I tavoli verranno mostrati qui</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.tableSectionTitle}>Tavoli Evento</Text>
-                {tables.map((table) => (
-                  <Card key={table.id} style={styles.tableCard}>
-                    <View style={styles.tableHeader}>
-                      <View style={styles.tableInfo}>
-                        <Text style={styles.tableName}>{table.name}</Text>
-                        <View style={styles.tableMetaRow}>
-                          <View style={styles.tableMetaItem}>
-                            <Ionicons name="people" size={14} color={staticColors.mutedForeground} />
-                            <Text style={styles.tableMetaText}>{table.capacity} posti</Text>
-                          </View>
-                          {table.minSpend && (
+            {/* Tables List - only show in list mode */}
+            {tableViewMode === 'list' && (
+              tables.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="grid-outline" size={48} color={staticColors.mutedForeground} />
+                  <Text style={styles.emptyText}>Nessun tavolo disponibile</Text>
+                  <Text style={styles.emptySubtext}>I tavoli verranno mostrati qui</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.tableSectionTitle}>Tavoli Evento</Text>
+                  {tables.map((table) => (
+                    <Card key={table.id} style={styles.tableCard}>
+                      <View style={styles.tableHeader}>
+                        <View style={styles.tableInfo}>
+                          <Text style={styles.tableName}>{table.name}</Text>
+                          <View style={styles.tableMetaRow}>
                             <View style={styles.tableMetaItem}>
-                              <Ionicons name="cash" size={14} color={staticColors.golden} />
-                              <Text style={styles.tableMetaText}>Min €{table.minSpend}</Text>
+                              <Ionicons name="people" size={14} color={staticColors.mutedForeground} />
+                              <Text style={styles.tableMetaText}>{table.capacity} posti</Text>
                             </View>
-                          )}
+                            {table.minSpend && (
+                              <View style={styles.tableMetaItem}>
+                                <Ionicons name="cash" size={14} color={staticColors.golden} />
+                                <Text style={styles.tableMetaText}>Min €{table.minSpend}</Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
-                      </View>
-                      {table.isBooked ? (
-                        <Badge variant="success">
-                          <Text style={styles.statusText}>Prenotato</Text>
-                        </Badge>
-                      ) : (
-                        <Pressable
-                          onPress={() => {
-                            setSelectedTableId(table.id);
-                            setShowBookTable(true);
-                          }}
-                        >
-                          <Badge variant="outline">
-                            <Text style={[styles.statusText, { color: staticColors.primary }]}>Prenota</Text>
+                        {table.isBooked ? (
+                          <Badge variant="success">
+                            <Text style={styles.statusText}>Prenotato</Text>
                           </Badge>
-                        </Pressable>
-                      )}
-                    </View>
-                    {table.booking && (
-                      <View style={styles.bookingInfo}>
-                        <Text style={styles.bookingName}>{table.booking.guestName}</Text>
-                        <Text style={styles.bookingGuests}>{table.booking.guestCount} ospiti</Text>
+                        ) : (
+                          <Pressable
+                            onPress={() => {
+                              setSelectedTableId(table.id);
+                              setTableViewMode('add');
+                              setShowBookTable(true);
+                            }}
+                          >
+                            <Badge variant="outline">
+                              <Text style={[styles.statusText, { color: staticColors.primary }]}>Prenota</Text>
+                            </Badge>
+                          </Pressable>
+                        )}
                       </View>
-                    )}
-                  </Card>
-                ))}
-              </>
+                      {table.booking && (
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingName}>{table.booking.guestName}</Text>
+                          <Text style={styles.bookingGuests}>{table.booking.guestCount} ospiti</Text>
+                        </View>
+                      )}
+                    </Card>
+                  ))}
+                </>
+              )
             )}
           </>
         )}
@@ -1892,5 +1984,35 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
     marginTop: spacing.xs,
+  },
+  modeToggleRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.card,
+  },
+  modeButtonActive: {
+    borderColor: staticColors.primary,
+    backgroundColor: `${staticColors.primary}15`,
+  },
+  modeButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: staticColors.mutedForeground,
+  },
+  modeButtonTextActive: {
+    color: staticColors.primary,
   },
 });
