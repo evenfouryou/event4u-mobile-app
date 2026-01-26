@@ -8,8 +8,10 @@ import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
+import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrProfile, PrWallet, PrEvent } from '@/lib/api';
+import { PrQuickAction, getPrQuickActions } from '@/lib/storage';
 
 interface PRDashboardProps {
   onNavigateEvents: () => void;
@@ -34,9 +36,12 @@ export function PRDashboard({
   const [events, setEvents] = useState<PrEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [quickActions, setQuickActions] = useState<PrQuickAction[]>(['events', 'lists', 'wallet', 'profile']);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadQuickActions();
   }, []);
 
   const loadData = async () => {
@@ -60,7 +65,50 @@ export function PRDashboard({
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
+    await loadQuickActions();
     setRefreshing(false);
+  };
+
+  const loadQuickActions = async () => {
+    const actions = await getPrQuickActions();
+    setQuickActions(actions);
+  };
+
+  const getActionConfig = (actionId: PrQuickAction) => {
+    const configs: Record<PrQuickAction, { icon: keyof typeof Ionicons.glyphMap; label: string; gradient: 'golden' | 'teal' | 'purple' | 'blue' | 'pink'; onPress: () => void }> = {
+      'events': { icon: 'calendar', label: 'Eventi', gradient: 'purple', onPress: onNavigateEvents },
+      'lists': { icon: 'people', label: 'Liste', gradient: 'blue', onPress: onNavigateLists },
+      'wallet': { icon: 'wallet', label: 'Wallet', gradient: 'golden', onPress: onNavigateWallet },
+      'profile': { icon: 'person', label: 'Profilo', gradient: 'pink', onPress: onNavigateProfile },
+      'client-switch': { icon: 'swap-horizontal', label: 'Cliente', gradient: 'teal', onPress: onSwitchToClient },
+    };
+    return configs[actionId];
+  };
+
+  const renderQuickActions = () => {
+    const visibleActions = quickActions.slice(0, 4);
+    const rows: PrQuickAction[][] = [];
+    for (let i = 0; i < visibleActions.length; i += 2) {
+      rows.push(visibleActions.slice(i, i + 2));
+    }
+
+    return rows.map((row, rowIndex) => (
+      <View key={rowIndex} style={styles.actionRow}>
+        {row.map(actionId => {
+          const config = getActionConfig(actionId);
+          return (
+            <ActionCard
+              key={actionId}
+              icon={config.icon}
+              label={config.label}
+              gradient={config.gradient}
+              onPress={config.onPress}
+              testID={`action-${actionId}`}
+            />
+          );
+        })}
+      </View>
+    ));
   };
 
   const walletBalance = wallet?.balance || 0;
@@ -158,36 +206,22 @@ export function PRDashboard({
           </Pressable>
         </View>
 
-        <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+          <Pressable
+            onPress={() => {
+              triggerHaptic('light');
+              setShowCustomizeModal(true);
+            }}
+            style={styles.customizeButton}
+            testID="button-customize-actions"
+          >
+            <Ionicons name="settings-outline" size={18} color={colors.primary} />
+            <Text style={styles.customizeText}>Personalizza</Text>
+          </Pressable>
+        </View>
         <View style={styles.actionsGrid}>
-          <View style={styles.actionRow}>
-            <ActionCard
-              icon="calendar"
-              label="Eventi"
-              onPress={onNavigateEvents}
-              gradient="purple"
-            />
-            <ActionCard
-              icon="people"
-              label="Liste"
-              onPress={onNavigateLists}
-              gradient="blue"
-            />
-          </View>
-          <View style={styles.actionRow}>
-            <ActionCard
-              icon="wallet"
-              label="Wallet"
-              onPress={onNavigateWallet}
-              gradient="golden"
-            />
-            <ActionCard
-              icon="person"
-              label="Profilo"
-              onPress={onNavigateProfile}
-              gradient="pink"
-            />
-          </View>
+          {renderQuickActions()}
         </View>
 
         {events.length > 0 && (
@@ -258,6 +292,13 @@ export function PRDashboard({
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+
+      <CustomizeActionsModal
+        visible={showCustomizeModal}
+        onClose={() => setShowCustomizeModal(false)}
+        mode="pr"
+        onSave={loadQuickActions}
+      />
     </View>
   );
 }
@@ -386,13 +427,22 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
     color: colors.foreground,
-    marginBottom: spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  customizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  customizeText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: '500',
   },
   seeAllText: {
     fontSize: typography.fontSize.sm,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,9 +11,11 @@ import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { GreetingHeader } from '@/components/Header';
 import { ActionCard } from '@/components/ActionCard';
+import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { Wallet, Ticket as ApiTicket, TicketsResponse } from '@/lib/api';
+import { ClientQuickAction, getClientQuickActions } from '@/lib/storage';
 
 interface AccountDashboardProps {
   onNavigateTickets: () => void;
@@ -45,9 +47,12 @@ export function AccountDashboard({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasPrAccount, setHasPrAccount] = useState(false);
+  const [quickActions, setQuickActions] = useState<ClientQuickAction[]>(['buy-tickets', 'my-qr', 'wallet', 'resell']);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadQuickActions();
   }, []);
 
   const loadData = async () => {
@@ -71,7 +76,56 @@ export function AccountDashboard({
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
+    await loadQuickActions();
     setRefreshing(false);
+  };
+
+  const loadQuickActions = async () => {
+    const actions = await getClientQuickActions();
+    setQuickActions(actions);
+  };
+
+  const getActionConfig = (actionId: ClientQuickAction) => {
+    const configs: Record<ClientQuickAction, { icon: keyof typeof Ionicons.glyphMap; label: string; gradient: 'golden' | 'teal' | 'purple' | 'blue' | 'pink'; onPress: () => void }> = {
+      'buy-tickets': { icon: 'ticket-outline', label: 'Acquista Biglietti', gradient: 'golden', onPress: onNavigateEvents },
+      'my-qr': { icon: 'qr-code-outline', label: 'I miei QR', gradient: 'teal', onPress: onNavigateTickets },
+      'wallet': { icon: 'wallet-outline', label: 'Ricarica Wallet', gradient: 'purple', onPress: onNavigateWallet },
+      'resell': { icon: 'swap-horizontal-outline', label: 'Rivendi Biglietti', gradient: 'blue', onPress: onNavigateResales },
+      'pr-area': { icon: 'people-outline', label: 'Area PR', gradient: 'pink', onPress: onNavigatePrDashboard || (() => {}) },
+      'events': { icon: 'calendar-outline', label: 'Esplora Eventi', gradient: 'golden', onPress: onNavigateEvents },
+      'profile': { icon: 'person-outline', label: 'Profilo', gradient: 'blue', onPress: onNavigateProfile },
+    };
+    return configs[actionId];
+  };
+
+  const renderQuickActions = () => {
+    const visibleActions = quickActions.filter(a => {
+      if (a === 'pr-area' && (!hasPrAccount || !onNavigatePrDashboard)) return false;
+      return true;
+    }).slice(0, 4);
+
+    const rows: ClientQuickAction[][] = [];
+    for (let i = 0; i < visibleActions.length; i += 2) {
+      rows.push(visibleActions.slice(i, i + 2));
+    }
+
+    return rows.map((row, rowIndex) => (
+      <View key={rowIndex} style={styles.actionRow}>
+        {row.map(actionId => {
+          const config = getActionConfig(actionId);
+          return (
+            <ActionCard
+              key={actionId}
+              icon={config.icon}
+              label={config.label}
+              gradient={config.gradient}
+              onPress={config.onPress}
+              testID={`action-${actionId}`}
+            />
+          );
+        })}
+      </View>
+    ));
   };
 
   const walletBalance = wallet?.balance || 0;
@@ -149,50 +203,22 @@ export function AccountDashboard({
 
         <View style={styles.content}>
           <View>
-            <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+              <Pressable
+                onPress={() => {
+                  triggerHaptic('light');
+                  setShowCustomizeModal(true);
+                }}
+                style={styles.customizeButton}
+                testID="button-customize-actions"
+              >
+                <Ionicons name="settings-outline" size={18} color={colors.primary} />
+                <Text style={styles.customizeText}>Personalizza</Text>
+              </Pressable>
+            </View>
             <View style={styles.actionsGrid}>
-              <View style={styles.actionRow}>
-                <ActionCard
-                  icon="ticket-outline"
-                  label="Acquista Biglietti"
-                  gradient="golden"
-                  onPress={onNavigateEvents}
-                  testID="action-buy-tickets"
-                />
-                <ActionCard
-                  icon="qr-code-outline"
-                  label="I miei QR"
-                  gradient="teal"
-                  onPress={onNavigateTickets}
-                  testID="action-my-qr"
-                />
-              </View>
-              <View style={styles.actionRow}>
-                <ActionCard
-                  icon="wallet-outline"
-                  label="Ricarica Wallet"
-                  gradient="purple"
-                  onPress={onNavigateWallet}
-                  testID="action-wallet"
-                />
-                {hasPrAccount && onNavigatePrDashboard ? (
-                  <ActionCard
-                    icon="people-outline"
-                    label="Area PR"
-                    gradient="pink"
-                    onPress={onNavigatePrDashboard}
-                    testID="action-pr-area"
-                  />
-                ) : (
-                  <ActionCard
-                    icon="swap-horizontal-outline"
-                    label="Rivendi Biglietti"
-                    gradient="blue"
-                    onPress={onNavigateResales}
-                    testID="action-resell"
-                  />
-                )}
-              </View>
+              {renderQuickActions()}
             </View>
           </View>
 
@@ -331,6 +357,14 @@ export function AccountDashboard({
           </View>
         </View>
       </ScrollView>
+
+      <CustomizeActionsModal
+        visible={showCustomizeModal}
+        onClose={() => setShowCustomizeModal(false)}
+        mode="client"
+        hasPrAccount={hasPrAccount && !!onNavigatePrDashboard}
+        onSave={loadQuickActions}
+      />
     </View>
   );
 }
@@ -378,7 +412,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
     color: colors.foreground,
-    marginBottom: spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -386,6 +419,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
     marginTop: spacing.lg,
+  },
+  customizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  customizeText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: '500',
   },
   seeAllLink: {
     fontSize: typography.fontSize.sm,

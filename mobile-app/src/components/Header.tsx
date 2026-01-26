@@ -103,7 +103,7 @@ export function GreetingHeader({
   };
 
   return (
-    <View style={[styles.greetingContainer, { paddingTop: insets.top + spacing.md }]}>
+    <View style={styles.greetingContainer}>
       <View style={styles.greetingContent}>
         {avatarElement && <View style={styles.avatarWrapper}>{avatarElement}</View>}
         <View style={styles.greetingText}>
@@ -175,6 +175,7 @@ const styles = StyleSheet.create({
   greetingContainer: {
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
