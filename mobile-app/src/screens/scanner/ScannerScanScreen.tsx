@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, TextInput, FlatList, Vibration, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, TextInput, FlatList, Vibration, Animated, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { colors as staticColors, spacing, typography, borderRadius, shadows } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -13,6 +14,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import api, { ScannerEvent, GuestSearchResult, ScanResult } from '@/lib/api';
 
 type TabType = 'scan' | 'search' | 'stats';
+type ScanMode = 'camera' | 'manual';
 
 interface ScannerScanScreenProps {
   eventId: string;
@@ -22,7 +24,9 @@ interface ScannerScanScreenProps {
 export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
   const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
+  const [permission, requestPermission] = useCameraPermissions();
   const [activeTab, setActiveTab] = useState<TabType>('scan');
+  const [scanMode, setScanMode] = useState<ScanMode>('camera');
   const [event, setEvent] = useState<ScannerEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastScan, setLastScan] = useState<ScanResult | null>(null);
@@ -32,30 +36,38 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
   const [scanCount, setScanCount] = useState(0);
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(true);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   const resultAnimation = useRef(new Animated.Value(0)).current;
+  const scanCooldownRef = useRef(false);
 
   useEffect(() => {
     loadEventData();
   }, [eventId]);
 
   useEffect(() => {
-    if (lastScan) {
-      Animated.sequence([
-        Animated.timing(resultAnimation, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.delay(3000),
+    if (lastScan && showResultModal) {
+      Animated.timing(resultAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      const timeout = setTimeout(() => {
         Animated.timing(resultAnimation, {
           toValue: 0,
           duration: 300,
           useNativeDriver: true,
-        }),
-      ]).start();
+        }).start(() => {
+          setShowResultModal(false);
+          setIsCameraActive(true);
+        });
+      }, 2500);
+
+      return () => clearTimeout(timeout);
     }
-  }, [lastScan]);
+  }, [lastScan, showResultModal]);
 
   const loadEventData = async () => {
     try {
@@ -73,14 +85,29 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
     }
   };
 
-  const handleManualScan = async () => {
-    if (!manualCode.trim()) return;
+  const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
+    if (scanCooldownRef.current || isScanning) return;
+    
+    scanCooldownRef.current = true;
+    setIsCameraActive(false);
+    
+    const code = result.data;
+    await processCode(code);
+    
+    setTimeout(() => {
+      scanCooldownRef.current = false;
+    }, 2000);
+  };
+
+  const processCode = async (code: string) => {
+    if (!code.trim()) return;
 
     setIsScanning(true);
     try {
       triggerHaptic('medium');
-      const result = await api.scanEntry(eventId, manualCode.trim());
+      const result = await api.scanEntry(eventId, code.trim());
       setLastScan(result);
+      setShowResultModal(true);
 
       if (result.success) {
         Vibration.vibrate([0, 100, 50, 100]);
@@ -96,11 +123,16 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
         success: false,
         message: error.message || 'Errore durante la scansione',
       });
+      setShowResultModal(true);
       Vibration.vibrate([0, 300]);
       triggerHaptic('error');
     } finally {
       setIsScanning(false);
     }
+  };
+
+  const handleManualScan = async () => {
+    await processCode(manualCode);
   };
 
   const handleSearch = async () => {
@@ -160,6 +192,17 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
         },
       ]
     );
+  };
+
+  const requestCameraPermission = async () => {
+    const result = await requestPermission();
+    if (!result.granted) {
+      Alert.alert(
+        'Permesso Negato',
+        'Per scansionare i QR code è necessario il permesso della fotocamera. Vai nelle impostazioni per abilitarlo.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   if (loading) {
@@ -223,6 +266,138 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
     );
   };
 
+  const renderCameraScanner = () => {
+    if (!permission?.granted) {
+      return (
+        <View style={styles.permissionContainer}>
+          <View style={[styles.permissionCard, { backgroundColor: colors.card }]}>
+            <Ionicons name="camera" size={64} color={colors.mutedForeground} />
+            <Text style={[styles.permissionTitle, { color: colors.foreground }]}>
+              Permesso Fotocamera
+            </Text>
+            <Text style={[styles.permissionText, { color: colors.mutedForeground }]}>
+              Per scansionare i codici QR è necessario il permesso della fotocamera
+            </Text>
+            <Button onPress={requestCameraPermission} testID="button-request-permission">
+              Abilita Fotocamera
+            </Button>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.cameraContainer}>
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'],
+          }}
+          onBarcodeScanned={isCameraActive ? handleBarCodeScanned : undefined}
+        />
+        <View style={styles.cameraOverlay}>
+          <View style={styles.scanFrame}>
+            <View style={[styles.scanCorner, styles.topLeft]} />
+            <View style={[styles.scanCorner, styles.topRight]} />
+            <View style={[styles.scanCorner, styles.bottomLeft]} />
+            <View style={[styles.scanCorner, styles.bottomRight]} />
+          </View>
+          <Text style={styles.scanHint}>Inquadra il codice QR</Text>
+        </View>
+
+        <View style={styles.cameraControls}>
+          <Pressable
+            style={[styles.modeButton, scanMode === 'camera' && { backgroundColor: colors.primary }]}
+            onPress={() => setScanMode('camera')}
+          >
+            <Ionicons name="camera" size={20} color={scanMode === 'camera' ? staticColors.primaryForeground : colors.foreground} />
+            <Text style={[styles.modeButtonText, { color: scanMode === 'camera' ? staticColors.primaryForeground : colors.foreground }]}>
+              Camera
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modeButton, scanMode === 'manual' && { backgroundColor: colors.primary }]}
+            onPress={() => setScanMode('manual')}
+          >
+            <Ionicons name="keypad" size={20} color={scanMode === 'manual' ? staticColors.primaryForeground : colors.foreground} />
+            <Text style={[styles.modeButtonText, { color: scanMode === 'manual' ? staticColors.primaryForeground : colors.foreground }]}>
+              Manuale
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+
+  const renderManualInput = () => (
+    <ScrollView style={styles.tabContent} contentContainerStyle={styles.scanContent}>
+      <GlassCard style={styles.scanCard}>
+        <View style={[styles.scanIconContainer, { backgroundColor: colors.primary + '20' }]}>
+          <Ionicons name="keypad" size={48} color={colors.primary} />
+        </View>
+        
+        <Text style={[styles.scanTitle, { color: colors.foreground }]}>
+          Inserisci Codice
+        </Text>
+        <Text style={[styles.scanSubtitle, { color: colors.mutedForeground }]}>
+          Inserisci il codice del biglietto
+        </Text>
+
+        <View style={[styles.codeInputContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Ionicons name="qr-code-outline" size={20} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.codeInput, { color: colors.foreground }]}
+            placeholder="Codice..."
+            placeholderTextColor={colors.mutedForeground}
+            value={manualCode}
+            onChangeText={setManualCode}
+            onSubmitEditing={handleManualScan}
+            returnKeyType="done"
+            autoCapitalize="characters"
+            testID="input-manual-code"
+          />
+          {manualCode.length > 0 && (
+            <Pressable onPress={() => setManualCode('')}>
+              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
+            </Pressable>
+          )}
+        </View>
+
+        <Button
+          onPress={handleManualScan}
+          loading={isScanning}
+          disabled={!manualCode.trim()}
+          style={styles.scanButton}
+          testID="button-scan"
+        >
+          Verifica Accesso
+        </Button>
+      </GlassCard>
+
+      <View style={styles.modeToggle}>
+        <Pressable
+          style={[styles.modeButton, scanMode === 'camera' && { backgroundColor: colors.primary }]}
+          onPress={() => setScanMode('camera')}
+        >
+          <Ionicons name="camera" size={20} color={scanMode === 'camera' ? staticColors.primaryForeground : colors.foreground} />
+          <Text style={[styles.modeButtonText, { color: scanMode === 'camera' ? staticColors.primaryForeground : colors.foreground }]}>
+            Camera
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.modeButton, scanMode === 'manual' && { backgroundColor: colors.primary }]}
+          onPress={() => setScanMode('manual')}
+        >
+          <Ionicons name="keypad" size={20} color={scanMode === 'manual' ? staticColors.primaryForeground : colors.foreground} />
+          <Text style={[styles.modeButtonText, { color: scanMode === 'manual' ? staticColors.primaryForeground : colors.foreground }]}>
+            Manuale
+          </Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -272,101 +447,7 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
       </View>
 
       {activeTab === 'scan' && (
-        <ScrollView style={styles.tabContent} contentContainerStyle={styles.scanContent}>
-          <GlassCard style={styles.scanCard}>
-            <View style={[styles.scanIconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="scan" size={48} color={colors.primary} />
-            </View>
-            
-            <Text style={[styles.scanTitle, { color: colors.foreground }]}>
-              Inserisci Codice
-            </Text>
-            <Text style={[styles.scanSubtitle, { color: colors.mutedForeground }]}>
-              Inserisci il codice del biglietto o QR
-            </Text>
-
-            <View style={[styles.codeInputContainer, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-              <Ionicons name="qr-code-outline" size={20} color={colors.mutedForeground} />
-              <TextInput
-                style={[styles.codeInput, { color: colors.foreground }]}
-                placeholder="Codice..."
-                placeholderTextColor={colors.mutedForeground}
-                value={manualCode}
-                onChangeText={setManualCode}
-                onSubmitEditing={handleManualScan}
-                returnKeyType="done"
-                autoCapitalize="characters"
-                testID="input-manual-code"
-              />
-              {manualCode.length > 0 && (
-                <Pressable onPress={() => setManualCode('')}>
-                  <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
-                </Pressable>
-              )}
-            </View>
-
-            <Button
-              onPress={handleManualScan}
-              loading={isScanning}
-              disabled={!manualCode.trim()}
-              style={styles.scanButton}
-              testID="button-scan"
-            >
-              Verifica Accesso
-            </Button>
-          </GlassCard>
-
-          <Pressable
-            style={styles.searchHint}
-            onPress={() => setActiveTab('search')}
-          >
-            <Ionicons name="search" size={18} color={colors.primary} />
-            <Text style={[styles.searchHintText, { color: colors.primary }]}>
-              Cerca ospiti per nome
-            </Text>
-          </Pressable>
-
-          {lastScan && (
-            <Animated.View
-              style={[
-                styles.resultCard,
-                {
-                  opacity: resultAnimation,
-                  transform: [{
-                    translateY: resultAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 0],
-                    }),
-                  }],
-                },
-              ]}
-            >
-              <Card style={StyleSheet.flatten([
-                styles.resultContent,
-                { borderColor: lastScan.success ? staticColors.success : staticColors.destructive }
-              ])}>
-                <Ionicons
-                  name={lastScan.success ? 'checkmark-circle' : 'close-circle'}
-                  size={40}
-                  color={lastScan.success ? staticColors.success : staticColors.destructive}
-                />
-                <View style={styles.resultInfo}>
-                  <Text style={[styles.resultTitle, { color: colors.foreground }]}>
-                    {lastScan.success ? 'Check-in OK' : 'Negato'}
-                  </Text>
-                  {lastScan.guestName && (
-                    <Text style={[styles.resultName, { color: colors.foreground }]}>
-                      {lastScan.guestName}
-                    </Text>
-                  )}
-                  <Text style={[styles.resultMessage, { color: colors.mutedForeground }]}>
-                    {lastScan.message}
-                  </Text>
-                </View>
-              </Card>
-            </Animated.View>
-          )}
-        </ScrollView>
+        scanMode === 'camera' ? renderCameraScanner() : renderManualInput()
       )}
 
       {activeTab === 'search' && (
@@ -417,7 +498,7 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
 
       {activeTab === 'stats' && event && (
         <ScrollView style={styles.tabContent} contentContainerStyle={styles.statsContent}>
-          <GlassCard style={styles.mainStatsCard}>
+          <View style={styles.mainStatsCard}>
             <LinearGradient
               colors={[...gradients.teal]}
               start={{ x: 0, y: 0 }}
@@ -427,7 +508,7 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
               <Text style={styles.mainStatValue}>{scanCount}</Text>
               <Text style={styles.mainStatLabel}>Check-in Effettuati</Text>
             </LinearGradient>
-          </GlassCard>
+          </View>
 
           <View style={styles.statsGrid}>
             <Card style={styles.statCard}>
@@ -491,6 +572,55 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
           </Card>
         </ScrollView>
       )}
+
+      <Modal
+        visible={showResultModal}
+        transparent
+        animationType="none"
+        onRequestClose={() => setShowResultModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                opacity: resultAnimation,
+                transform: [{
+                  scale: resultAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                }],
+              },
+            ]}
+          >
+            <View style={[
+              styles.resultCard,
+              { 
+                backgroundColor: colors.card,
+                borderColor: lastScan?.success ? staticColors.success : staticColors.destructive 
+              }
+            ]}>
+              <Ionicons
+                name={lastScan?.success ? 'checkmark-circle' : 'close-circle'}
+                size={80}
+                color={lastScan?.success ? staticColors.success : staticColors.destructive}
+              />
+              <Text style={[styles.resultTitle, { color: colors.foreground }]}>
+                {lastScan?.success ? 'ACCESSO OK' : 'NEGATO'}
+              </Text>
+              {lastScan?.guestName && (
+                <Text style={[styles.resultName, { color: colors.foreground }]}>
+                  {lastScan.guestName}
+                </Text>
+              )}
+              <Text style={[styles.resultMessage, { color: colors.mutedForeground }]}>
+                {lastScan?.message}
+              </Text>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -547,6 +677,114 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
+  cameraContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanFrame: {
+    width: 250,
+    height: 250,
+    position: 'relative',
+  },
+  scanCorner: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderColor: staticColors.primary,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 12,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 12,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 12,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 12,
+  },
+  scanHint: {
+    marginTop: spacing.xl,
+    color: 'white',
+    fontSize: typography.fontSize.base,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  cameraControls: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    left: spacing.lg,
+    right: spacing.lg,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  modeButtonText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  permissionCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    gap: spacing.md,
+    width: '100%',
+  },
+  permissionTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '600',
+  },
+  permissionText: {
+    fontSize: typography.fontSize.base,
+    textAlign: 'center',
+  },
   scanContent: {
     padding: spacing.lg,
     gap: spacing.lg,
@@ -592,41 +830,6 @@ const styles = StyleSheet.create({
   },
   scanButton: {
     width: '100%',
-  },
-  searchHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  searchHintText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '500',
-  },
-  resultCard: {
-    marginTop: spacing.md,
-  },
-  resultContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderWidth: 2,
-  },
-  resultInfo: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  resultTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '600',
-  },
-  resultName: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: '700',
-  },
-  resultMessage: {
-    fontSize: typography.fontSize.sm,
   },
   searchSection: {
     padding: spacing.lg,
@@ -781,5 +984,34 @@ const styles = StyleSheet.create({
   },
   permissionLabel: {
     fontSize: typography.fontSize.base,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalContent: {
+    width: '100%',
+  },
+  resultCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    borderWidth: 3,
+    gap: spacing.md,
+  },
+  resultTitle: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '700',
+  },
+  resultName: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '600',
+  },
+  resultMessage: {
+    fontSize: typography.fontSize.base,
+    textAlign: 'center',
   },
 });
