@@ -3109,14 +3109,19 @@ router.post("/api/siae/ticketed-events", requireAuth, requireOrganizer, async (r
       approvalStatus = 'approved';
       approvedBy = user.id;
       approvedAt = new Date();
+    } else if (data.isInternational) {
+      // International events (no SIAE) are auto-approved - no fiscal compliance needed
+      approvalStatus = 'approved';
+      approvedBy = user.id;
+      approvedAt = new Date();
     } else {
-      // Check user features for skipSiaeApproval
+      // Check user features for skipSiaeApproval or international_only mode
       const [features] = await db
         .select()
         .from(userFeatures)
         .where(eq(userFeatures.userId, user.id));
       
-      if (features?.skipSiaeApproval) {
+      if (features?.skipSiaeApproval || features?.operatingMode === 'international_only') {
         approvalStatus = 'approved';
         approvedBy = user.id;
         approvedAt = new Date();
