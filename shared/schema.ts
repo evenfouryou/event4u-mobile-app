@@ -4454,6 +4454,15 @@ export const prListAssignments = pgTable("pr_list_assignments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// PR Table Type Assignments - Assegnazione tipi di tavoli ai PR con quota
+export const prTableAssignments = pgTable("pr_table_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  prAssignmentId: varchar("pr_assignment_id").notNull().references(() => eventPrAssignments.id, { onDelete: 'cascade' }),
+  tableTypeId: varchar("table_type_id").notNull().references(() => tableTypes.id, { onDelete: 'cascade' }),
+  quota: integer("quota"), // Numero max di tavoli che il PR può proporre di questo tipo (null = illimitato)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Event Scanners - Scanner abilitati per evento
 export const eventScanners = pgTable("event_scanners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

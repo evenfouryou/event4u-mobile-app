@@ -13,6 +13,7 @@ import {
   siaeCustomers,
   eventPrAssignments,
   prListAssignments,
+  prTableAssignments,
   listEntries,
   users,
   events,
@@ -1401,6 +1402,33 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       canProposeTables,
       isActive: true,
     }).returning();
+    
+    // Save list assignments if provided
+    const { listAssignments, tableAssignments } = req.body;
+    if (listAssignments && Array.isArray(listAssignments) && listAssignments.length > 0) {
+      for (const la of listAssignments) {
+        if (la.listId) {
+          await db.insert(prListAssignments).values({
+            prAssignmentId: assignment.id,
+            listId: la.listId,
+            quota: la.quota || null,
+          });
+        }
+      }
+    }
+    
+    // Save table type assignments if provided
+    if (tableAssignments && Array.isArray(tableAssignments) && tableAssignments.length > 0) {
+      for (const ta of tableAssignments) {
+        if (ta.tableTypeId) {
+          await db.insert(prTableAssignments).values({
+            prAssignmentId: assignment.id,
+            tableTypeId: ta.tableTypeId,
+            quota: ta.quota || null,
+          });
+        }
+      }
+    }
     
     res.status(201).json(assignment);
   } catch (error: any) {

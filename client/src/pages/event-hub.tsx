@@ -739,6 +739,9 @@ export default function EventHub() {
   const [showAssignPrDialogNew, setShowAssignPrDialogNew] = useState(false);
   const [selectedPrUserId, setSelectedPrUserId] = useState<string>('');
   const [newPrPermissions, setNewPrPermissions] = useState({ canAddToLists: true, canProposeTables: true });
+  // Selezione liste e tavoli durante assegnazione PR
+  const [newPrListSelections, setNewPrListSelections] = useState<Record<string, { selected: boolean; quota: number | null }>>({});
+  const [newPrTableSelections, setNewPrTableSelections] = useState<Record<string, { selected: boolean; quota: number | null }>>({});
 
   // PR List Assignment Dialog State
   const [showPrListAssignmentDialog, setShowPrListAssignmentDialog] = useState(false);
@@ -1787,7 +1790,13 @@ export default function EventHub() {
 
   // Assign PR mutation (new endpoint)
   const assignPrMutationNew = useMutation({
-    mutationFn: async (data: { prUserId: string; canAddToLists: boolean; canProposeTables: boolean }) => {
+    mutationFn: async (data: { 
+      prUserId: string; 
+      canAddToLists: boolean; 
+      canProposeTables: boolean;
+      listAssignments?: { listId: string; quota: number | null }[];
+      tableAssignments?: { tableTypeId: string; quota: number | null }[];
+    }) => {
       return apiRequest('POST', `/api/events/${id}/pr-assignments`, data);
     },
     onSuccess: () => {
@@ -1796,6 +1805,8 @@ export default function EventHub() {
       setShowAssignPrDialogNew(false);
       setSelectedPrUserId('');
       setNewPrPermissions({ canAddToLists: true, canProposeTables: true });
+      setNewPrListSelections({});
+      setNewPrTableSelections({});
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error?.message || "Impossibile assegnare il PR", variant: "destructive" });
@@ -6245,13 +6256,128 @@ export default function EventHub() {
                   </div>
                 </div>
               </div>
+
+              {/* Selezione Liste con Quota */}
+              {newPrPermissions.canAddToLists && e4uLists.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Tipologie Liste (opzionale)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Lascia vuoto per accesso a tutte le liste</p>
+                  <div className="space-y-2 max-h-[150px] overflow-y-auto border rounded-lg p-2">
+                    {e4uLists.map((list: any) => (
+                      <div key={list.id} className="flex items-center justify-between gap-2 p-2 rounded border bg-muted/30">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Checkbox 
+                            checked={newPrListSelections[list.id]?.selected || false}
+                            onCheckedChange={(checked) => {
+                              setNewPrListSelections(prev => ({
+                                ...prev,
+                                [list.id]: { selected: !!checked, quota: prev[list.id]?.quota || null }
+                              }));
+                            }}
+                            data-testid={`checkbox-list-${list.id}`}
+                          />
+                          <span className="text-sm truncate">{list.name}</span>
+                          <Badge variant="outline" className="shrink-0">{list.listType}</Badge>
+                        </div>
+                        {newPrListSelections[list.id]?.selected && (
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="∞"
+                            className="w-20 h-8"
+                            value={newPrListSelections[list.id]?.quota ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseInt(e.target.value) : null;
+                              setNewPrListSelections(prev => ({
+                                ...prev,
+                                [list.id]: { ...prev[list.id], quota: val }
+                              }));
+                            }}
+                            data-testid={`input-list-quota-${list.id}`}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Selezione Tipi Tavoli con Quota */}
+              {newPrPermissions.canProposeTables && e4uTableTypes.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Table2 className="h-4 w-4" />
+                    Tipologie Tavoli (opzionale)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Lascia vuoto per accesso a tutti i tavoli</p>
+                  <div className="space-y-2 max-h-[150px] overflow-y-auto border rounded-lg p-2">
+                    {e4uTableTypes.map((tt: any) => (
+                      <div key={tt.id} className="flex items-center justify-between gap-2 p-2 rounded border bg-muted/30">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Checkbox 
+                            checked={newPrTableSelections[tt.id]?.selected || false}
+                            onCheckedChange={(checked) => {
+                              setNewPrTableSelections(prev => ({
+                                ...prev,
+                                [tt.id]: { selected: !!checked, quota: prev[tt.id]?.quota || null }
+                              }));
+                            }}
+                            data-testid={`checkbox-table-${tt.id}`}
+                          />
+                          <span className="text-sm truncate">{tt.name}</span>
+                          <Badge variant="outline" className="shrink-0">€{tt.price}</Badge>
+                        </div>
+                        {newPrTableSelections[tt.id]?.selected && (
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="∞"
+                            className="w-20 h-8"
+                            value={newPrTableSelections[tt.id]?.quota ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseInt(e.target.value) : null;
+                              setNewPrTableSelections(prev => ({
+                                ...prev,
+                                [tt.id]: { ...prev[tt.id], quota: val }
+                              }));
+                            }}
+                            data-testid={`input-table-quota-${tt.id}`}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setShowAssignPrDialogNew(false); setSelectedPrUserId(''); setNewPrPermissions({ canAddToLists: true, canProposeTables: true }); }} data-testid="button-cancel-pr-assignment">
+              <Button variant="outline" onClick={() => { 
+                setShowAssignPrDialogNew(false); 
+                setSelectedPrUserId(''); 
+                setNewPrPermissions({ canAddToLists: true, canProposeTables: true }); 
+                setNewPrListSelections({});
+                setNewPrTableSelections({});
+              }} data-testid="button-cancel-pr-assignment">
                 Annulla
               </Button>
               <Button 
-                onClick={() => assignPrMutationNew.mutate({ prUserId: selectedPrUserId, ...newPrPermissions })} 
+                onClick={() => {
+                  const listAssignments = Object.entries(newPrListSelections)
+                    .filter(([_, v]) => v.selected)
+                    .map(([listId, v]) => ({ listId, quota: v.quota }));
+                  const tableAssignments = Object.entries(newPrTableSelections)
+                    .filter(([_, v]) => v.selected)
+                    .map(([tableTypeId, v]) => ({ tableTypeId, quota: v.quota }));
+                  assignPrMutationNew.mutate({ 
+                    prUserId: selectedPrUserId, 
+                    ...newPrPermissions,
+                    listAssignments,
+                    tableAssignments
+                  });
+                }} 
                 disabled={assignPrMutationNew.isPending || !selectedPrUserId}
                 data-testid="button-confirm-pr-assignment"
               >
