@@ -345,8 +345,8 @@ export default function PrDashboard() {
           >
             <Card 
               className="overflow-hidden cursor-pointer hover-elevate group"
-              onClick={() => navigate(`/pr/events/${featuredEvent.id}`)}
-              data-testid={`card-event-${featuredEvent.id}`}
+              onClick={() => navigate(`/pr/events/${featuredEvent.eventId}`)}
+              data-testid={`card-event-${featuredEvent.eventId}`}
             >
               <div className="relative h-48 md:h-56">
                 {featuredEvent.eventImageUrl ? (
