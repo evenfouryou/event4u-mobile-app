@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Image, Modal, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
@@ -8,6 +8,24 @@ import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
+
+const PHONE_PREFIXES = [
+  { value: '+39', label: 'IT +39', flag: 'IT' },
+  { value: '+1', label: 'US +1', flag: 'US' },
+  { value: '+44', label: 'UK +44', flag: 'GB' },
+  { value: '+49', label: 'DE +49', flag: 'DE' },
+  { value: '+33', label: 'FR +33', flag: 'FR' },
+  { value: '+34', label: 'ES +34', flag: 'ES' },
+  { value: '+41', label: 'CH +41', flag: 'CH' },
+  { value: '+43', label: 'AT +43', flag: 'AT' },
+  { value: '+31', label: 'NL +31', flag: 'NL' },
+  { value: '+32', label: 'BE +32', flag: 'BE' },
+  { value: '+351', label: 'PT +351', flag: 'PT' },
+  { value: '+48', label: 'PL +48', flag: 'PL' },
+  { value: '+30', label: 'GR +30', flag: 'GR' },
+  { value: '+385', label: 'HR +385', flag: 'HR' },
+  { value: '+386', label: 'SI +386', flag: 'SI' },
+];
 
 interface LoginScreenProps {
   onNavigateRegister: () => void;
@@ -30,6 +48,8 @@ export function LoginScreen({
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [phonePrefix, setPhonePrefix] = useState('+39');
+  const [showPrefixModal, setShowPrefixModal] = useState(false);
 
   const handleLogin = async () => {
     if (!identifier || !password) {
@@ -41,7 +61,10 @@ export function LoginScreen({
     try {
       setLoading(true);
       setError('');
-      await login(identifier, password);
+      const loginIdentifier = loginMethod === 'phone' 
+        ? `${phonePrefix}${identifier.replace(/\s/g, '')}` 
+        : identifier;
+      await login(loginIdentifier, password);
       triggerHaptic('success');
       onLoginSuccess();
     } catch (err: any) {
@@ -148,16 +171,45 @@ export function LoginScreen({
               </View>
             ) : null}
 
-            <Input
-              label={inputProps.label}
-              value={identifier}
-              onChangeText={setIdentifier}
-              placeholder={inputProps.placeholder}
-              keyboardType={inputProps.keyboardType}
-              autoCapitalize="none"
-              leftIcon={inputProps.leftIcon}
-              testID="input-identifier"
-            />
+            {loginMethod === 'phone' ? (
+              <View>
+                <Text style={styles.inputLabel}>Telefono</Text>
+                <View style={styles.phoneRow}>
+                  <Pressable
+                    style={styles.prefixSelector}
+                    onPress={() => {
+                      triggerHaptic('light');
+                      setShowPrefixModal(true);
+                    }}
+                    testID="button-select-prefix"
+                  >
+                    <Text style={styles.prefixText}>{phonePrefix}</Text>
+                    <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                  <View style={styles.phoneInputContainer}>
+                    <Input
+                      value={identifier}
+                      onChangeText={setIdentifier}
+                      placeholder="123 456 7890"
+                      keyboardType="phone-pad"
+                      containerStyle={{ marginBottom: 0, flex: 1 }}
+                      testID="input-phone-number"
+                    />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <Input
+                label={inputProps.label}
+                value={identifier}
+                onChangeText={setIdentifier}
+                placeholder={inputProps.placeholder}
+                keyboardType={inputProps.keyboardType}
+                autoCapitalize="none"
+                leftIcon={inputProps.leftIcon}
+                testID="input-identifier"
+              />
+            )}
 
             <Input
               label="Password"
@@ -194,6 +246,55 @@ export function LoginScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showPrefixModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPrefixModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowPrefixModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleziona Prefisso</Text>
+              <Pressable onPress={() => setShowPrefixModal(false)}>
+                <Ionicons name="close" size={24} color={colors.foreground} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={PHONE_PREFIXES}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[
+                    styles.prefixOption,
+                    phonePrefix === item.value && styles.prefixOptionActive,
+                  ]}
+                  onPress={() => {
+                    setPhonePrefix(item.value);
+                    setShowPrefixModal(false);
+                    triggerHaptic('light');
+                  }}
+                >
+                  <Text style={styles.prefixFlag}>{item.flag}</Text>
+                  <Text style={[
+                    styles.prefixOptionText,
+                    phonePrefix === item.value && styles.prefixOptionTextActive,
+                  ]}>
+                    {item.label}
+                  </Text>
+                  {phonePrefix === item.value && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </Pressable>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </SafeArea>
   );
 }
@@ -336,6 +437,86 @@ const styles = StyleSheet.create({
   registerLink: {
     color: colors.primary,
     fontSize: typography.fontSize.base,
+    fontWeight: '600',
+  },
+  inputLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: colors.foreground,
+    marginBottom: spacing.xs,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  prefixSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    height: 52,
+    gap: spacing.xs,
+  },
+  prefixText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: colors.foreground,
+  },
+  phoneInputContainer: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '70%',
+    paddingBottom: spacing.xxl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    color: colors.foreground,
+  },
+  prefixOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  prefixOptionActive: {
+    backgroundColor: `${colors.primary}15`,
+  },
+  prefixFlag: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: colors.mutedForeground,
+    width: 30,
+  },
+  prefixOptionText: {
+    flex: 1,
+    fontSize: typography.fontSize.base,
+    color: colors.foreground,
+  },
+  prefixOptionTextActive: {
+    color: colors.primary,
     fontWeight: '600',
   },
 });
