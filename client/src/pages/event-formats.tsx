@@ -369,16 +369,16 @@ export default function EventFormats() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-event-formats">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Formati Evento</h1>
-            <p className="text-muted-foreground">Gestione dei formati per gli eventi</p>
+            <h1 className="text-3xl font-bold">Format Eventi</h1>
+            <p className="text-muted-foreground">Gestione dei format per gli eventi</p>
           </div>
           <FormDialog />
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Formati Configurati</CardTitle>
-            <CardDescription>Elenco dei formati evento disponibili</CardDescription>
+            <CardTitle>Format Configurati</CardTitle>
+            <CardDescription>Elenco dei format eventi disponibili</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="relative mb-6">
@@ -419,7 +419,7 @@ export default function EventFormats() {
   // Mobile version
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Formati Evento" showBackButton showMenuButton />}
+      header={<MobileHeader title="Format Eventi" showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="flex flex-col gap-6 p-6">

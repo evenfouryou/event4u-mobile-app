@@ -262,7 +262,7 @@ export function AppSidebar() {
       group: t('nav.groups.modules'),
     });
 
-    // Add Formati Evento
+    // Add Format Eventi
     menuItems.push({
       title: t('nav.eventFormats'),
       icon: ListChecks,
