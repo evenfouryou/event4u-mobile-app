@@ -138,6 +138,7 @@ import {
   Search,
   Gift,
   History,
+  Table2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -1077,7 +1078,7 @@ export default function EventHub() {
       priceRidotto: data.ticketType === 'RID' ? priceValue : '0',
       priceOmaggio: '0',
       prevendita: data.ddp || '0',
-      ivaRate: String(ticketedEvent?.vatRate || 10),
+      ivaRate: String((ticketedEvent as any)?.vatRate || 10),
       sortOrder: data.sortOrder,
       active: data.active,
     };
@@ -1865,7 +1866,7 @@ export default function EventHub() {
     
     try {
       const response = await apiRequest('GET', `/api/e4u/pr-assignments/${assignment.id}/lists`);
-      const items = response as any[];
+      const items = (await response.json()) as any[];
       const assignedListIds = items.map((item: any) => item.assignment?.listId || item.listId || item.id);
       const quotas: Record<string, number | null> = {};
       items.forEach((item: any) => {
@@ -3798,12 +3799,12 @@ export default function EventHub() {
                       <CardDescription>Stato delle trasmissioni all'Agenzia delle Entrate</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {ticketedEvent?.transmissionStatus && (
+                      {(ticketedEvent as any)?.transmissionStatus && (
                         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-                          <Badge variant={ticketedEvent.transmissionStatus === 'completed' ? 'default' : 'secondary'}>
-                            {ticketedEvent.transmissionStatus === 'completed' ? 'Trasmesso' : 
-                             ticketedEvent.transmissionStatus === 'pending' ? 'In Attesa' : 
-                             ticketedEvent.transmissionStatus === 'failed' ? 'Errore' : 'Non Trasmesso'}
+                          <Badge variant={(ticketedEvent as any).transmissionStatus === 'completed' ? 'default' : 'secondary'}>
+                            {(ticketedEvent as any).transmissionStatus === 'completed' ? 'Trasmesso' : 
+                             (ticketedEvent as any).transmissionStatus === 'pending' ? 'In Attesa' : 
+                             (ticketedEvent as any).transmissionStatus === 'failed' ? 'Errore' : 'Non Trasmesso'}
                           </Badge>
                         </div>
                       )}
@@ -3834,7 +3835,7 @@ export default function EventHub() {
                           <div className="text-xs text-muted-foreground">Annullati</div>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/50 text-center">
-                          <div className="text-2xl font-bold text-amber-400">{ticketedEvent?.ticketsRefunded || 0}</div>
+                          <div className="text-2xl font-bold text-amber-400">{(ticketedEvent as any)?.ticketsRefunded || 0}</div>
                           <div className="text-xs text-muted-foreground">Rimborsati</div>
                         </div>
                       </div>
@@ -7062,7 +7063,7 @@ export default function EventHub() {
                   <div className="space-y-2">
                     <Label>Aliquota IVA</Label>
                     <div className="h-9 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center">
-                      {ticketedEvent?.vatRate || 10}% (da evento)
+                      {(ticketedEvent as any)?.vatRate || 10}% (da evento)
                     </div>
                   </div>
 
@@ -9400,12 +9401,12 @@ export default function EventHub() {
                       <CardDescription>Stato delle trasmissioni all'Agenzia delle Entrate</CardDescription>
                     </CardHeader>
                     <CardContent className="px-4 space-y-3">
-                      {ticketedEvent?.transmissionStatus && (
+                      {(ticketedEvent as any)?.transmissionStatus && (
                         <div className="flex items-center gap-2 p-3 rounded-lg bg-white/5">
-                          <Badge variant={ticketedEvent.transmissionStatus === 'completed' ? 'default' : 'secondary'}>
-                            {ticketedEvent.transmissionStatus === 'completed' ? 'Trasmesso' : 
-                             ticketedEvent.transmissionStatus === 'pending' ? 'In Attesa' : 
-                             ticketedEvent.transmissionStatus === 'failed' ? 'Errore' : 'Non Trasmesso'}
+                          <Badge variant={(ticketedEvent as any).transmissionStatus === 'completed' ? 'default' : 'secondary'}>
+                            {(ticketedEvent as any).transmissionStatus === 'completed' ? 'Trasmesso' : 
+                             (ticketedEvent as any).transmissionStatus === 'pending' ? 'In Attesa' : 
+                             (ticketedEvent as any).transmissionStatus === 'failed' ? 'Errore' : 'Non Trasmesso'}
                           </Badge>
                         </div>
                       )}
@@ -9436,7 +9437,7 @@ export default function EventHub() {
                           <div className="text-xs text-muted-foreground">Annullati</div>
                         </div>
                         <div className="p-3 rounded-lg bg-white/5 text-center">
-                          <div className="text-2xl font-bold text-amber-400">{ticketedEvent?.ticketsRefunded || 0}</div>
+                          <div className="text-2xl font-bold text-amber-400">{(ticketedEvent as any)?.ticketsRefunded || 0}</div>
                           <div className="text-xs text-muted-foreground">Rimborsati</div>
                         </div>
                       </div>
