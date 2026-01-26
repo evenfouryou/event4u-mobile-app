@@ -812,9 +812,9 @@ export default function Home() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                {t('dashboard.upcomingEvents') || 'Prossimi Eventi'}
+                {t('dashboard.upcomingEvents') && t('dashboard.upcomingEvents') !== 'dashboard.upcomingEvents' ? t('dashboard.upcomingEvents') : 'Prossimi Eventi'}
               </CardTitle>
-              <CardDescription>{t('dashboard.yourUpcomingEvents') || 'I tuoi prossimi eventi'}</CardDescription>
+              <CardDescription>{t('dashboard.yourUpcomingEvents') && t('dashboard.yourUpcomingEvents') !== 'dashboard.yourUpcomingEvents' ? t('dashboard.yourUpcomingEvents') : 'I tuoi prossimi eventi'}</CardDescription>
             </div>
             <Link href="/events">
               <Button variant="outline" data-testid="link-view-all-events">
