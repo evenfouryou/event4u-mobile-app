@@ -3592,6 +3592,8 @@ export const tableBookingParticipants = pgTable("table_booking_participants", {
   phone: varchar("phone", { length: 20 }).notNull(),
   gender: varchar("gender", { length: 1 }).notNull(), // 'M' o 'F'
   email: varchar("email", { length: 255 }),
+  // Indica se è il prenotante principale
+  isBooker: boolean("is_booker").notNull().default(false),
   // Collegamento account utente (se registrato)
   linkedUserId: varchar("linked_user_id").references(() => users.id),
   // QR Code univoco per questo partecipante

@@ -396,6 +396,105 @@ router.post("/api/pr/events/:eventId/tables/bulk", requireAuth, requireGestore, 
   }
 });
 
+// Book a table (PR creates booking for client)
+router.post("/api/pr/tables/:tableId/book", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { tableId } = req.params;
+    const { customerName, customerPhone, customerEmail, guestCount, notes, booker, participants } = req.body;
+    
+    const { prProfileId } = await resolvePrIdentity(req);
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Get table to find event and company
+    const table = await prStorage.getEventTable(tableId);
+    if (!table) {
+      return res.status(404).json({ error: "Tavolo non trovato" });
+    }
+    
+    // Get event to find company
+    const event = await db.select({ companyId: events.companyId })
+      .from(events)
+      .where(eq(events.id, table.eventId))
+      .then(r => r[0]);
+    
+    if (!event) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Check if table is already booked
+    if (table.status === 'booked') {
+      return res.status(400).json({ error: "Tavolo già prenotato" });
+    }
+    
+    // Get PR user ID
+    const prProfile = await db.select({ userId: prProfiles.userId })
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId))
+      .then(r => r[0]);
+    
+    // Create booking with pending_approval status
+    const booking = await prStorage.createTableBooking({
+      tableId,
+      eventId: table.eventId,
+      companyId: event.companyId,
+      bookedByUserId: prProfile?.userId || null,
+      customerName: customerName || `${booker.firstName} ${booker.lastName}`,
+      customerPhone: customerPhone || booker.phone,
+      customerEmail: customerEmail || null,
+      guestsCount: guestCount || 1,
+      notes: notes || null,
+      approvalStatus: 'pending_approval',
+    });
+    
+    // Create booker participant
+    const bookerParticipant = await prStorage.createParticipant({
+      bookingId: booking.id,
+      eventId: table.eventId,
+      companyId: event.companyId,
+      firstName: booker.firstName,
+      lastName: booker.lastName,
+      phone: booker.phone,
+      email: customerEmail || null,
+      gender: booker.gender,
+      isBooker: true,
+      status: 'pending',
+    });
+    
+    // Create additional participants
+    const createdParticipants = [bookerParticipant];
+    if (participants && Array.isArray(participants) && participants.length > 0) {
+      const additionalParticipants = await prStorage.createParticipantsBatch(
+        participants.slice(0, 10).map((p: any) => ({
+          bookingId: booking.id,
+          eventId: table.eventId,
+          companyId: event.companyId,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          phone: p.phone,
+          gender: p.gender || 'M',
+          isBooker: false,
+          status: 'pending',
+        }))
+      );
+      createdParticipants.push(...additionalParticipants);
+    }
+    
+    // Update table status to pending
+    await prStorage.updateEventTable(tableId, { status: 'pending' });
+    
+    res.status(201).json({
+      booking,
+      participants: createdParticipants,
+      message: "Prenotazione creata. In attesa di approvazione dal gestore.",
+    });
+  } catch (error: any) {
+    console.error("Error booking table:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update table
 router.patch("/api/pr/tables/:id", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
@@ -534,7 +633,7 @@ router.get("/api/pr/bookings/pending-approval", requireAuth, requireGestore, asy
     const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
       const [table, event, participants, prUser] = await Promise.all([
         prStorage.getEventTable(booking.tableId),
-        db.select({ name: events.name, startDate: events.startDate })
+        db.select({ name: events.name, startDatetime: events.startDatetime })
           .from(events)
           .where(eq(events.id, booking.eventId))
           .then(r => r[0]),
@@ -552,7 +651,7 @@ router.get("/api/pr/bookings/pending-approval", requireAuth, requireGestore, asy
         tableName: table?.name || 'Sconosciuto',
         tableCapacity: table?.capacity || 0,
         eventName: event?.name || 'Evento',
-        eventDate: event?.startDate?.toISOString() || booking.createdAt,
+        eventDate: event?.startDatetime?.toISOString() || booking.createdAt,
         prName: prUser ? `${prUser.firstName || ''} ${prUser.lastName || ''}`.trim() : null,
         participants: participants.map(p => ({
           id: p.id,
@@ -2893,20 +2992,20 @@ router.get("/api/my/table-reservations", requireAuth, async (req: Request, res: 
       return res.status(401).json({ error: "Non autenticato" });
     }
 
-    // Find all participants linked to this user or with their phone/email
+    // Find all participants linked to this user
     const userParticipants = await db.select({
       participant: tableBookingParticipants,
       booking: tableBookings,
     })
       .from(tableBookingParticipants)
       .innerJoin(tableBookings, eq(tableBookingParticipants.bookingId, tableBookings.id))
-      .where(eq(tableBookingParticipants.clientUserId, user.id));
+      .where(eq(tableBookingParticipants.linkedUserId, user.id));
 
     // Enrich with event and table data
     const reservations = await Promise.all(userParticipants.map(async ({ participant, booking }) => {
       const [table, event] = await Promise.all([
         prStorage.getEventTable(booking.tableId),
-        db.select({ name: events.name, startDate: events.startDate, locationId: events.locationId })
+        db.select({ name: events.name, startDatetime: events.startDatetime, locationId: events.locationId })
           .from(events)
           .where(eq(events.id, booking.eventId))
           .then(r => r[0]),
@@ -2924,7 +3023,7 @@ router.get("/api/my/table-reservations", requireAuth, async (req: Request, res: 
       return {
         id: booking.id,
         eventName: event?.name || 'Evento',
-        eventDate: event?.startDate?.toISOString() || booking.createdAt,
+        eventDate: event?.startDatetime?.toISOString() || booking.createdAt,
         tableName: table?.name || 'Tavolo',
         venueName,
         approvalStatus: booking.approvalStatus,
@@ -2964,7 +3063,7 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
 
     // Enrich with event data
     const entries = await Promise.all(userEntries.map(async ({ entry, list }) => {
-      const event = await db.select({ name: events.name, startDate: events.startDate, locationId: events.locationId })
+      const event = await db.select({ name: events.name, startDatetime: events.startDatetime, locationId: events.locationId })
         .from(events)
         .where(eq(events.id, list.eventId))
         .then(r => r[0]);
@@ -2981,7 +3080,7 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       return {
         id: entry.id,
         eventName: event?.name || 'Evento',
-        eventDate: event?.startDate?.toISOString() || entry.createdAt,
+        eventDate: event?.startDatetime?.toISOString() || entry.createdAt,
         listName: list.name,
         venueName,
         qrCode: entry.qrCode,
