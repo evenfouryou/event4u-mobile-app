@@ -28,7 +28,8 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
   const [activeTab, setActiveTab] = useState<TabType>('scan');
   const [scanMode, setScanMode] = useState<ScanMode>('camera');
   const [event, setEvent] = useState<ScannerEvent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [lastScan, setLastScan] = useState<ScanResult | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GuestSearchResult[]>([]);
@@ -41,11 +42,20 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
 
   const resultAnimation = useRef(new Animated.Value(0)).current;
   const scanCooldownRef = useRef(false);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    loadEventData(true);
+    loadEventData();
   }, [eventId]);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
 
   useEffect(() => {
     if (lastScan && showResultModal) {
@@ -70,24 +80,19 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
     }
   }, [lastScan, showResultModal]);
 
-  const loadEventData = async (isInitial: boolean = false) => {
+  const loadEventData = async () => {
     try {
-      if (isInitial && !initialLoadDone) {
-        setLoading(true);
-      }
+      setIsLoading(true);
       const events = await api.getScannerEvents();
       const currentEvent = events.find(e => e.eventId === eventId);
       if (currentEvent) {
         setEvent(currentEvent);
         setScanCount(currentEvent.checkedIn);
       }
-      if (isInitial) {
-        setInitialLoadDone(true);
-      }
     } catch (error) {
       console.error('Error loading event:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -211,7 +216,7 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
     }
   };
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento evento..." />;
   }
 

@@ -19,28 +19,33 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
   const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<ScannerEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadEvents(true);
+    loadEvents();
   }, []);
 
-  const loadEvents = async (isInitial: boolean = false) => {
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
+  const loadEvents = async () => {
     try {
-      if (isInitial && !initialLoadDone) {
-        setLoading(true);
-      }
+      setIsLoading(true);
       const data = await api.getScannerEvents();
       setEvents(data);
-      if (isInitial) {
-        setInitialLoadDone(true);
-      }
     } catch (error) {
       console.error('Error loading scanner events:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -187,7 +192,7 @@ export function ScannerEventsScreen({ onBack, onEventPress }: ScannerEventsScree
     );
   };
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento eventi..." />;
   }
 

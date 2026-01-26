@@ -32,32 +32,37 @@ export function ScannerDashboard({
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<ScannerEvent[]>([]);
   const [stats, setStats] = useState<ScannerStats>({ totalScans: 0, todayScans: 0, eventsAssigned: 0 });
-  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData(true);
+    loadData();
   }, []);
 
-  const loadData = async (isInitial: boolean = false) => {
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => setShowLoader(true), 300);
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
+  const loadData = async () => {
     try {
-      if (isInitial && !initialLoadDone) {
-        setLoading(true);
-      }
+      setIsLoading(true);
       const [eventsData, statsData] = await Promise.all([
         api.getScannerEvents(),
         api.getScannerStats(),
       ]);
       setEvents(eventsData.slice(0, 3));
       setStats(statsData);
-      if (isInitial) {
-        setInitialLoadDone(true);
-      }
     } catch (error) {
       console.error('Error loading scanner data:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -90,7 +95,7 @@ export function ScannerDashboard({
     onLogout();
   };
 
-  if (loading) {
+  if (showLoader) {
     return <Loading text="Caricamento..." />;
   }
 
