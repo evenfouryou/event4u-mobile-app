@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,12 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { usePrAuth } from "@/hooks/usePrAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { PrLayout, PrPageContainer } from "@/components/pr-layout";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import {
   ArrowLeft,
   Calendar,
@@ -38,6 +45,10 @@ import {
   Table2,
   Sparkles,
   Zap,
+  Search,
+  Phone,
+  User,
+  Loader2,
 } from "lucide-react";
 
 interface EventDetail {
@@ -109,6 +120,41 @@ interface ActivityLog {
   createdAt: string;
 }
 
+// Guest form schema
+const guestFormSchema = z.object({
+  firstName: z.string().min(1, "Nome richiesto"),
+  lastName: z.string().min(1, "Cognome richiesto"),
+  phone: z.string().optional(),
+  email: z.string().email("Email non valida").optional().or(z.literal("")),
+  gender: z.enum(["M", "F"]).optional(),
+  plusOnes: z.number().min(0).max(10).default(0),
+  notes: z.string().optional(),
+});
+
+type GuestFormData = z.infer<typeof guestFormSchema>;
+
+// Table booking form schema
+const tableBookingSchema = z.object({
+  tableId: z.string().min(1, "Seleziona un tavolo"),
+  customerName: z.string().min(1, "Nome cliente richiesto"),
+  customerPhone: z.string().optional(),
+  customerEmail: z.string().email("Email non valida").optional().or(z.literal("")),
+  guestCount: z.number().min(1, "Almeno 1 ospite"),
+  notes: z.string().optional(),
+});
+
+type TableBookingData = z.infer<typeof tableBookingSchema>;
+
+// Phone search result interface
+interface PhoneSearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string;
+  gender?: string;
+}
+
 export default function PrEventDashboard() {
   const { eventId } = useParams();
   const [, navigate] = useLocation();
@@ -116,6 +162,38 @@ export default function PrEventDashboard() {
   const { prProfile, isLoading: isLoadingProfile } = usePrAuth();
   const [activeTab, setActiveTab] = useState("liste");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
+  const [showBookTableDialog, setShowBookTableDialog] = useState(false);
+  const [phoneSearch, setPhoneSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<PhoneSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Guest form
+  const guestForm = useForm<GuestFormData>({
+    resolver: zodResolver(guestFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      gender: undefined,
+      plusOnes: 0,
+      notes: "",
+    },
+  });
+
+  // Table booking form
+  const tableBookingForm = useForm<TableBookingData>({
+    resolver: zodResolver(tableBookingSchema),
+    defaultValues: {
+      tableId: "",
+      customerName: "",
+      customerPhone: "",
+      customerEmail: "",
+      guestCount: 2,
+      notes: "",
+    },
+  });
 
   const { data: event, isLoading: isLoadingEvent } = useQuery<EventDetail>({
     queryKey: ["/api/pr/events", eventId],
@@ -146,6 +224,109 @@ export default function PrEventDashboard() {
     queryKey: ["/api/pr/events", eventId, "activity-logs"],
     enabled: !!eventId && !!prProfile,
   });
+
+  // Add guest mutation
+  const addGuestMutation = useMutation({
+    mutationFn: async (data: GuestFormData) => {
+      return apiRequest(`/api/pr/events/${eventId}/guests`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Ospite aggiunto!", description: "L'ospite è stato aggiunto alla lista." });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/events", eventId, "guest-lists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/stats"] });
+      setShowAddGuestDialog(false);
+      guestForm.reset();
+      setPhoneSearch("");
+      setSearchResults([]);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Errore", 
+        description: error.message || "Impossibile aggiungere l'ospite.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Book table mutation
+  const bookTableMutation = useMutation({
+    mutationFn: async (data: TableBookingData) => {
+      return apiRequest(`/api/pr/events/${eventId}/bookings`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Prenotazione effettuata!", description: "Il tavolo è stato prenotato." });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/events", eventId, "tables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/stats"] });
+      setShowBookTableDialog(false);
+      tableBookingForm.reset();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Errore", 
+        description: error.message || "Impossibile prenotare il tavolo.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Phone search with debounce
+  useEffect(() => {
+    const searchPhone = async () => {
+      if (phoneSearch.length < 3) {
+        setSearchResults([]);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/pr/search-phone?phone=${encodeURIComponent(phoneSearch)}&eventId=${eventId}`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data);
+        }
+      } catch (err) {
+        console.error("Phone search error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchPhone, 300);
+    return () => clearTimeout(timeoutId);
+  }, [phoneSearch, eventId]);
+
+  // Handle selecting a search result
+  const handleSelectSearchResult = (result: PhoneSearchResult) => {
+    guestForm.setValue("firstName", result.firstName);
+    guestForm.setValue("lastName", result.lastName);
+    guestForm.setValue("phone", result.phone);
+    if (result.email) guestForm.setValue("email", result.email);
+    if (result.gender === "M" || result.gender === "F") {
+      guestForm.setValue("gender", result.gender);
+    }
+    setPhoneSearch("");
+    setSearchResults([]);
+  };
+
+  // Submit guest form
+  const onSubmitGuest = (data: GuestFormData) => {
+    addGuestMutation.mutate(data);
+  };
+
+  // Submit table booking form
+  const onSubmitTableBooking = (data: TableBookingData) => {
+    bookTableMutation.mutate(data);
+  };
+
+  // Available tables (not booked)
+  const availableTables = useMemo(() => tables.filter(t => !t.isBooked), [tables]);
 
   const prLink = useMemo(() => {
     if (!event || !prProfile?.prCode) return null;
@@ -417,7 +598,12 @@ export default function PrEventDashboard() {
                   <p className="text-center text-muted-foreground py-4">Nessuna lista disponibile</p>
                 )}
 
-                <Button className="w-full" variant="outline" data-testid="button-add-guest">
+                <Button 
+                  className="w-full" 
+                  variant="outline" 
+                  data-testid="button-add-guest"
+                  onClick={() => setShowAddGuestDialog(true)}
+                >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Aggiungi ospite
                 </Button>
@@ -459,6 +645,18 @@ export default function PrEventDashboard() {
                   </div>
                 ) : (
                   <p className="text-center text-muted-foreground py-4">Nessun tavolo disponibile</p>
+                )}
+
+                {availableTables.length > 0 && (
+                  <Button 
+                    className="w-full mt-4" 
+                    variant="outline" 
+                    data-testid="button-book-table"
+                    onClick={() => setShowBookTableDialog(true)}
+                  >
+                    <Table2 className="h-4 w-4 mr-2" />
+                    Prenota tavolo
+                  </Button>
                 )}
               </CardContent>
             </Card>
@@ -670,6 +868,328 @@ export default function PrEventDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Add Guest Dialog */}
+      <Dialog open={showAddGuestDialog} onOpenChange={setShowAddGuestDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Ospite</DialogTitle>
+            <DialogDescription>
+              Inserisci i dati dell'ospite da aggiungere alla lista
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Phone Search */}
+          <div className="space-y-2">
+            <Label>Cerca per telefono</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Inserisci numero..."
+                value={phoneSearch}
+                onChange={(e) => setPhoneSearch(e.target.value)}
+                className="pl-10"
+                data-testid="input-phone-search"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+            {searchResults.length > 0 && (
+              <div className="border rounded-lg max-h-32 overflow-y-auto">
+                {searchResults.map((result) => (
+                  <button
+                    key={result.id}
+                    type="button"
+                    className="w-full p-2 text-left hover:bg-muted/50 flex items-center gap-2 text-sm"
+                    onClick={() => handleSelectSearchResult(result)}
+                    data-testid={`search-result-${result.id}`}
+                  >
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{result.firstName} {result.lastName}</span>
+                    <span className="text-muted-foreground ml-auto">{result.phone}</span>
+                    {result.gender && (
+                      <Badge variant="outline" className="text-xs">
+                        {result.gender === "M" ? "M" : "F"}
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Form {...guestForm}>
+            <form onSubmit={guestForm.handleSubmit(onSubmitGuest)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={guestForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Mario" {...field} data-testid="input-guest-firstname" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={guestForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cognome *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Rossi" {...field} data-testid="input-guest-lastname" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={guestForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefono</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+39 333..." {...field} data-testid="input-guest-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={guestForm.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sesso</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-guest-gender">
+                            <SelectValue placeholder="Seleziona..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Maschio</SelectItem>
+                          <SelectItem value="F">Femmina</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={guestForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="mario@example.com" type="email" {...field} data-testid="input-guest-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={guestForm.control}
+                name="plusOnes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Accompagnatori</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={0} 
+                        max={10} 
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        data-testid="input-guest-plusones"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={guestForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Note opzionali..." {...field} data-testid="input-guest-notes" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddGuestDialog(false)}>
+                  Annulla
+                </Button>
+                <Button type="submit" disabled={addGuestMutation.isPending} data-testid="button-submit-guest">
+                  {addGuestMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvataggio...
+                    </>
+                  ) : (
+                    "Aggiungi Ospite"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Book Table Dialog */}
+      <Dialog open={showBookTableDialog} onOpenChange={setShowBookTableDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Prenota Tavolo</DialogTitle>
+            <DialogDescription>
+              Seleziona un tavolo e inserisci i dati del cliente
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...tableBookingForm}>
+            <form onSubmit={tableBookingForm.handleSubmit(onSubmitTableBooking)} className="space-y-4">
+              <FormField
+                control={tableBookingForm.control}
+                name="tableId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tavolo *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-table">
+                          <SelectValue placeholder="Seleziona tavolo..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableTables.map((table) => (
+                          <SelectItem key={table.id} value={table.id}>
+                            {table.name} ({table.capacity} posti)
+                            {table.minSpend && ` - Min. ${table.minSpend}€`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={tableBookingForm.control}
+                name="customerName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Cliente *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome del cliente" {...field} data-testid="input-booking-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={tableBookingForm.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefono</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+39 333..." {...field} data-testid="input-booking-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tableBookingForm.control}
+                  name="guestCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>N. Ospiti *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={1} 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          data-testid="input-booking-guests"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={tableBookingForm.control}
+                name="customerEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="cliente@example.com" type="email" {...field} data-testid="input-booking-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={tableBookingForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Note opzionali..." {...field} data-testid="input-booking-notes" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowBookTableDialog(false)}>
+                  Annulla
+                </Button>
+                <Button type="submit" disabled={bookTableMutation.isPending} data-testid="button-submit-booking">
+                  {bookTableMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Prenotazione...
+                    </>
+                  ) : (
+                    "Prenota Tavolo"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </PrLayout>
   );
 }

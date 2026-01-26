@@ -914,6 +914,143 @@ router.post("/api/pr/guest-lists/:listId/entries", requireAuth, requirePr, async
   }
 });
 
+// Add guest directly to an event (auto-selects first available list)
+// POST /api/pr/events/:eventId/guests
+router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const user = req.user as any;
+    
+    // Resolve PR identity
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Find all lists for this event that PR has access to
+    const allLists = await prStorage.getGuestListsByEvent(eventId);
+    if (allLists.length === 0) {
+      return res.status(404).json({ error: "Nessuna lista disponibile per questo evento" });
+    }
+    
+    // Filter active lists
+    const activeLists = allLists.filter(l => l.isActive);
+    if (activeLists.length === 0) {
+      return res.status(400).json({ error: "Nessuna lista attiva per questo evento" });
+    }
+    
+    // Find lists where PR has access (created by PR or assigned via prListAssignments)
+    const prAssignments = await db.select()
+      .from(eventPrAssignments)
+      .where(
+        and(
+          eq(eventPrAssignments.eventId, eventId),
+          or(
+            userId ? eq(eventPrAssignments.userId, userId) : sql`false`,
+            prProfileId ? eq(eventPrAssignments.prProfileId, prProfileId) : sql`false`
+          )
+        )
+      );
+    
+    // Get list assignments if PR has specific ones
+    let accessibleListIds: string[] = [];
+    if (prAssignments.length > 0) {
+      const prAssignmentIds = prAssignments.map(a => a.id);
+      const listAssignments = await db.select()
+        .from(prListAssignments)
+        .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
+      
+      if (listAssignments.length > 0) {
+        accessibleListIds = listAssignments.map(la => la.listId);
+      }
+    }
+    
+    // Also include lists created by the PR
+    const listsCreatedByPr = activeLists.filter(l => l.createdByUserId === userId);
+    const listsCreatedByPrIds = listsCreatedByPr.map(l => l.id);
+    
+    // Combine: assigned lists + lists created by PR
+    const allAccessibleIds = Array.from(new Set([...accessibleListIds, ...listsCreatedByPrIds]));
+    
+    // If PR has no specific assignments, they can add to any active list
+    let targetList;
+    if (allAccessibleIds.length > 0) {
+      targetList = activeLists.find(l => allAccessibleIds.includes(l.id));
+    } else {
+      // Fallback: use first active list
+      targetList = activeLists[0];
+    }
+    
+    if (!targetList) {
+      return res.status(400).json({ error: "Nessuna lista accessibile trovata" });
+    }
+    
+    // Check capacity
+    if (targetList.maxCapacity && targetList.currentCount >= targetList.maxCapacity) {
+      return res.status(400).json({ error: "Lista piena" });
+    }
+    
+    // Create entry
+    const validated = insertListEntrySchema.omit({ qrCode: true }).parse({
+      ...req.body,
+      listId: targetList.id,
+      eventId: eventId,
+      companyId: targetList.companyId,
+      addedByUserId: userId,
+    });
+    
+    const entry = await prStorage.createGuestListEntry(validated);
+    res.status(201).json(entry);
+  } catch (error: any) {
+    console.error("Error adding guest to event:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search guests by phone number
+// GET /api/pr/search-phone?phone=xxx&eventId=yyy
+router.get("/api/pr/search-phone", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { phone, eventId } = req.query;
+    
+    if (!phone || typeof phone !== 'string' || phone.length < 3) {
+      return res.status(400).json({ error: "Numero telefono richiesto (min 3 caratteri)" });
+    }
+    
+    const { userId } = await resolvePrIdentity(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Search in guest list entries
+    const results = await db.select({
+      id: listEntries.id,
+      firstName: listEntries.firstName,
+      lastName: listEntries.lastName,
+      phone: listEntries.phone,
+      email: listEntries.email,
+      gender: listEntries.gender,
+      eventId: listEntries.eventId,
+    })
+      .from(listEntries)
+      .where(
+        and(
+          like(listEntries.phone, `%${phone}%`),
+          eventId ? eq(listEntries.eventId, eventId as string) : sql`true`
+        )
+      )
+      .limit(10);
+    
+    res.json(results);
+  } catch (error: any) {
+    console.error("Error searching by phone:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update guest list entry
 // FIX 2026-01-22: Controllo ownership - PR può modificare solo i propri ospiti
 router.patch("/api/pr/guest-entries/:id", requireAuth, requirePr, async (req: Request, res: Response) => {
