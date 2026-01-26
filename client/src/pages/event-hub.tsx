@@ -5033,50 +5033,184 @@ export default function EventHub() {
 
           {/* Tables Tab */}
           <TabsContent value="tables" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Tipologie Tavoli</CardTitle>
-                  <CardDescription>{e4uTableTypes.length || tables.length} tipologie, {bookedTables} prenotazioni</CardDescription>
-                </div>
-                <Button onClick={() => setShowCreateTableTypeDialog(true)} data-testid="button-create-table-type">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Tipo Tavolo
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {e4uTableTypes.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Prezzo</TableHead>
-                        <TableHead>Max Ospiti</TableHead>
-                        <TableHead>Quantità</TableHead>
-                        <TableHead>Prenotati</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {e4uTableTypes.map((tt: any) => (
-                        <TableRow key={tt.id} data-testid={`row-table-type-${tt.id}`}>
-                          <TableCell className="font-medium">{tt.name}</TableCell>
-                          <TableCell>€{tt.price}</TableCell>
-                          <TableCell>{tt.maxGuests}</TableCell>
-                          <TableCell>{tt.totalQuantity}</TableCell>
-                          <TableCell>{tt.bookedCount || 0}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <VenueMap 
-                    tables={tables} 
-                    bookings={bookings}
-                    onTableClick={(table) => navigate(`/pr/tables?tableId=${table.id}`)}
-                  />
-                )}
-              </CardContent>
-            </Card>
+            {/* Stats Overview */}
+            {(() => {
+              const pendingReservations = e4uReservations.filter((r: any) => r.status === 'pending');
+              const approvedReservations = e4uReservations.filter((r: any) => r.status === 'approved' || r.status === 'confirmed');
+              
+              return (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                      <div className="text-2xl font-bold text-purple-400">{e4uTableTypes.length}</div>
+                      <div className="text-sm text-muted-foreground">Tipologie</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-background/50 border">
+                      <div className="text-2xl font-bold">{e4uReservations.length}</div>
+                      <div className="text-sm text-muted-foreground">Prenotazioni Totali</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                      <div className="text-2xl font-bold text-amber-400">{pendingReservations.length}</div>
+                      <div className="text-sm text-muted-foreground">In Attesa</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                      <div className="text-2xl font-bold text-emerald-400">{approvedReservations.length}</div>
+                      <div className="text-sm text-muted-foreground">Confermate</div>
+                    </div>
+                  </div>
+
+                  {/* Pending Reservations */}
+                  {pendingReservations.length > 0 && (
+                    <Card className="border-amber-500/30">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-amber-400">
+                          <Clock className="h-5 w-5" />
+                          Prenotazioni in Attesa ({pendingReservations.length})
+                        </CardTitle>
+                        <CardDescription>Richieste di prenotazione tavoli da approvare</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {pendingReservations.map((reservation: any) => (
+                            <div 
+                              key={reservation.id}
+                              className="flex items-center justify-between gap-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20"
+                              data-testid={`pending-reservation-desktop-${reservation.id}`}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium">{reservation.customerName}</span>
+                                  <Badge variant="secondary">{reservation.tableTypeName || reservation.tableType}</Badge>
+                                  {reservation.prName && (
+                                    <Badge variant="outline" className="text-xs">PR: {reservation.prName}</Badge>
+                                  )}
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {reservation.guestsCount} ospiti • {reservation.phone || reservation.email || 'Contatto N/D'}
+                                  {reservation.notes && <span className="ml-2">• Note: {reservation.notes}</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  size="sm"
+                                  onClick={() => approveReservationMutation.mutate(reservation.id)}
+                                  disabled={approveReservationMutation.isPending}
+                                  data-testid={`btn-approve-desktop-${reservation.id}`}
+                                >
+                                  {approveReservationMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  )}
+                                  Approva
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => rejectReservationMutation.mutate({ reservationId: reservation.id })}
+                                  disabled={rejectReservationMutation.isPending}
+                                  data-testid={`btn-reject-desktop-${reservation.id}`}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Rifiuta
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Approved Reservations */}
+                  {approvedReservations.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                          Prenotazioni Confermate ({approvedReservations.length})
+                        </CardTitle>
+                        <CardDescription>Tavoli prenotati e confermati</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Cliente</TableHead>
+                              <TableHead>Tipo Tavolo</TableHead>
+                              <TableHead>Ospiti</TableHead>
+                              <TableHead>PR</TableHead>
+                              <TableHead>Contatto</TableHead>
+                              <TableHead>Stato</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {approvedReservations.map((reservation: any) => (
+                              <TableRow key={reservation.id} data-testid={`approved-reservation-desktop-${reservation.id}`}>
+                                <TableCell className="font-medium">{reservation.customerName}</TableCell>
+                                <TableCell>{reservation.tableTypeName || reservation.tableType}</TableCell>
+                                <TableCell>{reservation.guestsCount}</TableCell>
+                                <TableCell>{reservation.prName || '-'}</TableCell>
+                                <TableCell className="text-muted-foreground">{reservation.phone || reservation.email || '-'}</TableCell>
+                                <TableCell>
+                                  <Badge className="bg-emerald-500/20 text-emerald-400">Confermata</Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Table Types Card */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-4">
+                      <div>
+                        <CardTitle>Tipologie Tavoli</CardTitle>
+                        <CardDescription>{e4uTableTypes.length} tipologie configurate</CardDescription>
+                      </div>
+                      <Button onClick={() => setShowCreateTableTypeDialog(true)} data-testid="button-create-table-type">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuovo Tipo Tavolo
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {e4uTableTypes.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Nome</TableHead>
+                              <TableHead>Prezzo</TableHead>
+                              <TableHead>Max Ospiti</TableHead>
+                              <TableHead>Quantità</TableHead>
+                              <TableHead>Prenotati</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {e4uTableTypes.map((tt: any) => (
+                              <TableRow key={tt.id} data-testid={`row-table-type-${tt.id}`}>
+                                <TableCell className="font-medium">{tt.name}</TableCell>
+                                <TableCell>€{tt.price}</TableCell>
+                                <TableCell>{tt.maxGuests}</TableCell>
+                                <TableCell>{tt.totalQuantity}</TableCell>
+                                <TableCell>{tt.bookedCount || 0}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="text-center py-12 text-muted-foreground">
+                          <Armchair className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Nessuna tipologia tavolo configurata</p>
+                          <p className="text-sm mt-2">Clicca "Nuovo Tipo Tavolo" per creare una tipologia</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              );
+            })()}
           </TabsContent>
 
           {/* PR Tab */}
