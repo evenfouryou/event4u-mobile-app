@@ -939,7 +939,6 @@ export function AppNavigator() {
             onNavigateProfile={() => navigate({ name: 'adminSettings' })}
             onNavigateNameChanges={() => navigate({ name: 'adminNameChanges' })}
             onNavigateSIAEMonitor={() => navigate({ name: 'adminSIAEMonitor' })}
-            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
