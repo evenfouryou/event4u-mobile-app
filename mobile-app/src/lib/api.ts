@@ -1799,6 +1799,305 @@ class ApiClient {
   async rejectNameChangeAdmin(id: string): Promise<{ success: boolean }> {
     return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/reject`);
   }
+
+  // Admin Billing API
+  async getAdminBillingPlans(): Promise<BillingPlan[]> {
+    try {
+      return await this.get<BillingPlan[]>('/api/admin/billing/plans');
+    } catch {
+      return [];
+    }
+  }
+
+  async createAdminBillingPlan(plan: Omit<BillingPlan, 'id'>): Promise<BillingPlan> {
+    return this.post<BillingPlan>('/api/admin/billing/plans', plan);
+  }
+
+  async updateAdminBillingPlan(id: string, plan: Partial<BillingPlan>): Promise<BillingPlan> {
+    return this.put<BillingPlan>(`/api/admin/billing/plans/${id}`, plan);
+  }
+
+  async deleteAdminBillingPlan(id: string): Promise<void> {
+    return this.delete(`/api/admin/billing/plans/${id}`);
+  }
+
+  async getAdminBillingOrganizers(): Promise<BillingOrganizer[]> {
+    try {
+      return await this.get<BillingOrganizer[]>('/api/admin/billing/organizers');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminBillingOrganizerDetail(companyId: string): Promise<BillingOrganizerDetail> {
+    return this.get<BillingOrganizerDetail>(`/api/admin/billing/organizers/${companyId}`);
+  }
+
+  async updateOrganizerSubscription(companyId: string, data: { planId: string }): Promise<void> {
+    return this.put(`/api/admin/billing/organizers/${companyId}/subscription`, data);
+  }
+
+  async updateOrganizerCommissions(companyId: string, data: { ticketCommission: number; walletCommission: number }): Promise<void> {
+    return this.put(`/api/admin/billing/organizers/${companyId}/commissions`, data);
+  }
+
+  async getAdminBillingInvoicesAll(): Promise<AdminBillingInvoice[]> {
+    try {
+      return await this.get<AdminBillingInvoice[]>('/api/admin/billing/invoices');
+    } catch {
+      return [];
+    }
+  }
+
+  async markInvoicePaid(invoiceId: string): Promise<void> {
+    return this.put(`/api/admin/billing/invoices/${invoiceId}/mark-paid`);
+  }
+
+  async getAdminBillingReports(period?: string): Promise<BillingReportData> {
+    try {
+      const params = period ? `?period=${period}` : '';
+      return await this.get<BillingReportData>(`/api/admin/billing/reports/sales${params}`);
+    } catch {
+      return { totalSales: 0, totalCommissions: 0, byOrganizer: [], byMonth: [] };
+    }
+  }
+
+  // Admin Site Settings API
+  async getAdminSiteSettings(): Promise<SiteSettings> {
+    try {
+      return await this.get<SiteSettings>('/api/admin/site-settings');
+    } catch {
+      return { maintenanceMode: false, allowRegistrations: true, defaultLanguage: 'it' };
+    }
+  }
+
+  async updateAdminSiteSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
+    return this.patch<SiteSettings>('/api/admin/site-settings', settings);
+  }
+
+  // Admin SIAE Extended API
+  async getAdminSIAEApprovals(): Promise<SIAEApproval[]> {
+    try {
+      return await this.get<SIAEApproval[]>('/api/admin/siae/approvals');
+    } catch {
+      return [];
+    }
+  }
+
+  async approveAdminSIAE(id: string): Promise<void> {
+    return this.post(`/api/admin/siae/approvals/${id}/approve`);
+  }
+
+  async rejectAdminSIAE(id: string, reason: string): Promise<void> {
+    return this.post(`/api/admin/siae/approvals/${id}/reject`, { reason });
+  }
+
+  async getAdminSIAECards(): Promise<SIAECard[]> {
+    try {
+      return await this.get<SIAECard[]>('/api/admin/siae/cards');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminSIAETables(): Promise<SIAETable[]> {
+    try {
+      return await this.get<SIAETable[]>('/api/admin/siae/tables');
+    } catch {
+      return [];
+    }
+  }
+
+  async updateAdminSIAETable(id: string, data: Partial<SIAETable>): Promise<SIAETable> {
+    return this.put<SIAETable>(`/api/admin/siae/tables/${id}`, data);
+  }
+
+  // Gestore Marketing API - Loyalty
+  async getGestoreLoyaltyPrograms(): Promise<LoyaltyProgram[]> {
+    try {
+      return await this.get<LoyaltyProgram[]>('/api/gestore/loyalty/programs');
+    } catch {
+      return [];
+    }
+  }
+
+  async createLoyaltyProgram(program: Omit<LoyaltyProgram, 'id'>): Promise<LoyaltyProgram> {
+    return this.post<LoyaltyProgram>('/api/gestore/loyalty/programs', program);
+  }
+
+  async updateLoyaltyProgram(id: string, program: Partial<LoyaltyProgram>): Promise<LoyaltyProgram> {
+    return this.put<LoyaltyProgram>(`/api/gestore/loyalty/programs/${id}`, program);
+  }
+
+  async getLoyaltyRewards(programId: string): Promise<LoyaltyReward[]> {
+    try {
+      return await this.get<LoyaltyReward[]>(`/api/gestore/loyalty/programs/${programId}/rewards`);
+    } catch {
+      return [];
+    }
+  }
+
+  async createLoyaltyReward(programId: string, reward: Omit<LoyaltyReward, 'id'>): Promise<LoyaltyReward> {
+    return this.post<LoyaltyReward>(`/api/gestore/loyalty/programs/${programId}/rewards`, reward);
+  }
+
+  async getLoyaltyStats(): Promise<LoyaltyStats> {
+    try {
+      return await this.get<LoyaltyStats>('/api/gestore/loyalty/stats');
+    } catch {
+      return { totalMembers: 0, activeMembers: 0, pointsIssued: 0, pointsRedeemed: 0, rewardsRedeemed: 0 };
+    }
+  }
+
+  // Gestore Marketing API - Referral
+  async getGestoreReferralProgram(): Promise<ReferralProgram | null> {
+    try {
+      return await this.get<ReferralProgram>('/api/gestore/referral/program');
+    } catch {
+      return null;
+    }
+  }
+
+  async createReferralProgram(program: Omit<ReferralProgram, 'id'>): Promise<ReferralProgram> {
+    return this.post<ReferralProgram>('/api/gestore/referral/program', program);
+  }
+
+  async updateReferralProgram(id: string, program: Partial<ReferralProgram>): Promise<ReferralProgram> {
+    return this.put<ReferralProgram>(`/api/gestore/referral/program/${id}`, program);
+  }
+
+  async getReferralStats(): Promise<ReferralStats> {
+    try {
+      return await this.get<ReferralStats>('/api/gestore/referral/stats');
+    } catch {
+      return { totalReferrals: 0, successfulReferrals: 0, pendingReferrals: 0, totalPointsAwarded: 0 };
+    }
+  }
+
+  async getReferralLeaderboard(): Promise<ReferralLeader[]> {
+    try {
+      return await this.get<ReferralLeader[]>('/api/gestore/referral/leaderboard');
+    } catch {
+      return [];
+    }
+  }
+
+  // Gestore Product Bundles API
+  async getGestoreProductBundles(): Promise<ProductBundle[]> {
+    try {
+      return await this.get<ProductBundle[]>('/api/bundles');
+    } catch {
+      return [];
+    }
+  }
+
+  async createProductBundle(bundle: Omit<ProductBundle, 'id'>): Promise<ProductBundle> {
+    return this.post<ProductBundle>('/api/bundles', bundle);
+  }
+
+  async updateProductBundle(id: string, bundle: Partial<ProductBundle>): Promise<ProductBundle> {
+    return this.put<ProductBundle>(`/api/bundles/${id}`, bundle);
+  }
+
+  async deleteProductBundle(id: string): Promise<void> {
+    return this.delete(`/api/bundles/${id}`);
+  }
+
+  async getProductBundleStats(): Promise<BundleStats> {
+    try {
+      return await this.get<BundleStats>('/api/bundles/stats');
+    } catch {
+      return { totalBundles: 0, activeBundles: 0, totalSold: 0, totalRevenue: 0 };
+    }
+  }
+
+  // Gestore Event Hub API
+  async getEventHubData(eventId: string): Promise<EventHubData> {
+    return this.get<EventHubData>(`/api/gestore/events/${eventId}/hub`);
+  }
+
+  async getEventHubTicketing(eventId: string): Promise<EventHubTicketing> {
+    return this.get<EventHubTicketing>(`/api/gestore/events/${eventId}/hub/ticketing`);
+  }
+
+  async getEventHubGuests(eventId: string): Promise<EventHubGuest[]> {
+    return this.get<EventHubGuest[]>(`/api/gestore/events/${eventId}/hub/guests`);
+  }
+
+  async getEventHubTables(eventId: string): Promise<EventHubTable[]> {
+    return this.get<EventHubTable[]>(`/api/gestore/events/${eventId}/hub/tables`);
+  }
+
+  async getEventHubStaff(eventId: string): Promise<EventHubStaff[]> {
+    return this.get<EventHubStaff[]>(`/api/gestore/events/${eventId}/hub/staff`);
+  }
+
+  async getEventHubInventory(eventId: string): Promise<EventHubInventory> {
+    return this.get<EventHubInventory>(`/api/gestore/events/${eventId}/hub/inventory`);
+  }
+
+  async getEventHubFinance(eventId: string): Promise<EventHubFinance> {
+    return this.get<EventHubFinance>(`/api/gestore/events/${eventId}/hub/finance`);
+  }
+
+  // Gestore Event Formats API
+  async getEventFormats(): Promise<EventFormat[]> {
+    try {
+      return await this.get<EventFormat[]>('/api/gestore/event-formats');
+    } catch {
+      return [];
+    }
+  }
+
+  async createEventFormat(format: Omit<EventFormat, 'id'>): Promise<EventFormat> {
+    return this.post<EventFormat>('/api/gestore/event-formats', format);
+  }
+
+  async updateEventFormat(id: string, format: Partial<EventFormat>): Promise<EventFormat> {
+    return this.put<EventFormat>(`/api/gestore/event-formats/${id}`, format);
+  }
+
+  async deleteEventFormat(id: string): Promise<void> {
+    return this.delete(`/api/gestore/event-formats/${id}`);
+  }
+
+  // Gestore Warehouse Returns API
+  async getWarehouseReturns(eventId?: string): Promise<WarehouseReturn[]> {
+    try {
+      const params = eventId ? `?eventId=${eventId}` : '';
+      return await this.get<WarehouseReturn[]>(`/api/gestore/warehouse/returns${params}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async createWarehouseReturn(data: CreateWarehouseReturn): Promise<WarehouseReturn> {
+    return this.post<WarehouseReturn>('/api/gestore/warehouse/returns', data);
+  }
+
+  async getWarehouseReturnStats(): Promise<WarehouseReturnStats> {
+    try {
+      return await this.get<WarehouseReturnStats>('/api/gestore/warehouse/returns/stats');
+    } catch {
+      return { totalReturns: 0, pendingReturns: 0, completedReturns: 0, totalItemsReturned: 0 };
+    }
+  }
+
+  // Gestore Marketing Dashboard API
+  async getMarketingDashboardStats(): Promise<MarketingDashboardStats> {
+    try {
+      return await this.get<MarketingDashboardStats>('/api/gestore/marketing/dashboard');
+    } catch {
+      return { 
+        totalCustomers: 0, 
+        activeCustomers: 0, 
+        emailsSent: 0, 
+        emailOpenRate: 0, 
+        loyaltyMembers: 0, 
+        referralCount: 0 
+      };
+    }
+  }
 }
 
 // Gestore Types
@@ -2986,6 +3285,351 @@ export interface SIAEConfig {
   defaultCategories: string[];
   printerConfigured: boolean;
   printerName?: string;
+}
+
+// Admin Billing Types
+export interface BillingPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  interval: 'monthly' | 'yearly';
+  features: string[];
+  isActive: boolean;
+  maxEvents?: number;
+  maxTickets?: number;
+  ticketCommission: number;
+  walletCommission: number;
+}
+
+export interface BillingOrganizer {
+  id: string;
+  companyId: string;
+  companyName: string;
+  planId?: string;
+  planName?: string;
+  status: 'active' | 'suspended' | 'trial';
+  monthlyRevenue: number;
+  totalEvents: number;
+  walletBalance: number;
+  lastPayment?: string;
+}
+
+export interface BillingOrganizerDetail extends BillingOrganizer {
+  ticketCommission: number;
+  walletCommission: number;
+  invoices: AdminBillingInvoice[];
+  paymentHistory: PaymentRecord[];
+}
+
+export interface AdminBillingInvoice {
+  id: string;
+  invoiceNumber: string;
+  companyId: string;
+  companyName: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'overdue';
+  issueDate: string;
+  dueDate: string;
+  paidAt?: string;
+  items: InvoiceItem[];
+}
+
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PaymentRecord {
+  id: string;
+  amount: number;
+  date: string;
+  method: string;
+  status: string;
+}
+
+export interface BillingReportData {
+  totalSales: number;
+  totalCommissions: number;
+  byOrganizer: OrganizerSalesData[];
+  byMonth: MonthlySalesData[];
+}
+
+export interface OrganizerSalesData {
+  companyId: string;
+  companyName: string;
+  totalSales: number;
+  commissions: number;
+  ticketsSold: number;
+}
+
+export interface MonthlySalesData {
+  month: string;
+  sales: number;
+  commissions: number;
+  ticketsSold: number;
+}
+
+// Admin Site Settings Types
+export interface SiteSettings {
+  maintenanceMode: boolean;
+  allowRegistrations: boolean;
+  defaultLanguage: string;
+  supportEmail?: string;
+  termsUrl?: string;
+  privacyUrl?: string;
+  googleAnalyticsId?: string;
+  facebookPixelId?: string;
+}
+
+// Admin SIAE Extended Types
+export interface SIAEApproval {
+  id: string;
+  companyId: string;
+  companyName: string;
+  requestType: 'activation' | 'config_change' | 'certificate_renewal';
+  status: 'pending' | 'approved' | 'rejected';
+  requestDate: string;
+  details: string;
+  documentUrl?: string;
+}
+
+export interface SIAECard {
+  id: string;
+  serialNumber: string;
+  companyId: string;
+  companyName: string;
+  status: 'active' | 'expired' | 'revoked';
+  issueDate: string;
+  expiryDate: string;
+  certificateType: string;
+}
+
+export interface SIAETable {
+  id: string;
+  tableName: string;
+  code: string;
+  description: string;
+  category: string;
+  isActive: boolean;
+  lastUpdated: string;
+}
+
+// Gestore Marketing - Loyalty Types
+export interface LoyaltyProgram {
+  id: string;
+  name: string;
+  description: string;
+  pointsPerEuro: number;
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  membersCount: number;
+}
+
+export interface LoyaltyReward {
+  id: string;
+  name: string;
+  description: string;
+  pointsCost: number;
+  type: 'discount' | 'freebie' | 'upgrade' | 'experience';
+  value: number;
+  imageUrl?: string;
+  availableQuantity: number;
+  redeemedCount: number;
+  isActive: boolean;
+}
+
+export interface LoyaltyStats {
+  totalMembers: number;
+  activeMembers: number;
+  pointsIssued: number;
+  pointsRedeemed: number;
+  rewardsRedeemed: number;
+}
+
+// Gestore Marketing - Referral Types
+export interface ReferralProgram {
+  id: string;
+  name: string;
+  description: string;
+  referrerReward: number;
+  refereeReward: number;
+  rewardType: 'points' | 'discount' | 'credit';
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ReferralStats {
+  totalReferrals: number;
+  successfulReferrals: number;
+  pendingReferrals: number;
+  totalPointsAwarded: number;
+}
+
+export interface ReferralLeader {
+  rank: number;
+  userId: string;
+  userName: string;
+  referralCount: number;
+  pointsEarned: number;
+}
+
+// Gestore Product Bundle Types
+export interface ProductBundle {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice: number;
+  imageUrl?: string;
+  items: BundleItem[];
+  isActive: boolean;
+  soldCount: number;
+  startDate?: string;
+  endDate?: string;
+  eventId?: string;
+}
+
+export interface BundleItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+}
+
+export interface BundleStats {
+  totalBundles: number;
+  activeBundles: number;
+  totalSold: number;
+  totalRevenue: number;
+}
+
+// Gestore Event Hub Types
+export interface EventHubData {
+  event: {
+    id: string;
+    name: string;
+    date: string;
+    location: string;
+    status: 'upcoming' | 'live' | 'ended';
+  };
+  overview: {
+    ticketsSold: number;
+    totalCapacity: number;
+    revenue: number;
+    guestsCheckedIn: number;
+    tablesBooked: number;
+    staffOnDuty: number;
+  };
+}
+
+export interface EventHubTicketing {
+  soldByType: { type: string; count: number; revenue: number }[];
+  salesTimeline: { hour: string; count: number }[];
+  recentSales: { time: string; type: string; amount: number }[];
+}
+
+export interface EventHubGuest {
+  id: string;
+  name: string;
+  email: string;
+  ticketType: string;
+  checkedIn: boolean;
+  checkInTime?: string;
+}
+
+export interface EventHubTable {
+  id: string;
+  name: string;
+  capacity: number;
+  status: 'available' | 'reserved' | 'occupied';
+  reservedBy?: string;
+}
+
+export interface EventHubStaff {
+  id: string;
+  name: string;
+  role: string;
+  station?: string;
+  status: 'active' | 'break' | 'offline';
+}
+
+export interface EventHubInventory {
+  stations: { name: string; itemsSold: number; revenue: number }[];
+  lowStock: { item: string; remaining: number; station: string }[];
+  consumption: { item: string; consumed: number; percentage: number }[];
+}
+
+export interface EventHubFinance {
+  totalRevenue: number;
+  ticketRevenue: number;
+  barRevenue: number;
+  tableRevenue: number;
+  expenses: number;
+  netProfit: number;
+  paymentMethods: { method: string; amount: number }[];
+}
+
+// Gestore Event Format Types
+export interface EventFormat {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  defaultDuration: number;
+  defaultCapacity: number;
+  ticketTypes: string[];
+  isActive: boolean;
+  eventsCount: number;
+}
+
+// Gestore Warehouse Return Types
+export interface WarehouseReturn {
+  id: string;
+  eventId: string;
+  eventName: string;
+  returnDate: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  items: WarehouseReturnItem[];
+  notes?: string;
+  processedBy?: string;
+}
+
+export interface WarehouseReturnItem {
+  productId: string;
+  productName: string;
+  quantitySent: number;
+  quantityReturned: number;
+  quantityConsumed: number;
+  stationName: string;
+}
+
+export interface CreateWarehouseReturn {
+  eventId: string;
+  items: { productId: string; quantityReturned: number; stationId: string }[];
+  notes?: string;
+}
+
+export interface WarehouseReturnStats {
+  totalReturns: number;
+  pendingReturns: number;
+  completedReturns: number;
+  totalItemsReturned: number;
+}
+
+// Marketing Dashboard Types
+export interface MarketingDashboardStats {
+  totalCustomers: number;
+  activeCustomers: number;
+  emailsSent: number;
+  emailOpenRate: number;
+  loyaltyMembers: number;
+  referralCount: number;
 }
 
 export const api = new ApiClient(API_BASE_URL);
