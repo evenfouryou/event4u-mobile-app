@@ -9,6 +9,7 @@ import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
 import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
+import { SkeletonDashboard } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrProfile, PrWallet, PrEvent } from '@/lib/api';
@@ -36,9 +37,9 @@ export function PRDashboard({
   const [profile, setProfile] = useState<PrProfile | null>(null);
   const [wallet, setWallet] = useState<PrWallet | null>(null);
   const [events, setEvents] = useState<PrEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-    const [quickActions, setQuickActions] = useState<PrQuickAction[]>(['events', 'lists', 'wallet', 'profile']);
+  const [quickActions, setQuickActions] = useState<PrQuickAction[]>(['events', 'lists', 'wallet', 'profile']);
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
   useEffect(() => {
@@ -46,9 +47,16 @@ export function PRDashboard({
     loadQuickActions();
   }, []);
 
+  useEffect(() => {
+    // Hide skeleton immediately if we have data (from cache)
+    if (profile !== null || events.length > 0) {
+      setShowSkeleton(false);
+    }
+  }, [profile, events]);
+
   const loadData = async () => {
     try {
-      setLoading(true);
+      // Don't set loading=true initially - allows cache data to show immediately
       const [profileData, walletData, eventsData] = await Promise.all([
         api.getPrProfile().catch(() => null),
         api.getPrWallet().catch(() => null),
@@ -57,10 +65,10 @@ export function PRDashboard({
       setProfile(profileData);
       setWallet(walletData);
       setEvents(eventsData.slice(0, 3));
+      setShowSkeleton(false);
     } catch (error) {
       console.error('Error loading PR dashboard:', error);
-    } finally {
-      setLoading(false);
+      setShowSkeleton(false);
     }
   };
 
@@ -115,6 +123,14 @@ export function PRDashboard({
 
   const walletBalance = wallet?.balance || 0;
   const pendingBalance = wallet?.pendingBalance || 0;
+
+  if (showSkeleton && !refreshing) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <SkeletonDashboard />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

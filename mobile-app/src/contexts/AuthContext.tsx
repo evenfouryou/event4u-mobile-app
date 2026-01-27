@@ -59,6 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+    // Prefetch public events on app startup for instant landing page
+    api.prefetchPublicEvents(6);
+    api.prefetchPublicEvents(50);
   }, []);
 
   const login = async (identifier: string, password: string): Promise<{ role?: string }> => {
@@ -77,6 +80,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.user) {
         setUser(response.user);
+        
+        // Prefetch dashboard data for instant navigation (Instagram-style)
+        const role = response.user.role;
+        if (role === 'pr') {
+          api.prefetchPrDashboard();
+        } else if (role === 'scanner') {
+          api.prefetchScannerDashboard();
+        } else {
+          api.prefetchClientDashboard();
+        }
+        
         return { role: response.user.role };
       }
       return { role: 'client' };

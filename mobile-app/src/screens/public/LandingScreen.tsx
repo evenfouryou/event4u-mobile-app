@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge, LiveBadge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
+import { SkeletonEventCard } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PublicEvent } from '@/lib/api';
@@ -46,21 +47,26 @@ export function LandingScreen({
 }: LandingScreenProps) {
   const { colors, gradients } = useTheme();
   const [events, setEvents] = useState<PublicEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   useEffect(() => {
     loadEvents();
   }, []);
 
+  useEffect(() => {
+    if (events.length > 0) {
+      setShowSkeleton(false);
+    }
+  }, [events]);
+
   const loadEvents = async () => {
     try {
-      setLoading(true);
       const data = await api.getPublicEvents({ limit: 6 });
       setEvents(data);
+      setShowSkeleton(false);
     } catch (error) {
       console.error('Error loading events:', error);
-    } finally {
-      setLoading(false);
+      setShowSkeleton(false);
     }
   };
 
@@ -182,10 +188,10 @@ export function LandingScreen({
             </Pressable>
           </View>
           
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={staticColors.primary} />
-            </View>
+          {showSkeleton ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.eventsScroll}>
+              {[1, 2, 3].map((i) => <SkeletonEventCard key={i} />)}
+            </ScrollView>
           ) : events.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={48} color={staticColors.mutedForeground} />

@@ -12,6 +12,7 @@ import { SafeArea } from '@/components/SafeArea';
 import { GreetingHeader } from '@/components/Header';
 import { ActionCard } from '@/components/ActionCard';
 import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
+import { SkeletonDashboard } from '@/components/Loading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -46,7 +47,8 @@ export function AccountDashboard({
   const insets = useSafeAreaInsets();
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [upcomingTickets, setUpcomingTickets] = useState<ApiTicket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasPrAccount, setHasPrAccount] = useState(false);
   const [quickActions, setQuickActions] = useState<ClientQuickAction[]>(['buy-tickets', 'my-qr', 'wallet', 'resell']);
@@ -57,9 +59,16 @@ export function AccountDashboard({
     loadQuickActions();
   }, []);
 
+  useEffect(() => {
+    // Hide skeleton immediately if we have data (from cache)
+    if (wallet !== null || upcomingTickets.length > 0) {
+      setShowSkeleton(false);
+    }
+  }, [wallet, upcomingTickets]);
+
   const loadData = async () => {
     try {
-      setLoading(true);
+      // Don't set loading=true initially - allows cache data to show immediately
       const [walletData, ticketsData, prProfile] = await Promise.all([
         api.getWallet().catch(() => null),
         api.getMyTickets().catch(() => ({ upcoming: [], past: [], total: 0 })),
@@ -68,10 +77,10 @@ export function AccountDashboard({
       setWallet(walletData);
       setUpcomingTickets(ticketsData.upcoming?.slice(0, 3) || []);
       setHasPrAccount(!!prProfile);
+      setShowSkeleton(false);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
+      setShowSkeleton(false);
     }
   };
 
@@ -229,6 +238,9 @@ export function AccountDashboard({
           }
         />
 
+        {showSkeleton && !refreshing ? (
+          <SkeletonDashboard />
+        ) : (
         <View style={styles.content}>
           <View>
             <View style={styles.sectionHeader}>
@@ -348,6 +360,7 @@ export function AccountDashboard({
             </Button>
           </View>
         </View>
+        )}
       </ScrollView>
 
       <CustomizeActionsModal

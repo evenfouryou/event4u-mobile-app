@@ -8,7 +8,7 @@ import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
-import { Loading } from '@/components/Loading';
+import { Loading, SkeletonDashboard } from '@/components/Loading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -32,37 +32,33 @@ export function ScannerDashboard({
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<ScannerEvent[]>([]);
   const [stats, setStats] = useState<ScannerStats>({ totalScans: 0, todayScans: 0, eventsAssigned: 0 });
-  const [showLoader, setShowLoader] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
-    if (isLoading) {
-      timeout = setTimeout(() => setShowLoader(true), 300);
-    } else {
-      setShowLoader(false);
+    // Hide skeleton immediately if we have data (from cache)
+    if (events.length > 0 || stats.eventsAssigned > 0) {
+      setShowSkeleton(false);
     }
-    return () => clearTimeout(timeout);
-  }, [isLoading]);
+  }, [events, stats]);
 
   const loadData = async () => {
     try {
-      setIsLoading(true);
+      // Don't set loading=true initially - allows cache data to show immediately
       const [eventsData, statsData] = await Promise.all([
         api.getScannerEvents(),
         api.getScannerStats(),
       ]);
       setEvents(eventsData.slice(0, 3));
       setStats(statsData);
+      setShowSkeleton(false);
     } catch (error) {
       console.error('Error loading scanner data:', error);
-    } finally {
-      setIsLoading(false);
+      setShowSkeleton(false);
     }
   };
 
@@ -95,8 +91,12 @@ export function ScannerDashboard({
     onLogout();
   };
 
-  if (showLoader) {
-    return <Loading text="Caricamento..." />;
+  if (showSkeleton && !refreshing) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <SkeletonDashboard />
+      </View>
+    );
   }
 
   return (

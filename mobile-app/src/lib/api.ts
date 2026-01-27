@@ -1,9 +1,13 @@
+import { fetchManager } from './fetchManager';
+
 const API_BASE_URL = 'https://manage.eventfouryou.com';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: any;
   headers?: Record<string, string>;
+  cacheTTL?: number;
+  forceRefresh?: boolean;
 }
 
 export interface PublicEvent {
@@ -225,8 +229,12 @@ class ApiClient {
     this.authToken = token;
   }
 
+  clearCache(pattern?: string) {
+    fetchManager.clearCache(pattern);
+  }
+
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { method = 'GET', body, headers = {} } = options;
+    const { method = 'GET', body, headers = {}, cacheTTL, forceRefresh } = options;
 
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -237,27 +245,24 @@ class ApiClient {
       requestHeaders['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method,
-      headers: requestHeaders,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return {} as T;
-    }
-
-    return response.json();
+    return fetchManager.fetch<T>(
+      `${this.baseUrl}${endpoint}`,
+      {
+        method,
+        headers: requestHeaders,
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'include',
+      },
+      {
+        cacheTTL,
+        forceRefresh,
+        cacheKey: `${method}_${endpoint}`,
+      }
+    );
   }
 
-  get<T>(endpoint: string) {
-    return this.request<T>(endpoint, { method: 'GET' });
+  get<T>(endpoint: string, options?: { cacheTTL?: number; forceRefresh?: boolean }) {
+    return this.request<T>(endpoint, { method: 'GET', ...options });
   }
 
   post<T>(endpoint: string, body?: any) {
@@ -276,16 +281,55 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 
+  prefetchClientDashboard(): void {
+    fetchManager.prefetchMultiple([
+      { url: `${this.baseUrl}/api/public/account/wallet`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/public/account/wallet' } },
+      { url: `${this.baseUrl}/api/public/account/tickets`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/public/account/tickets' } },
+      { url: `${this.baseUrl}/api/pr/profile`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/pr/profile' } },
+    ]);
+  }
+
+  prefetchPrDashboard(): void {
+    fetchManager.prefetchMultiple([
+      { url: `${this.baseUrl}/api/pr/profile`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/pr/profile' } },
+      { url: `${this.baseUrl}/api/pr/wallet`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/pr/wallet' } },
+      { url: `${this.baseUrl}/api/pr/my-events`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/pr/my-events' } },
+    ]);
+  }
+
+  prefetchScannerDashboard(): void {
+    fetchManager.prefetchMultiple([
+      { url: `${this.baseUrl}/api/e4u/scanner/events`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/e4u/scanner/events' } },
+      { url: `${this.baseUrl}/api/e4u/scanner/stats`, options: this.getRequestOptions(), fetchOptions: { cacheKey: 'GET_/api/e4u/scanner/stats' } },
+    ]);
+  }
+
+  prefetchPublicEvents(limit: number = 50): void {
+    const endpoint = `/api/public/events?limit=${limit}`;
+    fetchManager.prefetch(`${this.baseUrl}${endpoint}`, this.getRequestOptions(), { cacheKey: `GET_${endpoint}` });
+  }
+
+  private getRequestOptions(): RequestInit {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    return { method: 'GET', headers, credentials: 'include' };
+  }
+
   async getPublicEvents(params?: { limit?: number; offset?: number; categoryId?: string; userLat?: number; userLng?: number }): Promise<PublicEvent[]> {
-    const queryParams = new URLSearchParams();
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.offset) queryParams.append('offset', params.offset.toString());
-    if (params?.categoryId) queryParams.append('categoryId', params.categoryId);
-    if (params?.userLat) queryParams.append('userLat', params.userLat.toString());
-    if (params?.userLng) queryParams.append('userLng', params.userLng.toString());
+    // Build query string in consistent order for cache key matching
+    const parts: string[] = [];
+    if (params?.limit) parts.push(`limit=${params.limit}`);
+    if (params?.offset) parts.push(`offset=${params.offset}`);
+    if (params?.categoryId) parts.push(`categoryId=${params.categoryId}`);
+    if (params?.userLat) parts.push(`userLat=${params.userLat}`);
+    if (params?.userLng) parts.push(`userLng=${params.userLng}`);
     
-    const query = queryParams.toString();
-    return this.get<PublicEvent[]>(`/api/public/events${query ? `?${query}` : ''}`);
+    const query = parts.length > 0 ? `?${parts.join('&')}` : '';
+    return this.get<PublicEvent[]>(`/api/public/events${query}`);
   }
 
   async getPublicEventById(id: string): Promise<PublicEventDetail> {

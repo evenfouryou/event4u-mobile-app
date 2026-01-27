@@ -7,7 +7,7 @@ import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
-import { Loading } from '@/components/Loading';
+import { Loading, SkeletonEventList } from '@/components/Loading';
 import { Avatar } from '@/components/Avatar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,7 +37,7 @@ export function EventsListScreen({
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [loading, setLoading] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [events, setEvents] = useState<PublicEvent[]>([]);
@@ -46,15 +46,22 @@ export function EventsListScreen({
     loadEvents();
   }, []);
 
+  useEffect(() => {
+    // Hide skeleton immediately if we have data (from cache)
+    if (events.length > 0) {
+      setShowSkeleton(false);
+    }
+  }, [events]);
+
   const loadEvents = async () => {
     try {
-      setLoading(true);
+      // Don't set loading=true initially - allows cache data to show immediately
       const data = await api.getPublicEvents({ limit: 50 });
       setEvents(data);
+      setShowSkeleton(false);
     } catch (error) {
       console.error('Error loading events:', error);
-    } finally {
-      setLoading(false);
+      setShowSkeleton(false);
     }
   };
 
@@ -326,8 +333,8 @@ export function EventsListScreen({
         />
       </View>
 
-      {loading ? (
-        <Loading text="Caricamento eventi..." />
+      {showSkeleton && !refreshing ? (
+        <SkeletonEventList count={5} />
       ) : (
         <FlatList
           data={filteredEvents}
