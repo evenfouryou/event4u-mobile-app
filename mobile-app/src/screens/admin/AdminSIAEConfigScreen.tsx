@@ -118,7 +118,14 @@ export function AdminSIAEConfigScreen({ onBack }: AdminSIAEConfigScreenProps) {
     try {
       setIsSaving(true);
       triggerHaptic('medium');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.updateSIAEConfig({
+        codiceFiscale: '',
+        partitaIVA: '',
+        smartCardConnected: connectionStatus.isConnected,
+        emailAddress: config.adminEmails[0] || '',
+        defaultCategories: [],
+        printerConfigured: false,
+      });
       Alert.alert('Successo', 'Configurazione SIAE salvata con successo');
     } catch (error) {
       Alert.alert('Errore', 'Impossibile salvare la configurazione');
@@ -131,14 +138,19 @@ export function AdminSIAEConfigScreen({ onBack }: AdminSIAEConfigScreenProps) {
     try {
       setIsTesting(true);
       triggerHaptic('medium');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const result = await api.testSIAEConnection();
+      const startTime = Date.now();
       setConnectionStatus({
-        isConnected: true,
+        isConnected: result.success,
         lastCheck: new Date().toISOString(),
-        latency: Math.floor(Math.random() * 100) + 20,
-        certificateValid: true,
+        latency: Date.now() - startTime,
+        certificateValid: result.success,
       });
-      Alert.alert('Successo', 'Connessione al sistema SIAE verificata con successo');
+      if (result.success) {
+        Alert.alert('Successo', 'Connessione al sistema SIAE verificata con successo');
+      } else {
+        Alert.alert('Errore', result.message || 'Connessione fallita');
+      }
     } catch (error) {
       Alert.alert('Errore', 'Impossibile connettersi al sistema SIAE');
     } finally {

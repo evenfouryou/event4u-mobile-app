@@ -17,7 +17,8 @@ interface AdminSettingsScreenProps {
 
 export function AdminSettingsScreen({ onBack, onLogout }: AdminSettingsScreenProps) {
   const { user, logout } = useAuth();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark, setMode } = useTheme();
+  const toggleTheme = () => setMode(isDark ? 'light' : 'dark');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
