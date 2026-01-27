@@ -1762,6 +1762,42 @@ router.get("/api/pr/events/:eventId/stats", requireAuth, async (req: Request, re
 
 // ==================== Customer Search ====================
 
+// Search users/customers by phone or name (for mobile app compatibility)
+// GET /api/users/search?q=xxx - Search registered customers
+router.get("/api/users/search", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      return res.json([]);
+    }
+    
+    const searchTerm = q.toLowerCase().replace(/\s/g, '');
+    
+    // Search in siaeCustomers by phone, firstName, lastName
+    const customers = await db.select({
+      id: siaeCustomers.id,
+      firstName: siaeCustomers.firstName,
+      lastName: siaeCustomers.lastName,
+      phone: siaeCustomers.phone,
+    })
+    .from(siaeCustomers)
+    .where(
+      or(
+        like(siaeCustomers.phone, `%${searchTerm}%`),
+        like(sql`LOWER(${siaeCustomers.firstName})`, `%${searchTerm}%`),
+        like(sql`LOWER(${siaeCustomers.lastName})`, `%${searchTerm}%`)
+      )
+    )
+    .limit(10);
+    
+    res.json(customers);
+  } catch (error: any) {
+    console.error("Error searching users:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Search customer by phone (partial or complete)
 router.get("/api/pr/customers/search", requireAuth, requirePr, async (req: Request, res: Response) => {
   try {

@@ -64,7 +64,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const [showBatchAdd, setShowBatchAdd] = useState(false);
   const [listViewMode, setListViewMode] = useState<'list' | 'add'>('list');
   const [tableViewMode, setTableViewMode] = useState<'list' | 'add'>('list');
-  const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phone: '', gender: 'M' as 'M' | 'F', listId: '' });
+  const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phonePrefix: '+39', phone: '', gender: 'M' as 'M' | 'F', listId: '' });
   const [adding, setAdding] = useState(false);
   
   // Search states
@@ -237,12 +237,12 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
       await api.addPrGuest(eventId, {
         firstName: newGuest.firstName,
         lastName: newGuest.lastName,
-        phone: newGuest.phone,
+        phone: newGuest.phone ? `${newGuest.phonePrefix}${newGuest.phone.replace(/^0+/, '')}` : '',
         gender: newGuest.gender,
         listId: newGuest.listId || undefined,
       });
       await loadData();
-      setNewGuest({ firstName: '', lastName: '', phone: '', gender: 'M', listId: guestLists[0]?.id || '' });
+      setNewGuest({ firstName: '', lastName: '', phonePrefix: '+39', phone: '', gender: 'M', listId: guestLists[0]?.id || '' });
       setShowAddGuest(false);
       triggerHaptic('success');
       Alert.alert('Successo', 'Ospite aggiunto alla lista');
@@ -742,15 +742,31 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                   onChangeText={(text) => setNewGuest({ ...newGuest, lastName: text })}
                   testID="input-last-name"
                 />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Telefono (opzionale)"
-                  placeholderTextColor={staticColors.mutedForeground}
-                  value={newGuest.phone}
-                  onChangeText={(text) => setNewGuest({ ...newGuest, phone: text })}
-                  keyboardType="phone-pad"
-                  testID="input-phone"
-                />
+                <View style={styles.phoneRow}>
+                  <View style={styles.prefixSelector}>
+                    <Pressable
+                      style={styles.prefixButton}
+                      onPress={() => {
+                        const prefixes = ['+39', '+41', '+43', '+33', '+49', '+44', '+1'];
+                        const currentIndex = prefixes.indexOf(newGuest.phonePrefix);
+                        const nextIndex = (currentIndex + 1) % prefixes.length;
+                        setNewGuest({ ...newGuest, phonePrefix: prefixes[nextIndex] });
+                      }}
+                    >
+                      <Text style={styles.prefixText}>{newGuest.phonePrefix}</Text>
+                      <Ionicons name="chevron-down" size={12} color={staticColors.mutedForeground} />
+                    </Pressable>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.phoneInput]}
+                    placeholder="Telefono (opzionale)"
+                    placeholderTextColor={staticColors.mutedForeground}
+                    value={newGuest.phone}
+                    onChangeText={(text) => setNewGuest({ ...newGuest, phone: text })}
+                    keyboardType="phone-pad"
+                    testID="input-phone"
+                  />
+                </View>
                 
                 {/* Gender selector */}
                 <View style={styles.genderSelector}>
@@ -1667,6 +1683,36 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: staticColors.border,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  prefixSelector: {
+    width: 80,
+  },
+  prefixButton: {
+    backgroundColor: staticColors.glass,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    height: 44,
+  },
+  prefixText: {
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+    fontWeight: '500',
+  },
+  phoneInput: {
+    flex: 1,
+    marginBottom: 0,
   },
   formButtons: {
     flexDirection: 'row',
