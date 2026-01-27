@@ -260,8 +260,10 @@ export function LandingScreen({
                       style={styles.eventGradient}
                     >
                       <Badge variant="teal" size="sm">
-                        <Ionicons name="location" size={10} color="#fff" style={{ marginRight: 4 }} />
-                        {formatEventDate(event.eventStart)}
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Ionicons name="location" size={10} color="#fff" style={{ marginRight: 4 }} />
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '600' }}>{formatEventDate(event.eventStart)}</Text>
+                        </View>
                       </Badge>
                       <Text style={styles.eventName} numberOfLines={2}>{event.eventName}</Text>
                       <View style={styles.eventInfo}>
