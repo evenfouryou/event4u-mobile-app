@@ -111,6 +111,14 @@ import {
   AdminEventDetailScreen,
   AdminNameChangesScreen,
   AdminSIAEMonitorScreen,
+  AdminSiteSettingsScreen,
+  AdminSIAETablesScreen,
+  AdminSIAECardsScreen,
+  AdminSIAEConfigScreen,
+  AdminSIAEApprovalsScreen,
+  AdminSIAECustomersScreen,
+  AdminSIAEConsoleScreen,
+  AdminSIAETransactionsScreen,
 } from '@/screens/admin';
 
 type Screen =
@@ -219,7 +227,15 @@ type Screen =
   | { name: 'adminUsers' }
   | { name: 'adminEventDetail'; params: { eventId: string } }
   | { name: 'adminNameChanges' }
-  | { name: 'adminSIAEMonitor' };
+  | { name: 'adminSIAEMonitor' }
+  | { name: 'adminSiteSettings' }
+  | { name: 'adminSIAETables' }
+  | { name: 'adminSIAECards' }
+  | { name: 'adminSIAEConfig' }
+  | { name: 'adminSIAEApprovals' }
+  | { name: 'adminSIAECustomers' }
+  | { name: 'adminSIAEConsole' }
+  | { name: 'adminSIAETransactions' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -934,20 +950,20 @@ export function AppNavigator() {
             onNavigateEvents={() => navigate({ name: 'adminEvents' })}
             onNavigateUsers={() => navigate({ name: 'adminUsers' })}
             onNavigateBilling={() => navigate({ name: 'adminBilling' })}
-            onNavigateSettings={() => navigate({ name: 'adminSettings' })}
+            onNavigateSettings={() => navigate({ name: 'adminSiteSettings' })}
             onNavigateProfile={() => navigate({ name: 'adminSettings' })}
             onNavigateNameChanges={() => navigate({ name: 'adminNameChanges' })}
             onNavigateSIAEMonitor={() => navigate({ name: 'adminSIAEMonitor' })}
             onNavigatePrinter={() => navigate({ name: 'adminSettings' })}
             onNavigateDigitalTemplates={() => navigate({ name: 'adminSettings' })}
             onNavigateStripeAdmin={() => navigate({ name: 'adminBilling' })}
-            onNavigateSIAEApprovals={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigateSIAETables={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigateSIAECards={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigateSIAEConfig={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigateSIAECustomers={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigateSIAEConsole={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigateSIAETransactions={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAEApprovals={() => navigate({ name: 'adminSIAEApprovals' })}
+            onNavigateSIAETables={() => navigate({ name: 'adminSIAETables' })}
+            onNavigateSIAECards={() => navigate({ name: 'adminSIAECards' })}
+            onNavigateSIAEConfig={() => navigate({ name: 'adminSIAEConfig' })}
+            onNavigateSIAECustomers={() => navigate({ name: 'adminSIAECustomers' })}
+            onNavigateSIAEConsole={() => navigate({ name: 'adminSIAEConsole' })}
+            onNavigateSIAETransactions={() => navigate({ name: 'adminSIAETransactions' })}
             onNavigateBillingPlans={() => navigate({ name: 'adminBilling' })}
             onNavigateBillingOrganizers={() => navigate({ name: 'adminBilling' })}
             onNavigateBillingInvoices={() => navigate({ name: 'adminBilling' })}
@@ -1029,6 +1045,62 @@ export function AppNavigator() {
       case 'adminSIAEMonitor':
         return (
           <AdminSIAEMonitorScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSiteSettings':
+        return (
+          <AdminSiteSettingsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAETables':
+        return (
+          <AdminSIAETablesScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAECards':
+        return (
+          <AdminSIAECardsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEConfig':
+        return (
+          <AdminSIAEConfigScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEApprovals':
+        return (
+          <AdminSIAEApprovalsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAECustomers':
+        return (
+          <AdminSIAECustomersScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEConsole':
+        return (
+          <AdminSIAEConsoleScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAETransactions':
+        return (
+          <AdminSIAETransactionsScreen
             onBack={goBack}
           />
         );

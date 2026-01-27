@@ -14,3 +14,6 @@ export { AdminSIAETablesScreen } from './AdminSIAETablesScreen';
 export { AdminSIAECardsScreen } from './AdminSIAECardsScreen';
 export { AdminSIAEConfigScreen } from './AdminSIAEConfigScreen';
 export { AdminSIAEApprovalsScreen } from './AdminSIAEApprovalsScreen';
+export { AdminSIAECustomersScreen } from './AdminSIAECustomersScreen';
+export { AdminSIAEConsoleScreen } from './AdminSIAEConsoleScreen';
+export { AdminSIAETransactionsScreen } from './AdminSIAETransactionsScreen';
