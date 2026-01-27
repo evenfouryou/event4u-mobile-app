@@ -1160,22 +1160,47 @@ router.get("/api/pr/guest-lists/:listId/entries", requireAuth, async (req: Reque
 // Get entries for an event (all lists)
 // FIX 2026-01-22: PR vede solo i propri ospiti, Gestore vede tutti
 // FIX 2026-01-25: Use resolvePrIdentity helper for session support
+// FIX 2026-01-27: Support PR without linked userId - use prProfileId fallback
 router.get("/api/pr/events/:eventId/guest-entries", requireAuth, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
     const user = req.user as any;
     const allEntries = await prStorage.getGuestListEntriesByEvent(eventId);
     
+    console.log("[PR GetGuests] eventId:", eventId, "total entries:", allEntries.length);
+    
     // Gestore/Super Admin vedono tutti gli ospiti
     if (user && ['gestore', 'super_admin', 'gestore_covisione'].includes(user.role)) {
+      console.log("[PR GetGuests] Admin role, returning all entries");
       return res.json(allEntries);
     }
     
     // FIX 2026-01-25: Use helper to resolve identity
-    const { userId } = await resolvePrIdentity(req);
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    console.log("[PR GetGuests] Resolved identity - userId:", userId, "prProfileId:", prProfileId);
+    
+    // FIX 2026-01-27: PR without linked userId - if prProfileId exists, get the PR's assignment to find their entries
+    // For now, if PR has prProfileId but no userId, show entries they added (addedByUserId will be null in those cases)
+    // Also check if entries were created with their prProfileId stored somewhere
     
     // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
-    const userEntries = allEntries.filter(entry => userId && entry.addedByUserId === userId);
+    let userEntries: typeof allEntries = [];
+    
+    if (userId) {
+      // PR with linked userId - filter by addedByUserId
+      userEntries = allEntries.filter(entry => entry.addedByUserId === userId);
+      console.log("[PR GetGuests] Filtered by userId, found:", userEntries.length);
+    } else if (prProfileId) {
+      // FIX 2026-01-27: PR without userId - check if we stored prProfileId or show entries with null addedByUserId
+      // For entries added by PR without userId, addedByUserId will be null
+      // We need to also check createdBy field if it stores prProfileId
+      userEntries = allEntries.filter(entry => 
+        entry.addedByUserId === null || 
+        (entry.createdBy && entry.createdBy === prProfileId)
+      );
+      console.log("[PR GetGuests] Filtered by prProfileId/null, found:", userEntries.length);
+    }
+    
     res.json(userEntries);
   } catch (error: any) {
     console.error("Error getting event guest entries:", error);
@@ -1489,12 +1514,15 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     }
     
     // Create entry
+    // FIX 2026-01-27: Store prProfileId in createdBy field for PR without userId
     const entryData = {
       ...req.body,
       listId: targetList.id,
       eventId: eventId,
       companyId: targetList.companyId,
-      addedByUserId: userId,
+      addedByUserId: userId, // Can be null for PR without linked user account
+      createdBy: prProfileId || userId, // Store prProfileId for identification
+      createdByRole: 'pr',
     };
     console.log("[PR AddGuest] Entry data before validation:", JSON.stringify(entryData));
     
