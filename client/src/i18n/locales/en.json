@@ -3412,7 +3412,16 @@
       "ticketSystemUnavailable": "The ticket issuing system is temporarily unavailable.",
       "problemOccurred": "A problem occurred. Please try again.",
       "paymentErrorGeneric": "Error during payment.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "customerSupport": "24/7 customer support",
+      "securePaymentEncrypted": "Secure encrypted payment",
+      "title": "Checkout",
+      "completeYourPurchase": "Complete your purchase",
+      "event": "Event",
+      "date": "Date",
+      "sector": "Sector",
+      "qty": "Qty",
+      "price": "Price"
     },
     "checkoutSuccess": {
       "title": "Purchase Complete!",

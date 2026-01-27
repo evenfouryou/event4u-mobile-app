@@ -3700,7 +3700,16 @@
       "ticketSystemUnavailable": "Le système d'émission de billets est temporairement indisponible.",
       "problemOccurred": "Un problème est survenu. Veuillez réessayer.",
       "paymentErrorGeneric": "Erreur pendant le paiement.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "customerSupport": "Assistance client 24/7",
+      "securePaymentEncrypted": "Paiement sécurisé et crypté",
+      "title": "Paiement",
+      "completeYourPurchase": "Finalisez votre achat",
+      "event": "Événement",
+      "date": "Date",
+      "sector": "Secteur",
+      "qty": "Qté",
+      "price": "Prix"
     },
     "checkoutSuccess": {
       "title": "Achat Terminé!",

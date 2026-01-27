@@ -804,7 +804,7 @@ function CheckoutContent() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                   <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                  <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per inserire i dati della carta</p>
+                  <p className="text-sm text-amber-400">{t('public.checkout.completeCaptcha')}</p>
                 </div>
                 <div className="relative opacity-50 pointer-events-none">
                   <div className="p-4 bg-muted/30 rounded-2xl border border-border space-y-4">
@@ -826,7 +826,7 @@ function CheckoutContent() {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
                       <Lock className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Completa prima la verifica</span>
+                      <span className="text-sm text-muted-foreground">{t('public.checkout.completeVerificationFirst')}</span>
                     </div>
                   </div>
                 </div>
@@ -884,15 +884,15 @@ function CheckoutContent() {
         <motion.div variants={fadeInUp} className="space-y-3 pt-2">
           <div className="flex items-center gap-3 text-muted-foreground">
             <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
-            <span className="text-sm">Biglietti digitali immediati via email</span>
+            <span className="text-sm">{t('public.checkout.digitalTickets')}</span>
           </div>
           <div className="flex items-center gap-3 text-muted-foreground">
             <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
-            <span className="text-sm">Garanzia di rimborso per eventi annullati</span>
+            <span className="text-sm">{t('public.checkout.refundGuarantee')}</span>
           </div>
           <div className="flex items-center gap-3 text-muted-foreground">
             <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
-            <span className="text-sm">Assistenza clienti 24/7</span>
+            <span className="text-sm">{t('public.checkout.customerSupport')}</span>
           </div>
         </motion.div>
       </motion.div>
@@ -912,7 +912,7 @@ function CheckoutContent() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <ShieldCheck className="w-5 h-5" />
-              <span className="text-xs">Pagamento sicuro</span>
+              <span className="text-xs">{t('public.checkout.securePayment')}</span>
             </div>
           </div>
           
@@ -1046,13 +1046,13 @@ function DesktopCheckoutContent() {
         setCaptchaValidated(true);
         setCaptchaError(null);
       } else {
-        setCaptchaError(data.message || "Codice non corretto");
+        setCaptchaError(data.message || t('public.checkout.incorrectCode'));
         setCaptchaValidated(false);
         handleRefreshCaptcha();
       }
     },
     onError: (error: any) => {
-      setCaptchaError(error.message || "Errore validazione");
+      setCaptchaError(error.message || t('public.checkout.validationError'));
       setCaptchaValidated(false);
       handleRefreshCaptcha();
     },
@@ -1281,11 +1281,11 @@ function DesktopCheckoutContent() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Settore</TableHead>
-                  <TableHead className="text-center">Qtà</TableHead>
-                  <TableHead className="text-right">Prezzo</TableHead>
+                  <TableHead>{t('public.checkout.event')}</TableHead>
+                  <TableHead>{t('public.checkout.date')}</TableHead>
+                  <TableHead>{t('public.checkout.sector')}</TableHead>
+                  <TableHead className="text-center">{t('public.checkout.qty')}</TableHead>
+                  <TableHead className="text-right">{t('public.checkout.price')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1431,7 +1431,7 @@ function DesktopCheckoutContent() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                   <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                  <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per inserire i dati della carta</p>
+                  <p className="text-sm text-amber-400">{t('public.checkout.completeCaptcha')}</p>
                 </div>
                 <div className="relative opacity-50 pointer-events-none">
                   <div className="p-4 bg-muted/30 rounded-xl border border-border space-y-4">
@@ -1453,7 +1453,7 @@ function DesktopCheckoutContent() {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
                       <Lock className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Completa prima la verifica</span>
+                      <span className="text-sm text-muted-foreground">{t('public.checkout.completeVerificationFirst')}</span>
                     </div>
                   </div>
                 </div>
@@ -1567,21 +1567,21 @@ function DesktopCheckoutContent() {
             <div className="space-y-2 pt-4">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Check className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                <span>Biglietti digitali immediati via email</span>
+                <span>{t('public.checkout.digitalTickets')}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Check className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                <span>Garanzia di rimborso per eventi annullati</span>
+                <span>{t('public.checkout.refundGuarantee')}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Check className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                <span>Assistenza clienti 24/7</span>
+                <span>{t('public.checkout.customerSupport')}</span>
               </div>
             </div>
 
             <div className="flex items-center justify-center gap-2 text-muted-foreground pt-2">
               <Lock className="w-4 h-4" />
-              <span className="text-xs">Pagamento sicuro crittografato</span>
+              <span className="text-xs">{t('public.checkout.securePaymentEncrypted')}</span>
             </div>
           </CardContent>
         </Card>
@@ -1608,8 +1608,8 @@ export default function PublicCheckoutPage() {
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Checkout</h1>
-            <p className="text-muted-foreground text-sm">Completa il tuo acquisto</p>
+            <h1 className="text-2xl font-bold">{t('public.checkout.title')}</h1>
+            <p className="text-muted-foreground text-sm">{t('public.checkout.completeYourPurchase')}</p>
           </div>
         </div>
         <DesktopCheckoutContent />

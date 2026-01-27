@@ -3663,7 +3663,16 @@
       "ticketSystemUnavailable": "Das Ticketsystem ist vorübergehend nicht verfügbar.",
       "problemOccurred": "Ein Problem ist aufgetreten. Bitte versuchen Sie es erneut.",
       "paymentErrorGeneric": "Fehler bei der Zahlung.",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "customerSupport": "24/7 Kundenservice",
+      "securePaymentEncrypted": "Sichere verschlüsselte Zahlung",
+      "title": "Kasse",
+      "completeYourPurchase": "Schließen Sie Ihren Einkauf ab",
+      "event": "Veranstaltung",
+      "date": "Datum",
+      "sector": "Sektor",
+      "qty": "Menge",
+      "price": "Preis"
     },
     "checkoutSuccess": {
       "title": "Kauf abgeschlossen!",

@@ -3517,7 +3517,16 @@
       "ticketSystemUnavailable": "Il sistema di emissione biglietti è temporaneamente non disponibile.",
       "problemOccurred": "Si è verificato un problema. Riprova.",
       "paymentErrorGeneric": "Errore durante il pagamento.",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "customerSupport": "Assistenza clienti 24/7",
+      "securePaymentEncrypted": "Pagamento sicuro crittografato",
+      "title": "Checkout",
+      "completeYourPurchase": "Completa il tuo acquisto",
+      "event": "Evento",
+      "date": "Data",
+      "sector": "Settore",
+      "qty": "Qtà",
+      "price": "Prezzo"
     },
     "checkoutSuccess": {
       "title": "Acquisto Completato!",
