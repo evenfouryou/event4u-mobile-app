@@ -188,7 +188,7 @@ type Screen =
   | { name: 'gestorePRWallet' }
   | { name: 'gestorePRLists' }
   | { name: 'gestorePRRewards' }
-  | { name: 'gestoreFloorPlanEditor'; params: { eventId: string } }
+  | { name: 'gestoreFloorPlanEditor'; params: { locationId: string } }
   | { name: 'gestoreScannerHistory' }
   | { name: 'gestoreScannerStats' }
   | { name: 'gestoreSIAETicketingConsole' }
@@ -886,7 +886,7 @@ export function AppNavigator() {
       case 'gestorePRRewards':
         return <GestorePRRewardsScreen onBack={goBack} />;
       case 'gestoreFloorPlanEditor':
-        return <GestoreFloorPlanEditorScreen locationId={currentScreen.params.eventId} onBack={goBack} />;
+        return <GestoreFloorPlanEditorScreen locationId={currentScreen.params.locationId} onBack={goBack} />;
       case 'gestoreScannerHistory':
         return <GestoreScannerHistoryScreen onBack={goBack} />;
       case 'gestoreScannerStats':

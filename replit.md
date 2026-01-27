@@ -41,10 +41,23 @@ The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 a
 **Completed Mobile Screens (January 2026):**
 - **Admin Dashboard**: AdminGestoreDetailScreen (4 tabs), AdminCompaniesScreen, AdminUsersScreen, AdminEventsScreen, AdminEventDetailScreen (5 tabs: Overview/Tickets/Tables/Staff/Stats), AdminNameChangesScreen (filter chips, approval actions), AdminBillingScreen, AdminSettingsScreen
 - **Gestore Dashboard**: GestoreDashboard, GestoreEventsScreen, GestoreEventDetailScreen (8 tabs), GestoreInventoryScreen, GestoreProductsScreen (3 tabs), GestorePriceListsScreen, GestoreStaffScreen, GestoreScannerScreen, GestoreMarketingScreen, GestoreAccountingScreen, GestoreProfileScreen, GestoreSettingsScreen, GestoreCreateEventScreen, GestorePRManagementScreen, GestoreCompaniesScreen, GestoreStationsScreen, GestoreWarehouseScreen (3 tabs), GestoreSuppliersScreen, GestorePersonnelScreen (4 role tabs), GestoreReportsScreen (4 tabs), GestoreCashierScreen, GestoreUsersScreen
+- **Gestore Phase 4 - Locations & Stations**: GestoreLocationsScreen, GestoreLocationDetailScreen, GestoreStationDetailScreen (inventory, staff, stats tabs)
+- **Gestore Phase 4 - Operations**: GestorePurchaseOrdersScreen, GestoreConsumptionTrackingScreen, GestoreNightFileScreen, GestoreBeverageScreen
+- **Gestore Phase 4 - PR Advanced**: GestorePRWalletScreen, GestorePRListsScreen, GestorePRRewardsScreen
+- **Gestore Phase 4 - Floor Plan & Scanner**: GestoreFloorPlanEditorScreen, GestoreScannerHistoryScreen, GestoreScannerStatsScreen
+- **Gestore Phase 4 - SIAE Module (13 screens)**: GestoreSIAEDashboardScreen, GestoreSIAEEventsScreen, GestoreSIAEReportsScreen, GestoreSIAECustomersScreen, GestoreSIAECardsScreen, GestoreSIAETicketingConsoleScreen, GestoreSIAEBoxOfficeScreen, GestoreSIAETransactionsScreen, GestoreSIAENameChangesScreen, GestoreSIAENumberedSeatsScreen, GestoreSIAETicketTypesScreen, GestoreSIAESubscriptionsScreen, GestoreSIAEResalesScreen, GestoreSIAETransmissionsScreen, GestoreSIAEAuditLogScreen, GestoreSIAEConfigScreen, GestoreSIAEReportC1Screen, GestoreSIAEReportC2Screen
+- **Gestore Phase 4 - Utilities**: GestoreImportScreen, GestorePrinterSettingsScreen, GestoreBillingScreen, GestoreEventPageEditorScreen
 - **Public/Client**: Events, Venues, EventDetail, VenueDetail, Tickets, Cart, Checkout, Account, Wallet, etc.
 - **PR/Scanner**: PRDashboard, PREventsScreen, PRGuestListScreen, ScannerDashboard, ScannerEventsScreen, ScannerScanScreen
 
+**Total Mobile Screens: 60+** (Admin: 10, Gestore: 47+, Public: various, PR/Scanner: 6)
+
 All screens follow consistent patterns: useTheme hook, Italian labels, testID attributes, RefreshControl, Loading states, Card/GlassCard/Badge components.
+
+**Critical Mobile Development Patterns:**
+- Do NOT use `typography.weights` - always use literal fontWeight values ('700', '600', '500')
+- Card components do not accept style arrays - use spread operator for conditional styles: `style={{...styles.card, ...(condition ? styles.active : {})}}`
+- Use 'medium' instead of 'warning' for haptic feedback type
 
 ### Additional Modules
 -   **Italian Fiscal Validation**: Server-side validation for Italian fiscal identifiers.
