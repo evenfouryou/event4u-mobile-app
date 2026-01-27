@@ -206,7 +206,7 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
         ))}
       </View>
 
-      {loading ? (
+      {showLoader ? (
         <Loading text="Caricamento biglietti..." />
       ) : tickets.length > 0 ? (
         <FlatList
