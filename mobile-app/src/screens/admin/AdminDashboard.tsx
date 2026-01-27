@@ -133,12 +133,7 @@ export function AdminDashboard({
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-
-  const [alerts] = useState<Alert[]>([
-    { id: '1', type: 'warning', title: 'Trasmissione SIAE in attesa', message: '3 trasmissioni richiedono approvazione', time: '10 min fa' },
-    { id: '2', type: 'info', title: 'Nuovo Gestore registrato', message: 'Event Club Milano ha completato la registrazione', time: '1 ora fa' },
-    { id: '3', type: 'success', title: 'Pagamento ricevuto', message: 'Fattura #2024-0156 saldata', time: '2 ore fa' },
-  ]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -160,12 +155,15 @@ export function AdminDashboard({
       const data = await api.getAdminDashboard();
       setStats({
         ...data,
-        ticketsSoldToday: data.ticketsSoldToday || Math.floor(Math.random() * 500) + 100,
-        pendingSIAETransmissions: data.pendingSIAETransmissions || Math.floor(Math.random() * 10),
-        gestoriTrend: data.gestoriTrend || 12,
-        eventsTrend: data.eventsTrend || 8,
-        revenueTrend: data.revenueTrend || 15,
+        ticketsSoldToday: data.ticketsSoldToday ?? 0,
+        pendingSIAETransmissions: data.pendingSIAETransmissions ?? 0,
+        gestoriTrend: data.gestoriTrend ?? 0,
+        eventsTrend: data.eventsTrend ?? 0,
+        revenueTrend: data.revenueTrend ?? 0,
       });
+      if (data.alerts) {
+        setAlerts(data.alerts);
+      }
     } catch (error) {
       console.error('Error loading admin dashboard:', error);
     } finally {
