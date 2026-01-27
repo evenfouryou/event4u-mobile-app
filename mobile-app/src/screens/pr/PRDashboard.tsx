@@ -419,6 +419,53 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: staticColors.background,
   },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  headerLogoContainer: {
+    flex: 1,
+  },
+  headerLogo: {
+    width: 120,
+    height: 32,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  walletIconButton: {
+    position: 'relative',
+  },
+  walletIconGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: staticColors.destructive,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  walletBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -438,6 +485,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: staticColors.foreground,
   },
+  greetingContainer: {
+    marginBottom: spacing.lg,
+  },
+  greetingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  greetingText: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '600',
+    color: staticColors.foreground,
+    marginBottom: spacing.xs,
+  },
+  greetingName: {
+    color: staticColors.primary,
+    fontWeight: '700',
+  },
+  prBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   prBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -446,6 +519,9 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
     fontWeight: '700',
     color: staticColors.primaryForeground,
+  },
+  prCodeBadge: {
+    borderColor: staticColors.primary,
   },
   switchButton: {
     width: 40,
@@ -456,6 +532,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: staticColors.primary,
+  },
+  actionsScrollContent: {
+    paddingVertical: spacing.xs,
+    gap: spacing.md,
+  },
+  actionCardWrapper: {
+    marginRight: spacing.sm,
   },
   scrollView: {
     flex: 1,
