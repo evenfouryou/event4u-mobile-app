@@ -254,19 +254,28 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
     }
     try {
       setAdding(true);
-      await api.addPrGuest(eventId, {
+      console.log('[PREventDashboard] Adding guest to event:', eventId, newGuest);
+      const result = await api.addPrGuest(eventId, {
         firstName: newGuest.firstName,
         lastName: newGuest.lastName,
         phone: newGuest.phone ? `${newGuest.phonePrefix}${newGuest.phone.replace(/^0+/, '')}` : '',
         gender: newGuest.gender,
         listId: newGuest.listId || undefined,
       });
+      console.log('[PREventDashboard] Guest added result:', result);
+      
+      // Verify the guest was actually created
+      if (!result || !result.id) {
+        throw new Error('Ospite non creato. Riprova.');
+      }
+      
       await loadData();
       setNewGuest({ firstName: '', lastName: '', phonePrefix: '+39', phone: '', gender: 'M', listId: guestLists[0]?.id || '' });
       setShowAddGuest(false);
       triggerHaptic('success');
       Alert.alert('Successo', 'Ospite aggiunto alla lista');
     } catch (error: any) {
+      console.error('[PREventDashboard] Error adding guest:', error);
       Alert.alert('Errore', error.message || 'Impossibile aggiungere ospite');
     } finally {
       setAdding(false);

@@ -641,7 +641,22 @@ class ApiClient {
   }
 
   async addPrGuest(eventId: string, data: { firstName: string; lastName: string; phone?: string; gender?: 'M' | 'F'; listId?: string }): Promise<PrGuestListEntry> {
+    console.log('[API] addPrGuest called:', eventId, data);
+    console.log('[API] Auth token set:', !!this.authToken);
     const result = await this.post<any>(`/api/pr/events/${eventId}/guests`, data);
+    console.log('[API] addPrGuest response:', result);
+    
+    // Check if we got an error response
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+    
+    // Ensure we have a valid result
+    if (!result || !result.id) {
+      console.error('[API] addPrGuest - No valid result:', result);
+      throw new Error('Risposta server non valida');
+    }
+    
     return {
       id: result.id,
       firstName: result.firstName || data.firstName,
