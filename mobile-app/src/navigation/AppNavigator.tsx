@@ -642,7 +642,6 @@ export function AppNavigator() {
             onNavigateCashier={() => navigate({ name: 'gestoreCashier' })}
             onNavigateUsers={() => navigate({ name: 'gestoreUsers' })}
             onNavigateSIAE={() => navigate({ name: 'gestoreSIAEDashboard' })}
-            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
