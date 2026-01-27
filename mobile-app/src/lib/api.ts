@@ -901,6 +901,34 @@ class ApiClient {
     }
   }
 
+  async getGestorePRWallet(): Promise<PRWalletData> {
+    try {
+      return await this.get<PRWalletData>('/api/gestore/pr-wallet');
+    } catch {
+      return { balance: 0, totalEarnings: 0, pending: 0, withdrawn: 0, transactions: [] };
+    }
+  }
+
+  async requestGestorePRPayout(): Promise<{ success: boolean; message: string }> {
+    return this.post<{ success: boolean; message: string }>('/api/gestore/pr-wallet/payout');
+  }
+
+  async getGestorePRLists(): Promise<PRList[]> {
+    try {
+      return await this.get<PRList[]>('/api/gestore/pr-lists');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestorePRRewards(): Promise<PRRewardsData> {
+    try {
+      return await this.get<PRRewardsData>('/api/gestore/pr-rewards');
+    } catch {
+      return { activeRewards: [], myRewards: [], leaderboard: [] };
+    }
+  }
+
   async getGestoreCompanies(): Promise<GestoreCompany[]> {
     try {
       return await this.get<GestoreCompany[]>('/api/gestore/companies');
@@ -1075,6 +1103,49 @@ class ApiClient {
     }
   }
 
+  async getSIAETransactions(): Promise<SIAETransaction[]> {
+    try {
+      return await this.get<SIAETransaction[]>('/api/gestore/siae/transactions');
+    } catch {
+      return [];
+    }
+  }
+
+  async exportSIAETransactionsXML(): Promise<void> {
+    try {
+      await this.post('/api/gestore/siae/transactions/export-xml');
+    } catch (error) {
+      console.error('Error exporting SIAE transactions XML:', error);
+      throw error;
+    }
+  }
+
+  async getNameChangeRequests(): Promise<NameChangeRequest[]> {
+    try {
+      return await this.get<NameChangeRequest[]>('/api/gestore/siae/name-changes');
+    } catch {
+      return [];
+    }
+  }
+
+  async approveNameChange(id: string): Promise<void> {
+    try {
+      await this.post(`/api/gestore/siae/name-changes/${id}/approve`);
+    } catch (error) {
+      console.error('Error approving name change:', error);
+      throw error;
+    }
+  }
+
+  async rejectNameChange(id: string): Promise<void> {
+    try {
+      await this.post(`/api/gestore/siae/name-changes/${id}/reject`);
+    } catch (error) {
+      console.error('Error rejecting name change:', error);
+      throw error;
+    }
+  }
+
   async getSIAECustomers(): Promise<SIAECustomer[]> {
     try {
       return await this.get<SIAECustomer[]>('/api/gestore/siae/customers');
@@ -1091,6 +1162,60 @@ class ApiClient {
     }
   }
 
+  async getSIAETicketingData(eventId: string): Promise<SIAETicketingData> {
+    try {
+      return await this.get<SIAETicketingData>(`/api/gestore/siae/ticketing/${eventId}`);
+    } catch {
+      return {
+        eventId,
+        eventName: '',
+        ticketsToday: 0,
+        revenueToday: 0,
+        availableSeats: 0,
+        ticketTypes: [],
+        recentEmissions: [],
+      };
+    }
+  }
+
+  async emitSIAETicket(eventId: string, data: {
+    ticketTypeId: string;
+    customerName?: string;
+    customerFiscalCode?: string;
+  }): Promise<{ success: boolean; ticketCode: string }> {
+    return this.post(`/api/gestore/siae/ticketing/${eventId}/emit`, data);
+  }
+
+  async getSIAEBoxOfficeData(): Promise<SIAEBoxOfficeData> {
+    try {
+      return await this.get<SIAEBoxOfficeData>('/api/gestore/siae/box-office');
+    } catch {
+      return {
+        drawerStatus: 'closed',
+        cashInDrawer: 0,
+        sessionTransactions: 0,
+        sessionTotal: 0,
+        ticketTypes: [],
+      };
+    }
+  }
+
+  async processSIAEBoxOfficeSale(data: {
+    items: Array<{ ticketTypeId: string; quantity: number }>;
+    paymentMethod: string;
+    total: number;
+  }): Promise<{ success: boolean; transactionId: string }> {
+    return this.post('/api/gestore/siae/box-office/sale', data);
+  }
+
+  async toggleSIAEBoxOfficeDrawer(action: 'open' | 'close'): Promise<{ success: boolean }> {
+    return this.post('/api/gestore/siae/box-office/drawer', { action });
+  }
+
+  async printSIAEBoxOfficeReceipt(): Promise<{ success: boolean }> {
+    return this.post('/api/gestore/siae/box-office/print-receipt', {});
+  }
+
   async getFloorPlan(eventId: string): Promise<FloorPlanData> {
     try {
       return await this.get<FloorPlanData>(`/api/gestore/events/${eventId}/floor-plan`);
@@ -1102,6 +1227,66 @@ class ApiClient {
         width: 400,
         height: 300,
         zones: [],
+      };
+    }
+  }
+
+  async getFloorPlanEditor(locationId: string): Promise<FloorPlanEditorData> {
+    try {
+      return await this.get<FloorPlanEditorData>(`/api/gestore/locations/${locationId}/floor-plan`);
+    } catch {
+      return {
+        id: '',
+        locationId,
+        name: '',
+        zones: [],
+        tables: [],
+        stages: [],
+      };
+    }
+  }
+
+  async saveFloorPlan(data: FloorPlanEditorData): Promise<FloorPlanEditorData> {
+    return this.post<FloorPlanEditorData>(`/api/gestore/locations/${data.locationId}/floor-plan`, data);
+  }
+
+  // Scanner Management Methods
+  async getGestoreScannerOperators(): Promise<ScannerOperator[]> {
+    try {
+      return await this.get<ScannerOperator[]>('/api/gestore/scanner/operators');
+    } catch {
+      return [];
+    }
+  }
+
+  async getScannerHistory(filters?: { dateFrom?: string; dateTo?: string; eventId?: string; operatorId?: string }): Promise<ScanHistoryEntry[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+      if (filters?.dateTo) params.append('dateTo', filters.dateTo);
+      if (filters?.eventId) params.append('eventId', filters.eventId);
+      if (filters?.operatorId) params.append('operatorId', filters.operatorId);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      return await this.get<ScanHistoryEntry[]>(`/api/gestore/scanner/history${query}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getScannerStats(period?: 'today' | 'week' | 'month' | 'all'): Promise<GestoreScannerStats> {
+    try {
+      const query = period ? `?period=${period}` : '';
+      return await this.get<GestoreScannerStats>(`/api/gestore/scanner/stats${query}`);
+    } catch {
+      return {
+        totalScans: 0,
+        successCount: 0,
+        errorCount: 0,
+        duplicateCount: 0,
+        successRate: 0,
+        scansPerHour: [],
+        topOperators: [],
+        byEvent: [],
       };
     }
   }
@@ -1488,6 +1673,16 @@ export interface GestoreStaffMember {
   phone?: string;
   status: string;
   eventsAssigned: number;
+}
+
+export interface ScannerOperator {
+  id: string;
+  name: string;
+  email?: string;
+  isActive: boolean;
+  totalScans?: number;
+  eventsCount?: number;
+  permissions?: string[];
 }
 
 // Alias for backward compatibility
@@ -1902,6 +2097,29 @@ export interface SIAEReport {
   errorMessage?: string;
 }
 
+export interface SIAETransaction {
+  id: string;
+  transactionDate: string;
+  type: 'sale' | 'refund' | 'cancellation';
+  amount: number;
+  fiscalSeal: string;
+  ticketCode: string;
+  eventId: string;
+  eventName: string;
+}
+
+export interface NameChangeRequest {
+  id: string;
+  ticketCode: string;
+  eventName: string;
+  originalName: string;
+  newName: string;
+  requestDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  fee: number;
+  documentUrl?: string;
+}
+
 export interface SIAECustomer {
   id: string;
   firstName: string;
@@ -1925,6 +2143,24 @@ export interface SIAECard {
   activationDate: string | null;
   expiryDate: string | null;
   status: 'active' | 'pending' | 'expired';
+}
+
+export interface SIAETicketingData {
+  eventId: string;
+  eventName: string;
+  ticketsToday: number;
+  revenueToday: number;
+  availableSeats: number;
+  ticketTypes: Array<{id: string; name: string; price: number; available: number}>;
+  recentEmissions: Array<{id: string; ticketCode: string; type: string; customerName?: string; timestamp: string}>;
+}
+
+export interface SIAEBoxOfficeData {
+  drawerStatus: 'open' | 'closed';
+  cashInDrawer: number;
+  sessionTransactions: number;
+  sessionTotal: number;
+  ticketTypes: Array<{id: string; name: string; price: number}>;
 }
 
 export interface FloorPlanZone {
@@ -2074,6 +2310,30 @@ export interface ScannerStats {
   eventsAssigned: number;
 }
 
+export interface ScanHistoryEntry {
+  id: string;
+  timestamp: string;
+  eventId: string;
+  eventName: string;
+  ticketCode: string;
+  ticketType: string;
+  result: 'success' | 'error' | 'duplicate';
+  operatorId: string;
+  operatorName: string;
+  errorMessage?: string;
+}
+
+export interface GestoreScannerStats {
+  totalScans: number;
+  successCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  successRate: number;
+  scansPerHour: Array<{ hour: string; count: number }>;
+  topOperators: Array<{ name: string; scans: number; successRate: number }>;
+  byEvent: Array<{ eventName: string; scans: number; successRate: number }>;
+}
+
 export interface ScanResult {
   success: boolean;
   message: string;
@@ -2188,6 +2448,96 @@ export interface BeverageData {
   catalog: BeverageCatalogItem[];
   sales: BeverageSalesItem[];
   stock: BeverageStockItem[];
+}
+
+export interface PRWalletTransaction {
+  id: string;
+  type: 'commission' | 'payout' | 'bonus';
+  amount: number;
+  date: string;
+  description: string;
+}
+
+export interface PRWalletData {
+  balance: number;
+  totalEarnings: number;
+  pending: number;
+  withdrawn: number;
+  transactions: PRWalletTransaction[];
+}
+
+export interface PRList {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  prName: string;
+  guestsCount: number;
+  confirmedCount: number;
+  status: 'active' | 'closed';
+}
+
+export interface PRActiveReward {
+  id: string;
+  name: string;
+  target: number;
+  current: number;
+  prize: string;
+}
+
+export interface PREarnedReward {
+  id: string;
+  name: string;
+  earnedAt: string;
+  prize: string;
+}
+
+export interface PRLeaderboardEntry {
+  rank: number;
+  prName: string;
+  points: number;
+}
+
+export interface PRRewardsData {
+  activeRewards: PRActiveReward[];
+  myRewards: PREarnedReward[];
+  leaderboard: PRLeaderboardEntry[];
+}
+
+export interface FloorPlanEditorZone {
+  id: string;
+  type: string;
+  name: string;
+  points: { x: number; y: number }[];
+  color: string;
+  capacity: number;
+}
+
+export interface FloorPlanEditorTable {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  seats: number;
+  shape: 'round' | 'square';
+}
+
+export interface FloorPlanEditorStage {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface FloorPlanEditorData {
+  id: string;
+  locationId: string;
+  name: string;
+  zones: FloorPlanEditorZone[];
+  tables: FloorPlanEditorTable[];
+  stages: FloorPlanEditorStage[];
 }
 
 export const api = new ApiClient(API_BASE_URL);

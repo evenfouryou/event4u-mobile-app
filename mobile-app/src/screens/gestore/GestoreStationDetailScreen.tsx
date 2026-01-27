@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   stationTitle: {
     fontSize: typography.fontSize.xl,
-    fontWeight: typography.weights.bold as any,
+    fontWeight: '700',
   },
   stationSubtitle: {
     fontSize: typography.fontSize.sm,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.weights.medium as any,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: typography.fontSize.xl,
-    fontWeight: typography.weights.bold as any,
+    fontWeight: '700',
     marginBottom: spacing.xs,
   },
   statLabel: {
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
-    fontWeight: typography.weights.semibold as any,
+    fontWeight: '600',
     marginBottom: spacing.md,
   },
   detailsCard: {
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.weights.medium as any,
+    fontWeight: '500',
   },
   detailDivider: {
     height: 1,
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: typography.fontSize.md,
-    fontWeight: typography.weights.semibold as any,
+    fontWeight: '600',
     marginBottom: spacing.md,
     textAlign: 'center',
   },
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: typography.fontSize.xl,
-    fontWeight: typography.weights.bold as any,
+    fontWeight: '700',
   },
   summaryLabel: {
     fontSize: typography.fontSize.xs,
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   },
   staffName: {
     fontSize: typography.fontSize.md,
-    fontWeight: typography.weights.medium as any,
+    fontWeight: '500',
   },
   staffRole: {
     fontSize: typography.fontSize.sm,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: typography.fontSize.md,
-    fontWeight: typography.weights.medium as any,
+    fontWeight: '500',
   },
   productCategory: {
     fontSize: typography.fontSize.sm,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: typography.fontSize.lg,
-    fontWeight: typography.weights.bold as any,
+    fontWeight: '700',
   },
   productFooter: {
     flexDirection: 'row',
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   },
   stockText: {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.weights.medium as any,
+    fontWeight: '500',
   },
   emptyCard: {
     padding: spacing.xl,
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: typography.fontSize.lg,
-    fontWeight: typography.weights.semibold as any,
+    fontWeight: '600',
     marginTop: spacing.md,
   },
 });
