@@ -9,6 +9,7 @@ import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
 import { Loading, SkeletonDashboard } from '@/components/Loading';
+import { Avatar } from '@/components/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -101,12 +102,13 @@ export function ScannerDashboard({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Badge variant="teal" style={styles.scannerBadge}>
-            <Text style={styles.scannerBadgeText}>SCANNER</Text>
-          </Badge>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Dashboard</Text>
+      <View style={styles.topHeader}>
+        <View style={styles.headerLogoContainer}>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
+            resizeMode="contain"
+          />
         </View>
         <Pressable
           onPress={onNavigateProfile}
@@ -129,9 +131,22 @@ export function ScannerDashboard({
           />
         }
       >
-        <View style={styles.welcomeSection}>
-          <Text style={[styles.welcomeText, { color: colors.mutedForeground }]}>Ciao,</Text>
-          <Text style={[styles.userName, { color: colors.foreground }]}>{user?.firstName || 'Scanner'}</Text>
+        <View style={styles.greetingContainer}>
+          <View style={styles.greetingContent}>
+            <Avatar
+              name={`${user?.firstName || ''} ${user?.lastName || ''}`}
+              size="lg"
+              testID="avatar-scanner"
+            />
+            <View style={styles.greetingText}>
+              <Text style={[styles.greeting, { color: colors.foreground }]}>
+                Benvenuto, <Text style={[styles.greetingName, { color: colors.primary }]}>{user?.firstName || 'Scanner'}</Text>
+              </Text>
+              <Badge variant="teal" size="sm">
+                <Text style={styles.scannerBadgeText}>Scanner Dashboard</Text>
+              </Badge>
+            </View>
+          </View>
         </View>
 
         <View style={styles.statsCard}>
@@ -162,46 +177,56 @@ export function ScannerDashboard({
 
         <View style={styles.actionsSection}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Azioni Rapide</Text>
-          <View style={styles.actionRow}>
-            <ActionCard
-              icon="scan"
-              label="Scansiona"
-              gradient="golden"
-              onPress={() => {
-                if (events.length === 0) {
-                  Alert.alert('Nessun Evento', 'Non hai eventi assegnati. Contatta il gestore per essere assegnato a un evento.');
-                } else if (events.length === 1) {
-                  onNavigateScan(events[0].eventId);
-                } else {
-                  onNavigateEvents();
-                }
-              }}
-              testID="action-scan"
-            />
-            <ActionCard
-              icon="calendar"
-              label="Eventi"
-              gradient="purple"
-              onPress={onNavigateEvents}
-              testID="action-events"
-            />
-          </View>
-          <View style={styles.actionRow}>
-            <ActionCard
-              icon="person"
-              label="Profilo"
-              gradient="blue"
-              onPress={onNavigateProfile}
-              testID="action-profile"
-            />
-            <ActionCard
-              icon="log-out"
-              label="Esci"
-              gradient="pink"
-              onPress={handleLogout}
-              testID="action-logout"
-            />
-          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.actionsScrollContent}
+          >
+            <View style={styles.actionCardWrapper}>
+              <ActionCard
+                icon="scan"
+                label="Scansiona"
+                gradient="golden"
+                onPress={() => {
+                  if (events.length === 0) {
+                    Alert.alert('Nessun Evento', 'Non hai eventi assegnati. Contatta il gestore per essere assegnato a un evento.');
+                  } else if (events.length === 1) {
+                    onNavigateScan(events[0].eventId);
+                  } else {
+                    onNavigateEvents();
+                  }
+                }}
+                testID="action-scan"
+              />
+            </View>
+            <View style={styles.actionCardWrapper}>
+              <ActionCard
+                icon="calendar"
+                label="Eventi"
+                gradient="purple"
+                onPress={onNavigateEvents}
+                testID="action-events"
+              />
+            </View>
+            <View style={styles.actionCardWrapper}>
+              <ActionCard
+                icon="person"
+                label="Profilo"
+                gradient="blue"
+                onPress={onNavigateProfile}
+                testID="action-profile"
+              />
+            </View>
+            <View style={styles.actionCardWrapper}>
+              <ActionCard
+                icon="log-out"
+                label="Esci"
+                gradient="pink"
+                onPress={handleLogout}
+                testID="action-logout"
+              />
+            </View>
+          </ScrollView>
         </View>
 
         {events.length > 0 && (
@@ -283,6 +308,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  topHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  headerLogoContainer: {
+    flex: 1,
+  },
+  headerLogo: {
+    width: 120,
+    height: 32,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -322,7 +363,27 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     gap: spacing.xl,
+  },
+  greetingContainer: {
+    marginBottom: spacing.sm,
+  },
+  greetingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  greetingText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  greeting: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '600',
+  },
+  greetingName: {
+    fontWeight: '700',
   },
   welcomeSection: {
     gap: spacing.xs,
@@ -333,6 +394,13 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
+  },
+  actionsScrollContent: {
+    paddingVertical: spacing.xs,
+    gap: spacing.md,
+  },
+  actionCardWrapper: {
+    marginRight: spacing.sm,
   },
   statsCard: {
     overflow: 'hidden',
