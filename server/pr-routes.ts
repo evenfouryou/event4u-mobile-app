@@ -128,6 +128,7 @@ function requireCapoStaff(req: Request, res: Response, next: NextFunction) {
 
 // Middleware to check PR role
 // FIX 2026-01-25: Accept both passport users with PR role AND PR session authentication
+// FIX 2026-01-27: Also accept Bearer token authentication (mobile app)
 function requirePr(req: Request, res: Response, next: NextFunction) {
   const user = req.user as any;
   
@@ -139,6 +140,12 @@ function requirePr(req: Request, res: Response, next: NextFunction) {
   // Allow PR session users (logged in via /api/pr/login)
   const prSession = (req.session as any)?.prProfile;
   if (prSession?.id) {
+    return next();
+  }
+  
+  // Allow Bearer token authenticated users (mobile app)
+  // This is set by requireAuth middleware when validating Bearer token
+  if ((req as any).prProfileId) {
     return next();
   }
   

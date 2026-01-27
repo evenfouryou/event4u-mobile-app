@@ -135,6 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
+      // CRITICAL FIX 2026-01-27: Load saved auth token first before any API calls
+      const savedToken = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      if (savedToken) {
+        api.setAuthToken(savedToken);
+        console.log('[Auth] Restored saved auth token');
+      }
+      
       // First try to validate existing session
       try {
         const userData = await api.get<{ user: User }>('/api/auth/user');
@@ -163,11 +170,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body.email = identifier;
           }
 
-          const response = await api.post<{ user: User; message: string }>('/api/auth/login', body);
+          // Use postDirect to bypass re-auth handler during login
+          const response = await api.postDirect<{ user: User; message: string; token?: string }>('/api/auth/login', body);
           
           if (response.user) {
             setUser(response.user);
             await saveUser(response.user);
+            
+            // CRITICAL FIX 2026-01-27: Save and set token from re-authentication
+            if (response.token) {
+              await SecureStore.setItemAsync(AUTH_TOKEN_KEY, response.token);
+              api.setAuthToken(response.token);
+              console.log('[Auth] Token saved from re-authentication');
+            }
+            
             console.log('Re-authenticated successfully');
             return;
           }
