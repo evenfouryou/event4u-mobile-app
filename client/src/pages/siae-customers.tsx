@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -210,12 +210,21 @@ export default function SiaeCustomersPage() {
   const [canForceDelete, setCanForceDelete] = useState(false);
   const [pendingCustomerId, setPendingCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { data: events = [], isLoading: isLoadingEvents } = useQuery<{ id: number; name: string; startDate: string }[]>({
     queryKey: ["/api/siae/ticketed-events"],
@@ -232,6 +241,18 @@ export default function SiaeCustomersPage() {
       if (!response.ok) throw new Error("Failed to fetch customers");
       return response.json();
     },
+  });
+
+  // Server-side search for customers not in the event list
+  const { data: searchResults = [] } = useQuery<SiaeCustomer[]>({
+    queryKey: ["/api/siae/customers/search", debouncedSearch],
+    queryFn: async () => {
+      if (debouncedSearch.length < 2) return [];
+      const response = await fetch(`/api/siae/customers/search?q=${encodeURIComponent(debouncedSearch)}`, { credentials: "include" });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: debouncedSearch.length >= 2,
   });
 
   const form = useForm<CustomerFormData>({
@@ -449,17 +470,30 @@ export default function SiaeCustomersPage() {
     }
   };
 
-  const filteredCustomers = customers.filter((customer) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      customer.firstName?.toLowerCase().includes(query) ||
-      customer.lastName?.toLowerCase().includes(query) ||
-      customer.email?.toLowerCase().includes(query) ||
-      customer.phone?.includes(query) ||
-      customer.uniqueCode?.toLowerCase().includes(query)
-    );
-  });
+  // Combine local filter with server search results
+  const filteredCustomers = (() => {
+    // First filter locally loaded customers
+    const localFiltered = customers.filter((customer) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        customer.firstName?.toLowerCase().includes(query) ||
+        customer.lastName?.toLowerCase().includes(query) ||
+        customer.email?.toLowerCase().includes(query) ||
+        customer.phone?.includes(query) ||
+        customer.uniqueCode?.toLowerCase().includes(query)
+      );
+    });
+    
+    // If searching, merge with server results (avoiding duplicates)
+    if (debouncedSearch.length >= 2 && searchResults.length > 0) {
+      const existingIds = new Set(localFiltered.map(c => c.id));
+      const newFromServer = searchResults.filter(c => !existingIds.has(c.id));
+      return [...localFiltered, ...newFromServer];
+    }
+    
+    return localFiltered;
+  })();
 
   const generateCustomerCode = () => {
     const prefix = "CLI";
