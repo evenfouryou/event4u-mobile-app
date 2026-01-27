@@ -11,17 +11,17 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.88, 380);
+const SHEET_HEIGHT = SCREEN_HEIGHT * 0.85;
 
 interface MenuItem {
   id: string;
@@ -111,8 +111,34 @@ export function AdminMenuDrawer({
   const insets = useSafeAreaInsets();
   const [expandedGroup, setExpandedGroup] = useState<string | null>('sistema');
   const [searchQuery, setSearchQuery] = useState('');
-  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 10;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          slideAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
+          onClose();
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 11,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (visible) {
@@ -132,7 +158,7 @@ export function AdminMenuDrawer({
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: -DRAWER_WIDTH,
+          toValue: SHEET_HEIGHT,
           duration: 200,
           useNativeDriver: true,
         }),
@@ -248,7 +274,6 @@ export function AdminMenuDrawer({
         style={styles.modalContainer}
       >
         <View style={styles.overlay}>
-          {/* Animated Backdrop */}
           <Animated.View 
             style={[
               styles.backdrop, 
@@ -258,32 +283,29 @@ export function AdminMenuDrawer({
             <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           </Animated.View>
 
-          {/* Animated Drawer */}
           <Animated.View 
             style={[
-              styles.drawer, 
+              styles.sheet, 
               { 
-                width: DRAWER_WIDTH,
+                height: SHEET_HEIGHT,
                 backgroundColor: colors.background,
-                transform: [{ translateX: slideAnim }],
+                transform: [{ translateY: slideAnim }],
               }
             ]}
           >
-            {/* Header compatto */}
-            <LinearGradient
-              colors={['#14B8A6', '#0D9488']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.header, { paddingTop: insets.top + 12 }]}
-            >
+            <View {...panResponder.panHandlers} style={styles.handleContainer}>
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
               <View style={styles.headerRow}>
                 <View style={styles.headerLeft}>
-                  <View style={styles.logoIcon}>
-                    <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
-                  </View>
+                  <LinearGradient
+                    colors={['#14B8A6', '#0D9488']}
+                    style={styles.logoIcon}
+                  >
+                    <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
+                  </LinearGradient>
                   <View>
-                    <Text style={styles.headerTitle}>Admin</Text>
-                    <Text style={styles.headerSubtitle}>Event4U</Text>
+                    <Text style={[styles.headerTitle, { color: colors.foreground }]}>Menu Admin</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>Event4U</Text>
                   </View>
                 </View>
                 <Pressable
@@ -291,40 +313,37 @@ export function AdminMenuDrawer({
                     triggerHaptic('light');
                     onClose();
                   }}
-                  style={styles.closeBtn}
+                  style={[styles.closeBtn, { backgroundColor: colors.muted }]}
                   testID="button-close-drawer"
                 >
-                  <Ionicons name="close" size={20} color="#FFFFFF" />
+                  <Ionicons name="close" size={18} color={colors.foreground} />
                 </Pressable>
               </View>
+            </View>
 
-              {/* Search Bar */}
-              <View style={styles.searchContainer}>
-                <Ionicons name="search" size={16} color="rgba(255,255,255,0.6)" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Cerca sezione..."
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  testID="input-search-menu"
-                />
-                {searchQuery.length > 0 && (
-                  <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
-                    <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.6)" />
-                  </Pressable>
-                )}
-              </View>
-            </LinearGradient>
+            <View style={[styles.searchContainer, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <Ionicons name="search" size={16} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.foreground }]}
+                placeholder="Cerca sezione..."
+                placeholderTextColor={colors.mutedForeground}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                testID="input-search-menu"
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
+                  <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+                </Pressable>
+              )}
+            </View>
 
-            {/* Content */}
             <ScrollView 
               style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Search Results */}
               {searchQuery.trim().length > 0 ? (
                 <View style={styles.searchResults}>
                   <Text style={[styles.searchResultsTitle, { color: colors.mutedForeground }]}>
@@ -370,7 +389,6 @@ export function AdminMenuDrawer({
                 </View>
               ) : (
                 <>
-                  {/* Menu Groups */}
                   {menuGroups.map((group) => {
                     const isExpanded = expandedGroup === group.id;
                     
@@ -471,35 +489,34 @@ export function AdminMenuDrawer({
               )}
             </ScrollView>
 
-            {/* Footer */}
-            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
+            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card, paddingBottom: insets.bottom + 12 }]}>
               <Pressable 
                 style={[styles.footerButton, { backgroundColor: colors.muted }]}
                 onPress={() => handleItemPress(onNavigateDashboard)}
                 testID="footer-dashboard"
               >
-                <Ionicons name="speedometer-outline" size={18} color={colors.foreground} />
+                <Ionicons name="speedometer-outline" size={20} color={colors.foreground} />
               </Pressable>
               <Pressable 
                 style={[styles.footerButton, { backgroundColor: colors.muted }]}
                 onPress={() => handleItemPress(onNavigateSIAEMonitor)}
                 testID="footer-monitor"
               >
-                <Ionicons name="pulse-outline" size={18} color={colors.foreground} />
+                <Ionicons name="pulse-outline" size={20} color={colors.foreground} />
               </Pressable>
               <Pressable 
                 style={[styles.footerButton, { backgroundColor: colors.muted }]}
                 onPress={() => handleItemPress(onNavigateBillingInvoices)}
                 testID="footer-invoices"
               >
-                <Ionicons name="receipt-outline" size={18} color={colors.foreground} />
+                <Ionicons name="receipt-outline" size={20} color={colors.foreground} />
               </Pressable>
               <Pressable 
                 style={[styles.footerButton, { backgroundColor: colors.muted }]}
                 onPress={() => handleItemPress(onNavigateSettings)}
                 testID="footer-settings"
               >
-                <Ionicons name="settings-outline" size={18} color={colors.foreground} />
+                <Ionicons name="settings-outline" size={20} color={colors.foreground} />
               </Pressable>
             </View>
           </Animated.View>
@@ -515,32 +532,39 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  drawer: {
-    height: '100%',
-    borderTopRightRadius: 20,
-    borderBottomRightRadius: 20,
+  sheet: {
+    width: '100%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 4, height: 0 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
   },
-  header: {
-    paddingBottom: 16,
+  handleContainer: {
+    paddingTop: 12,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -551,49 +575,46 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: 12,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 10,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     gap: 8,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: 15,
     padding: 0,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   searchResults: {
     gap: 8,
@@ -613,8 +634,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   searchResultIcon: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -623,7 +644,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchResultLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   searchResultDesc: {
@@ -646,51 +667,51 @@ const styles = StyleSheet.create({
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 10,
-    gap: 10,
+    borderRadius: 12,
+    gap: 12,
   },
   groupIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   groupTitle: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
   groupBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   groupBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   groupItems: {
-    marginLeft: 20,
-    paddingLeft: 12,
+    marginLeft: 24,
+    paddingLeft: 16,
     borderLeftWidth: 2,
     marginTop: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    gap: 12,
     marginBottom: 2,
   },
   menuItemIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -698,37 +719,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuItemLabel: {
-    fontSize: 14,
+    fontSize: 15,
   },
   menuItemDesc: {
-    fontSize: 11,
-    marginTop: 1,
+    fontSize: 12,
+    marginTop: 2,
   },
   itemBadge: {
     backgroundColor: '#EF4444',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    minWidth: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    minWidth: 24,
     alignItems: 'center',
   },
   itemBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 12,
+    paddingTop: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    gap: 8,
+    gap: 12,
   },
   footerButton: {
     flex: 1,
-    height: 44,
-    borderRadius: 10,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
