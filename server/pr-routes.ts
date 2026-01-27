@@ -83,19 +83,13 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   
   // Check Bearer token authentication (for mobile app)
   const authHeader = req.headers.authorization;
-  console.log('[PR Auth] Checking auth - URL:', req.url, 'Method:', req.method);
-  console.log('[PR Auth] Authorization header:', authHeader ? authHeader.substring(0, 20) + '...' : 'MISSING');
-  
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    console.log('[PR Auth] Token received:', token.substring(0, 15) + '...');
     // Token format: "pr_<profileId>" for PR profiles
     if (token.startsWith('pr_')) {
       const profileId = token.substring(3);
-      console.log('[PR Auth] Extracted profileId:', profileId);
       try {
         const profile = await db.select().from(prProfiles).where(eq(prProfiles.id, profileId)).limit(1);
-        console.log('[PR Auth] Profile found:', profile.length > 0);
         if (profile.length > 0) {
           (req as any).prProfileId = profileId;
           // Also set up session-like data for consistency
@@ -103,7 +97,6 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
             (req.session as any) = {};
           }
           (req.session as any).prProfile = profile[0];
-          console.log('[PR Auth] Token auth SUCCESS for profile:', profileId);
           return next();
         }
       } catch (error) {
