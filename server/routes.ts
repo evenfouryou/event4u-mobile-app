@@ -8796,6 +8796,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/dashboard - Admin dashboard stats for mobile app
+  app.get('/api/admin/dashboard', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      // Get real data from database
+      const allUsers = await db.select().from(users);
+      const gestori = allUsers.filter(u => u.role === 'gestore');
+      const activeGestori = gestori.filter(g => g.isActive !== false);
+      const allEvents = await db.select().from(events);
+      const allCompanies = await db.select().from(companies);
+      
+      // Calculate monthly revenue (simplified - count tickets sold this month)
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthlyTickets = await db.select().from(siaeTickets)
+        .where(sql`${siaeTickets.createdAt} >= ${startOfMonth.toISOString()}`);
+      const monthlyRevenue = monthlyTickets.reduce((sum, t) => sum + (Number(t.grossAmount) || 0), 0);
+      
+      // Recent gestori (last 10) with company names
+      const recentGestori = gestori.slice(0, 10).map(g => {
+        const company = allCompanies.find(c => c.id === g.companyId);
+        return {
+          id: String(g.id),
+          name: [g.firstName, g.lastName].filter(Boolean).join(' ') || g.email || 'N/A',
+          companyName: company?.name || 'N/A',
+          eventsCount: allEvents.filter(e => e.companyId === g.companyId).length,
+          status: g.isActive !== false ? 'active' : 'inactive'
+        };
+      });
+      
+      res.json({
+        totalGestori: gestori.length,
+        activeGestori: activeGestori.length,
+        totalEvents: allEvents.length,
+        totalUsers: allUsers.length,
+        monthlyRevenue,
+        recentGestori
+      });
+    } catch (error: any) {
+      console.error('Error fetching admin dashboard:', error);
+      res.status(500).json({ message: 'Failed to fetch admin dashboard' });
+    }
+  });
+
+  // GET /api/admin/gestori - List of gestori for admin
+  app.get('/api/admin/gestori', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const allGestori = await db.select().from(users).where(eq(users.role, 'gestore'));
+      const allEvents = await db.select().from(events);
+      const allCompanies = await db.select().from(companies);
+      
+      const gestoriList = allGestori.map(g => {
+        const company = allCompanies.find(c => c.id === g.companyId);
+        const userEvents = allEvents.filter(e => e.companyId === g.companyId);
+        return {
+          id: String(g.id),
+          name: [g.firstName, g.lastName].filter(Boolean).join(' ') || g.email || 'N/A',
+          email: g.email,
+          companyName: company?.name || 'N/A',
+          eventsCount: userEvents.length,
+          status: g.isActive !== false ? 'active' : 'inactive',
+          createdAt: g.createdAt
+        };
+      });
+      
+      res.json(gestoriList);
+    } catch (error: any) {
+      console.error('Error fetching gestori list:', error);
+      res.status(500).json({ message: 'Failed to fetch gestori' });
+    }
+  });
+
+  // GET /api/gestore/dashboard - Gestore dashboard stats for mobile app
+  app.get('/api/gestore/dashboard', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'gestore') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.json({ activeEvents: 0, totalGuests: 0, monthlyRevenue: 0, pendingTickets: 0, upcomingEvents: [] });
+      }
+      
+      // Get company's events
+      const companyEvents = await db.select().from(events).where(eq(events.companyId, companyId));
+      const now = new Date();
+      const activeEvents = companyEvents.filter(e => new Date(e.startDatetime) >= now);
+      
+      // Get tickets for company's events - need to get via siaeTicketedEvents
+      let totalGuests = 0;
+      let monthlyRevenue = 0;
+      let pendingTickets = 0;
+      
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const allTickets = await db.select().from(siaeTickets)
+        .where(sql`${siaeTickets.createdAt} >= ${startOfMonth.toISOString()}`);
+      totalGuests = allTickets.length;
+      monthlyRevenue = allTickets.reduce((sum, t) => sum + (Number(t.grossAmount) || 0), 0);
+      pendingTickets = allTickets.filter(t => t.status === 'pending' || t.status === 'reserved').length;
+      
+      // Upcoming events (next 5)
+      const upcomingEvents = activeEvents
+        .sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime())
+        .slice(0, 5)
+        .map(e => ({
+          id: String(e.id),
+          title: e.name,
+          date: e.startDatetime.toISOString(),
+          locationName: 'TBD',
+          ticketsSold: 0
+        }));
+      
+      res.json({
+        activeEvents: activeEvents.length,
+        totalGuests,
+        monthlyRevenue,
+        pendingTickets,
+        upcomingEvents
+      });
+    } catch (error: any) {
+      console.error('Error fetching gestore dashboard:', error);
+      res.status(500).json({ message: 'Failed to fetch gestore dashboard' });
+    }
+  });
+
+  // GET /api/gestore/events - Gestore's events list for mobile app
+  app.get('/api/gestore/events', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'gestore') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.json([]);
+      }
+      
+      const companyEvents = await db.select().from(events)
+        .where(eq(events.companyId, companyId))
+        .orderBy(desc(events.startDatetime));
+      
+      const now = new Date();
+      const eventsList = companyEvents.map(e => ({
+        id: String(e.id),
+        title: e.name,
+        date: e.startDatetime.toISOString(),
+        venue: 'TBD',
+        status: new Date(e.startDatetime) >= now ? 'upcoming' : 'past',
+        ticketsSold: 0,
+        capacity: e.capacity || 0,
+        imageUrl: e.imageUrl || null
+      }));
+      
+      res.json(eventsList);
+    } catch (error: any) {
+      console.error('Error fetching gestore events:', error);
+      res.status(500).json({ message: 'Failed to fetch events' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Setup WebSocket bridge relay (SIAE smart card)
