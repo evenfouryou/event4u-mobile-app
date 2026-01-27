@@ -1,0 +1,201 @@
+Perfetto.
+Qui sotto trovi la **versione imperativa diretta per Replit AI**, pronta da incollare. È scritta come istruzione operativa, non come documento descrittivo.
+
+---
+
+# 🔥 ISTRUZIONI OPERATIVE PER REPLIT AI
+
+## Modifica e completa Admin App — Parità Totale + API Reali + Design App
+
+---
+
+## ESEGUI QUESTE MODIFICHE SUL PROGETTO ESISTENTE
+
+Non fare una semplice revisione estetica.
+Devi correggere struttura, navigazione, connessioni API e completare tutte le funzioni mancanti.
+
+---
+
+# 1️⃣ SISTEMA IL MENU (MODIFICA STRUTTURALE OBBLIGATORIA)
+
+### Problema:
+
+Il menu si apre a destra.
+
+### Azione richiesta:
+
+* Sposta il menu a **sinistra**
+* Implementa:
+
+  * Mobile → drawer da sinistra con overlay
+  * Tablet/Desktop → sidebar sinistra fissa o collassabile
+* Mantieni:
+
+  * Ordine identico al sito
+  * Stesse etichette
+  * Stessa gerarchia
+* Ogni voce deve aprire una pagina reale funzionante
+
+Non lasciare nessuna voce non collegata.
+
+---
+
+# 2️⃣ ALLINEA COMPLETAMENTE L’APP AL SITO
+
+Devi:
+
+1. Analizzare la struttura completa del sito
+2. Estrarre:
+
+   * Tutte le sezioni
+   * Tutte le sottosezioni
+   * Tutte le funzioni
+3. Replicarle nell’app
+
+Se una funzione esiste nel sito → deve esistere anche nell’app.
+
+Non è accettabile:
+
+* Funzioni mancanti
+* Pagine incomplete
+* UI senza logica backend
+
+---
+
+# 3️⃣ ELIMINA TOTALMENTE MOCK E DATI FINTI
+
+Rimuovi:
+
+* Dati hardcoded
+* JSON statici
+* Array di test
+* Mock service
+* Funzioni simulate
+* setTimeout per fake loading
+* Flag demo
+
+Tutto deve usare:
+
+* API backend reali
+* Database reale
+
+---
+
+# 4️⃣ COLLEGA TUTTO A API REALI
+
+Per ogni modulo implementa:
+
+* GET reale
+* POST reale
+* PUT/PATCH reale
+* DELETE reale
+
+Gestisci:
+
+* Loading state reale
+* Error state reale
+* Empty state reale
+
+Se nel sito:
+
+* si salva → deve salvare su DB
+* si modifica → deve aggiornare DB
+* si elimina → deve eliminare realmente
+* si filtra → filtro lato backend
+* si cambia stato → update reale
+
+---
+
+# 5️⃣ RISPETTA LINEE GUIDA DESIGN APP (NON WEB)
+
+Non copiare layout web rigidi.
+
+Applica:
+
+* Mobile-first
+* Layout verticale
+* Componenti touch-friendly
+* Liste in formato card su mobile
+* Tabelle web vietate su mobile
+* Navigazione: Lista → Dettaglio → Modifica
+* Bottom sheet per azioni rapide
+
+Mantieni:
+
+* Palette del sito
+* Font del sito
+* Icone coerenti
+* Identità visiva
+
+Non inventare un nuovo design.
+
+---
+
+# 6️⃣ STRUTTURA TECNICA (React + Express)
+
+Frontend deve:
+
+* Avere layer API centralizzato
+* Non duplicare logica backend
+* Gestire autenticazione correttamente
+* Gestire errori globalmente
+* Essere organizzato in:
+
+  * pages
+  * components
+  * services/api
+  * hooks
+  * types
+
+Backend deve:
+
+* Esporre endpoint coerenti con sito
+* Usare validazioni reali
+* Restituire status HTTP corretti
+* Mantenere logica identica al sito
+
+---
+
+# 7️⃣ ESEGUI AUDIT COMPLETO
+
+1. Confronta sito e app
+2. Individua:
+
+   * Sezioni mancanti
+   * Funzioni non collegate
+   * Parti con dati finti
+3. Correggi tutto
+
+---
+
+# 8️⃣ DEFINITION OF DONE
+
+Una sezione è completata solo se:
+
+✔ È nel menu a sinistra
+✔ Esiste come nel sito
+✔ È collegata a API reale
+✔ Usa database reale
+✔ Non contiene mock
+✔ Gestisce loading/error
+✔ Funziona end-to-end
+
+---
+
+# OUTPUT FINALE
+
+* Admin App completa
+* Menu a sinistra
+* Parità totale con sito
+* Solo dati reali
+* Nessuna funzione finta
+* UX coerente con design app
+* Report tecnico con:
+
+  * sezioni implementate
+  * endpoint collegati
+  * modifiche strutturali effettuate
+
+---
+
+Se vuoi adesso ti preparo anche la versione **ancora più rigida e tecnica**, con checklist verificabile tipo QA automation, così Replit non può “interpretare” nulla e lavora solo per criteri oggettivi.
