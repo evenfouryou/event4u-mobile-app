@@ -1,11 +1,27 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Pressable, 
+  Modal, 
+  TextInput,
+  Dimensions,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.88, 380);
 
 interface MenuItem {
   id: string;
@@ -13,6 +29,7 @@ interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   badge?: string;
+  description?: string;
 }
 
 interface MenuGroup {
@@ -48,6 +65,7 @@ interface AdminMenuDrawerProps {
   onNavigateUsers: () => void;
   onNavigateEvents: () => void;
   onNavigateNameChanges: () => void;
+  currentScreen?: string;
 }
 
 export function AdminMenuDrawer({
@@ -75,18 +93,49 @@ export function AdminMenuDrawer({
   onNavigateUsers,
   onNavigateEvents,
   onNavigateNameChanges,
+  currentScreen,
 }: AdminMenuDrawerProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['sistema']);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>('sistema');
+  const [searchQuery, setSearchQuery] = useState('');
+  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -DRAWER_WIDTH,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
 
   const toggleGroup = (groupId: string) => {
     triggerHaptic('light');
-    setExpandedGroups(prev => 
-      prev.includes(groupId) 
-        ? prev.filter(id => id !== groupId)
-        : [...prev, groupId]
-    );
+    setExpandedGroup(prev => prev === groupId ? null : groupId);
   };
 
   const handleItemPress = (onPress: () => void) => {
@@ -99,35 +148,43 @@ export function AdminMenuDrawer({
     {
       id: 'sistema',
       title: 'Sistema',
-      icon: 'settings',
+      icon: 'apps',
       gradient: ['#14B8A6', '#0D9488'],
       items: [
-        { id: 'dashboard', label: 'Pannello di Controllo', icon: 'grid', onPress: onNavigateDashboard },
-        { id: 'gestori', label: 'Gestori', icon: 'people', onPress: onNavigateGestori },
-        { id: 'companies', label: 'Aziende', icon: 'business', onPress: onNavigateCompanies },
-        { id: 'users', label: 'Utenti', icon: 'person', onPress: onNavigateUsers },
-        { id: 'events', label: 'Eventi', icon: 'calendar', onPress: onNavigateEvents },
-        { id: 'settings', label: 'Impostazioni Sito', icon: 'cog', onPress: onNavigateSettings },
-        { id: 'printer', label: 'Stampanti', icon: 'print', onPress: onNavigatePrinter },
-        { id: 'templates', label: 'Template Digitali', icon: 'document-text', onPress: onNavigateDigitalTemplates },
-        { id: 'stripe', label: 'Gestione Stripe', icon: 'card', onPress: onNavigateStripeAdmin },
+        { id: 'dashboard', label: 'Dashboard', icon: 'speedometer', onPress: onNavigateDashboard, description: 'Panoramica generale' },
+        { id: 'gestori', label: 'Gestori', icon: 'people', onPress: onNavigateGestori, description: 'Gestione organizzatori' },
+        { id: 'companies', label: 'Aziende', icon: 'business', onPress: onNavigateCompanies, description: 'Società registrate' },
+        { id: 'users', label: 'Utenti', icon: 'person', onPress: onNavigateUsers, description: 'Account utenti' },
+        { id: 'events', label: 'Eventi', icon: 'calendar', onPress: onNavigateEvents, description: 'Tutti gli eventi' },
+      ],
+    },
+    {
+      id: 'tools',
+      title: 'Strumenti',
+      icon: 'construct',
+      gradient: ['#8B5CF6', '#7C3AED'],
+      items: [
+        { id: 'settings', label: 'Impostazioni', icon: 'settings', onPress: onNavigateSettings, description: 'Configurazione sito' },
+        { id: 'printer', label: 'Stampanti', icon: 'print', onPress: onNavigatePrinter, description: 'Gestione stampa' },
+        { id: 'templates', label: 'Template', icon: 'document-text', onPress: onNavigateDigitalTemplates, description: 'Template biglietti' },
+        { id: 'stripe', label: 'Stripe', icon: 'card', onPress: onNavigateStripeAdmin, description: 'Pagamenti online' },
       ],
     },
     {
       id: 'siae',
-      title: 'Modulo SIAE',
+      title: 'SIAE',
       icon: 'shield-checkmark',
       gradient: ['#10B981', '#059669'],
       items: [
-        { id: 'siae-approvals', label: 'Approvazioni', icon: 'checkmark-done', onPress: onNavigateSIAEApprovals, badge: '3' },
-        { id: 'siae-tables', label: 'Tabelle Dati', icon: 'grid-outline', onPress: onNavigateSIAETables },
-        { id: 'siae-cards', label: 'Tessere Attivazione', icon: 'card-outline', onPress: onNavigateSIAECards },
-        { id: 'siae-config', label: 'Configurazione', icon: 'options', onPress: onNavigateSIAEConfig },
-        { id: 'siae-customers', label: 'Clienti SIAE', icon: 'people-outline', onPress: onNavigateSIAECustomers },
-        { id: 'siae-console', label: 'Console Operativa', icon: 'terminal', onPress: onNavigateSIAEConsole },
-        { id: 'siae-transactions', label: 'Transazioni', icon: 'swap-horizontal', onPress: onNavigateSIAETransactions },
-        { id: 'siae-monitor', label: 'Monitoraggio', icon: 'pulse', onPress: onNavigateSIAEMonitor },
-        { id: 'name-changes', label: 'Cambio Nominativo', icon: 'swap-vertical', onPress: onNavigateNameChanges },
+        { id: 'siae-approvals', label: 'Approvazioni', icon: 'checkmark-done', onPress: onNavigateSIAEApprovals, badge: '3', description: 'Richieste in attesa' },
+        { id: 'siae-monitor', label: 'Monitoraggio', icon: 'pulse', onPress: onNavigateSIAEMonitor, description: 'Stato sistema' },
+        { id: 'siae-tables', label: 'Tabelle', icon: 'grid-outline', onPress: onNavigateSIAETables, description: 'Dati di riferimento' },
+        { id: 'siae-cards', label: 'Tessere', icon: 'card-outline', onPress: onNavigateSIAECards, description: 'Attivazione smart card' },
+        { id: 'siae-config', label: 'Configurazione', icon: 'options', onPress: onNavigateSIAEConfig, description: 'Parametri SIAE' },
+        { id: 'siae-customers', label: 'Clienti', icon: 'people-outline', onPress: onNavigateSIAECustomers, description: 'Anagrafica clienti' },
+        { id: 'siae-console', label: 'Console', icon: 'terminal', onPress: onNavigateSIAEConsole, description: 'Operazioni avanzate' },
+        { id: 'siae-transactions', label: 'Transazioni', icon: 'swap-horizontal', onPress: onNavigateSIAETransactions, description: 'Storico operazioni' },
+        { id: 'name-changes', label: 'Nominativi', icon: 'swap-vertical', onPress: onNavigateNameChanges, description: 'Cambio intestatario' },
       ],
     },
     {
@@ -136,368 +193,526 @@ export function AdminMenuDrawer({
       icon: 'wallet',
       gradient: ['#F59E0B', '#D97706'],
       items: [
-        { id: 'billing-plans', label: 'Piani Abbonamento', icon: 'layers', onPress: onNavigateBillingPlans },
-        { id: 'billing-organizers', label: 'Organizzatori', icon: 'briefcase', onPress: onNavigateBillingOrganizers },
-        { id: 'billing-invoices', label: 'Fatture', icon: 'receipt', onPress: onNavigateBillingInvoices },
-        { id: 'billing-reports', label: 'Report Finanziari', icon: 'bar-chart', onPress: onNavigateBillingReports },
+        { id: 'billing-plans', label: 'Piani', icon: 'layers', onPress: onNavigateBillingPlans, description: 'Abbonamenti attivi' },
+        { id: 'billing-organizers', label: 'Organizzatori', icon: 'briefcase', onPress: onNavigateBillingOrganizers, description: 'Fatturazione clienti' },
+        { id: 'billing-invoices', label: 'Fatture', icon: 'receipt', onPress: onNavigateBillingInvoices, description: 'Documenti emessi' },
+        { id: 'billing-reports', label: 'Report', icon: 'bar-chart', onPress: onNavigateBillingReports, description: 'Statistiche vendite' },
       ],
     },
   ];
 
+  const allItems = menuGroups.flatMap(g => g.items.map(i => ({ ...i, groupId: g.id, groupColor: g.gradient[0] })));
+  
+  const filteredItems = searchQuery.trim() 
+    ? allItems.filter(item => 
+        item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
+
+  const isItemActive = (itemId: string) => {
+    if (!currentScreen) return false;
+    return currentScreen.toLowerCase().includes(itemId.replace(/-/g, ''));
+  };
+
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        <View style={[styles.drawer, { paddingTop: insets.top, backgroundColor: colors.background }]}>
-          {/* Header con gradiente */}
-          <LinearGradient
-            colors={['#14B8A6', '#0D9488']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.headerGradient}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.modalContainer}
+      >
+        <View style={styles.overlay}>
+          {/* Animated Backdrop */}
+          <Animated.View 
+            style={[
+              styles.backdrop, 
+              { opacity: backdropAnim }
+            ]}
           >
-            <View style={styles.drawerHeader}>
-              <View style={styles.headerContent}>
-                <View style={styles.logoContainer}>
-                  <Ionicons name="shield-checkmark" size={28} color="#FFFFFF" />
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          </Animated.View>
+
+          {/* Animated Drawer */}
+          <Animated.View 
+            style={[
+              styles.drawer, 
+              { 
+                width: DRAWER_WIDTH,
+                backgroundColor: colors.background,
+                transform: [{ translateX: slideAnim }],
+              }
+            ]}
+          >
+            {/* Header compatto */}
+            <LinearGradient
+              colors={['#14B8A6', '#0D9488']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.header, { paddingTop: insets.top + 12 }]}
+            >
+              <View style={styles.headerRow}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.logoIcon}>
+                    <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.headerTitle}>Admin</Text>
+                    <Text style={styles.headerSubtitle}>Event4U</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.drawerTitle}>Pannello Admin</Text>
-                  <Text style={styles.drawerSubtitle}>Event4U Management</Text>
-                </View>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onClose();
+                  }}
+                  style={styles.closeBtn}
+                  testID="button-close-drawer"
+                >
+                  <Ionicons name="close" size={20} color="#FFFFFF" />
+                </Pressable>
               </View>
-              <Pressable
-                onPress={() => {
-                  triggerHaptic('light');
-                  onClose();
-                }}
-                style={styles.closeButton}
-                testID="button-close-drawer"
-              >
-                <Ionicons name="close" size={24} color="#FFFFFF" />
-              </Pressable>
-            </View>
-          </LinearGradient>
 
-          <ScrollView 
-            style={styles.menuScroll} 
-            contentContainerStyle={styles.menuContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {menuGroups.map((group) => {
-              const isExpanded = expandedGroups.includes(group.id);
-              
-              return (
-                <View key={group.id} style={styles.menuGroup}>
-                  <Pressable
-                    onPress={() => toggleGroup(group.id)}
-                    style={({ pressed }) => [
-                      styles.groupHeader,
-                      { 
-                        backgroundColor: pressed ? colors.muted : colors.card,
-                        borderColor: colors.border,
-                      }
-                    ]}
-                    testID={`group-${group.id}`}
-                  >
-                    <LinearGradient
-                      colors={group.gradient}
-                      style={styles.groupIconWrap}
-                    >
-                      <Ionicons name={group.icon} size={18} color="#FFFFFF" />
-                    </LinearGradient>
-                    <Text style={[styles.groupTitle, { color: colors.foreground }]}>
-                      {group.title}
-                    </Text>
-                    <View style={[styles.itemCount, { backgroundColor: colors.muted }]}>
-                      <Text style={[styles.itemCountText, { color: colors.mutedForeground }]}>
-                        {group.items.length}
-                      </Text>
-                    </View>
-                    <Ionicons 
-                      name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                      size={18} 
-                      color={colors.mutedForeground} 
-                    />
+              {/* Search Bar */}
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={16} color="rgba(255,255,255,0.6)" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Cerca sezione..."
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  testID="input-search-menu"
+                />
+                {searchQuery.length > 0 && (
+                  <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
+                    <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.6)" />
                   </Pressable>
+                )}
+              </View>
+            </LinearGradient>
 
-                  {isExpanded && (
-                    <View style={[styles.groupItems, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      {group.items.map((item, index) => (
-                        <Pressable
-                          key={item.id}
-                          onPress={() => handleItemPress(item.onPress)}
-                          style={({ pressed }) => [
-                            styles.menuItem,
-                            { 
-                              backgroundColor: pressed ? colors.muted : 'transparent',
-                              borderBottomColor: index < group.items.length - 1 ? colors.border : 'transparent',
-                              borderBottomWidth: index < group.items.length - 1 ? 1 : 0,
-                            }
-                          ]}
-                          testID={`menu-item-${item.id}`}
-                        >
-                          <View style={[styles.menuIconWrap, { backgroundColor: `${group.gradient[0]}15` }]}>
-                            <Ionicons name={item.icon} size={16} color={group.gradient[0]} />
-                          </View>
-                          <Text style={[styles.menuItemLabel, { color: colors.foreground }]}>
-                            {item.label}
+            {/* Content */}
+            <ScrollView 
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Search Results */}
+              {searchQuery.trim().length > 0 ? (
+                <View style={styles.searchResults}>
+                  <Text style={[styles.searchResultsTitle, { color: colors.mutedForeground }]}>
+                    {filteredItems.length} risultat{filteredItems.length === 1 ? 'o' : 'i'}
+                  </Text>
+                  {filteredItems.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => handleItemPress(item.onPress)}
+                      style={({ pressed }) => [
+                        styles.searchResultItem,
+                        { 
+                          backgroundColor: pressed ? colors.muted : colors.card,
+                          borderColor: colors.border,
+                        }
+                      ]}
+                      testID={`search-result-${item.id}`}
+                    >
+                      <View style={[styles.searchResultIcon, { backgroundColor: `${item.groupColor}20` }]}>
+                        <Ionicons name={item.icon} size={18} color={item.groupColor} />
+                      </View>
+                      <View style={styles.searchResultText}>
+                        <Text style={[styles.searchResultLabel, { color: colors.foreground }]}>
+                          {item.label}
+                        </Text>
+                        {item.description && (
+                          <Text style={[styles.searchResultDesc, { color: colors.mutedForeground }]}>
+                            {item.description}
                           </Text>
-                          {item.badge && (
-                            <View style={styles.badge}>
-                              <Text style={styles.badgeText}>{item.badge}</Text>
-                            </View>
-                          )}
-                          <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
-                        </Pressable>
-                      ))}
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                    </Pressable>
+                  ))}
+                  {filteredItems.length === 0 && (
+                    <View style={styles.noResults}>
+                      <Ionicons name="search-outline" size={40} color={colors.mutedForeground} />
+                      <Text style={[styles.noResultsText, { color: colors.mutedForeground }]}>
+                        Nessun risultato
+                      </Text>
                     </View>
                   )}
                 </View>
-              );
-            })}
+              ) : (
+                <>
+                  {/* Menu Groups */}
+                  {menuGroups.map((group) => {
+                    const isExpanded = expandedGroup === group.id;
+                    
+                    return (
+                      <View key={group.id} style={styles.group}>
+                        <Pressable
+                          onPress={() => toggleGroup(group.id)}
+                          style={({ pressed }) => [
+                            styles.groupHeader,
+                            { 
+                              backgroundColor: pressed ? colors.muted : 'transparent',
+                            }
+                          ]}
+                          testID={`group-${group.id}`}
+                        >
+                          <LinearGradient
+                            colors={group.gradient}
+                            style={styles.groupIcon}
+                          >
+                            <Ionicons name={group.icon} size={16} color="#FFFFFF" />
+                          </LinearGradient>
+                          <Text style={[styles.groupTitle, { color: colors.foreground }]}>
+                            {group.title}
+                          </Text>
+                          <View style={[styles.groupBadge, { backgroundColor: colors.muted }]}>
+                            <Text style={[styles.groupBadgeText, { color: colors.mutedForeground }]}>
+                              {group.items.length}
+                            </Text>
+                          </View>
+                          <Ionicons 
+                            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                            size={16} 
+                            color={colors.mutedForeground} 
+                          />
+                        </Pressable>
 
-            {/* Quick Actions */}
-            <View style={styles.quickActions}>
-              <Text style={[styles.quickActionsTitle, { color: colors.mutedForeground }]}>
-                Azioni Rapide
-              </Text>
-              <View style={styles.quickActionsGrid}>
-                <Pressable 
-                  style={[styles.quickAction, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => handleItemPress(onNavigateDashboard)}
-                  testID="quick-action-dashboard"
-                >
-                  <Ionicons name="speedometer" size={24} color="#14B8A6" />
-                  <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>Dashboard</Text>
-                </Pressable>
-                <Pressable 
-                  style={[styles.quickAction, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => handleItemPress(onNavigateSIAEMonitor)}
-                  testID="quick-action-monitor"
-                >
-                  <Ionicons name="pulse" size={24} color="#10B981" />
-                  <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>Monitor</Text>
-                </Pressable>
-                <Pressable 
-                  style={[styles.quickAction, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => handleItemPress(onNavigateBillingInvoices)}
-                  testID="quick-action-invoices"
-                >
-                  <Ionicons name="receipt" size={24} color="#F59E0B" />
-                  <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>Fatture</Text>
-                </Pressable>
-                <Pressable 
-                  style={[styles.quickAction, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => handleItemPress(onNavigateSettings)}
-                  testID="quick-action-settings"
-                >
-                  <Ionicons name="settings" size={24} color="#8B5CF6" />
-                  <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>Impostazioni</Text>
-                </Pressable>
-              </View>
-            </View>
-          </ScrollView>
+                        {isExpanded && (
+                          <View style={[styles.groupItems, { borderLeftColor: group.gradient[0] }]}>
+                            {group.items.map((item) => {
+                              const isActive = isItemActive(item.id);
+                              
+                              return (
+                                <Pressable
+                                  key={item.id}
+                                  onPress={() => handleItemPress(item.onPress)}
+                                  style={({ pressed }) => [
+                                    styles.menuItem,
+                                    { 
+                                      backgroundColor: pressed 
+                                        ? colors.muted 
+                                        : isActive 
+                                          ? `${group.gradient[0]}15`
+                                          : 'transparent',
+                                    }
+                                  ]}
+                                  testID={`menu-item-${item.id}`}
+                                >
+                                  <View style={[
+                                    styles.menuItemIcon, 
+                                    { backgroundColor: isActive ? `${group.gradient[0]}25` : colors.muted }
+                                  ]}>
+                                    <Ionicons 
+                                      name={item.icon} 
+                                      size={14} 
+                                      color={isActive ? group.gradient[0] : colors.mutedForeground} 
+                                    />
+                                  </View>
+                                  <View style={styles.menuItemContent}>
+                                    <Text style={[
+                                      styles.menuItemLabel, 
+                                      { 
+                                        color: isActive ? group.gradient[0] : colors.foreground,
+                                        fontWeight: isActive ? '600' : '500',
+                                      }
+                                    ]}>
+                                      {item.label}
+                                    </Text>
+                                    {item.description && (
+                                      <Text style={[styles.menuItemDesc, { color: colors.mutedForeground }]} numberOfLines={1}>
+                                        {item.description}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  {item.badge && (
+                                    <View style={styles.itemBadge}>
+                                      <Text style={styles.itemBadgeText}>{item.badge}</Text>
+                                    </View>
+                                  )}
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </>
+              )}
+            </ScrollView>
 
-          {/* Footer */}
-          <View style={[styles.drawerFooter, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
-            <View style={styles.footerContent}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} />
-              <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-                Event4U Admin v2.0
-              </Text>
+            {/* Footer */}
+            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
+              <Pressable 
+                style={[styles.footerButton, { backgroundColor: colors.muted }]}
+                onPress={() => handleItemPress(onNavigateDashboard)}
+                testID="footer-dashboard"
+              >
+                <Ionicons name="speedometer-outline" size={18} color={colors.foreground} />
+              </Pressable>
+              <Pressable 
+                style={[styles.footerButton, { backgroundColor: colors.muted }]}
+                onPress={() => handleItemPress(onNavigateSIAEMonitor)}
+                testID="footer-monitor"
+              >
+                <Ionicons name="pulse-outline" size={18} color={colors.foreground} />
+              </Pressable>
+              <Pressable 
+                style={[styles.footerButton, { backgroundColor: colors.muted }]}
+                onPress={() => handleItemPress(onNavigateBillingInvoices)}
+                testID="footer-invoices"
+              >
+                <Ionicons name="receipt-outline" size={18} color={colors.foreground} />
+              </Pressable>
+              <Pressable 
+                style={[styles.footerButton, { backgroundColor: colors.muted }]}
+                onPress={() => handleItemPress(onNavigateSettings)}
+                testID="footer-settings"
+              >
+                <Ionicons name="settings-outline" size={18} color={colors.foreground} />
+              </Pressable>
             </View>
-          </View>
+          </Animated.View>
         </View>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     flexDirection: 'row',
   },
   backdrop: {
-    flex: 0.15,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   drawer: {
-    flex: 0.85,
-    borderTopRightRadius: 24,
-    borderBottomRightRadius: 24,
+    height: '100%',
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  headerGradient: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
+  header: {
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
-  drawerHeader: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  headerContent: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 10,
   },
-  logoContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  drawerTitle: {
-    fontSize: typography.fontSize.xl,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  drawerSubtitle: {
-    fontSize: typography.fontSize.sm,
+  headerSubtitle: {
+    fontSize: 12,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    color: 'rgba(255,255,255,0.7)',
   },
-  closeButton: {
-    width: 40,
-    height: 40,
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  menuScroll: {
-    flex: 1,
-  },
-  menuContent: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  menuGroup: {
-    marginBottom: spacing.md,
-  },
-  groupHeader: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: 14,
-    gap: spacing.sm,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  groupIconWrap: {
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#FFFFFF',
+    padding: 0,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  searchResults: {
+    gap: 8,
+  },
+  searchResultsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  searchResultIcon: {
     width: 36,
     height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  groupTitle: {
+  searchResultText: {
     flex: 1,
-    fontSize: typography.fontSize.base,
+  },
+  searchResultLabel: {
+    fontSize: 14,
     fontWeight: '600',
   },
-  itemCount: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+  searchResultDesc: {
+    fontSize: 12,
+    marginTop: 2,
   },
-  itemCountText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '600',
+  noResults: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
   },
-  groupItems: {
-    marginTop: spacing.xs,
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
+  noResultsText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  menuItem: {
+  group: {
+    marginBottom: 8,
+  },
+  groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    gap: 10,
   },
-  menuIconWrap: {
+  groupIcon: {
     width: 32,
     height: 32,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuItemLabel: {
+  groupTitle: {
     flex: 1,
-    fontSize: typography.fontSize.sm,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
   },
-  badge: {
+  groupBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  groupBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  groupItems: {
+    marginLeft: 20,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    marginTop: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 10,
+    marginBottom: 2,
+  },
+  menuItemIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuItemContent: {
+    flex: 1,
+  },
+  menuItemLabel: {
+    fontSize: 14,
+  },
+  menuItemDesc: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  itemBadge: {
     backgroundColor: '#EF4444',
-    minWidth: 24,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    minWidth: 20,
     alignItems: 'center',
   },
-  badgeText: {
-    fontSize: typography.fontSize.xs,
+  itemBadgeText: {
+    fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  quickActions: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
-  quickActionsTitle: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '600',
-    marginBottom: spacing.md,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  quickActionsGrid: {
+  footer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  quickAction: {
-    width: '48%',
-    padding: spacing.md,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  quickActionLabel: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '500',
-  },
-  drawerFooter: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
+    gap: 8,
   },
-  footerContent: {
-    flexDirection: 'row',
+  footerButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  footerText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '500',
   },
 });
 
