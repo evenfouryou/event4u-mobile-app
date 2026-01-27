@@ -1,0 +1,55 @@
+~/workspace$ cd mobile-app
+
+# Installa sharp
+npm install sharp --save-dev
+
+# Crea le icone valide
+node -e "
+const sharp = require('sharp');
+const fs = require('fs');
+
+(async () => {
+  for (const [size, file] of [[1024, 'icon.png'], [1024, 'adaptive-icon.png'], [1024, 'splash-icon.png'], [48, 'favicon.png']]) {
+    await sharp({ create: { width: size, height: size, channels: 4, background: '#0f0f14' } }).png().toFile('assets/' + file);
+    console.log('Created', file);
+  }
+})();
+"
+
+# Commit e build
+git add assets/*.png
+git commit -m "Fix icons locally"
+git push origin main
+npx eas build --platform ios --profile production --clear-cache
+
+added 6 packages, and audited 724 packages in 3s
+
+82 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+Created icon.png
+Created adaptive-icon.png
+Created splash-icon.png
+Created favicon.png
+[main 3c5cff4a] Fix icons locally
+ 4 files changed, 0 insertions(+), 0 deletions(-)
+Enumerating objects: 15, done.
+Counting objects: 100% (15/15), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (10/10), done.
+Writing objects: 100% (10/10), 2.23 KiB | 2.23 MiB/s, done.
+Total 10 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (6/6), completed with 3 local objects.
+To https://github.com/evenfouryou/event4u-mobile-app.git
+   7aab553d..3c5cff4a  main -> main
+error: update_ref failed for ref 'refs/remotes/origin/main': cannot lock ref 'refs/remotes/origin/main': Unable to create '/home/runner/workspace/.git/refs/remotes/origin/main.lock': File exists.
+
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.
+npm error could not determine executable to run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-01-27T00_59_46_568Z-debug-0.log
+~/workspace/mobile-app$ 
