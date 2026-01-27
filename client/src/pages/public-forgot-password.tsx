@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { triggerHaptic, HapticButton, MobileAppLayout } from "@/components/mobile-primitives";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTranslation } from "react-i18next";
 
 const springTransition = {
   type: "spring" as const,
@@ -20,6 +21,7 @@ const springTransition = {
 
 export default function PublicForgotPassword() {
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -34,11 +36,11 @@ export default function PublicForgotPassword() {
 
     try {
       const response: any = await apiRequest('POST', '/api/public/customers/forgot-password', { email });
-      setSuccess(response.message || "Se l'email è registrata, riceverai un link per reimpostare la password.");
+      setSuccess(response.message || t('auth.resetLinkSent'));
       setEmail("");
       triggerHaptic('success');
     } catch (err: any) {
-      setError(err.message || "Si è verificato un errore. Riprova più tardi.");
+      setError(err.message || t('auth.genericError'));
       triggerHaptic('error');
     } finally {
       setIsLoading(false);
@@ -60,9 +62,9 @@ export default function PublicForgotPassword() {
               <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <Mail className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Password Dimenticata</CardTitle>
+              <CardTitle className="text-2xl">{t('auth.forgotPasswordTitle')}</CardTitle>
               <CardDescription>
-                Inserisci la tua email per ricevere un link di reset password
+                {t('auth.forgotPasswordDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -102,7 +104,7 @@ export default function PublicForgotPassword() {
                 </AnimatePresence>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email-desktop">Email</Label>
+                  <Label htmlFor="email-desktop">{t('auth.email')}</Label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       <Mail className="h-4 w-4 text-muted-foreground" />
@@ -110,7 +112,7 @@ export default function PublicForgotPassword() {
                     <Input
                       id="email-desktop"
                       type="email"
-                      placeholder="tuaemail@esempio.com"
+                      placeholder={t('auth.enterEmail')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -136,20 +138,20 @@ export default function PublicForgotPassword() {
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
-                      Invia Link di Reset
+                      {t('auth.sendResetLink')}
                     </>
                   )}
                 </Button>
 
                 <div className="text-center">
                   <p className="text-muted-foreground text-sm">
-                    Ricordi la password?{" "}
+                    {t('auth.rememberPassword')}{" "}
                     <Link 
                       href="/login" 
                       className="text-primary font-medium hover:underline" 
                       data-testid="link-login"
                     >
-                      Accedi
+                      {t('auth.login')}
                     </Link>
                   </p>
                 </div>
@@ -161,7 +163,7 @@ export default function PublicForgotPassword() {
             <Button variant="ghost" size="sm" asChild data-testid="button-back-home">
               <Link href="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Torna alla Home
+                {t('auth.backToHome')}
               </Link>
             </Button>
           </div>
@@ -213,9 +215,9 @@ export default function PublicForgotPassword() {
           transition={{ ...springTransition, delay: 0.15 }}
           className="text-center mb-8"
         >
-          <h1 className="text-2xl font-bold text-foreground mb-2">Password Dimenticata</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">{t('auth.forgotPasswordTitle')}</h1>
           <p className="text-muted-foreground text-base">
-            Inserisci la tua email per ricevere un link di reset password
+            {t('auth.forgotPasswordDescription')}
           </p>
         </motion.div>
 
@@ -262,7 +264,7 @@ export default function PublicForgotPassword() {
 
           <div className="space-y-3">
             <Label htmlFor="email" className="text-muted-foreground text-base font-medium">
-              Email
+              {t('auth.email')}
             </Label>
             <div className="relative">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -271,7 +273,7 @@ export default function PublicForgotPassword() {
               <Input
                 id="email"
                 type="email"
-                placeholder="tuaemail@esempio.com"
+                placeholder={t('auth.enterEmail')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -298,7 +300,7 @@ export default function PublicForgotPassword() {
             ) : (
               <>
                 <Send className="h-5 w-5" />
-                Invia Link di Reset
+                {t('auth.sendResetLink')}
               </>
             )}
           </HapticButton>
@@ -310,14 +312,14 @@ export default function PublicForgotPassword() {
             transition={{ ...springTransition, delay: 0.3 }}
           >
             <p className="text-muted-foreground text-base">
-              Ricordi la password?{" "}
+              {t('auth.rememberPassword')}{" "}
               <Link 
                 href="/login" 
                 className="text-primary font-semibold active:opacity-70 transition-opacity" 
                 data-testid="link-login"
                 onClick={() => triggerHaptic('light')}
               >
-                Accedi
+                {t('auth.login')}
               </Link>
             </p>
           </motion.div>

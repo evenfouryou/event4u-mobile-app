@@ -14,6 +14,7 @@ import { useState, useRef, useCallback } from "react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTranslation } from "react-i18next";
 
 interface PublicEvent {
   id: string;
@@ -101,6 +102,7 @@ function formatDistance(km: number): string {
 }
 
 function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: { lat: number; lng: number } | null }) {
+  const { t } = useTranslation();
   const eventDate = new Date(event.eventStart);
   const isToday = new Date().toDateString() === eventDate.toDateString();
   const isSoldOut = event.totalAvailable <= 0;
@@ -142,7 +144,7 @@ function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: 
                     data-testid={`badge-today-${event.id}`}
                   >
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                    Stasera
+                    {t('public.events.tonight')}
                   </motion.div>
                 )}
                 {event.categoryName && (
@@ -194,7 +196,7 @@ function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: 
                     {format(eventDate, "EEEE d MMMM", { locale: it })}
                   </p>
                   <p className="text-xs text-muted-foreground" data-testid={`text-time-${event.id}`}>
-                    Ore {format(eventDate, "HH:mm")}
+                    {t('public.events.hours')} {format(eventDate, "HH:mm")}
                   </p>
                 </div>
               </div>
@@ -218,7 +220,7 @@ function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: 
             
             <div className="flex items-center justify-between pt-3 border-t border-border gap-4">
               <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">A partire da</span>
+                <span className="text-xs text-muted-foreground">{t('public.events.from')}</span>
                 <span className="text-2xl font-bold text-primary" data-testid={`text-price-${event.id}`}>
                   €{event.minPrice.toFixed(2)}
                 </span>
@@ -229,7 +231,7 @@ function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: 
                 data-testid={`button-buy-${event.id}`}
               >
                 <Ticket className="w-5 h-5 mr-2" />
-                {isSoldOut ? "Esaurito" : "Acquista"}
+                {isSoldOut ? t('public.events.soldOut') : t('public.events.buy')}
               </Button>
             </div>
           </div>
@@ -301,6 +303,7 @@ function FilterPill({ label, icon, active, onClick, testId }: FilterPillProps) {
 }
 
 export default function PublicEventsPage() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -421,13 +424,13 @@ export default function PublicEventsPage() {
 
               <nav className="flex items-center gap-6">
                 <Link href="/acquista" className="text-foreground font-medium" data-testid="nav-events-desktop">
-                  Eventi
+                  {t('public.nav.events')}
                 </Link>
                 <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-resales-desktop">
-                  Rivendite
+                  {t('public.nav.resales')}
                 </Link>
                 <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-venues-desktop">
-                  Locali
+                  {t('public.nav.venues')}
                 </Link>
               </nav>
 
@@ -435,7 +438,7 @@ export default function PublicEventsPage() {
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca eventi, luoghi..."
+                    placeholder={t('public.events.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-12 h-12 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 text-base rounded-xl"
@@ -466,7 +469,7 @@ export default function PublicEventsPage() {
                 ) : (
                   <Link href="/login" data-testid="link-login-desktop">
                     <Button className="h-10 px-5 rounded-xl font-semibold" data-testid="button-login-desktop">
-                      Accedi
+                      {t('public.events.login')}
                     </Button>
                   </Link>
                 )}
@@ -477,20 +480,20 @@ export default function PublicEventsPage() {
 
         <main className="container mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Eventi in Programma</h1>
-            <p className="text-muted-foreground">Scopri gli eventi e acquista i tuoi biglietti</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">{t('public.events.pageTitle')}</h1>
+            <p className="text-muted-foreground">{t('public.events.pageSubtitle')}</p>
           </div>
 
           <div className="space-y-4 mb-8">
             <div className="flex flex-wrap gap-3">
               <FilterPill
-                label="Tutti"
+                label={t('public.events.filterAll')}
                 active={activeFilter === 'all'}
                 onClick={() => setActiveFilter('all')}
                 testId="filter-all-desktop"
               />
               <FilterPill
-                label="Stasera"
+                label={t('public.events.filterTonight')}
                 icon={<Star className="w-4 h-4" />}
                 active={activeFilter === 'today'}
                 onClick={() => setActiveFilter('today')}
@@ -503,7 +506,7 @@ export default function PublicEventsPage() {
                 testId="filter-weekend-desktop"
               />
               <FilterPill
-                label="Questo Mese"
+                label={t('public.events.filterThisMonth')}
                 icon={<Calendar className="w-4 h-4" />}
                 active={activeFilter === 'month'}
                 onClick={() => setActiveFilter('month')}
@@ -511,7 +514,7 @@ export default function PublicEventsPage() {
               />
               <div className="w-px h-8 bg-border self-center mx-1" />
               <FilterPill
-                label={locationLoading ? "Caricamento..." : "Vicino a te"}
+                label={locationLoading ? t('public.events.filterLoading') : t('public.events.filterNearby')}
                 icon={<MapPin className={`w-4 h-4 ${locationLoading ? 'animate-pulse' : ''}`} />}
                 active={locationEnabled}
                 onClick={requestGeolocation}
@@ -521,7 +524,7 @@ export default function PublicEventsPage() {
             
             <div className="flex flex-wrap gap-3">
               <FilterPill
-                label="Tutti"
+                label={t('public.events.filterAll')}
                 icon={<Globe className="w-4 h-4" />}
                 active={activeCategory === null}
                 onClick={() => setActiveCategory(null)}
@@ -550,7 +553,7 @@ export default function PublicEventsPage() {
 
           {error && (
             <Card className="p-6 text-center bg-red-500/10 border-red-500/20 rounded-2xl mb-6">
-              <p className="text-red-400">Errore nel caricamento degli eventi. Riprova più tardi.</p>
+              <p className="text-red-400">{t('public.events.loadError')}</p>
             </Card>
           )}
 
@@ -577,13 +580,13 @@ export default function PublicEventsPage() {
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
                 <Ticket className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Nessun evento</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.events.noEvents')}</h3>
               <p className="text-muted-foreground text-sm">
                 {searchQuery
-                  ? "Nessun evento corrisponde alla tua ricerca."
+                  ? t('public.events.noEventsSearch')
                   : activeFilter !== 'all'
-                  ? "Nessun evento per questo periodo."
-                  : "Al momento non ci sono eventi in vendita."}
+                  ? t('public.events.noEventsPeriod')
+                  : t('public.events.noEventsAvailable')}
               </p>
             </Card>
           )}

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -273,7 +273,7 @@ export default function AccountHome() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
-                            {format(new Date(ticket.eventStart), "d MMM yyyy", { locale: it })}
+                            {format(new Date(ticket.eventStart), "d MMM yyyy", { locale: enUS })}
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
@@ -489,7 +489,7 @@ export default function AccountHome() {
                     <h4 className="font-semibold text-lg text-foreground truncate">{ticket.eventName}</h4>
                     <div className="flex items-center gap-2 text-base text-muted-foreground mt-2">
                       <Calendar className="w-4 h-4 flex-shrink-0" />
-                      <span>{format(new Date(ticket.eventStart), "d MMM yyyy", { locale: it })}</span>
+                      <span>{format(new Date(ticket.eventStart), "d MMM yyyy", { locale: enUS })}</span>
                     </div>
                     <div className="flex items-center gap-2 text-base text-muted-foreground mt-1">
                       <MapPin className="w-4 h-4 flex-shrink-0" />

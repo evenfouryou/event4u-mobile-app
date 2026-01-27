@@ -32,6 +32,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTranslation } from "react-i18next";
 
 interface TicketData {
   id: string;
@@ -51,13 +52,14 @@ interface TicketData {
 }
 
 function TicketCard({ ticket }: { ticket: TicketData }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   const copyCode = () => {
     navigator.clipboard.writeText(ticket.fiscalSealCode);
     toast({
-      title: "Copiato!",
-      description: "Codice biglietto copiato negli appunti.",
+      title: t('public.checkoutSuccess.copied'),
+      description: t('public.checkoutSuccess.copiedMessage'),
     });
   };
 
@@ -79,7 +81,7 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
                   {ticket.eventName}
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  {ticket.sectorName} - {ticket.ticketTypeCode === "INT" ? "Intero" : "Ridotto"}
+                  {ticket.sectorName} - {ticket.ticketTypeCode === "INT" ? t('public.cart.full') : t('public.cart.reduced')}
                 </p>
                 <div className="flex flex-wrap gap-3 mt-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
@@ -108,7 +110,7 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
                   }
                   data-testid={`badge-status-${ticket.id}`}
                 >
-                  {ticket.status === "valid" ? "Valido" : ticket.status}
+                  {ticket.status === "valid" ? t('public.checkoutSuccess.valid') : ticket.status}
                 </Badge>
               </div>
             </div>
@@ -125,19 +127,19 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
                       : "bg-red-500/20 text-red-400 border-red-500/30"
                   }
                 >
-                  {ticket.status === "valid" ? "Valido" : ticket.status}
+                  {ticket.status === "valid" ? t('public.checkoutSuccess.valid') : ticket.status}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Intestatario</p>
+                  <p className="text-xs text-muted-foreground">{t('public.checkoutSuccess.holder')}</p>
                   <p className="text-xs sm:text-sm text-foreground" data-testid={`text-participant-${ticket.id}`}>
                     {ticket.participantFirstName} {ticket.participantLastName}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground hidden sm:block">Codice Biglietto</p>
+                    <p className="text-xs text-muted-foreground hidden sm:block">{t('public.checkoutSuccess.ticketCode')}</p>
                     <p className="text-xs sm:text-sm font-mono text-foreground" data-testid={`text-code-${ticket.id}`}>
                       {ticket.fiscalSealCode.slice(0, 8)}...
                     </p>
@@ -162,6 +164,7 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
 }
 
 export default function PublicCheckoutSuccessPage() {
+  const { t } = useTranslation();
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const transactionCode = params.get("transaction");
@@ -193,7 +196,7 @@ export default function PublicCheckoutSuccessPage() {
 
   const handleDownloadAllPdfs = async () => {
     if (!tickets || tickets.length === 0) {
-      toast({ title: "Nessun biglietto da scaricare", variant: "destructive" });
+      toast({ title: t('public.checkoutSuccess.noTicketsToDownload'), variant: "destructive" });
       return;
     }
     
@@ -205,8 +208,8 @@ export default function PublicCheckoutSuccessPage() {
         });
         
         if (!res.ok) {
-          const error = await res.json().catch(() => ({ message: "Errore download" }));
-          throw new Error(error.message || "Errore nel download del PDF");
+          const error = await res.json().catch(() => ({ message: t('public.checkoutSuccess.downloadError') }));
+          throw new Error(error.message || t('public.checkoutSuccess.downloadError'));
         }
         
         const blob = await res.blob();
@@ -220,10 +223,10 @@ export default function PublicCheckoutSuccessPage() {
         document.body.removeChild(a);
       }
       
-      toast({ title: "Download completato!", description: `${tickets.length} biglietti scaricati` });
+      toast({ title: t('public.checkoutSuccess.downloadComplete'), description: t('public.checkoutSuccess.ticketsDownloaded', { count: tickets.length }) });
     } catch (error: any) {
       console.error("Download PDF error:", error);
-      toast({ title: "Errore download", description: error.message, variant: "destructive" });
+      toast({ title: t('public.checkoutSuccess.downloadError'), description: error.message, variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
@@ -251,15 +254,15 @@ export default function PublicCheckoutSuccessPage() {
               <Check className="w-12 h-12 text-teal-400" />
             </div>
             <h1 className="text-4xl font-bold text-foreground mb-4" data-testid="text-success-title">
-              Acquisto Completato!
+              {t('public.checkoutSuccess.title')}
             </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              I tuoi biglietti sono stati generati con successo.
-              Li riceverai anche via email con il QR code per l'ingresso.
+              {t('public.checkoutSuccess.subtitle')}
+              {' '}{t('public.checkoutSuccess.emailSent')}
             </p>
             {transactionCode && (
               <Badge className="mt-4 bg-primary/20 text-primary border-primary/30 text-sm py-1 px-3">
-                Transazione: {transactionCode}
+                {t('public.checkoutSuccess.transaction')}: {transactionCode}
               </Badge>
             )}
           </motion.div>
@@ -271,8 +274,8 @@ export default function PublicCheckoutSuccessPage() {
                   <Mail className="w-7 h-7 text-teal-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground text-lg">Email Inviata</h3>
-                  <p className="text-sm text-muted-foreground">I biglietti sono stati inviati alla tua email</p>
+                  <h3 className="font-semibold text-foreground text-lg">{t('public.checkoutSuccess.emailCard')}</h3>
+                  <p className="text-sm text-muted-foreground">{t('public.checkoutSuccess.emailCardDesc')}</p>
                 </div>
               </Card>
               <Card 
@@ -289,10 +292,10 @@ export default function PublicCheckoutSuccessPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground text-lg">
-                    {isDownloading ? "Scaricamento..." : "Scarica PDF"}
+                    {isDownloading ? t('public.checkoutSuccess.downloading') : t('public.checkoutSuccess.downloadPdf')}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {isDownloading ? "Attendere prego..." : "Puoi scaricare i biglietti in formato PDF"}
+                    {isDownloading ? t('public.checkoutSuccess.pleaseWait') : t('public.checkoutSuccess.downloadAvailable')}
                   </p>
                 </div>
               </Card>
@@ -302,7 +305,7 @@ export default function PublicCheckoutSuccessPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Ticket className="w-5 h-5 text-primary" />
-                  I Tuoi Biglietti
+                  {t('public.checkoutSuccess.yourTickets')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -321,7 +324,7 @@ export default function PublicCheckoutSuccessPage() {
                 ) : (
                   <div className="p-8 text-center bg-muted/50 rounded-lg">
                     <Ticket className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">Nessun biglietto trovato.</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.noTickets')}</p>
                   </div>
                 )}
               </CardContent>
@@ -330,14 +333,14 @@ export default function PublicCheckoutSuccessPage() {
             <div className="flex gap-4 justify-center">
               <Link href="/acquista">
                 <Button variant="outline" size="lg" data-testid="button-more-events">
-                  Scopri Altri Eventi
+                  {t('public.checkoutSuccess.discoverMoreEvents')}
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
               <Link href="/account/tickets">
                 <Button size="lg" data-testid="button-my-tickets">
                   <Ticket className="w-4 h-4 mr-2" />
-                  Biglietti/Abbonamenti
+                  {t('public.checkoutSuccess.ticketsSubscriptions')}
                 </Button>
               </Link>
             </div>
@@ -347,9 +350,9 @@ export default function PublicCheckoutSuccessPage() {
         <footer className="border-t border-border py-8 mt-12">
           <div className="container mx-auto px-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Hai bisogno di assistenza?{" "}
+              {t('public.checkoutSuccess.needHelp')}{" "}
               <a href="#" className="text-primary hover:underline">
-                Contattaci
+                {t('public.checkoutSuccess.contactUs')}
               </a>
             </p>
           </div>
@@ -358,9 +361,9 @@ export default function PublicCheckoutSuccessPage() {
         <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Dettaglio Biglietto</DialogTitle>
+              <DialogTitle>{t('public.checkoutSuccess.ticketDetail')}</DialogTitle>
               <DialogDescription>
-                Informazioni complete sul biglietto selezionato
+                {t('public.checkoutSuccess.ticketDetailDesc')}
               </DialogDescription>
             </DialogHeader>
             {selectedTicket && (
@@ -376,27 +379,27 @@ export default function PublicCheckoutSuccessPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Data</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.date')}</p>
                     <p className="font-medium">{format(new Date(selectedTicket.eventStart), "d MMMM yyyy", { locale: it })}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Ora</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.time')}</p>
                     <p className="font-medium">{format(new Date(selectedTicket.eventStart), "HH:mm")}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Location</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.location')}</p>
                     <p className="font-medium">{selectedTicket.locationName}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Prezzo</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.ticketPrice')}</p>
                     <p className="font-medium text-primary">€{Number(selectedTicket.grossAmount).toFixed(2)}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-muted-foreground">Intestatario</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.holder')}</p>
                     <p className="font-medium">{selectedTicket.participantFirstName} {selectedTicket.participantLastName}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-muted-foreground">Codice Biglietto</p>
+                    <p className="text-muted-foreground">{t('public.checkoutSuccess.ticketCode')}</p>
                     <p className="font-mono text-sm">{selectedTicket.fiscalSealCode}</p>
                   </div>
                 </div>
@@ -429,15 +432,15 @@ export default function PublicCheckoutSuccessPage() {
             <Check className="w-8 h-8 sm:w-10 sm:h-10 text-teal-400" />
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-3 sm:mb-4" data-testid="text-success-title">
-            Acquisto Completato!
+            {t('public.checkoutSuccess.title')}
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            I tuoi biglietti sono stati generati con successo.
-            Li riceverai anche via email con il QR code per l'ingresso.
+            {t('public.checkoutSuccess.subtitle')}
+            {' '}{t('public.checkoutSuccess.emailSent')}
           </p>
           {transactionCode && (
             <Badge className="mt-4 bg-primary/20 text-primary border-primary/30 text-sm py-1 px-3">
-              Transazione: {transactionCode}
+              {t('public.checkoutSuccess.transaction')}: {transactionCode}
             </Badge>
           )}
         </motion.div>
@@ -448,8 +451,8 @@ export default function PublicCheckoutSuccessPage() {
               <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-semibold text-foreground text-sm sm:text-base">Email Inviata</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">I biglietti sono stati inviati alla tua email</p>
+              <h3 className="font-semibold text-foreground text-sm sm:text-base">{t('public.checkoutSuccess.emailCard')}</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('public.checkoutSuccess.emailCardDesc')}</p>
             </div>
           </Card>
           <Card 
@@ -466,10 +469,10 @@ export default function PublicCheckoutSuccessPage() {
             </div>
             <div className="min-w-0">
               <h3 className="font-semibold text-foreground text-sm sm:text-base">
-                {isDownloading ? "Scaricamento..." : "Scarica PDF"}
+                {isDownloading ? t('public.checkoutSuccess.downloading') : t('public.checkoutSuccess.downloadPdf')}
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                {isDownloading ? "Attendere prego..." : "Puoi scaricare i biglietti in formato PDF"}
+                {isDownloading ? t('public.checkoutSuccess.pleaseWait') : t('public.checkoutSuccess.downloadAvailable')}
               </p>
             </div>
           </Card>
@@ -477,7 +480,7 @@ export default function PublicCheckoutSuccessPage() {
 
         <h2 className="text-lg sm:text-xl font-bold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
           <Ticket className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-          I Tuoi Biglietti
+          {t('public.checkoutSuccess.yourTickets')}
         </h2>
 
         {isLoading ? (
@@ -495,7 +498,7 @@ export default function PublicCheckoutSuccessPage() {
         ) : (
           <Card className="p-8 text-center bg-muted/50 border-border">
             <Ticket className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Nessun biglietto trovato.</p>
+            <p className="text-muted-foreground">{t('public.checkoutSuccess.noTickets')}</p>
           </Card>
         )}
 
@@ -505,7 +508,7 @@ export default function PublicCheckoutSuccessPage() {
               variant="outline"
               data-testid="button-more-events"
             >
-              Scopri Altri Eventi
+              {t('public.checkoutSuccess.discoverMoreEvents')}
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </Link>
@@ -514,7 +517,7 @@ export default function PublicCheckoutSuccessPage() {
               data-testid="button-my-tickets"
             >
               <Ticket className="w-4 h-4 mr-2" />
-              Biglietti/Abbonamenti
+              {t('public.checkoutSuccess.ticketsSubscriptions')}
             </Button>
           </Link>
         </div>
@@ -523,9 +526,9 @@ export default function PublicCheckoutSuccessPage() {
       <footer className="border-t border-border py-8 mt-12">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <p className="text-sm text-muted-foreground">
-            Hai bisogno di assistenza?{" "}
+            {t('public.checkoutSuccess.needHelp')}{" "}
             <a href="#" className="text-primary hover:underline">
-              Contattaci
+              {t('public.checkoutSuccess.contactUs')}
             </a>
           </p>
         </div>

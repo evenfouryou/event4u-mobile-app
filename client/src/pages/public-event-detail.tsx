@@ -76,6 +76,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { PublicReservationSection } from "@/components/public-reservation-section";
 import { useSeatHolds, type SeatStatusUpdate } from "@/hooks/use-ticketing-websocket";
 import { HoldCountdownTimer } from "@/components/hold-countdown-timer";
+import { useTranslation } from "react-i18next";
 
 interface Seat {
   id: string;
@@ -327,8 +328,8 @@ function TimelineBlock({ items }: { items: Array<any> }) {
 function QuickInfoBlock({ config }: { config: any }) {
   const infoItems = [
     config?.dressCode && { icon: "shirt", label: "Dress Code", value: config.dressCode },
-    config?.minAge && { icon: "user", label: "Età Minima", value: `${config.minAge}+` },
-    config?.parkingInfo && { icon: "car", label: "Parcheggio", value: config.parkingInfo },
+    config?.minAge && { icon: "user", label: t('public.eventDetail.minAge'), value: `${config.minAge}+` },
+    config?.parkingInfo && { icon: "car", label: "Parking", value: config.parkingInfo },
   ].filter(Boolean);
   
   if (!infoItems.length) return null;
@@ -337,7 +338,7 @@ function QuickInfoBlock({ config }: { config: any }) {
     <section className="py-8" data-testid="quick-info-section">
       <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
         <Info className="w-6 h-6 text-amber-400" />
-        Info Utili
+        Useful Info
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {infoItems.map((item: any, i) => (
@@ -357,7 +358,7 @@ function FaqBlock({ items }: { items: Array<any> }) {
     <section className="py-8" data-testid="faq-section">
       <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
         <HelpCircle className="w-6 h-6 text-amber-400" />
-        Domande Frequenti
+        Frequently Asked Questions
       </h2>
       <Accordion type="single" collapsible className="space-y-2">
         {items.map((item) => (
@@ -1486,7 +1487,7 @@ function FloorPlanViewer({
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e', boxShadow: '0 0 4px #22c55e' }} />
-            <span className="text-xs text-muted-foreground">Selezionato</span>
+            <span className="text-xs text-muted-foreground">{t('public.eventDetail.selected')}</span>
           </div>
         </div>
       </div>
@@ -1651,7 +1652,7 @@ function TicketTypeCard({
 
       {sector.isNumbered ? (
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground font-medium">Seleziona Posto</Label>
+          <Label className="text-xs text-muted-foreground font-medium">{t('public.eventDetail.selectSeat')}</Label>
           <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-3 bg-background/30 rounded-xl">
             {sector.seats.map((seat) => {
               const isMapSelected = mapSelectedSeatIds?.includes(seat.id);
@@ -1688,7 +1689,7 @@ function TicketTypeCard({
         </div>
       ) : (
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground font-medium">Quantità</Label>
+          <Label className="text-xs text-muted-foreground font-medium">{t('public.eventDetail.quantity')}</Label>
           <div className="flex items-center justify-center gap-6 bg-background/30 rounded-xl p-3">
             <Button
               variant="ghost"
@@ -2000,8 +2001,8 @@ export default function PublicEventDetailPage() {
     },
     onError: () => {
       toast({
-        title: "Impossibile estendere",
-        description: "Non è stato possibile estendere il tempo.",
+        title: t('public.eventDetail.error'),
+        description: t('public.eventDetail.extensionFailed'),
         variant: "destructive",
       });
     },
@@ -2016,8 +2017,8 @@ export default function PublicEventDetailPage() {
       return newInfo;
     });
     toast({
-      title: "Opzione scaduta",
-      description: "Il tempo per il posto selezionato è scaduto.",
+      title: t('public.eventDetail.error'),
+      description: t('public.eventDetail.seatReservationExpired'),
       variant: "destructive",
     });
   }, [toast]);
@@ -2121,9 +2122,9 @@ export default function PublicEventDetailPage() {
         triggerHaptic('error');
         const errorMessage = error?.message || "Posto non disponibile";
         toast({
-          title: "Impossibile selezionare",
+          title: t('public.eventDetail.error'),
           description: errorMessage.includes('already held') 
-            ? "Questo posto è già stato selezionato da un altro utente." 
+            ? t('public.eventDetail.seatAlreadySelected') 
             : errorMessage,
           variant: "destructive",
         });
@@ -2191,7 +2192,7 @@ export default function PublicEventDetailPage() {
     } catch (error: any) {
       triggerHaptic('error');
       toast({
-        title: "Errore",
+        title: t('public.eventDetail.error'),
         description: error.message || "Impossibile aggiungere al carrello.",
         variant: "destructive",
       });
@@ -2232,7 +2233,7 @@ export default function PublicEventDetailPage() {
     } catch (error: any) {
       triggerHaptic('error');
       toast({
-        title: "Errore",
+        title: t('public.eventDetail.error'),
         description: error.message || "Impossibile aggiungere al carrello.",
         variant: "destructive",
       });
@@ -2255,7 +2256,7 @@ export default function PublicEventDetailPage() {
           <Card className="p-8 text-center bg-red-500/10 border-red-500/20 backdrop-blur-xl rounded-2xl">
             <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
             <h2 className="text-xl font-bold text-foreground mb-2">Evento non trovato</h2>
-            <p className="text-muted-foreground mb-6">L'evento richiesto non è disponibile.</p>
+            <p className="text-muted-foreground mb-6">{t('public.eventDetail.eventNotFoundDesc')}</p>
             <Link href="/acquista">
               <Button variant="ghost" className="text-foreground min-h-[44px]">
                 <ChevronLeft className="w-5 h-5 mr-1" /> Torna agli eventi
@@ -2625,7 +2626,7 @@ export default function PublicEventDetailPage() {
                                 {/* Quantity or seat selection */}
                                 {sector.isNumbered ? (
                                   <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Seleziona Posto</Label>
+                                    <Label className="text-sm font-medium">{t('public.eventDetail.selectSeat')}</Label>
                                     <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-3 bg-muted/30 rounded-xl">
                                       {sector.seats.map((seat) => {
                                         const isMapSelected = selectedSeatIds.includes(seat.id);
@@ -2660,7 +2661,7 @@ export default function PublicEventDetailPage() {
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Quantità</Label>
+                                    <Label className="text-sm font-medium">{t('public.eventDetail.quantity')}</Label>
                                     <div className="flex items-center gap-4">
                                       <Button
                                         variant="outline"
@@ -2760,8 +2761,8 @@ export default function PublicEventDetailPage() {
                         <div>
                           <h4 className="font-semibold text-purple-300 text-sm">Biglietti Nominativi</h4>
                           <p className="text-xs text-purple-200/70">
-                            Inserisci nome e cognome per ogni partecipante.
-                            {event.allowsChangeName && " Il cambio nominativo è consentito."}
+                            {t('public.eventDetail.enterNominativeInfo')}
+                            {event.allowsChangeName && t('public.eventDetail.nameChangeAllowed')}
                           </p>
                         </div>
                       </CardContent>
@@ -2831,7 +2832,7 @@ export default function PublicEventDetailPage() {
                         <div className="text-center py-4">
                           <Ticket className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm text-muted-foreground">
-                            Seleziona un biglietto per continuare
+                            {t('public.eventDetail.selectTicketToContinue')}
                           </p>
                         </div>
                       )}
@@ -3085,8 +3086,8 @@ export default function PublicEventDetailPage() {
                   <div>
                     <h4 className="font-semibold text-purple-300 text-sm">Biglietti Nominativi</h4>
                     <p className="text-xs text-purple-200/70">
-                      Inserisci nome e cognome per ogni partecipante.
-                      {event.allowsChangeName && " Il cambio nominativo è consentito."}
+                      {t('public.eventDetail.enterNominativeInfo')}
+                      {event.allowsChangeName && t('public.eventDetail.nameChangeAllowed')}
                     </p>
                   </div>
                 </motion.div>
@@ -3268,7 +3269,7 @@ export default function PublicEventDetailPage() {
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground" data-testid="text-no-selection">
-                  Seleziona un biglietto
+                  {t('public.eventDetail.selectTicket')}
                 </p>
               )}
             </div>

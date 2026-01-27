@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { format, isAfter, isToday, parseISO } from "date-fns";
-import { it } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,7 @@ const staggerItem = {
 };
 
 export default function ScannerHomePage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
@@ -124,14 +126,14 @@ export default function ScannerHomePage() {
               <h1 className="text-3xl font-bold" data-testid="text-title">Scanner</h1>
               {user && (
                 <p className="text-muted-foreground" data-testid="text-user-name">
-                  Ciao, {(user as any).firstName || (user as any).username}!
+                  {t('scanner.hello')}, {(user as any).firstName || (user as any).username}!
                 </p>
               )}
             </div>
           </div>
           <Button variant="outline" onClick={handleLogout} data-testid="button-logout">
             <LogOut className="w-4 h-4 mr-2" />
-            Esci
+            {t('scanner.logout')}
           </Button>
         </div>
 
@@ -142,8 +144,8 @@ export default function ScannerHomePage() {
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-4">
                   <History className="h-8 w-8 text-purple-400" />
                 </div>
-                <span className="font-semibold text-lg">Eventi Passati</span>
-                <span className="text-sm text-muted-foreground mt-1">Storico scansioni</span>
+                <span className="font-semibold text-lg">{t('scanner.pastEvents')}</span>
+                <span className="text-sm text-muted-foreground mt-1">{t('scanner.scanHistoryDesc')}</span>
               </CardContent>
             </Card>
           </Link>
@@ -153,8 +155,8 @@ export default function ScannerHomePage() {
                 <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-4">
                   <BarChart3 className="h-8 w-8 text-blue-400" />
                 </div>
-                <span className="font-semibold text-lg">Statistiche</span>
-                <span className="text-sm text-muted-foreground mt-1">Riepilogo generale</span>
+                <span className="font-semibold text-lg">{t('scanner.statistics')}</span>
+                <span className="text-sm text-muted-foreground mt-1">{t('scanner.generalOverview')}</span>
               </CardContent>
             </Card>
           </Link>
@@ -168,8 +170,8 @@ export default function ScannerHomePage() {
                   <Zap className="h-5 w-5 text-emerald-400" />
                 </div>
                 <div>
-                  <CardTitle data-testid="text-today-section">Eventi di Oggi</CardTitle>
-                  <CardDescription>{todayEvents.length} eventi in programma</CardDescription>
+                  <CardTitle data-testid="text-today-section">{t('scanner.todayEvents')}</CardTitle>
+                  <CardDescription>{todayEvents.length} {t('scanner.eventsAvailableForScanning')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -185,7 +187,7 @@ export default function ScannerHomePage() {
                         <div className="flex items-center gap-2 mb-2">
                           <Badge className="bg-emerald-500 text-white border-0">
                             <Sparkles className="h-3 w-3 mr-1" />
-                            Oggi
+                            {t('scanner.today')}
                           </Badge>
                         </div>
                         <h3 className="font-bold text-lg" data-testid="text-event-name">
@@ -194,7 +196,7 @@ export default function ScannerHomePage() {
                         <div className="flex items-center gap-4 mt-2">
                           <p className="text-sm font-medium text-emerald-400 flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            {format(parseISO(event.startDatetime), "HH:mm", { locale: it })}
+                            {format(parseISO(event.startDatetime), "HH:mm", { locale: enUS })}
                           </p>
                           {event.location && (
                             <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -224,9 +226,9 @@ export default function ScannerHomePage() {
               </div>
               <div>
                 <CardTitle data-testid="text-upcoming-section">
-                  {todayEvents.length > 0 ? "Prossimi Eventi" : "Seleziona Evento"}
+                  {todayEvents.length > 0 ? t('scanner.upcomingEvents') : t('scanner.selectEvent')}
                 </CardTitle>
-                <CardDescription>Eventi disponibili per la scansione</CardDescription>
+                <CardDescription>{t('scanner.eventsAvailableForScanning')}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -259,7 +261,7 @@ export default function ScannerHomePage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1 font-medium">
-                              {format(parseISO(event.startDatetime), "EEEE d MMMM", { locale: it })}
+                              {format(parseISO(event.startDatetime), "EEEE d MMMM", { locale: enUS })}
                             </p>
                             <h3 className="font-semibold text-base" data-testid="text-event-name">
                               {event.name}
@@ -286,7 +288,7 @@ export default function ScannerHomePage() {
                   <Calendar className="h-10 w-10 text-muted-foreground/30" />
                 </div>
                 <p className="text-muted-foreground text-base">
-                  Nessun evento disponibile
+                  {t('scanner.noEventsAvailable')}
                 </p>
               </div>
             ) : null}
@@ -362,8 +364,8 @@ export default function ScannerHomePage() {
                     <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-3">
                       <History className="h-7 w-7 text-purple-400" />
                     </div>
-                    <span className="font-semibold text-base">Eventi Passati</span>
-                    <span className="text-xs text-muted-foreground mt-1">Storico scansioni</span>
+                    <span className="font-semibold text-base">{t('scanner.pastEvents')}</span>
+                    <span className="text-xs text-muted-foreground mt-1">{t('scanner.scanHistoryDesc')}</span>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -382,8 +384,8 @@ export default function ScannerHomePage() {
                     <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-3">
                       <BarChart3 className="h-7 w-7 text-blue-400" />
                     </div>
-                    <span className="font-semibold text-base">Statistiche</span>
-                    <span className="text-xs text-muted-foreground mt-1">Riepilogo generale</span>
+                    <span className="font-semibold text-base">{t('scanner.statistics')}</span>
+                    <span className="text-xs text-muted-foreground mt-1">{t('scanner.generalOverview')}</span>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -397,7 +399,7 @@ export default function ScannerHomePage() {
                   <Zap className="h-5 w-5 text-emerald-400" />
                 </div>
                 <h2 className="text-lg font-bold" data-testid="text-today-section">
-                  Eventi di Oggi
+                  {t('scanner.todayEvents')}
                 </h2>
               </div>
               <div className="space-y-4">
@@ -432,7 +434,7 @@ export default function ScannerHomePage() {
                               <div className="flex flex-col gap-1.5">
                                 <p className="text-sm font-medium text-emerald-400 flex items-center gap-2">
                                   <Clock className="h-4 w-4" />
-                                  {format(parseISO(event.startDatetime), "HH:mm", { locale: it })}
+                                  {format(parseISO(event.startDatetime), "HH:mm", { locale: enUS })}
                                 </p>
                                 {event.location && (
                                   <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -461,7 +463,7 @@ export default function ScannerHomePage() {
                 <CalendarDays className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-lg font-bold" data-testid="text-upcoming-section">
-                {todayEvents.length > 0 ? "Prossimi Eventi" : "Seleziona Evento"}
+                {todayEvents.length > 0 ? t('scanner.upcomingEvents') : t('scanner.selectEvent')}
               </h2>
             </div>
             
@@ -508,7 +510,7 @@ export default function ScannerHomePage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs text-muted-foreground mb-1 font-medium">
-                                  {format(parseISO(event.startDatetime), "EEEE d MMMM", { locale: it })}
+                                  {format(parseISO(event.startDatetime), "EEEE d MMMM", { locale: enUS })}
                                 </p>
                                 <h3 className="font-semibold text-base truncate mb-1" data-testid="text-event-name">
                                   {event.name}

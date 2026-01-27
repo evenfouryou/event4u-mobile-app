@@ -50,6 +50,7 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface CartItem {
   id: string;
@@ -94,6 +95,7 @@ function TicketCard({
   onUpdateQuantity: (newQuantity: number) => void;
   isUpdating: boolean;
 }) {
+  const { t } = useTranslation();
   const reservedUntil = new Date(item.reservedUntil);
   const isExpired = reservedUntil < new Date();
   const minutesLeft = Math.max(0, Math.floor((reservedUntil.getTime() - Date.now()) / 60000));
@@ -142,8 +144,8 @@ function TicketCard({
                   </h3>
                   <p className="text-sm text-muted-foreground mt-0.5" data-testid={`text-item-type-${item.id}`}>
                     {item.itemType === 'subscription' 
-                      ? item.subscriptionName || 'Abbonamento'
-                      : item.sectorName || 'Settore'}
+                      ? item.subscriptionName || t('public.cart.subscription')
+                      : item.sectorName || t('public.cart.sector')}
                   </p>
                 </div>
                 
@@ -174,11 +176,11 @@ function TicketCard({
               <div className="flex items-center gap-2 mt-2">
                 {item.itemType === 'subscription' ? (
                   <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs" data-testid={`badge-subscription-${item.id}`}>
-                    Abbonamento
+                    {t('public.cart.subscription')}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="border-border text-muted-foreground text-xs" data-testid={`badge-ticket-type-${item.id}`}>
-                    {item.ticketType === "intero" ? "Intero" : "Ridotto"}
+                    {item.ticketType === "intero" ? t('public.cart.full') : t('public.cart.reduced')}
                   </Badge>
                 )}
                 {item.participantFirstName && (
@@ -236,7 +238,7 @@ function TicketCard({
                 €{(Number(item.unitPrice) * item.quantity).toFixed(2)}
               </p>
               <p className="text-xs text-muted-foreground">
-                €{Number(item.unitPrice).toFixed(2)} cad.
+                €{Number(item.unitPrice).toFixed(2)} {t('public.cart.each')}
               </p>
             </motion.div>
           </div>
@@ -248,7 +250,7 @@ function TicketCard({
               className="text-xs text-amber-400 mt-3 flex items-center gap-1"
             >
               <AlertCircle className="w-3.5 h-3.5" />
-              Riserva scade tra {minutesLeft} minuti
+              {t('public.cart.reserveExpires', { minutes: minutesLeft })}
             </motion.p>
           )}
           
@@ -259,7 +261,7 @@ function TicketCard({
               className="text-xs text-red-400 mt-3 flex items-center gap-1"
             >
               <AlertCircle className="w-3.5 h-3.5" />
-              Riserva scaduta - Rimuovi e riprova
+              {t('public.cart.reserveExpired')}
             </motion.p>
           )}
         </CardContent>
@@ -269,6 +271,7 @@ function TicketCard({
 }
 
 function EmptyCart() {
+  const { t } = useTranslation();
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -292,7 +295,7 @@ function EmptyCart() {
         transition={{ ...springConfig, delay: 0.2 }}
         className="text-xl font-semibold text-foreground mb-2 text-center"
       >
-        Carrello vuoto
+        {t('public.cart.empty')}
       </motion.h3>
       
       <motion.p 
@@ -301,7 +304,7 @@ function EmptyCart() {
         transition={{ ...springConfig, delay: 0.3 }}
         className="text-muted-foreground text-center mb-8 max-w-xs"
       >
-        Non hai ancora aggiunto biglietti al carrello. Scopri gli eventi disponibili!
+        {t('public.cart.emptyMessage')}
       </motion.p>
       
       <motion.div
@@ -312,7 +315,7 @@ function EmptyCart() {
         <Link href="/acquista">
           <HapticButton hapticType="medium" data-testid="button-browse">
             <Ticket className="w-5 h-5 mr-2" />
-            Sfoglia Eventi
+            {t('public.cart.browseEvents')}
           </HapticButton>
         </Link>
       </motion.div>
@@ -350,6 +353,7 @@ function LoadingSkeleton() {
 }
 
 export default function PublicCartPage() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -368,15 +372,15 @@ export default function PublicCartPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/public/cart"] });
       triggerHaptic('success');
       toast({
-        title: "Rimosso",
-        description: "Articolo rimosso dal carrello.",
+        title: t('public.cart.removed'),
+        description: t('public.cart.removedMessage'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile rimuovere l'articolo.",
+        title: t('common.error'),
+        description: error.message || t('public.cart.removeError'),
         variant: "destructive",
       });
     },
@@ -392,8 +396,8 @@ export default function PublicCartPage() {
     onError: (error: any) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile aggiornare la quantità.",
+        title: t('common.error'),
+        description: error.message || t('public.cart.updateError'),
         variant: "destructive",
       });
     },
@@ -421,8 +425,10 @@ export default function PublicCartPage() {
       });
       
       toast({
-        title: "Riserve scadute rimosse",
-        description: `${expiredItems.length} articol${expiredItems.length > 1 ? 'i' : 'o'} con riserva scaduta ${expiredItems.length > 1 ? 'sono stati rimossi' : 'è stato rimosso'} automaticamente.`,
+        title: t('public.cart.expiredRemoved'),
+        description: expiredItems.length > 1 
+          ? t('public.cart.expiredRemovedPlural', { count: expiredItems.length })
+          : t('public.cart.expiredRemovedSingle', { count: expiredItems.length }),
         variant: "destructive",
       });
     }
@@ -437,7 +443,7 @@ export default function PublicCartPage() {
 
   const header = (
     <MobileHeader
-      title="Carrello"
+      title={t('public.cart.title')}
       leftAction={
         <Link href="/acquista">
           <HapticButton 
@@ -477,24 +483,24 @@ export default function PublicCartPage() {
       <div className="px-4 py-2 border-b border-border/50 flex items-center justify-center gap-4">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="w-3.5 h-3.5 text-teal-500" />
-          <span>Sicuro</span>
+          <span>{t('public.cart.secure')}</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Lock className="w-3.5 h-3.5 text-primary" />
-          <span>Crittografato</span>
+          <span>{t('public.cart.encrypted')}</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <CreditCard className="w-3.5 h-3.5 text-blue-500" />
-          <span>Multi-pay</span>
+          <span>{t('public.cart.multiPay')}</span>
         </div>
       </div>
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-sm text-muted-foreground">
-              {cart.itemsCount} {cart.itemsCount === 1 ? "biglietto" : "biglietti"}
+              {cart.itemsCount} {cart.itemsCount === 1 ? t('public.cart.tickets') : t('public.cart.ticketsPlural')}
             </p>
-            <p className="text-xs text-teal-500 font-medium">Commissioni gratuite</p>
+            <p className="text-xs text-teal-500 font-medium">{t('public.cart.freeCommissions')}</p>
           </div>
           <motion.div
             key={cart.total}
@@ -514,7 +520,7 @@ export default function PublicCartPage() {
           hapticType="medium"
           data-testid="button-checkout"
         >
-          Procedi al Checkout
+          {t('public.cart.proceedToCheckout')}
           <ArrowRight className="w-5 h-5 ml-2" />
         </HapticButton>
       </div>
@@ -532,9 +538,9 @@ export default function PublicCartPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">Carrello</h1>
+              <h1 className="text-3xl font-bold">{t('public.cart.title')}</h1>
               <p className="text-muted-foreground">
-                {hasItems ? `${cart?.itemsCount} ${cart?.itemsCount === 1 ? "biglietto" : "biglietti"}` : "Nessun articolo"}
+                {hasItems ? `${cart?.itemsCount} ${cart?.itemsCount === 1 ? t('public.cart.tickets') : t('public.cart.ticketsPlural')}` : t('public.cart.noItems')}
               </p>
             </div>
           </div>
@@ -543,19 +549,19 @@ export default function PublicCartPage() {
               <DialogTrigger asChild>
                 <Button variant="outline" className="text-red-400 border-red-400/30 hover:bg-red-400/10" data-testid="button-clear">
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Svuota Carrello
+                  {t('public.cart.clearCart')}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Svuota Carrello</DialogTitle>
+                  <DialogTitle>{t('public.cart.clearCart')}</DialogTitle>
                   <DialogDescription>
-                    Sei sicuro di voler rimuovere tutti gli articoli dal carrello? Questa azione non può essere annullata.
+                    {t('public.cart.clearCartConfirm')}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setClearCartDialogOpen(false)}>
-                    Annulla
+                    {t('public.cart.cancel')}
                   </Button>
                   <Button
                     variant="destructive"
@@ -568,7 +574,7 @@ export default function PublicCartPage() {
                     disabled={removeMutation.isPending}
                     data-testid="button-confirm-clear"
                   >
-                    Svuota
+                    {t('public.cart.clear')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -597,7 +603,7 @@ export default function PublicCartPage() {
               <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                 <AlertCircle className="w-10 h-10 text-red-400" />
               </div>
-              <p className="text-red-400 text-center mb-4">Errore nel caricamento del carrello.</p>
+              <p className="text-red-400 text-center mb-4">{t('public.cart.loadError')}</p>
               <Button variant="outline" onClick={() => window.location.reload()}>
                 Riprova
               </Button>
@@ -610,18 +616,18 @@ export default function PublicCartPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Ticket className="w-5 h-5 text-primary" />
-                    I tuoi biglietti
+                    {t('public.cart.yourTickets')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Evento</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Nominativo</TableHead>
-                        <TableHead className="text-center">Quantità</TableHead>
-                        <TableHead className="text-right">Prezzo</TableHead>
+                        <TableHead>{t('public.cart.event')}</TableHead>
+                        <TableHead>{t('public.cart.type')}</TableHead>
+                        <TableHead>{t('public.cart.nominative')}</TableHead>
+                        <TableHead className="text-center">{t('public.cart.quantity')}</TableHead>
+                        <TableHead className="text-right">{t('public.cart.price')}</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>

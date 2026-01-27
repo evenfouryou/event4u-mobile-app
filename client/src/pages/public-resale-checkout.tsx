@@ -21,6 +21,7 @@ import {
   triggerHaptic,
 } from "@/components/mobile-primitives";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import { 
   RefreshCw, 
   Calendar, 
@@ -128,10 +129,11 @@ async function getStripe() {
 }
 
 function ResaleProgressIndicator({ currentStep }: { currentStep: number }) {
+  const { t } = useTranslation();
   const steps = [
-    { label: "Dettagli", icon: Ticket },
-    { label: "Verifica", icon: ShieldCheck },
-    { label: "Pagamento", icon: CreditCard },
+    { label: t('common.details'), icon: Ticket },
+    { label: t('common.verification'), icon: ShieldCheck },
+    { label: t('public.checkout.paymentMethod'), icon: CreditCard },
   ];
 
   return (
@@ -220,6 +222,7 @@ function PaymentElementWrapper({
 }
 
 export default function PublicResaleCheckoutPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -279,7 +282,7 @@ export default function PublicResaleCheckoutPage() {
       .then(setStripePromise)
       .catch((error) => {
         console.error("[Stripe] Load error:", error);
-        setStripeError(error.message || "Errore caricamento sistema di pagamento");
+        setStripeError(error.message || t('public.resaleCheckout.paymentSystemError'));
       });
   }, []);
 
@@ -302,13 +305,13 @@ export default function PublicResaleCheckoutPage() {
           createPaymentIntent.mutate();
         }
       } else {
-        setCaptchaError(data.message || "Codice non corretto");
+        setCaptchaError(data.message || t('public.checkout.incorrectCode'));
         setCaptchaValidated(false);
         handleRefreshCaptcha();
       }
     },
     onError: (error: any) => {
-      setCaptchaError(error.message || "Errore validazione");
+      setCaptchaError(error.message || t('public.checkout.validationError'));
       setCaptchaValidated(false);
       handleRefreshCaptcha();
     },
@@ -346,8 +349,8 @@ export default function PublicResaleCheckoutPage() {
       
       // All other errors: show toast notification, UI will show via createPaymentIntent.isError
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile avviare il pagamento.",
+        title: t('common.error'),
+        description: error.message || t('public.checkout.paymentError'),
         variant: "destructive",
       });
     },
@@ -422,7 +425,7 @@ export default function PublicResaleCheckoutPage() {
       });
 
       if (error) {
-        setPaymentError(error.message || "Pagamento fallito. Riprova.");
+        setPaymentError(error.message || t('public.resaleCheckout.paymentFailed'));
         setIsProcessing(false);
         triggerHaptic('error');
         return;
@@ -449,8 +452,8 @@ export default function PublicResaleCheckoutPage() {
           // If we got here without error, the backend confirmed successfully
           triggerHaptic('success');
           toast({
-            title: "Acquisto completato!",
-            description: "Il biglietto è stato trasferito al tuo account.",
+            title: t('public.resaleCheckout.purchaseComplete'),
+            description: t('public.resaleCheckout.ticketTransferred'),
           });
 
           navigate(`/account/resale-success?resale_id=${id}&success=true`);
@@ -463,8 +466,8 @@ export default function PublicResaleCheckoutPage() {
             console.warn("[Checkout] Treating SyntaxError as success (backend likely completed)");
             triggerHaptic('success');
             toast({
-              title: "Acquisto completato!",
-              description: "Il biglietto è stato trasferito al tuo account.",
+              title: t('public.resaleCheckout.purchaseComplete'),
+              description: t('public.resaleCheckout.ticketTransferred'),
             });
             navigate(`/account/resale-success?resale_id=${id}&success=true`);
             return;
@@ -486,10 +489,10 @@ export default function PublicResaleCheckoutPage() {
                 console.log("[Checkout] Recovery successful:", recoveryResult);
                 triggerHaptic('success');
                 toast({
-                  title: "Acquisto completato!",
+                  title: t('public.resaleCheckout.purchaseComplete'),
                   description: recoveryResult.recovered 
-                    ? "Transazione recuperata con successo." 
-                    : "Il biglietto è stato trasferito al tuo account.",
+                    ? t('public.resaleCheckout.transactionRecovered') 
+                    : t('public.resaleCheckout.ticketTransferred'),
                 });
                 navigate(`/account/resale-success?resale_id=${id}&success=true`);
                 return;
@@ -500,16 +503,16 @@ export default function PublicResaleCheckoutPage() {
           }
           
           // Parse error response for better messaging
-          let errorMessage = confirmError.message || "Errore nella conferma acquisto";
+          let errorMessage = confirmError.message || t('public.resaleCheckout.confirmError');
           let wasRefunded = false;
           
           try {
             if (confirmError.data) {
               if (confirmError.data.refunded) {
                 wasRefunded = true;
-                errorMessage = "Sistema sigilli fiscali non disponibile. Il pagamento è stato stornato automaticamente.";
+                errorMessage = t('public.resaleCheckout.fiscalSealsUnavailable');
               } else if (confirmError.data.code?.includes('SEAL')) {
-                errorMessage = "Sistema fiscale temporaneamente non disponibile. Riprova più tardi.";
+                errorMessage = t('public.resaleCheckout.fiscalSystemRetry');
               }
             }
           } catch (e) {}
@@ -518,7 +521,7 @@ export default function PublicResaleCheckoutPage() {
           if (wasRefunded) {
             setPaymentError(errorMessage);
             toast({
-              title: "Pagamento stornato",
+              title: t('public.resaleCheckout.paymentRefunded'),
               description: errorMessage,
               variant: "destructive",
             });
@@ -530,8 +533,8 @@ export default function PublicResaleCheckoutPage() {
           // This ensures the user can retry confirmation even if this page fails
           console.log("[Checkout] Redirecting to success page for recovery...");
           toast({
-            title: "Completamento in corso",
-            description: "Stiamo completando la tua transazione...",
+            title: t('public.resaleCheckout.processing'),
+            description: t('public.resaleCheckout.completingTransaction'),
           });
           // Only append token if defined to avoid "token=undefined" in URL
           const tokenParam = createPaymentIntent.data?.confirmToken 
@@ -542,7 +545,7 @@ export default function PublicResaleCheckoutPage() {
         }
       }
     } catch (error: any) {
-      setPaymentError(error.message || "Errore durante il pagamento.");
+      setPaymentError(error.message || t('public.resaleCheckout.paymentErrorGeneric'));
       setIsProcessing(false);
     }
   };
@@ -588,9 +591,9 @@ export default function PublicResaleCheckoutPage() {
           >
             <AlertCircle className="w-10 h-10 text-red-400" />
           </motion.div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">Rivendita non disponibile</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.resaleCheckout.resaleNotAvailable')}</h3>
           <p className="text-muted-foreground mb-8">
-            Questo biglietto potrebbe essere stato già acquistato o non è più in vendita.
+            {t('public.resaleCheckout.ticketAlreadyPurchased')}
           </p>
           <Link href="/rivendite">
             <HapticButton 
@@ -599,7 +602,7 @@ export default function PublicResaleCheckoutPage() {
               data-testid="button-back-to-resales"
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
-              Torna alle rivendite
+              {t('public.resaleCheckout.backToResales')}
             </HapticButton>
           </Link>
         </motion.div>
@@ -624,9 +627,9 @@ export default function PublicResaleCheckoutPage() {
           >
             <AlertCircle className="w-10 h-10 text-amber-400" />
           </motion.div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">Biglietto non più disponibile</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.resaleCheckout.ticketNoLongerAvailable')}</h3>
           <p className="text-muted-foreground mb-8">
-            Questo biglietto è stato già acquistato da un altro utente.
+            {t('public.resaleCheckout.ticketPurchasedByOther')}
           </p>
           <Link href="/rivendite">
             <HapticButton 
@@ -635,7 +638,7 @@ export default function PublicResaleCheckoutPage() {
               data-testid="button-back-to-resales"
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
-              Torna alle rivendite
+              {t('public.resaleCheckout.backToResales')}
             </HapticButton>
           </Link>
         </motion.div>
@@ -660,9 +663,9 @@ export default function PublicResaleCheckoutPage() {
           >
             <User className="w-10 h-10 text-primary" />
           </motion.div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">Accesso Richiesto</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.resaleCheckout.loginRequired')}</h3>
           <p className="text-muted-foreground mb-8">
-            Per acquistare questo biglietto devi accedere al tuo account o registrarti.
+            {t('public.resaleCheckout.loginMessage')}
           </p>
           <Link href={`/login?redirect=/rivendita/${id}`}>
             <HapticButton 
@@ -671,7 +674,7 @@ export default function PublicResaleCheckoutPage() {
               data-testid="button-login"
             >
               <User className="w-4 h-4 mr-2" />
-              Accedi o Registrati
+              {t('public.resaleCheckout.loginButton')}
             </HapticButton>
           </Link>
         </motion.div>
@@ -720,7 +723,7 @@ export default function PublicResaleCheckoutPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-3 left-3 right-3">
                 <Badge variant="secondary" className="mb-2 bg-teal-500/90 text-white border-0">
-                  Biglietto in Rivendita
+                  {t('public.resaleCheckout.resaleTicket')}
                 </Badge>
                 <h1 className="text-lg font-bold text-white line-clamp-2">
                   {resale.eventName}
@@ -748,20 +751,20 @@ export default function PublicResaleCheckoutPage() {
             <div className="px-4 py-3 border-b border-border bg-muted/30">
               <h2 className="font-semibold text-foreground flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-teal-400" />
-                Riepilogo Acquisto
+                {t('public.resaleCheckout.purchaseSummary')}
               </h2>
             </div>
             <div className="p-4 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Prezzo biglietto</span>
+                <span className="text-muted-foreground">{t('public.resaleCheckout.ticketPrice')}</span>
                 <span className="font-medium">€{resalePrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Commissioni piattaforma</span>
-                <span className="text-teal-400">Incluse</span>
+                <span className="text-muted-foreground">{t('public.resaleCheckout.platformFees')}</span>
+                <span className="text-teal-400">{t('public.resaleCheckout.included')}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-border">
-                <span className="text-lg font-semibold text-foreground">Totale</span>
+                <span className="text-lg font-semibold text-foreground">{t('public.resaleCheckout.total')}</span>
                 <span className="text-2xl font-bold text-primary" data-testid="text-total">
                   €{resalePrice.toFixed(2)}
                 </span>
@@ -773,21 +776,21 @@ export default function PublicResaleCheckoutPage() {
             <div className="px-4 py-3 border-b border-border bg-muted/30">
               <h2 className="font-semibold text-foreground flex items-center gap-2">
                 <User className="w-5 h-5 text-teal-400" />
-                Dati Acquirente
+                {t('public.resaleCheckout.buyerData')}
               </h2>
             </div>
             <div className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground text-xs">Nome</Label>
+                  <Label className="text-muted-foreground text-xs">{t('public.resaleCheckout.firstName')}</Label>
                   <p className="text-foreground font-medium" data-testid="text-firstname">{customer.firstName}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground text-xs">Cognome</Label>
+                  <Label className="text-muted-foreground text-xs">{t('public.resaleCheckout.lastName')}</Label>
                   <p className="text-foreground font-medium" data-testid="text-lastname">{customer.lastName}</p>
                 </div>
                 <div className="col-span-2">
-                  <Label className="text-muted-foreground text-xs">Email</Label>
+                  <Label className="text-muted-foreground text-xs">{t('public.resaleCheckout.email')}</Label>
                   <p className="text-foreground font-medium truncate" data-testid="text-email">{customer.email}</p>
                 </div>
               </div>
@@ -875,7 +878,7 @@ export default function PublicResaleCheckoutPage() {
             <div className="px-4 py-3 border-b border-border bg-muted/30">
               <h2 className="font-semibold text-foreground flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-teal-400" />
-                Metodo di Pagamento
+                {t('public.resaleCheckout.paymentMethod')}
               </h2>
             </div>
             <div className="p-4">
@@ -932,7 +935,7 @@ export default function PublicResaleCheckoutPage() {
                     className="h-12"
                     hapticType="medium"
                   >
-                    Riprova
+                    {t('public.resaleCheckout.retry')}
                   </HapticButton>
                 </div>
               ) : createPaymentIntent.isError ? (
@@ -941,12 +944,11 @@ export default function PublicResaleCheckoutPage() {
                   <p className="text-red-400 mb-2 font-semibold">
                     {(createPaymentIntent.error as any)?.data?.code === 'SEAL_BRIDGE_OFFLINE' || 
                      (createPaymentIntent.error as any)?.data?.code === 'SEAL_CARD_NOT_READY'
-                      ? "Sistema fiscale non disponibile"
-                      : "Errore nel caricamento del pagamento"}
+                      ? t('public.resaleCheckout.fiscalSystemUnavailable')
+                      : t('public.resaleCheckout.paymentLoadError')}
                   </p>
                   <p className="text-muted-foreground text-sm mb-4 max-w-xs mx-auto">
-                    {(createPaymentIntent.error as any)?.message || 
-                     "Si è verificato un errore. Riprova tra qualche istante."}
+                    {(createPaymentIntent.error as any)?.message || t('public.resaleCheckout.errorOccurred')}
                   </p>
                   <HapticButton
                     onClick={() => {
@@ -957,13 +959,13 @@ export default function PublicResaleCheckoutPage() {
                     className="h-12"
                     hapticType="medium"
                   >
-                    Riprova
+                    {t('public.resaleCheckout.retry')}
                   </HapticButton>
                 </div>
               ) : createPaymentIntent.isPending || validateCaptchaMutation.isPending ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-                  <p className="text-muted-foreground">Preparazione pagamento...</p>
+                  <p className="text-muted-foreground">{t('public.resaleCheckout.preparingPayment')}</p>
                 </div>
               ) : createPaymentIntent.data && elementsOptions && stripePromise ? (
                 <Elements 
@@ -995,7 +997,7 @@ export default function PublicResaleCheckoutPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-                  <p className="text-muted-foreground">Preparazione pagamento...</p>
+                  <p className="text-muted-foreground">{t('public.resaleCheckout.preparingPayment')}</p>
                 </div>
               )}
             </div>
@@ -1016,15 +1018,15 @@ export default function PublicResaleCheckoutPage() {
           <motion.div variants={fadeInUp} className="space-y-3 pt-2">
             <div className="flex items-center gap-3 text-muted-foreground">
               <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
-              <span className="text-sm">Biglietto verificato e garantito</span>
+              <span className="text-sm">{t('public.resaleCheckout.verifiedTicket')}</span>
             </div>
             <div className="flex items-center gap-3 text-muted-foreground">
               <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
-              <span className="text-sm">Trasferimento immediato dopo il pagamento</span>
+              <span className="text-sm">{t('public.resaleCheckout.immediateTransfer')}</span>
             </div>
             <div className="flex items-center gap-3 text-muted-foreground">
               <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
-              <span className="text-sm">Pagamento sicuro con Stripe</span>
+              <span className="text-sm">{t('public.resaleCheckout.securePayment')}</span>
             </div>
           </motion.div>
         </motion.div>
@@ -1045,7 +1047,7 @@ export default function PublicResaleCheckoutPage() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <ShieldCheck className="w-5 h-5" />
-              <span className="text-xs">Pagamento sicuro</span>
+              <span className="text-xs">{t('public.resaleCheckout.securePaymentLabel')}</span>
             </div>
           </div>
           

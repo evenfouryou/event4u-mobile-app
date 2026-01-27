@@ -51,6 +51,7 @@ import {
   triggerHaptic,
 } from "@/components/mobile-primitives";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface CartItem {
   id: string;
@@ -106,10 +107,11 @@ const springConfig = {
 };
 
 function CheckoutProgressIndicator({ currentStep }: { currentStep: number }) {
+  const { t } = useTranslation();
   const steps = [
-    { label: "Carrello", icon: Ticket },
-    { label: "Pagamento", icon: CreditCard },
-    { label: "Conferma", icon: Check },
+    { label: t('public.cart.title'), icon: Ticket },
+    { label: t('public.checkout.paymentMethod'), icon: CreditCard },
+    { label: t('common.confirm'), icon: Check },
   ];
 
   return (
@@ -193,6 +195,7 @@ function PaymentFormContent({
   onError: (error: string | null) => void;
   onSuccess: (transactionCode: string) => void;
 }) {
+  const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -217,7 +220,7 @@ function PaymentFormContent({
       });
 
       if (error) {
-        onError(error.message || "Pagamento fallito. Riprova.");
+        onError(error.message || t('public.checkout.paymentFailed'));
         onProcessing(false);
         triggerHaptic('error');
         return;
@@ -234,8 +237,8 @@ function PaymentFormContent({
           triggerHaptic('success');
 
           toast({
-            title: "Pagamento completato!",
-            description: "I tuoi biglietti sono stati generati.",
+            title: t('public.checkout.paymentComplete'),
+            description: t('public.checkout.ticketsGenerated'),
           });
 
           onSuccess(result.transactionCode);
@@ -246,22 +249,22 @@ function PaymentFormContent({
           if (errorData.refunded || errorCode.includes("REFUNDED")) {
             onError(confirmError.message);
             toast({
-              title: "Rimborso elaborato",
-              description: "L'importo ti sarà restituito entro 5-10 giorni lavorativi.",
+              title: t('public.checkout.refundProcessed'),
+              description: t('public.checkout.refundMessage'),
             });
           } else if (errorCode === "SEAL_ERROR_REFUND_FAILED" || errorCode === "CRITICAL_ERROR_REFUND_FAILED") {
             onError(confirmError.message);
             toast({
-              title: "Ti ricontatteremo",
-              description: "Il nostro team verificherà lo stato del tuo ordine.",
+              title: t('public.checkout.willContactYou'),
+              description: t('public.checkout.orderVerification'),
               variant: "destructive",
             });
           } else if (errorCode.includes("SEAL_BRIDGE") || errorCode.includes("SEAL_CARD")) {
             onError(
-              confirmError.message || "Il sistema di emissione biglietti è temporaneamente non disponibile. Ti invitiamo a riprovare tra qualche minuto."
+              confirmError.message || t('public.checkout.ticketSystemUnavailable')
             );
           } else {
-            onError(confirmError.message || "Si è verificato un problema durante la conferma dell'ordine. Riprova tra qualche istante.");
+            onError(confirmError.message || t('public.checkout.problemOccurred'));
           }
           onProcessing(false);
           triggerHaptic('error');
@@ -269,7 +272,7 @@ function PaymentFormContent({
         }
       }
     } catch (error: any) {
-      onError(error.message || "Errore durante il pagamento.");
+      onError(error.message || t('public.checkout.paymentErrorGeneric'));
       onProcessing(false);
       triggerHaptic('error');
     }
@@ -310,6 +313,7 @@ function PaymentButton({
 }
 
 function CheckoutContent() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
@@ -370,13 +374,13 @@ function CheckoutContent() {
         setCaptchaError(null);
         triggerHaptic('success');
       } else {
-        setCaptchaError(data.message || "Codice non corretto");
+        setCaptchaError(data.message || t('public.checkout.incorrectCode'));
         setCaptchaValidated(false);
         handleRefreshCaptcha();
       }
     },
     onError: (error: any) => {
-      setCaptchaError(error.message || "Errore validazione");
+      setCaptchaError(error.message || t('public.checkout.validationError'));
       setCaptchaValidated(false);
       handleRefreshCaptcha();
     },
@@ -405,14 +409,14 @@ function CheckoutContent() {
         navigate("/login?redirect=/checkout");
       } else if (errorCode === "SEAL_BRIDGE_OFFLINE" || errorCode === "SEAL_CARD_NOT_READY") {
         toast({
-          title: "Sistema non disponibile",
-          description: error.message || "Il sistema di emissione biglietti è temporaneamente non disponibile. Riprova tra qualche minuto.",
+          title: t('public.checkout.systemUnavailable'),
+          description: error.message || t('public.checkout.ticketSystemUnavailable'),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Errore",
-          description: error.message || "Impossibile avviare il pagamento.",
+          title: t('public.checkout.error'),
+          description: error.message || t('public.checkout.paymentError'),
           variant: "destructive",
         });
       }
@@ -450,7 +454,7 @@ function CheckoutContent() {
       });
 
       if (error) {
-        setPaymentError(error.message || "Pagamento fallito. Riprova.");
+        setPaymentError(error.message || t('public.checkout.paymentFailed'));
         setIsProcessing(false);
         triggerHaptic('error');
         return;
@@ -467,8 +471,8 @@ function CheckoutContent() {
           triggerHaptic('success');
 
           toast({
-            title: "Pagamento completato!",
-            description: "I tuoi biglietti sono stati generati.",
+            title: t('public.checkout.paymentComplete'),
+            description: t('public.checkout.ticketsGenerated'),
           });
 
           navigate(`/checkout/success?transaction=${result.transactionCode}`);
@@ -479,22 +483,22 @@ function CheckoutContent() {
           if (errorData.refunded || errorCode.includes("REFUNDED")) {
             setPaymentError(confirmError.message);
             toast({
-              title: "Rimborso elaborato",
-              description: "L'importo ti sarà restituito entro 5-10 giorni lavorativi.",
+              title: t('public.checkout.refundProcessed'),
+              description: t('public.checkout.refundMessage'),
             });
           } else if (errorCode === "SEAL_ERROR_REFUND_FAILED" || errorCode === "CRITICAL_ERROR_REFUND_FAILED") {
             setPaymentError(confirmError.message);
             toast({
-              title: "Ti ricontatteremo",
-              description: "Il nostro team verificherà lo stato del tuo ordine.",
+              title: t('public.checkout.willContactYou'),
+              description: t('public.checkout.orderVerification'),
               variant: "destructive",
             });
           } else if (errorCode.includes("SEAL_BRIDGE") || errorCode.includes("SEAL_CARD")) {
             setPaymentError(
-              confirmError.message || "Il sistema di emissione biglietti è temporaneamente non disponibile."
+              confirmError.message || t('public.checkout.ticketSystemUnavailable')
             );
           } else {
-            setPaymentError(confirmError.message || "Si è verificato un problema. Riprova.");
+            setPaymentError(confirmError.message || t('public.checkout.problemOccurred'));
           }
           setIsProcessing(false);
           triggerHaptic('error');
@@ -502,7 +506,7 @@ function CheckoutContent() {
         }
       }
     } catch (error: any) {
-      setPaymentError(error.message || "Errore durante il pagamento.");
+      setPaymentError(error.message || t('public.checkout.paymentErrorGeneric'));
       setIsProcessing(false);
       triggerHaptic('error');
     }
@@ -534,9 +538,9 @@ function CheckoutContent() {
         >
           <User className="w-10 h-10 text-primary" />
         </motion.div>
-        <h3 className="text-xl font-semibold text-foreground mb-2">Accesso Richiesto</h3>
+        <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.checkout.loginRequired')}</h3>
         <p className="text-muted-foreground mb-8">
-          Per completare l'acquisto devi accedere al tuo account o registrarti.
+          {t('public.checkout.loginMessage')}
         </p>
         <Link href="/login?redirect=/checkout">
           <HapticButton 
@@ -544,7 +548,7 @@ function CheckoutContent() {
             hapticType="medium"
             data-testid="button-login"
           >
-            Accedi o Registrati
+            {t('public.checkout.loginButton')}
           </HapticButton>
         </Link>
       </motion.div>
@@ -567,15 +571,15 @@ function CheckoutContent() {
         >
           <Ticket className="w-10 h-10 text-muted-foreground" />
         </motion.div>
-        <h3 className="text-xl font-semibold text-foreground mb-2">Carrello Vuoto</h3>
-        <p className="text-muted-foreground mb-8">Aggiungi biglietti al carrello per procedere.</p>
+        <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.checkout.emptyCart')}</h3>
+        <p className="text-muted-foreground mb-8">{t('public.checkout.emptyCartMessage')}</p>
         <Link href="/acquista">
           <HapticButton 
             className="h-14 px-8 text-base"
             hapticType="medium"
             data-testid="button-browse"
           >
-            Sfoglia Eventi
+            {t('public.checkout.browseEvents')}
           </HapticButton>
         </Link>
       </motion.div>
@@ -625,7 +629,7 @@ function CheckoutContent() {
           <div className="px-4 py-3 border-b border-border bg-muted/30">
             <h2 className="font-semibold text-foreground flex items-center gap-2">
               <Ticket className="w-5 h-5 text-primary" />
-              Riepilogo Ordine
+              {t('public.checkout.orderSummary')}
             </h2>
           </div>
           <div className="p-4 space-y-3">
@@ -661,19 +665,19 @@ function CheckoutContent() {
             
             <div className="pt-2 space-y-2">
               <div className="flex justify-between items-center text-muted-foreground">
-                <span>Subtotale</span>
+                <span>{t('public.checkout.subtotal')}</span>
                 <span>€{(createPaymentIntent.data?.subtotal ?? cart.total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground">
-                <span>Commissioni</span>
+                <span>{t('public.checkout.commissions')}</span>
                 {createPaymentIntent.data?.feePayer === 'customer' && (createPaymentIntent.data?.commissionAmount ?? 0) > 0 ? (
                   <span className="text-foreground">€{(createPaymentIntent.data.commissionAmount ?? 0).toFixed(2)}</span>
                 ) : (
-                  <span className="text-teal-400">Gratuite</span>
+                  <span className="text-teal-400">{t('public.checkout.freeCommissions')}</span>
                 )}
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-border">
-                <span className="text-lg font-semibold text-foreground">Totale</span>
+                <span className="text-lg font-semibold text-foreground">{t('public.checkout.total')}</span>
                 <span className="text-2xl font-bold text-primary" data-testid="text-total">
                   €{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}
                 </span>
@@ -686,25 +690,25 @@ function CheckoutContent() {
           <div className="px-4 py-3 border-b border-border bg-muted/30">
             <h2 className="font-semibold text-foreground flex items-center gap-2">
               <User className="w-5 h-5 text-teal-400" />
-              Dati Acquirente
+              {t('public.checkout.buyerData')}
             </h2>
           </div>
           <div className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-muted-foreground text-xs">Nome</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.firstName')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-firstname">{customer.firstName}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-xs">Cognome</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.lastName')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-lastname">{customer.lastName}</p>
               </div>
               <div className="col-span-2">
-                <Label className="text-muted-foreground text-xs">Email</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.email')}</Label>
                 <p className="text-foreground font-medium truncate" data-testid="text-email">{customer.email}</p>
               </div>
               <div className="col-span-2">
-                <Label className="text-muted-foreground text-xs">Telefono</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.phone')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-phone">{customer.phone}</p>
               </div>
             </div>
@@ -716,7 +720,7 @@ function CheckoutContent() {
             <div className="px-4 py-3 border-b border-border bg-muted/30">
               <h2 className="font-semibold text-foreground flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-primary" />
-                Verifica di Sicurezza
+                {t('public.checkout.securityVerification')}
                 {captchaValidated && <Check className="w-4 h-4 text-teal-400 ml-auto" />}
               </h2>
             </div>
@@ -741,14 +745,14 @@ function CheckoutContent() {
               {!captchaValidated ? (
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <Label>Inserisci il codice mostrato nell'immagine</Label>
+                    <Label>{t('public.checkout.enterCaptcha')}</Label>
                     <Input
                       value={captchaInput}
                       onChange={(e) => {
                         setCaptchaInput(e.target.value.toUpperCase());
                         setCaptchaError(null);
                       }}
-                      placeholder="Codice CAPTCHA"
+                      placeholder={t('public.checkout.captchaPlaceholder')}
                       className="uppercase tracking-widest font-mono"
                       maxLength={8}
                       disabled={validateCaptchaMutation.isPending}
@@ -768,12 +772,12 @@ function CheckoutContent() {
                     {validateCaptchaMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verifica in corso...
+                        {t('public.checkout.verifying')}
                       </>
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4 mr-2" />
-                        Verifica Codice
+                        {t('public.checkout.verifyCode')}
                       </>
                     )}
                   </HapticButton>
@@ -781,7 +785,7 @@ function CheckoutContent() {
               ) : (
                 <div className="flex items-center gap-2 text-teal-400 py-2">
                   <Check className="w-5 h-5" />
-                  <span className="font-medium">Verifica completata</span>
+                  <span className="font-medium">{t('public.checkout.verificationComplete')}</span>
                 </div>
               )}
             </div>
@@ -792,7 +796,7 @@ function CheckoutContent() {
           <div className="px-4 py-3 border-b border-border bg-muted/30">
             <h2 className="font-semibold text-foreground flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-teal-400" />
-              Metodo di Pagamento
+              {t('public.checkout.paymentMethod')}
             </h2>
           </div>
           <div className="p-4">
@@ -903,7 +907,7 @@ function CheckoutContent() {
         <div className="p-4 space-y-3">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-xs text-muted-foreground">Totale da pagare</p>
+              <p className="text-xs text-muted-foreground">{t('public.checkout.total')}</p>
               <p className="text-2xl font-bold text-primary">€{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}</p>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -1077,14 +1081,14 @@ function DesktopCheckoutContent() {
         navigate("/login?redirect=/checkout");
       } else if (errorCode === "SEAL_BRIDGE_OFFLINE" || errorCode === "SEAL_CARD_NOT_READY") {
         toast({
-          title: "Sistema non disponibile",
-          description: error.message || "Il sistema di emissione biglietti è temporaneamente non disponibile. Riprova tra qualche minuto.",
+          title: t('public.checkout.systemUnavailable'),
+          description: error.message || t('public.checkout.ticketSystemUnavailable'),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Errore",
-          description: error.message || "Impossibile avviare il pagamento.",
+          title: t('public.checkout.error'),
+          description: error.message || t('public.checkout.paymentError'),
           variant: "destructive",
         });
       }
@@ -1121,7 +1125,7 @@ function DesktopCheckoutContent() {
       });
 
       if (error) {
-        setPaymentError(error.message || "Pagamento fallito. Riprova.");
+        setPaymentError(error.message || t('public.checkout.paymentFailed'));
         setIsProcessing(false);
         return;
       }
@@ -1136,8 +1140,8 @@ function DesktopCheckoutContent() {
           const result = await response.json();
 
           toast({
-            title: "Pagamento completato!",
-            description: "I tuoi biglietti sono stati generati.",
+            title: t('public.checkout.paymentComplete'),
+            description: t('public.checkout.ticketsGenerated'),
           });
 
           navigate(`/checkout/success?transaction=${result.transactionCode}`);
@@ -1148,29 +1152,29 @@ function DesktopCheckoutContent() {
           if (errorData.refunded || errorCode.includes("REFUNDED")) {
             setPaymentError(confirmError.message);
             toast({
-              title: "Rimborso elaborato",
-              description: "L'importo ti sarà restituito entro 5-10 giorni lavorativi.",
+              title: t('public.checkout.refundProcessed'),
+              description: t('public.checkout.refundMessage'),
             });
           } else if (errorCode === "SEAL_ERROR_REFUND_FAILED" || errorCode === "CRITICAL_ERROR_REFUND_FAILED") {
             setPaymentError(confirmError.message);
             toast({
-              title: "Ti ricontatteremo",
-              description: "Il nostro team verificherà lo stato del tuo ordine.",
+              title: t('public.checkout.willContactYou'),
+              description: t('public.checkout.orderVerification'),
               variant: "destructive",
             });
           } else if (errorCode.includes("SEAL_BRIDGE") || errorCode.includes("SEAL_CARD")) {
             setPaymentError(
-              confirmError.message || "Il sistema di emissione biglietti è temporaneamente non disponibile."
+              confirmError.message || t('public.checkout.ticketSystemUnavailable')
             );
           } else {
-            setPaymentError(confirmError.message || "Si è verificato un problema. Riprova.");
+            setPaymentError(confirmError.message || t('public.checkout.problemOccurred'));
           }
           setIsProcessing(false);
           return;
         }
       }
     } catch (error: any) {
-      setPaymentError(error.message || "Errore durante il pagamento.");
+      setPaymentError(error.message || t('public.checkout.paymentErrorGeneric'));
       setIsProcessing(false);
     }
   };
@@ -1197,13 +1201,13 @@ function DesktopCheckoutContent() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <User className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Accesso Richiesto</h3>
+            <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.checkout.loginRequired')}</h3>
             <p className="text-muted-foreground mb-6">
-              Per completare l'acquisto devi accedere al tuo account o registrarti.
+              {t('public.checkout.loginMessage')}
             </p>
             <Link href="/login?redirect=/checkout">
               <Button data-testid="button-login-desktop">
-                Accedi o Registrati
+                {t('public.checkout.loginButton')}
               </Button>
             </Link>
           </div>
@@ -1220,11 +1224,11 @@ function DesktopCheckoutContent() {
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Ticket className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Carrello Vuoto</h3>
-            <p className="text-muted-foreground mb-6">Aggiungi biglietti al carrello per procedere.</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">{t('public.checkout.emptyCart')}</h3>
+            <p className="text-muted-foreground mb-6">{t('public.checkout.emptyCartMessage')}</p>
             <Link href="/acquista">
               <Button data-testid="button-browse-desktop">
-                Sfoglia Eventi
+                {t('public.checkout.browseEvents')}
               </Button>
             </Link>
           </div>
@@ -1270,7 +1274,7 @@ function DesktopCheckoutContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Ticket className="w-5 h-5 text-primary" />
-                Riepilogo Ordine
+                {t('public.checkout.orderSummary')}
               </CardTitle>
             </CardHeader>
           <CardContent>
@@ -1315,25 +1319,25 @@ function DesktopCheckoutContent() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-teal-400" />
-              Dati Acquirente
+              {t('public.checkout.buyerData')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-muted-foreground text-xs">Nome</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.firstName')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-firstname-desktop">{customer.firstName}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-xs">Cognome</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.lastName')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-lastname-desktop">{customer.lastName}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-xs">Email</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.email')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-email-desktop">{customer.email}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-xs">Telefono</Label>
+                <Label className="text-muted-foreground text-xs">{t('public.checkout.phone')}</Label>
                 <p className="text-foreground font-medium" data-testid="text-phone-desktop">{customer.phone}</p>
               </div>
             </div>
@@ -1345,7 +1349,7 @@ function DesktopCheckoutContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-primary" />
-                Verifica di Sicurezza
+                {t('public.checkout.securityVerification')}
                 {captchaValidated && <Check className="w-4 h-4 text-teal-400 ml-auto" />}
               </CardTitle>
             </CardHeader>
@@ -1369,14 +1373,14 @@ function DesktopCheckoutContent() {
               {!captchaValidated ? (
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <Label>Inserisci il codice mostrato nell'immagine</Label>
+                    <Label>{t('public.checkout.enterCaptcha')}</Label>
                     <Input
                       value={captchaInput}
                       onChange={(e) => {
                         setCaptchaInput(e.target.value.toUpperCase());
                         setCaptchaError(null);
                       }}
-                      placeholder="Codice CAPTCHA"
+                      placeholder={t('public.checkout.captchaPlaceholder')}
                       className="uppercase tracking-widest font-mono"
                       maxLength={8}
                       disabled={validateCaptchaMutation.isPending}
@@ -1395,12 +1399,12 @@ function DesktopCheckoutContent() {
                     {validateCaptchaMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verifica in corso...
+                        {t('public.checkout.verifying')}
                       </>
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4 mr-2" />
-                        Verifica Codice
+                        {t('public.checkout.verifyCode')}
                       </>
                     )}
                   </Button>
@@ -1408,7 +1412,7 @@ function DesktopCheckoutContent() {
               ) : (
                 <div className="flex items-center gap-2 text-teal-400 py-2">
                   <Check className="w-5 h-5" />
-                  <span className="font-medium">Verifica completata</span>
+                  <span className="font-medium">{t('public.checkout.verificationComplete')}</span>
                 </div>
               )}
             </CardContent>
@@ -1419,7 +1423,7 @@ function DesktopCheckoutContent() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-teal-400" />
-              Metodo di Pagamento
+              {t('public.checkout.paymentMethod')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1514,16 +1518,16 @@ function DesktopCheckoutContent() {
                 <span>€{(createPaymentIntent.data?.subtotal ?? cart.total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground">
-                <span>Commissioni</span>
+                <span>{t('public.checkout.commissions')}</span>
                 {createPaymentIntent.data?.feePayer === 'customer' && (createPaymentIntent.data?.commissionAmount ?? 0) > 0 ? (
                   <span className="text-foreground">€{(createPaymentIntent.data.commissionAmount ?? 0).toFixed(2)}</span>
                 ) : (
-                  <span className="text-teal-400">Gratuite</span>
+                  <span className="text-teal-400">{t('public.checkout.freeCommissions')}</span>
                 )}
               </div>
               <div className="h-px bg-border my-3" />
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-foreground">Totale</span>
+                <span className="text-lg font-semibold text-foreground">{t('public.checkout.total')}</span>
                 <span className="text-2xl font-bold text-primary" data-testid="text-total-desktop">
                   €{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}
                 </span>

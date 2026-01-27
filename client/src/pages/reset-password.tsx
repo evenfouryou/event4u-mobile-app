@@ -11,9 +11,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { triggerHaptic, HapticButton } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTranslation } from "react-i18next";
 
 export default function ResetPassword() {
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const token = new URLSearchParams(search).get("token") || "";
@@ -32,7 +34,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
-        setError("Link non valido. Manca il token di reset.");
+        setError(t('auth.invalidLinkMissingToken'));
         setIsVerifying(false);
         return;
       }
@@ -45,17 +47,17 @@ export default function ResetPassword() {
           setIsValidToken(true);
           setUserEmail(data.email || "");
         } else {
-          setError(data.message || "Link non valido o scaduto.");
+          setError(data.message || t('auth.invalidOrExpiredLink'));
         }
       } catch (err) {
-        setError("Errore durante la verifica del link.");
+        setError(t('auth.linkVerificationError'));
       } finally {
         setIsVerifying(false);
       }
     };
 
     verifyToken();
-  }, [token]);
+  }, [token, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +65,13 @@ export default function ResetPassword() {
     triggerHaptic('medium');
 
     if (password !== confirmPassword) {
-      setError("Le password non coincidono");
+      setError(t('auth.validation.passwordsDoNotMatch'));
       triggerHaptic('error');
       return;
     }
 
     if (password.length < 8) {
-      setError("La password deve essere di almeno 8 caratteri");
+      setError(t('auth.validation.passwordMinLength'));
       triggerHaptic('error');
       return;
     }
@@ -81,14 +83,14 @@ export default function ResetPassword() {
         token, 
         password 
       });
-      setSuccess(response.message || "Password reimpostata con successo!");
+      setSuccess(response.message || t('auth.passwordResetSuccess'));
       triggerHaptic('success');
       
       setTimeout(() => {
         setLocation("/login");
       }, 2000);
     } catch (err: any) {
-      setError(err.message || "Si è verificato un errore. Riprova più tardi.");
+      setError(err.message || t('auth.genericError'));
       triggerHaptic('error');
     } finally {
       setIsLoading(false);
@@ -116,7 +118,7 @@ export default function ResetPassword() {
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
-            <p className="text-muted-foreground text-lg">Verifica del link in corso...</p>
+            <p className="text-muted-foreground text-lg">{t('auth.verifyingLink')}</p>
           </motion.div>
         </div>
       </div>
@@ -138,11 +140,11 @@ export default function ResetPassword() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Lock className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Reimposta Password</CardTitle>
+              <CardTitle className="text-2xl">{t('auth.resetPasswordTitle')}</CardTitle>
               <CardDescription>
                 {isValidToken 
-                  ? `Inserisci una nuova password per ${userEmail}`
-                  : "Impossibile reimpostare la password"
+                  ? t('auth.enterNewPasswordFor', { email: userEmail })
+                  : t('auth.unableToResetPassword')
                 }
               </CardDescription>
             </CardHeader>
@@ -167,7 +169,7 @@ export default function ResetPassword() {
                         className="w-full"
                         data-testid="button-request-new"
                       >
-                        Richiedi nuovo link
+                        {t('auth.requestNewLink')}
                       </Button>
                     </Link>
                   </motion.div>
@@ -203,7 +205,7 @@ export default function ResetPassword() {
                           <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
                           <div className="text-green-600 dark:text-green-400 text-sm">
                             <p>{success}</p>
-                            <p className="text-xs mt-1">Reindirizzamento al login...</p>
+                            <p className="text-xs mt-1">{t('auth.redirectingToLogin')}</p>
                           </div>
                         </motion.div>
                       )}
@@ -211,12 +213,12 @@ export default function ResetPassword() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="password-desktop">Nuova Password</Label>
+                        <Label htmlFor="password-desktop">{t('auth.newPassword')}</Label>
                         <div className="relative">
                           <Input
                             id="password-desktop"
                             type={showPassword ? "text" : "password"}
-                            placeholder="Minimo 8 caratteri"
+                            placeholder={t('auth.newPasswordPlaceholder')}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
@@ -240,12 +242,12 @@ export default function ResetPassword() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="confirmPassword-desktop">Conferma Password</Label>
+                        <Label htmlFor="confirmPassword-desktop">{t('auth.confirmPassword')}</Label>
                         <div className="relative">
                           <Input
                             id="confirmPassword-desktop"
                             type={showConfirmPassword ? "text" : "password"}
-                            placeholder="Ripeti la password"
+                            placeholder={t('auth.confirmPasswordPlaceholder')}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
@@ -277,10 +279,10 @@ export default function ResetPassword() {
                         {isLoading ? (
                           <span className="flex items-center justify-center gap-2">
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Salvataggio...</span>
+                            <span>{t('auth.saving')}</span>
                           </span>
                         ) : (
-                          <span>Reimposta Password</span>
+                          <span>{t('auth.resetPassword')}</span>
                         )}
                       </Button>
                     </form>
@@ -295,7 +297,7 @@ export default function ResetPassword() {
                   data-testid="link-login"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  <span>Torna al login</span>
+                  <span>{t('auth.backToLogin')}</span>
                 </Link>
               </div>
             </CardContent>
@@ -345,12 +347,12 @@ export default function ResetPassword() {
                 <Lock className="h-8 w-8 text-primary" />
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-2">
-                Reimposta Password
+                {t('auth.resetPasswordTitle')}
               </h1>
               <p className="text-muted-foreground">
                 {isValidToken 
-                  ? `Inserisci una nuova password per ${userEmail}`
-                  : "Impossibile reimpostare la password"
+                  ? t('auth.enterNewPasswordFor', { email: userEmail })
+                  : t('auth.unableToResetPassword')
                 }
               </p>
             </div>
@@ -376,7 +378,7 @@ export default function ResetPassword() {
                       hapticType="light"
                       data-testid="button-request-new"
                     >
-                      Richiedi nuovo link
+                      {t('auth.requestNewLink')}
                     </HapticButton>
                   </Link>
                 </motion.div>
@@ -414,7 +416,7 @@ export default function ResetPassword() {
                           <AlertDescription className="text-green-700 dark:text-green-300 text-base">
                             {success}
                             <br />
-                            <span className="text-sm">Reindirizzamento al login...</span>
+                            <span className="text-sm">{t('auth.redirectingToLogin')}</span>
                           </AlertDescription>
                         </Alert>
                       </motion.div>
@@ -423,13 +425,13 @@ export default function ResetPassword() {
 
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-base font-medium">
-                      Nuova Password
+                      {t('auth.newPassword')}
                     </Label>
                     <div className="relative">
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Minimo 8 caratteri"
+                        placeholder={t('auth.newPasswordPlaceholder')}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -458,13 +460,13 @@ export default function ResetPassword() {
 
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword" className="text-base font-medium">
-                      Conferma Password
+                      {t('auth.confirmPassword')}
                     </Label>
                     <div className="relative">
                       <Input
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Ripeti la password"
+                        placeholder={t('auth.confirmPasswordPlaceholder')}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
@@ -505,9 +507,9 @@ export default function ResetPassword() {
                       {isLoading ? (
                         <>
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Salvataggio...
+                          {t('auth.saving')}
                         </>
-                      ) : "Reimposta Password"}
+                      ) : t('auth.resetPassword')}
                     </HapticButton>
                   </motion.div>
 
@@ -518,7 +520,7 @@ export default function ResetPassword() {
                       data-testid="link-login"
                       onClick={() => triggerHaptic('light')}
                     >
-                      Torna al Login
+                      {t('auth.backToLogin')}
                     </Link>
                   </div>
                 </motion.form>

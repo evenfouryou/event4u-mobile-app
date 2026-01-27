@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ interface WalletInfo {
 }
 
 export default function PrDashboard() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { prProfile, isLoading: isLoadingProfile } = usePrAuth();
   const [animatedStats, setAnimatedStats] = useState<PrStats>({
@@ -123,7 +125,7 @@ export default function PrDashboard() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("it-IT", {
+    return date.toLocaleDateString("en-US", {
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -132,7 +134,7 @@ export default function PrDashboard() {
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString("it-IT", {
+    return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -144,11 +146,11 @@ export default function PrDashboard() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (diffHours < 0) return "In corso";
+    if (diffHours < 0) return t('pr.ongoing');
     if (diffHours === 0) return `${diffMins} min`;
     if (diffHours < 24) return `${diffHours}h ${diffMins}m`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} giorni`;
+    return t('pr.daysFormat', { days: diffDays });
   };
 
   const getInitials = () => {
@@ -192,7 +194,7 @@ export default function PrDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-muted-foreground text-sm"
                 >
-                  Bentornato,
+                  {t('pr.welcomeBack')}
                 </motion.p>
                 <motion.h1
                   initial={{ opacity: 0, y: -10 }}
@@ -246,7 +248,7 @@ export default function PrDashboard() {
               
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-white/80 text-sm font-medium">Il tuo saldo</span>
+                  <span className="text-white/80 text-sm font-medium">{t('pr.yourBalance')}</span>
                   <Wallet className="h-5 w-5 text-white/60" />
                 </div>
                 <div className="flex items-baseline gap-2 mb-1">
@@ -256,7 +258,7 @@ export default function PrDashboard() {
                 </div>
                 {wallet?.pendingPayout && parseFloat(wallet.pendingPayout) > 0 && (
                   <p className="text-white/70 text-sm">
-                    €{parseFloat(wallet.pendingPayout).toFixed(2)} in attesa di pagamento
+                    €{parseFloat(wallet.pendingPayout).toFixed(2)} {t('pr.pendingPayment')}
                   </p>
                 )}
               </div>
@@ -281,7 +283,7 @@ export default function PrDashboard() {
                   <p className="text-2xl font-bold text-foreground">
                     {isLoadingStats ? <Skeleton className="h-7 w-12" /> : animatedStats.totalGuests}
                   </p>
-                  <p className="text-xs text-muted-foreground">Ospiti</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.guestsLabel')}</p>
                 </div>
               </div>
             </CardContent>
@@ -297,7 +299,7 @@ export default function PrDashboard() {
                   <p className="text-2xl font-bold text-foreground">
                     {isLoadingStats ? <Skeleton className="h-7 w-12" /> : animatedStats.ticketsSold}
                   </p>
-                  <p className="text-xs text-muted-foreground">Biglietti</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.ticketsLabel')}</p>
                 </div>
               </div>
             </CardContent>
@@ -313,7 +315,7 @@ export default function PrDashboard() {
                   <p className="text-2xl font-bold text-foreground">
                     {isLoadingStats ? <Skeleton className="h-7 w-16" /> : `€${animatedStats.commissionEarned}`}
                   </p>
-                  <p className="text-xs text-muted-foreground">Guadagnato</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.earnedLabel')}</p>
                 </div>
               </div>
             </CardContent>
@@ -329,7 +331,7 @@ export default function PrDashboard() {
                   <p className="text-2xl font-bold text-foreground">
                     {isLoadingStats ? <Skeleton className="h-7 w-8" /> : animatedStats.activeEvents}
                   </p>
-                  <p className="text-xs text-muted-foreground">Eventi</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.eventsLabel')}</p>
                 </div>
               </div>
             </CardContent>
@@ -365,7 +367,7 @@ export default function PrDashboard() {
                   {todayEvent ? (
                     <Badge className="bg-primary text-primary-foreground shadow-lg animate-pulse">
                       <Sparkles className="h-3 w-3 mr-1" />
-                      OGGI
+                      {t('pr.todayLabel')}
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
@@ -413,7 +415,7 @@ export default function PrDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <h2 className="text-lg font-semibold text-foreground mb-3">Azioni rapide</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">{t('pr.quickActions')}</h2>
           <div className="grid grid-cols-2 gap-3">
             <Card 
               className="cursor-pointer hover-elevate"
@@ -425,8 +427,8 @@ export default function PrDashboard() {
                   <Calendar className="h-6 w-6 text-violet-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">I miei eventi</p>
-                  <p className="text-xs text-muted-foreground">Gestisci liste e tavoli</p>
+                  <p className="font-medium text-foreground">{t('pr.myEventsAction')}</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.manageListsAndTables')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -441,8 +443,8 @@ export default function PrDashboard() {
                   <Wallet className="h-6 w-6 text-emerald-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Wallet</p>
-                  <p className="text-xs text-muted-foreground">Saldo e transazioni</p>
+                  <p className="font-medium text-foreground">{t('pr.wallet')}</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.balanceAndTransactions')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -457,8 +459,8 @@ export default function PrDashboard() {
                   <Users className="h-6 w-6 text-blue-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Profilo</p>
-                  <p className="text-xs text-muted-foreground">Impostazioni account</p>
+                  <p className="font-medium text-foreground">{t('pr.profile')}</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.accountSettings')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -473,8 +475,8 @@ export default function PrDashboard() {
                   <Trophy className="h-6 w-6 text-amber-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Premi</p>
-                  <p className="text-xs text-muted-foreground">Obiettivi e bonus</p>
+                  <p className="font-medium text-foreground">{t('pr.rewards')}</p>
+                  <p className="text-xs text-muted-foreground">{t('pr.goalsAndBonuses')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -489,14 +491,14 @@ export default function PrDashboard() {
             transition={{ delay: 0.5 }}
           >
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">I tuoi eventi</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t('pr.yourEvents')}</h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/pr/events")}
                 data-testid="button-see-all-events"
               >
-                Vedi tutti
+                {t('pr.viewAllEvents')}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -537,12 +539,12 @@ export default function PrDashboard() {
                             </h4>
                             {isToday && (
                               <Badge className="bg-primary/10 text-primary text-xs">
-                                Oggi
+                                {t('pr.todayBadge')}
                               </Badge>
                             )}
                             {isPast && !isToday && (
                               <Badge variant="secondary" className="text-xs">
-                                Passato
+                                {t('pr.pastBadge')}
                               </Badge>
                             )}
                           </div>
@@ -571,7 +573,7 @@ export default function PrDashboard() {
               <CardContent className="py-12 text-center">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Nessun evento assegnato
+                  {t('pr.noEventsAssignedPR')}
                 </h3>
                 <p className="text-muted-foreground text-sm max-w-sm mx-auto">
                   Al momento non hai eventi assegnati. Contatta il tuo organizzatore per essere aggiunto agli eventi.

@@ -149,7 +149,7 @@ function RecentEventCard({
   delay?: number;
 }) {
   const eventDate = new Date(event.startDatetime);
-  const formattedDate = eventDate.toLocaleDateString('it-IT', {
+  const formattedDate = eventDate.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
   });
@@ -710,7 +710,7 @@ export default function Home() {
                   <Clock className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '--'}</p>
+                  <p className="text-2xl font-bold">{recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : '--'}</p>
                   <p className="text-sm text-muted-foreground">{t('dashboard.nextEvent')}</p>
                 </div>
               </div>
@@ -793,7 +793,7 @@ export default function Home() {
                           <div>
                             <p className="font-semibold text-lg line-clamp-1">{event.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {eventDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              {eventDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
                             </p>
                           </div>
                         </CardContent>
@@ -849,7 +849,7 @@ export default function Home() {
                           <div>
                             <p className="font-semibold text-lg line-clamp-1">{event.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {eventDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              {eventDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
                             </p>
                           </div>
                         </CardContent>
@@ -919,7 +919,7 @@ export default function Home() {
           <MobileStatsCard 
             icon={Clock} 
             label={t('dashboard.nextEvent')} 
-            value={recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '--'}
+            value={recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : '--'}
             gradient="from-rose-500 to-pink-600"
             delay={0.25}
           />

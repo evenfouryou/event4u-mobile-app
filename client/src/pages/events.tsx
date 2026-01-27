@@ -185,18 +185,18 @@ function EventCard({
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-lg">
-                {new Date(event.startDatetime).toLocaleDateString('it-IT', {
+                {new Date(event.startDatetime).toLocaleDateString('en-US', {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
                 })}
               </p>
               <p className="text-muted-foreground text-base">
-                {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                {new Date(event.startDatetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 {event.endDatetime && (
                   <>
                     {' - '}
-                    {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(event.endDatetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </>
                 )}
               </p>
@@ -623,18 +623,18 @@ export default function Events() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {new Date(event.startDatetime).toLocaleDateString('it-IT', {
+                          {new Date(event.startDatetime).toLocaleDateString('en-US', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric'
                           })}
                         </TableCell>
                         <TableCell>
-                          {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(event.startDatetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           {event.endDatetime && (
                             <>
                               {' - '}
-                              {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(event.endDatetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                             </>
                           )}
                         </TableCell>

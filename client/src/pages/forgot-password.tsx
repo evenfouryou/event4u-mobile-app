@@ -14,11 +14,13 @@ import {
   triggerHaptic 
 } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTranslation } from "react-i18next";
 
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 export default function ForgotPassword() {
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,11 +35,11 @@ export default function ForgotPassword() {
 
     try {
       const response: any = await apiRequest('POST', '/api/forgot-password', { email });
-      setSuccess(response.message || "Se l'email è registrata, riceverai un link per reimpostare la password.");
+      setSuccess(response.message || t('auth.resetLinkSent'));
       setEmail("");
       triggerHaptic('success');
     } catch (err: any) {
-      setError(err.message || "Si è verificato un errore. Riprova più tardi.");
+      setError(err.message || t('auth.genericError'));
       triggerHaptic('error');
     } finally {
       setIsLoading(false);
@@ -56,9 +58,9 @@ export default function ForgotPassword() {
 
           <Card>
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Password dimenticata</CardTitle>
+              <CardTitle className="text-2xl">{t('auth.forgotPasswordTitle')}</CardTitle>
               <CardDescription>
-                Inserisci la tua email per ricevere il link di reset
+                {t('auth.forgotPasswordDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -92,13 +94,13 @@ export default function ForgotPassword() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email-desktop">Email</Label>
+                  <Label htmlFor="email-desktop">{t('auth.email')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                     <Input
                       id="email-desktop"
                       type="email"
-                      placeholder="tuaemail@esempio.com"
+                      placeholder={t('auth.enterEmail')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -118,10 +120,10 @@ export default function ForgotPassword() {
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Invio in corso...</span>
+                      <span>{t('auth.sending')}</span>
                     </span>
                   ) : (
-                    <span>Invia link</span>
+                    <span>{t('auth.sendLink')}</span>
                   )}
                 </Button>
               </form>
@@ -133,7 +135,7 @@ export default function ForgotPassword() {
                   data-testid="link-login"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  <span>Torna al login</span>
+                  <span>{t('auth.backToLogin')}</span>
                 </Link>
               </div>
             </CardContent>
@@ -176,10 +178,10 @@ export default function ForgotPassword() {
           className="w-full text-center mb-10"
         >
           <h1 className="text-3xl font-bold text-foreground mb-3">
-            Password dimenticata
+            {t('auth.forgotPasswordTitle')}
           </h1>
           <p className="text-muted-foreground text-lg px-4">
-            Inserisci la tua email per ricevere il link di reset
+            {t('auth.forgotPasswordDescription')}
           </p>
         </motion.div>
 
@@ -222,14 +224,14 @@ export default function ForgotPassword() {
         >
           <div className="space-y-4">
             <Label htmlFor="email" className="text-lg font-medium">
-              Email
+              {t('auth.email')}
             </Label>
             <div className="relative">
               <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground pointer-events-none" />
               <Input
                 id="email"
                 type="email"
-                placeholder="tuaemail@esempio.com"
+                placeholder={t('auth.enterEmail')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -254,10 +256,10 @@ export default function ForgotPassword() {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin" />
-                  <span>Invio in corso...</span>
+                  <span>{t('auth.sending')}</span>
                 </span>
               ) : (
-                <span>Invia link</span>
+                <span>{t('auth.sendLink')}</span>
               )}
             </HapticButton>
           </motion.div>
@@ -276,7 +278,7 @@ export default function ForgotPassword() {
             data-testid="link-login-mobile"
           >
             <ArrowLeft className="h-6 w-6" />
-            <span className="text-lg font-medium">Torna al login</span>
+            <span className="text-lg font-medium">{t('auth.backToLogin')}</span>
           </Link>
         </motion.div>
       </motion.div>

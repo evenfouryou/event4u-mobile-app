@@ -6,12 +6,14 @@ import { triggerHaptic } from "@/components/mobile-primitives";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslation } from "react-i18next";
 
 const springConfig = { stiffness: 400, damping: 30 };
 
 export default function VerifyEmail() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already-verified'>('loading');
   const [message, setMessage] = useState('');
 
@@ -22,7 +24,7 @@ export default function VerifyEmail() {
 
       if (!token) {
         setStatus('error');
-        setMessage('Token di verifica mancante. Controlla il link nella tua email.');
+        setMessage(t('auth.verifyEmail.missingToken'));
         triggerHaptic('error');
         return;
       }
@@ -34,27 +36,27 @@ export default function VerifyEmail() {
         if (response.ok) {
           if (data.alreadyVerified) {
             setStatus('already-verified');
-            setMessage(data.message || 'Email già verificata');
+            setMessage(data.message || t('auth.verifyEmail.alreadyVerifiedMessage'));
             triggerHaptic('success');
           } else {
             setStatus('success');
-            setMessage(data.message || 'Email verificata con successo!');
+            setMessage(data.message || t('auth.verifyEmail.successMessage'));
             triggerHaptic('success');
           }
         } else {
           setStatus('error');
-          setMessage(data.message || 'Verifica fallita. Il link potrebbe essere scaduto o non valido.');
+          setMessage(data.message || t('auth.verifyEmail.failedMessage'));
           triggerHaptic('error');
         }
       } catch (error) {
         setStatus('error');
-        setMessage('Errore durante la verifica. Riprova più tardi.');
+        setMessage(t('auth.verifyEmail.errorMessage'));
         triggerHaptic('error');
       }
     };
 
     verifyEmail();
-  }, []);
+  }, [t]);
 
   const handleButtonClick = (type: 'light' | 'medium' = 'medium') => {
     triggerHaptic(type);
@@ -85,13 +87,13 @@ export default function VerifyEmail() {
               </div>
             </div>
             <CardTitle data-testid="text-verification-title">
-              {status === 'loading' && 'Verifica in corso...'}
-              {status === 'success' && 'Email Verificata!'}
-              {status === 'already-verified' && 'Email già Verificata'}
-              {status === 'error' && 'Verifica Fallita'}
+              {status === 'loading' && t('auth.verifyEmail.verifying')}
+              {status === 'success' && t('auth.verifyEmail.success')}
+              {status === 'already-verified' && t('auth.verifyEmail.alreadyVerified')}
+              {status === 'error' && t('auth.verifyEmail.failed')}
             </CardTitle>
             <CardDescription data-testid="text-verification-message">
-              {message || (status === 'loading' && 'Stiamo verificando la tua email...')}
+              {message || (status === 'loading' && t('auth.verifyEmail.verifyingMessage'))}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -103,13 +105,13 @@ export default function VerifyEmail() {
                       <Mail className="h-5 w-5 text-primary" />
                     </div>
                     <p className="text-foreground text-sm flex-1">
-                      Ora puoi accedere alla piattaforma con le tue credenziali.
+                      {t('auth.verifyEmail.canNowLogin')}
                     </p>
                   </div>
                 </div>
                 <Button className="w-full" asChild data-testid="button-go-to-login">
                   <Link href="/login">
-                    Vai al Login
+                    {t('auth.goToLogin')}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -124,18 +126,18 @@ export default function VerifyEmail() {
                       <RefreshCw className="h-5 w-5 text-destructive" />
                     </div>
                     <p className="text-muted-foreground text-sm pt-2">
-                      Se il problema persiste, contatta il supporto o richiedi un nuovo link di verifica.
+                      {t('auth.verifyEmail.contactSupport')}
                     </p>
                   </div>
                 </div>
                 <Button className="w-full" variant="outline" asChild data-testid="button-back-to-register">
                   <Link href="/register">
-                    Torna alla Registrazione
+                    {t('auth.verifyEmail.backToRegister')}
                   </Link>
                 </Button>
                 <Button className="w-full" variant="ghost" asChild data-testid="button-go-to-login">
                   <Link href="/login">
-                    Vai al Login
+                    {t('auth.goToLogin')}
                   </Link>
                 </Button>
               </>
@@ -213,10 +215,10 @@ export default function VerifyEmail() {
               className="text-2xl font-bold text-foreground mb-3"
               data-testid="text-verification-title"
             >
-              {status === 'loading' && 'Verifica in corso...'}
-              {status === 'success' && 'Email Verificata!'}
-              {status === 'already-verified' && 'Email già Verificata'}
-              {status === 'error' && 'Verifica Fallita'}
+              {status === 'loading' && t('auth.verifyEmail.verifying')}
+              {status === 'success' && t('auth.verifyEmail.success')}
+              {status === 'already-verified' && t('auth.verifyEmail.alreadyVerified')}
+              {status === 'error' && t('auth.verifyEmail.failed')}
             </motion.h1>
 
             <motion.p
@@ -226,7 +228,7 @@ export default function VerifyEmail() {
               className="text-base text-muted-foreground mb-8 px-4"
               data-testid="text-verification-message"
             >
-              {message || (status === 'loading' && 'Stiamo verificando la tua email...')}
+              {message || (status === 'loading' && t('auth.verifyEmail.verifyingMessage'))}
             </motion.p>
 
             {(status === 'success' || status === 'already-verified') && (
@@ -247,7 +249,7 @@ export default function VerifyEmail() {
                       <Mail className="h-5 w-5 text-primary" />
                     </div>
                     <p className="text-foreground text-left flex-1">
-                      Ora puoi accedere alla piattaforma con le tue credenziali.
+                      {t('auth.verifyEmail.canNowLogin')}
                     </p>
                   </div>
                 </motion.div>
@@ -272,7 +274,7 @@ export default function VerifyEmail() {
                       <RefreshCw className="h-5 w-5 text-destructive" />
                     </div>
                     <p className="text-muted-foreground text-left text-sm pt-2">
-                      Se il problema persiste, contatta il supporto o richiedi un nuovo link di verifica.
+                      {t('auth.verifyEmail.contactSupport')}
                     </p>
                   </div>
                 </motion.div>
@@ -296,7 +298,7 @@ export default function VerifyEmail() {
             data-testid="button-go-to-login"
           >
             <Link href="/login">
-              Vai al Login
+              {t('auth.goToLogin')}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
@@ -312,7 +314,7 @@ export default function VerifyEmail() {
               data-testid="button-back-to-register"
             >
               <Link href="/register">
-                Torna alla Registrazione
+                {t('auth.verifyEmail.backToRegister')}
               </Link>
             </Button>
             <Button
@@ -323,7 +325,7 @@ export default function VerifyEmail() {
               data-testid="button-go-to-login"
             >
               <Link href="/login">
-                Vai al Login
+                {t('auth.goToLogin')}
               </Link>
             </Button>
           </>

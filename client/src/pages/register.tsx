@@ -46,30 +46,32 @@ import { BrandLogo } from "@/components/brand-logo";
 
 type AccountType = "cliente" | "gestore" | null;
 
-const gestoreRegisterSchema = z.object({
-  email: z.string().email("Email non valida"),
-  password: z.string().min(8, "La password deve contenere almeno 8 caratteri"),
+type TFunction = (key: string) => string;
+
+const createGestoreRegisterSchema = (t: TFunction) => z.object({
+  email: z.string().email(t('auth.validation.invalidEmail')),
+  password: z.string().min(8, t('auth.validation.passwordMinLength')),
   confirmPassword: z.string(),
-  firstName: z.string().min(1, "Nome richiesto"),
-  lastName: z.string().min(1, "Cognome richiesto"),
+  firstName: z.string().min(1, t('auth.validation.firstNameRequired')),
+  lastName: z.string().min(1, t('auth.validation.lastNameRequired')),
   operatingMode: z.enum(['italy_only', 'international_only', 'hybrid']).default('italy_only'),
   acceptTerms: z.boolean().refine(val => val === true, {
-    message: "Devi accettare i termini e condizioni"
+    message: t('auth.validation.acceptTermsRequired')
   }),
   acceptPrivacy: z.boolean().refine(val => val === true, {
-    message: "Devi accettare la privacy policy"
+    message: t('auth.validation.acceptPrivacyRequired')
   }),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Le password non corrispondono",
+  message: t('auth.validation.passwordsDoNotMatch'),
   path: ["confirmPassword"],
 });
 
-const clienteRegisterSchema = z.object({
-  firstName: z.string().min(1, "Nome obbligatorio"),
-  lastName: z.string().min(1, "Cognome obbligatorio"),
-  email: z.string().email("Email non valida"),
-  phone: z.string().min(10, "Numero di telefono non valido"),
-  password: z.string().min(8, "Password deve avere almeno 8 caratteri"),
+const createClienteRegisterSchema = (t: TFunction) => z.object({
+  firstName: z.string().min(1, t('auth.validation.firstNameRequired')),
+  lastName: z.string().min(1, t('auth.validation.lastNameRequired')),
+  email: z.string().email(t('auth.validation.invalidEmail')),
+  phone: z.string().min(10, t('auth.validation.invalidPhone')),
+  password: z.string().min(8, t('auth.validation.passwordMinLength')),
   birthDate: z.string().optional(),
   gender: z.enum(['M', 'F']).optional(),
   street: z.string().optional(),
@@ -77,15 +79,15 @@ const clienteRegisterSchema = z.object({
   province: z.string().max(2).optional(),
   postalCode: z.string().optional(),
   acceptTerms: z.boolean().refine(val => val === true, {
-    message: "Devi accettare i termini e condizioni"
+    message: t('auth.validation.acceptTermsRequired')
   }),
   acceptPrivacy: z.boolean().refine(val => val === true, {
-    message: "Devi accettare la privacy policy"
+    message: t('auth.validation.acceptPrivacyRequired')
   }),
 });
 
-type GestoreFormValues = z.infer<typeof gestoreRegisterSchema>;
-type ClienteFormValues = z.infer<typeof clienteRegisterSchema>;
+type GestoreFormValues = z.infer<ReturnType<typeof createGestoreRegisterSchema>>;
+type ClienteFormValues = z.infer<ReturnType<typeof createClienteRegisterSchema>>;
 
 const springTransition = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -110,6 +112,9 @@ export default function Register() {
   const { data: clienteRegEnabled, isLoading: checkingCliente } = useQuery<{ enabled: boolean }>({
     queryKey: ['/api/public/customer-registration-enabled'],
   });
+
+  const gestoreRegisterSchema = createGestoreRegisterSchema(t);
+  const clienteRegisterSchema = createClienteRegisterSchema(t);
 
   const gestoreForm = useForm<GestoreFormValues>({
     resolver: zodResolver(gestoreRegisterSchema),
@@ -765,7 +770,7 @@ export default function Register() {
                           <FormControl>
                             <div className="relative">
                               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input {...field} placeholder="Mario" className="pl-10" data-testid="input-firstname" />
+                              <Input {...field} placeholder={t('auth.placeholders.firstName')} className="pl-10" data-testid="input-firstname" />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -779,7 +784,7 @@ export default function Register() {
                         <FormItem>
                           <FormLabel>{t('auth.lastName')}</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Rossi" data-testid="input-lastname" />
+                            <Input {...field} placeholder={t('auth.placeholders.lastName')} data-testid="input-lastname" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -795,7 +800,7 @@ export default function Register() {
                         <FormControl>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input {...field} type="email" placeholder="mario@azienda.it" className="pl-10" data-testid="input-email" />
+                            <Input {...field} type="email" placeholder={t('auth.placeholders.email')} className="pl-10" data-testid="input-email" />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -1064,7 +1069,7 @@ export default function Register() {
                             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                             <Input
                               {...field}
-                              placeholder="Mario"
+                              placeholder={t('auth.placeholders.firstName')}
                               className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
                               data-testid="input-firstname"
                             />
@@ -1083,7 +1088,7 @@ export default function Register() {
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="Rossi"
+                            placeholder={t('auth.placeholders.lastName')}
                             className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
                             data-testid="input-lastname"
                           />
@@ -1111,7 +1116,7 @@ export default function Register() {
                             <Input
                               {...field}
                               type="email"
-                              placeholder="mario@azienda.it"
+                              placeholder={t('auth.placeholders.email')}
                               className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
                               data-testid="input-email"
                             />
@@ -1213,7 +1218,7 @@ export default function Register() {
                       <FormItem className="space-y-3">
                         <FormLabel className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
                           <Globe className="h-4 w-4 text-primary" />
-                          Modalità Operativa
+                          {t('auth.operatingMode')}
                         </FormLabel>
                         <FormControl>
                           <RadioGroup
@@ -1229,10 +1234,10 @@ export default function Register() {
                               <RadioGroupItem value="italy_only" id="italy_only_mobile" className="mt-0.5" data-testid="radio-italy-only-mobile" />
                               <div className="flex-1">
                                 <label htmlFor="italy_only_mobile" className="text-sm font-medium cursor-pointer flex items-center gap-2 text-foreground">
-                                  <span>🇮🇹</span> Solo Italia
+                                  <span>🇮🇹</span> {t('auth.operatingModes.italyOnly')}
                                 </label>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Eventi in Italia con integrazione SIAE
+                                  {t('auth.operatingModes.italyOnlyDesc')}
                                 </p>
                               </div>
                             </div>
@@ -1240,10 +1245,10 @@ export default function Register() {
                               <RadioGroupItem value="international_only" id="international_only_mobile" className="mt-0.5" data-testid="radio-international-only-mobile" />
                               <div className="flex-1">
                                 <label htmlFor="international_only_mobile" className="text-sm font-medium cursor-pointer flex items-center gap-2 text-foreground">
-                                  <span>🌍</span> Solo Estero
+                                  <span>🌍</span> {t('auth.operatingModes.internationalOnly')}
                                 </label>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Eventi internazionali, senza SIAE
+                                  {t('auth.operatingModes.internationalOnlyDesc')}
                                 </p>
                               </div>
                             </div>
@@ -1251,10 +1256,10 @@ export default function Register() {
                               <RadioGroupItem value="hybrid" id="hybrid_mobile" className="mt-0.5" data-testid="radio-hybrid-mobile" />
                               <div className="flex-1">
                                 <label htmlFor="hybrid_mobile" className="text-sm font-medium cursor-pointer flex items-center gap-2 text-foreground">
-                                  <span>🌐</span> Italia + Estero
+                                  <span>🌐</span> {t('auth.operatingModes.hybrid')}
                                 </label>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Scegli per ogni evento se applicare SIAE
+                                  {t('auth.operatingModes.hybridDesc')}
                                 </p>
                               </div>
                             </div>
@@ -1409,7 +1414,7 @@ export default function Register() {
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input {...field} placeholder="Mario" className="pl-10" data-testid="input-firstname" />
+                            <Input {...field} placeholder={t('auth.placeholders.firstName')} className="pl-10" data-testid="input-firstname" />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -1423,7 +1428,7 @@ export default function Register() {
                       <FormItem>
                         <FormLabel>{t('auth.lastName')}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Rossi" data-testid="input-lastname" />
+                          <Input {...field} placeholder={t('auth.placeholders.lastName')} data-testid="input-lastname" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1439,7 +1444,7 @@ export default function Register() {
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input {...field} type="email" placeholder="mario@esempio.it" className="pl-10" data-testid="input-email" />
+                          <Input {...field} type="email" placeholder={t('auth.placeholders.email')} className="pl-10" data-testid="input-email" />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -1455,7 +1460,7 @@ export default function Register() {
                       <FormControl>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input {...field} type="tel" placeholder="+39 333 1234567" className="pl-10" data-testid="input-phone" />
+                          <Input {...field} type="tel" placeholder={t('auth.placeholders.phone')} className="pl-10" data-testid="input-phone" />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -1497,7 +1502,7 @@ export default function Register() {
                     name="birthDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Data di nascita</FormLabel>
+                        <FormLabel>{t('auth.birthDate')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} data-testid="input-birth-date" />
                         </FormControl>
@@ -1510,16 +1515,16 @@ export default function Register() {
                     name="gender"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sesso</FormLabel>
+                        <FormLabel>{t('auth.gender.label')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-gender">
-                              <SelectValue placeholder="Seleziona" />
+                              <SelectValue placeholder={t('common.select')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="M">Maschio</SelectItem>
-                            <SelectItem value="F">Femmina</SelectItem>
+                            <SelectItem value="M">{t('auth.gender.male')}</SelectItem>
+                            <SelectItem value="F">{t('auth.gender.female')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -1532,11 +1537,11 @@ export default function Register() {
                   name="street"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Indirizzo</FormLabel>
+                      <FormLabel>{t('auth.street')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input placeholder="Via Roma, 1" {...field} className="pl-10" data-testid="input-street" />
+                          <Input placeholder={t('auth.placeholders.street')} {...field} className="pl-10" data-testid="input-street" />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -1549,9 +1554,9 @@ export default function Register() {
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Città</FormLabel>
+                        <FormLabel>{t('auth.city')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Milano" {...field} data-testid="input-city" />
+                          <Input placeholder={t('auth.placeholders.city')} {...field} data-testid="input-city" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1562,9 +1567,9 @@ export default function Register() {
                     name="postalCode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CAP</FormLabel>
+                        <FormLabel>{t('auth.postalCode')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="20100" maxLength={5} {...field} data-testid="input-postal-code" />
+                          <Input placeholder={t('auth.placeholders.postalCode')} maxLength={5} {...field} data-testid="input-postal-code" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1576,9 +1581,9 @@ export default function Register() {
                   name="province"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Provincia</FormLabel>
+                      <FormLabel>{t('auth.province')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="MI" maxLength={2} {...field} className="uppercase" data-testid="input-province" />
+                        <Input placeholder={t('auth.placeholders.province')} maxLength={2} {...field} className="uppercase" data-testid="input-province" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1752,7 +1757,7 @@ export default function Register() {
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Rossi"
+                          placeholder={t('auth.placeholders.lastName')}
                           className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
                           data-testid="input-lastname"
                         />
@@ -1780,7 +1785,7 @@ export default function Register() {
                           <Input
                             {...field}
                             type="email"
-                            placeholder="mario@esempio.it"
+                            placeholder={t('auth.placeholders.email')}
                             className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
                             data-testid="input-email"
                           />
@@ -1802,14 +1807,14 @@ export default function Register() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Telefono</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.phone')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <Input
                             {...field}
                             type="tel"
-                            placeholder="+39 333 1234567"
+                            placeholder={t('auth.placeholders.phone')}
                             className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
                             data-testid="input-phone"
                           />
@@ -1872,7 +1877,7 @@ export default function Register() {
                   name="birthDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Data di nascita</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.birthDate')}</FormLabel>
                       <FormControl>
                         <Input
                           type="date"
@@ -1890,16 +1895,16 @@ export default function Register() {
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Sesso</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.gender.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl" data-testid="select-gender">
-                            <SelectValue placeholder="Seleziona" />
+                            <SelectValue placeholder={t('common.select')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="M">Maschio</SelectItem>
-                          <SelectItem value="F">Femmina</SelectItem>
+                          <SelectItem value="M">{t('auth.gender.male')}</SelectItem>
+                          <SelectItem value="F">{t('auth.gender.female')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1918,13 +1923,13 @@ export default function Register() {
                   name="street"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Indirizzo</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.street')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <Input
                             {...field}
-                            placeholder="Via Roma, 1"
+                            placeholder={t('auth.placeholders.street')}
                             className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
                             data-testid="input-street"
                           />
@@ -1947,11 +1952,11 @@ export default function Register() {
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Città</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.city')}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Milano"
+                          placeholder={t('auth.placeholders.city')}
                           className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
                           data-testid="input-city"
                         />
@@ -1965,11 +1970,11 @@ export default function Register() {
                   name="postalCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">CAP</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.postalCode')}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="20100"
+                          placeholder={t('auth.placeholders.postalCode')}
                           maxLength={5}
                           className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
                           data-testid="input-postal-code"
@@ -1991,11 +1996,11 @@ export default function Register() {
                   name="province"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Provincia</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.province')}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="MI"
+                          placeholder={t('auth.placeholders.province')}
                           maxLength={2}
                           className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl uppercase"
                           data-testid="input-province"

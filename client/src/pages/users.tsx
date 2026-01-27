@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -92,11 +93,11 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { User, Company, UserFeatures } from "@shared/schema";
 
-const userFormSchema = z.object({
-  email: z.string().email("Email non valida"),
+const createUserFormSchema = (t: (key: string) => string) => z.object({
+  email: z.string().email(t('users.validation.invalidEmail')),
   password: z.string().optional(),
-  firstName: z.string().min(1, "Nome richiesto"),
-  lastName: z.string().min(1, "Cognome richiesto"),
+  firstName: z.string().min(1, t('users.validation.firstNameRequired')),
+  lastName: z.string().min(1, t('users.validation.lastNameRequired')),
   role: z.enum(['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'warehouse', 'bartender', 'cassiere']),
   companyId: z.string().optional().nullable(),
   phone: z.string().optional(),
@@ -110,26 +111,34 @@ const userFormSchema = z.object({
   }
   return true;
 }, {
-  message: "Password minimo 8 caratteri",
+  message: t('users.validation.passwordMinLength'),
   path: ["password"],
 });
 
-type UserFormData = z.infer<typeof userFormSchema>;
-
-const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
-  gestore: 'Gestore',
-  gestore_covisione: 'Gestore Covisione',
-  capo_staff: 'Capo Staff',
-  warehouse: 'Magazzino',
-  bartender: 'Bartender',
-  cassiere: 'Cassiere',
-  scanner: 'Scanner',
-  pr: 'PR', // Legacy - PRs are now managed in Gestione PR
+type UserFormData = {
+  email: string;
+  password?: string;
+  firstName: string;
+  lastName: string;
+  role: 'super_admin' | 'gestore' | 'gestore_covisione' | 'capo_staff' | 'warehouse' | 'bartender' | 'cassiere';
+  companyId?: string | null;
+  phone?: string;
+  isEditing?: boolean;
 };
 
-const getRoleLabel = (role: string): string => {
-  return roleLabels[role] || role;
+const getRoleLabelKey = (role: string): string => {
+  const roleKeys: Record<string, string> = {
+    super_admin: 'users.roles.super_admin',
+    gestore: 'users.roles.gestore',
+    gestore_covisione: 'users.roles.gestore_covisione',
+    capo_staff: 'users.roles.capo_staff',
+    warehouse: 'users.roles.warehouse',
+    bartender: 'users.roles.bartender',
+    cassiere: 'users.roles.cassiere',
+    scanner: 'pr.roles.scanner',
+    pr: 'users.roles.pr',
+  };
+  return roleKeys[role] || role;
 };
 
 const roleGradients: Record<string, string> = {
@@ -155,17 +164,17 @@ interface FeatureConfig {
   icon: React.ReactNode;
 }
 
-const featuresList: FeatureConfig[] = [
-  { key: 'beverageEnabled', label: 'Beverage', description: 'Gestione stock bevande e consumi', icon: <Wine className="h-4 w-4" /> },
-  { key: 'contabilitaEnabled', label: 'Contabilità', description: 'Costi fissi, extra e manutenzioni', icon: <Calculator className="h-4 w-4" /> },
-  { key: 'personaleEnabled', label: 'Personale', description: 'Anagrafica staff e pagamenti', icon: <PersonnelIcon className="h-4 w-4" /> },
-  { key: 'cassaEnabled', label: 'Cassa', description: 'Settori, postazioni e fondi cassa', icon: <Receipt className="h-4 w-4" /> },
-  { key: 'nightFileEnabled', label: 'File della Serata', description: 'Documento integrato per evento', icon: <FileText className="h-4 w-4" /> },
-  { key: 'siaeEnabled', label: 'SIAE Biglietteria', description: 'Gestione biglietti e lettore fiscale SIAE', icon: <Ticket className="h-4 w-4" /> },
+const getFeaturesConfig = (t: (key: string) => string): FeatureConfig[] => [
+  { key: 'beverageEnabled', label: t('users.features.beverageEnabled'), description: t('users.features.beverageDescription'), icon: <Wine className="h-4 w-4" /> },
+  { key: 'contabilitaEnabled', label: t('users.features.siaeEnabled'), description: t('users.features.siaeDescription'), icon: <Calculator className="h-4 w-4" /> },
+  { key: 'personaleEnabled', label: t('users.features.prEnabled'), description: t('users.features.prDescription'), icon: <PersonnelIcon className="h-4 w-4" /> },
+  { key: 'cassaEnabled', label: t('users.features.marketingEnabled'), description: t('users.features.marketingDescription'), icon: <Receipt className="h-4 w-4" /> },
+  { key: 'nightFileEnabled', label: t('users.features.loyaltyEnabled'), description: t('users.features.loyaltyDescription'), icon: <FileText className="h-4 w-4" /> },
+  { key: 'siaeEnabled', label: t('users.features.siaeEnabled'), description: t('users.features.siaeDescription'), icon: <Ticket className="h-4 w-4" /> },
 ];
 
-const warehouseFeaturesList: FeatureConfig[] = [
-  { key: 'canCreateProducts', label: 'Crea Prodotti', description: 'Permesso di creare nuovi prodotti', icon: <Plus className="h-4 w-4" /> },
+const getWarehouseFeaturesConfig = (t: (key: string) => string): FeatureConfig[] => [
+  { key: 'canCreateProducts', label: t('users.features.canReceiveGoods'), description: t('users.features.canReceiveGoodsDescription'), icon: <Plus className="h-4 w-4" /> },
 ];
 
 interface MobileUserCardProps {
@@ -334,6 +343,7 @@ function MobileUserCard({
 }
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -345,6 +355,12 @@ export default function UsersPage() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const isMobile = useIsMobile();
+  
+  const userFormSchema = useMemo(() => createUserFormSchema(t), [t]);
+  const featuresList = useMemo(() => getFeaturesConfig(t), [t]);
+  const warehouseFeaturesList = useMemo(() => getWarehouseFeaturesConfig(t), [t]);
+  
+  const getRoleLabel = (role: string): string => t(getRoleLabelKey(role));
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ['/api/users'],
@@ -438,24 +454,24 @@ export default function UsersPage() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Utente creato con successo",
+        title: t('users.userCreated'),
+        description: t('users.userCreatedSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile creare l'utente",
+        title: t('users.error'),
+        description: error.message || t('users.userCreatedSuccess'),
         variant: "destructive",
       });
     },
@@ -472,24 +488,24 @@ export default function UsersPage() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Utente aggiornato con successo",
+        title: t('users.userUpdated'),
+        description: t('users.userUpdatedSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile aggiornare l'utente",
+        title: t('users.error'),
+        description: error.message || t('users.userUpdatedSuccess'),
         variant: "destructive",
       });
     },
@@ -504,24 +520,24 @@ export default function UsersPage() {
       setDeleteUserId(null);
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Utente eliminato con successo",
+        title: t('users.userDeleted'),
+        description: t('users.userDeletedSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile eliminare l'utente",
+        title: t('users.error'),
+        description: error.message || t('users.userDeletedSuccess'),
         variant: "destructive",
       });
     },
@@ -535,24 +551,24 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: variables.isActive ? "Utente riattivato con successo" : "Utente disattivato con successo",
+        title: variables.isActive ? t('users.userActivated') : t('users.userDeactivated'),
+        description: variables.isActive ? t('users.userActivatedSuccess') : t('users.userDeactivatedSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile modificare lo stato dell'utente",
+        title: t('users.error'),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -565,8 +581,8 @@ export default function UsersPage() {
     onSuccess: () => {
       triggerHaptic('success');
       toast({
-        title: "Impersonificazione attivata",
-        description: "Accesso come utente effettuato",
+        title: t('users.impersonationStarted'),
+        description: t('users.nowLoggedAs', { name: '' }),
       });
       setTimeout(() => window.location.href = '/', 500);
     },
@@ -574,16 +590,16 @@ export default function UsersPage() {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile impersonificare l'utente",
+        title: t('users.error'),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -601,15 +617,15 @@ export default function UsersPage() {
       setFeaturesDialogOpen(false);
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Moduli aggiornati con successo",
+        title: t('users.featuresUpdated'),
+        description: t('users.featuresUpdatedSuccess'),
       });
     },
     onError: () => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: "Impossibile aggiornare i moduli",
+        title: t('users.error'),
+        description: t('users.featuresUpdatedSuccess'),
         variant: "destructive",
       });
     },
@@ -721,8 +737,8 @@ export default function UsersPage() {
 
   const header = (
     <MobileHeader
-      title="Utenti"
-      subtitle={`${filteredUsers.length} ${filteredUsers.length === 1 ? 'utente' : 'utenti'}`}
+      title={t('users.title')}
+      subtitle={`${filteredUsers.length} ${filteredUsers.length === 1 ? t('users.user') : t('users.usersFound')}`}
       showBackButton showMenuButton
       rightAction={
         <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
@@ -737,9 +753,9 @@ export default function UsersPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-users">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Gestione Utenti</h1>
+            <h1 className="text-3xl font-bold">{t('users.pageTitle')}</h1>
             <p className="text-muted-foreground">
-              {filteredUsers.length} {filteredUsers.length === 1 ? 'utente' : 'utenti'} trovati
+              {filteredUsers.length} {filteredUsers.length === 1 ? t('users.userFound') : t('users.usersFound')}
             </p>
           </div>
           <Button 
@@ -760,7 +776,7 @@ export default function UsersPage() {
             data-testid="button-create-user"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Nuovo Utente
+            {t('users.newUser')}
           </Button>
         </div>
 
@@ -768,38 +784,38 @@ export default function UsersPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold" data-testid="text-total-users">{totalUsers}</div>
-              <p className="text-sm text-muted-foreground">Totale Utenti</p>
+              <p className="text-sm text-muted-foreground">{t('users.totalUsers')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-emerald-500" data-testid="text-active-users">{activeUsers}</div>
-              <p className="text-sm text-muted-foreground">Utenti Attivi</p>
+              <p className="text-sm text-muted-foreground">{t('users.activeUsers')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-amber-500">{totalUsers - activeUsers}</div>
-              <p className="text-sm text-muted-foreground">Utenti Disattivati</p>
+              <p className="text-sm text-muted-foreground">{t('users.deactivatedUsers')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-blue-500">{users?.filter(u => u.emailVerified).length || 0}</div>
-              <p className="text-sm text-muted-foreground">Email Verificate</p>
+              <p className="text-sm text-muted-foreground">{t('users.verifiedEmails')}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
-            <CardTitle className="text-xl">Elenco Utenti</CardTitle>
+            <CardTitle className="text-xl">{t('users.userList')}</CardTitle>
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Cerca utenti..."
+                  placeholder={t('users.searchUsers')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 w-64"
@@ -808,10 +824,10 @@ export default function UsersPage() {
               </div>
               <Select value={selectedRole || "all"} onValueChange={(v) => setSelectedRole(v === "all" ? null : v)}>
                 <SelectTrigger className="w-40" data-testid="select-filter-role">
-                  <SelectValue placeholder="Filtra ruolo" />
+                  <SelectValue placeholder={t('users.filterRole')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutti i ruoli</SelectItem>
+                  <SelectItem value="all">{t('users.allRoles')}</SelectItem>
                   {availableRoles.map((role) => (
                     <SelectItem key={role} value={role}>{getRoleLabel(role)}</SelectItem>
                   ))}
@@ -830,12 +846,12 @@ export default function UsersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Utente</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    {isSuperAdmin && <TableHead>Azienda</TableHead>}
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('users.tableHeaders.user')}</TableHead>
+                    <TableHead>{t('users.tableHeaders.email')}</TableHead>
+                    <TableHead>{t('users.tableHeaders.role')}</TableHead>
+                    {isSuperAdmin && <TableHead>{t('users.tableHeaders.company')}</TableHead>}
+                    <TableHead>{t('users.tableHeaders.status')}</TableHead>
+                    <TableHead className="text-right">{t('users.tableHeaders.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -872,12 +888,12 @@ export default function UsersPage() {
                           {user.isActive ? (
                             <Badge variant="outline" className="text-emerald-500 border-emerald-500/30" data-testid={`badge-active-${user.id}`}>
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              Attivo
+                              {t('users.active')}
                             </Badge>
                           ) : (
                             <Badge variant="destructive" data-testid={`badge-inactive-${user.id}`}>
                               <UserX className="h-3 w-3 mr-1" />
-                              Disattivato
+                              {t('users.deactivated')}
                             </Badge>
                           )}
                         </TableCell>
@@ -953,7 +969,7 @@ export default function UsersPage() {
               <div className="text-center py-12">
                 <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground" data-testid="text-no-users">
-                  {searchQuery || selectedRole ? 'Nessun utente trovato con i filtri applicati.' : 'Nessun utente presente.'}
+                  {searchQuery || selectedRole ? t('users.noUsersFiltered') : t('users.noUsersPresent')}
                 </p>
               </div>
             )}
@@ -964,12 +980,12 @@ export default function UsersPage() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingUser ? 'Modifica Utente' : 'Nuovo Utente'}
+                {editingUser ? t('users.editUserTitle') : t('users.newUserTitle')}
               </DialogTitle>
               <DialogDescription>
                 {editingUser 
-                  ? 'Modifica i dettagli dell\'utente. Lascia la password vuota per non modificarla.' 
-                  : 'Inserisci i dettagli del nuovo utente.'}
+                  ? t('users.editUserDescription')
+                  : t('users.newUserDescription')}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -979,7 +995,7 @@ export default function UsersPage() {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome</FormLabel>
+                      <FormLabel>{t('users.firstName')}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-user-firstname" />
                       </FormControl>
@@ -992,7 +1008,7 @@ export default function UsersPage() {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cognome</FormLabel>
+                      <FormLabel>{t('users.lastName')}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-user-lastname" />
                       </FormControl>
@@ -1005,7 +1021,7 @@ export default function UsersPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t('users.email')}</FormLabel>
                       <FormControl>
                         <Input type="email" {...field} data-testid="input-user-email" />
                       </FormControl>
@@ -1019,13 +1035,13 @@ export default function UsersPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Password {editingUser && '(lascia vuoto per non modificare)'}
+                        {t('users.password')} {editingUser && t('users.passwordNote')}
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="password"
                           {...field}
-                          placeholder={editingUser ? '' : 'Minimo 8 caratteri'}
+                          placeholder={editingUser ? '' : t('users.passwordPlaceholder')}
                           data-testid="input-user-password"
                         />
                       </FormControl>
@@ -1038,36 +1054,36 @@ export default function UsersPage() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ruolo</FormLabel>
+                      <FormLabel>{t('users.role')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-user-role">
-                            <SelectValue placeholder="Seleziona ruolo" />
+                            <SelectValue placeholder={t('users.selectRole')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {isSuperAdmin && (
                             <>
-                              <SelectItem value="super_admin">Super Admin</SelectItem>
-                              <SelectItem value="gestore">Gestore</SelectItem>
-                              <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
-                              <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                              <SelectItem value="warehouse">Magazzino</SelectItem>
-                              <SelectItem value="bartender">Bartender</SelectItem>
-                              <SelectItem value="cassiere">Cassiere</SelectItem>
+                              <SelectItem value="super_admin">{t('users.roles.super_admin')}</SelectItem>
+                              <SelectItem value="gestore">{t('users.roles.gestore')}</SelectItem>
+                              <SelectItem value="gestore_covisione">{t('users.roles.gestore_covisione')}</SelectItem>
+                              <SelectItem value="capo_staff">{t('users.roles.capo_staff')}</SelectItem>
+                              <SelectItem value="warehouse">{t('users.roles.warehouse')}</SelectItem>
+                              <SelectItem value="bartender">{t('users.roles.bartender')}</SelectItem>
+                              <SelectItem value="cassiere">{t('users.roles.cassiere')}</SelectItem>
                             </>
                           )}
                           {isAdmin && (
                             <>
-                              <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
-                              <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                              <SelectItem value="warehouse">Magazzino</SelectItem>
-                              <SelectItem value="bartender">Bartender</SelectItem>
-                              <SelectItem value="cassiere">Cassiere</SelectItem>
+                              <SelectItem value="gestore_covisione">{t('users.roles.gestore_covisione')}</SelectItem>
+                              <SelectItem value="capo_staff">{t('users.roles.capo_staff')}</SelectItem>
+                              <SelectItem value="warehouse">{t('users.roles.warehouse')}</SelectItem>
+                              <SelectItem value="bartender">{t('users.roles.bartender')}</SelectItem>
+                              <SelectItem value="cassiere">{t('users.roles.cassiere')}</SelectItem>
                             </>
                           )}
                           {isCapoStaff && (
-                            <SelectItem value="bartender">Bartender</SelectItem>
+                            <SelectItem value="bartender">{t('users.roles.bartender')}</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -1081,18 +1097,18 @@ export default function UsersPage() {
                     name="companyId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Azienda</FormLabel>
+                        <FormLabel>{t('users.company')}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value || undefined}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-user-company">
-                              <SelectValue placeholder="Seleziona azienda (opzionale)" />
+                              <SelectValue placeholder={t('users.selectCompany')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="null">Nessuna azienda</SelectItem>
+                            <SelectItem value="null">{t('users.noCompany')}</SelectItem>
                             {companies?.map((company) => (
                               <SelectItem key={company.id} value={company.id}>
                                 {company.name}
@@ -1112,14 +1128,14 @@ export default function UsersPage() {
                     onClick={() => handleDialogOpenChange(false)}
                     data-testid="button-cancel-user"
                   >
-                    Annulla
+                    {t('users.cancel')}
                   </Button>
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
                     data-testid="button-save-user"
                   >
-                    {editingUser ? 'Aggiorna' : 'Crea'}
+                    {editingUser ? t('users.update') : t('users.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -1130,19 +1146,19 @@ export default function UsersPage() {
         <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
+              <AlertDialogTitle>{t('users.deleteConfirmTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Sei sicuro di voler eliminare questo utente? Questa azione non può essere annullata.
+                {t('users.deleteConfirmMessage')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel data-testid="button-cancel-delete">Annulla</AlertDialogCancel>
+              <AlertDialogCancel data-testid="button-cancel-delete">{t('users.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 data-testid="button-confirm-delete"
               >
-                Elimina
+                {t('users.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1153,10 +1169,10 @@ export default function UsersPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Settings2 className="h-5 w-5" />
-                {selectedUserForFeatures?.role === 'warehouse' ? 'Gestione Permessi' : 'Gestione Moduli'}
+                {selectedUserForFeatures?.role === 'warehouse' ? t('users.managePermissions') : t('users.manageModules')}
               </DialogTitle>
               <DialogDescription>
-                {selectedUserForFeatures?.firstName} {selectedUserForFeatures?.lastName} - {selectedUserForFeatures?.role === 'warehouse' ? 'Abilita o disabilita i permessi' : 'Attiva o disattiva i moduli disponibili'}
+                {selectedUserForFeatures?.firstName} {selectedUserForFeatures?.lastName} - {selectedUserForFeatures?.role === 'warehouse' ? t('users.enableDisablePermissions') : t('users.enableDisableModules')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-4">
