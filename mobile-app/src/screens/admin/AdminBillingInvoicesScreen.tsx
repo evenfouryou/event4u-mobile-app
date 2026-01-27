@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { SkeletonList } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { AdminBillingInvoice } from '@/lib/api';
 
 interface Invoice {
   id: string;
@@ -54,71 +55,18 @@ export function AdminBillingInvoicesScreen({ onBack }: AdminBillingInvoicesScree
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setInvoices([
-        {
-          id: '1',
-          number: 'INV-2026-0001',
-          clientName: 'Event Club Milano',
-          clientEmail: 'marco@eventclub.it',
-          date: '2026-01-15',
-          dueDate: '2026-01-30',
-          amount: 79,
-          status: 'paid',
-          paymentMethod: 'Carta di credito',
-        },
-        {
-          id: '2',
-          number: 'INV-2026-0002',
-          clientName: 'Party Roma Srl',
-          clientEmail: 'laura@partyroma.it',
-          date: '2026-01-18',
-          dueDate: '2026-02-02',
-          amount: 199,
-          status: 'paid',
-          paymentMethod: 'Bonifico',
-        },
-        {
-          id: '3',
-          number: 'INV-2026-0003',
-          clientName: 'Night Life Napoli',
-          clientEmail: 'giuseppe@nightlife.it',
-          date: '2026-01-20',
-          dueDate: '2026-02-04',
-          amount: 29,
-          status: 'pending',
-        },
-        {
-          id: '4',
-          number: 'INV-2026-0004',
-          clientName: 'Disco Torino',
-          clientEmail: 'anna@discotorino.it',
-          date: '2026-01-05',
-          dueDate: '2026-01-20',
-          amount: 79,
-          status: 'overdue',
-        },
-        {
-          id: '5',
-          number: 'INV-2026-0005',
-          clientName: 'Disco Torino',
-          clientEmail: 'anna@discotorino.it',
-          date: '2025-12-15',
-          dueDate: '2025-12-30',
-          amount: 79,
-          status: 'overdue',
-        },
-        {
-          id: '6',
-          number: 'INV-2025-0156',
-          clientName: 'Festival Firenze',
-          clientEmail: 'luca@festivalfirenze.it',
-          date: '2025-11-01',
-          dueDate: '2025-11-15',
-          amount: 29,
-          status: 'cancelled',
-        },
-      ]);
+      const data = await api.getAdminBillingInvoicesAll();
+      setInvoices(data.map(inv => ({
+        id: inv.id,
+        number: inv.invoiceNumber,
+        clientName: inv.companyName,
+        clientEmail: '',
+        date: inv.issueDate,
+        dueDate: inv.dueDate,
+        amount: inv.amount,
+        status: inv.status,
+        paymentMethod: inv.paidAt ? 'Pagato' : undefined,
+      })));
     } catch (error) {
       console.error('Error loading invoices:', error);
     } finally {

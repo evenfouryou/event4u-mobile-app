@@ -10,16 +10,11 @@ import { Header } from '@/components/Header';
 import { SkeletonList } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { BillingPlan } from '@/lib/api';
 
-interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  interval: 'monthly' | 'yearly';
-  features: string[];
-  subscriberCount: number;
+interface Plan extends BillingPlan {
+  subscriberCount?: number;
   isPopular?: boolean;
-  isActive: boolean;
 }
 
 interface AdminBillingPlansScreenProps {
@@ -51,46 +46,12 @@ export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps
   const loadPlans = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setPlans([
-        {
-          id: '1',
-          name: 'Starter',
-          price: 29,
-          interval: 'monthly',
-          features: ['Fino a 5 eventi/mese', '500 biglietti/evento', 'Supporto email', 'Report base'],
-          subscriberCount: 45,
-          isActive: true,
-        },
-        {
-          id: '2',
-          name: 'Professional',
-          price: 79,
-          interval: 'monthly',
-          features: ['Eventi illimitati', 'Biglietti illimitati', 'Supporto prioritario', 'SIAE incluso', 'Report avanzati'],
-          subscriberCount: 128,
-          isPopular: true,
-          isActive: true,
-        },
-        {
-          id: '3',
-          name: 'Enterprise',
-          price: 199,
-          interval: 'monthly',
-          features: ['Tutto in Professional', 'API dedicate', 'Gestore dedicato', 'SLA garantito', 'White label', 'Integrazioni custom'],
-          subscriberCount: 23,
-          isActive: true,
-        },
-        {
-          id: '4',
-          name: 'Promo 2024',
-          price: 49,
-          interval: 'monthly',
-          features: ['10 eventi/mese', '1000 biglietti/evento', 'Supporto chat'],
-          subscriberCount: 12,
-          isActive: false,
-        },
-      ]);
+      const data = await api.getAdminBillingPlans();
+      setPlans(data.map((p, index) => ({
+        ...p,
+        subscriberCount: 0,
+        isPopular: index === 1,
+      })));
     } catch (error) {
       console.error('Error loading plans:', error);
     } finally {

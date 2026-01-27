@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { SkeletonList } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { BillingOrganizer } from '@/lib/api';
 
 interface Organizer {
   id: string;
@@ -17,7 +18,7 @@ interface Organizer {
   companyName: string;
   email: string;
   planName: string;
-  subscriptionStatus: 'active' | 'trial' | 'expired' | 'cancelled';
+  subscriptionStatus: 'active' | 'trial' | 'expired' | 'cancelled' | 'suspended';
   nextBillingDate: string;
   monthlyAmount: number;
   invoicesCount: number;
@@ -55,69 +56,19 @@ export function AdminBillingOrganizersScreen({ onBack }: AdminBillingOrganizersS
   const loadOrganizers = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setOrganizers([
-        {
-          id: '1',
-          name: 'Marco Rossi',
-          companyName: 'Event Club Milano',
-          email: 'marco@eventclub.it',
-          planName: 'Professional',
-          subscriptionStatus: 'active',
-          nextBillingDate: '2026-02-15',
-          monthlyAmount: 79,
-          invoicesCount: 12,
-          pendingAmount: 0,
-        },
-        {
-          id: '2',
-          name: 'Laura Bianchi',
-          companyName: 'Party Roma Srl',
-          email: 'laura@partyroma.it',
-          planName: 'Enterprise',
-          subscriptionStatus: 'active',
-          nextBillingDate: '2026-02-01',
-          monthlyAmount: 199,
-          invoicesCount: 24,
-          pendingAmount: 0,
-        },
-        {
-          id: '3',
-          name: 'Giuseppe Verde',
-          companyName: 'Night Life Napoli',
-          email: 'giuseppe@nightlife.it',
-          planName: 'Starter',
-          subscriptionStatus: 'trial',
-          nextBillingDate: '2026-01-31',
-          monthlyAmount: 29,
-          invoicesCount: 0,
-          pendingAmount: 0,
-        },
-        {
-          id: '4',
-          name: 'Anna Neri',
-          companyName: 'Disco Torino',
-          email: 'anna@discotorino.it',
-          planName: 'Professional',
-          subscriptionStatus: 'expired',
-          nextBillingDate: '2026-01-10',
-          monthlyAmount: 79,
-          invoicesCount: 6,
-          pendingAmount: 158,
-        },
-        {
-          id: '5',
-          name: 'Luca Gialli',
-          companyName: 'Festival Firenze',
-          email: 'luca@festivalfirenze.it',
-          planName: 'Starter',
-          subscriptionStatus: 'cancelled',
-          nextBillingDate: '-',
-          monthlyAmount: 0,
-          invoicesCount: 3,
-          pendingAmount: 0,
-        },
-      ]);
+      const data = await api.getAdminBillingOrganizers();
+      setOrganizers(data.map(org => ({
+        id: org.id,
+        name: org.companyName,
+        companyName: org.companyName,
+        email: '',
+        planName: org.planName || 'Nessun piano',
+        subscriptionStatus: org.status === 'suspended' ? 'expired' : org.status,
+        nextBillingDate: org.lastPayment || '-',
+        monthlyAmount: org.monthlyRevenue,
+        invoicesCount: 0,
+        pendingAmount: 0,
+      })));
     } catch (error) {
       console.error('Error loading organizers:', error);
     } finally {
