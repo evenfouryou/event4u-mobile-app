@@ -220,6 +220,8 @@ export interface PrGuestListEntry {
 class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
+  private reAuthHandler: (() => Promise<boolean>) | null = null;
+  private isReAuthenticating: boolean = false;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -229,11 +231,15 @@ class ApiClient {
     this.authToken = token;
   }
 
+  setReAuthHandler(handler: () => Promise<boolean>) {
+    this.reAuthHandler = handler;
+  }
+
   clearCache(pattern?: string) {
     fetchManager.clearCache(pattern);
   }
 
-  async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  async request<T>(endpoint: string, options: RequestOptions = {}, isRetry: boolean = false): Promise<T> {
     const { method = 'GET', body, headers = {}, cacheTTL, forceRefresh } = options;
 
     const requestHeaders: Record<string, string> = {
@@ -245,20 +251,42 @@ class ApiClient {
       requestHeaders['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    return fetchManager.fetch<T>(
-      `${this.baseUrl}${endpoint}`,
-      {
-        method,
-        headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-        credentials: 'include',
-      },
-      {
-        cacheTTL,
-        forceRefresh,
-        cacheKey: `${method}_${endpoint}`,
+    try {
+      return await fetchManager.fetch<T>(
+        `${this.baseUrl}${endpoint}`,
+        {
+          method,
+          headers: requestHeaders,
+          body: body ? JSON.stringify(body) : undefined,
+          credentials: 'include',
+        },
+        {
+          cacheTTL,
+          forceRefresh,
+          cacheKey: `${method}_${endpoint}`,
+        }
+      );
+    } catch (error: any) {
+      // If we get a 401/Unauthorized and we have a re-auth handler, try to re-authenticate
+      if (!isRetry && this.reAuthHandler && !this.isReAuthenticating &&
+          (error.message?.includes('401') || error.message?.includes('Unauthorized') || error.message?.includes('Non autenticato'))) {
+        console.log('[API] Got 401, attempting re-authentication...');
+        this.isReAuthenticating = true;
+        try {
+          const success = await this.reAuthHandler();
+          this.isReAuthenticating = false;
+          if (success) {
+            console.log('[API] Re-authentication successful, retrying request...');
+            // Retry the request
+            return this.request<T>(endpoint, options, true);
+          }
+        } catch (reAuthError) {
+          this.isReAuthenticating = false;
+          console.log('[API] Re-authentication failed:', reAuthError);
+        }
       }
-    );
+      throw error;
+    }
   }
 
   get<T>(endpoint: string, options?: { cacheTTL?: number; forceRefresh?: boolean }) {

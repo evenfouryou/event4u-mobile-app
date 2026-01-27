@@ -49,6 +49,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Re-authenticate using stored credentials (called by API client on 401)
+  const reAuthenticate = async (): Promise<boolean> => {
+    try {
+      const storedCredentials = await SecureStore.getItemAsync(AUTH_CREDENTIALS_KEY);
+      if (!storedCredentials) {
+        return false;
+      }
+      
+      const { identifier, password } = JSON.parse(storedCredentials);
+      const isPhone = identifier.startsWith('+') || /^\d{8,15}$/.test(identifier.replace(/[\s\-()]/g, ''));
+      
+      const body: any = { password };
+      if (isPhone) {
+        body.phone = identifier;
+      } else {
+        body.email = identifier;
+      }
+
+      const response = await api.post<{ user: User; message: string }>('/api/auth/login', body);
+      
+      if (response.user) {
+        setUser(response.user);
+        await saveUser(response.user);
+        console.log('[Auth] Re-authenticated successfully');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[Auth] Re-authentication failed:', error);
+      return false;
+    }
+  };
+
+  // Set up the re-auth handler on mount
+  useEffect(() => {
+    api.setReAuthHandler(reAuthenticate);
+  }, []);
+
   const saveUser = async (userData: User) => {
     try {
       await SecureStore.setItemAsync(AUTH_USER_KEY, JSON.stringify(userData));
