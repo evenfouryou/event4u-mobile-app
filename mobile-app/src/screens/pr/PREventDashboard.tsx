@@ -69,6 +69,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   
   // Search states
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchPhonePrefix, setSearchPhonePrefix] = useState('+39');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [batchSearchQuery, setBatchSearchQuery] = useState('');
@@ -145,7 +146,10 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
     }
     try {
       setSearching(true);
-      const results = await api.searchRegisteredUsers(query).catch(() => []);
+      // If query looks like a phone number, prepend the prefix
+      const isPhoneNumber = /^\d+$/.test(query.replace(/[\s\-()]/g, ''));
+      const searchTerm = isPhoneNumber ? `${searchPhonePrefix}${query.replace(/^0+/, '')}` : query;
+      const results = await api.searchRegisteredUsers(searchTerm).catch(() => []);
       setSearchResults(results || []);
     } catch (error) {
       console.error('Error searching users:', error);
@@ -174,11 +178,27 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   };
   
   const selectSearchResult = (result: SearchResult) => {
+    // Extract phone prefix and number from result
+    let phonePrefix = '+39';
+    let phoneNumber = result.phone || '';
+    
+    if (result.phone) {
+      const prefixes = ['+39', '+41', '+43', '+33', '+49', '+44', '+1'];
+      for (const prefix of prefixes) {
+        if (result.phone.startsWith(prefix)) {
+          phonePrefix = prefix;
+          phoneNumber = result.phone.substring(prefix.length);
+          break;
+        }
+      }
+    }
+    
     setNewGuest({
       ...newGuest,
       firstName: result.firstName,
       lastName: result.lastName,
-      phone: result.phone || '',
+      phonePrefix: phonePrefix,
+      phone: phoneNumber,
     });
     setSearchQuery('');
     setSearchResults([]);
@@ -668,10 +688,21 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                 {/* Search for registered users */}
                 <View style={styles.searchContainer}>
                   <View style={styles.searchInputWrapper}>
+                    <Pressable
+                      style={styles.searchPrefixButton}
+                      onPress={() => {
+                        const prefixes = ['+39', '+41', '+43', '+33', '+49', '+44', '+1'];
+                        const currentIndex = prefixes.indexOf(searchPhonePrefix);
+                        const nextIndex = (currentIndex + 1) % prefixes.length;
+                        setSearchPhonePrefix(prefixes[nextIndex]);
+                      }}
+                    >
+                      <Text style={styles.searchPrefixText}>{searchPhonePrefix}</Text>
+                    </Pressable>
                     <Ionicons name="search" size={18} color={staticColors.mutedForeground} />
                     <TextInput
                       style={styles.searchInput}
-                      placeholder="Cerca utente registrato..."
+                      placeholder="Cerca per nome o telefono..."
                       placeholderTextColor={staticColors.mutedForeground}
                       value={searchQuery}
                       onChangeText={handleSearch}
@@ -1915,6 +1946,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: staticColors.border,
     gap: spacing.sm,
+  },
+  searchPrefixButton: {
+    backgroundColor: staticColors.muted,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  searchPrefixText: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.foreground,
+    fontWeight: '600',
   },
   searchInput: {
     flex: 1,
