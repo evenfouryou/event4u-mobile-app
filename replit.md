@@ -36,7 +36,15 @@ The public event detail page (`/public/event/:id`) features an interactive floor
 A WebSocket relay system enabling remote smart card reader access from a desktop Electron application to the web application. It supports token-based authentication and company-scoped message routing, facilitating digital signatures for SIAE C1 reports using PKI functionality, managing signature error handling, and handling SIAE report transmission via email with an audit trail. It supports CAdES-BES digital signatures and S/MIME email signatures for RCA transmissions.
 
 ### Mobile App (Expo React Native)
-The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 and React Native 0.76 with TypeScript. It features a dark nightclub theme with glass-morphism effects matching the web design. Uses a custom AppNavigator, TanStack Query for data fetching, and Zustand for state management. It provides comprehensive functionality including authentication, public event browsing, account management, and PR dashboard features, with plans for complete feature parity with the web application across various modules (e.g., SIAE Ticketing, Inventory, Management, AI Analytics, Accounting, Admin, Floor Plan Editor, Scanner Management, Cashier, Marketing, School Badges).
+The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 and React Native 0.76 with TypeScript. It features a dark nightclub theme with glass-morphism effects matching the web design. Uses a custom AppNavigator, TanStack Query for data fetching, and Zustand for state management.
+
+**Completed Mobile Screens (January 2026):**
+- **Admin Dashboard**: AdminGestoreDetailScreen (4 tabs), AdminCompaniesScreen, AdminUsersScreen, AdminEventsScreen, AdminEventDetailScreen (5 tabs: Overview/Tickets/Tables/Staff/Stats), AdminNameChangesScreen (filter chips, approval actions), AdminBillingScreen, AdminSettingsScreen
+- **Gestore Dashboard**: GestoreDashboard, GestoreEventsScreen, GestoreEventDetailScreen (8 tabs), GestoreInventoryScreen, GestoreProductsScreen (3 tabs), GestorePriceListsScreen, GestoreStaffScreen, GestoreScannerScreen, GestoreMarketingScreen, GestoreAccountingScreen, GestoreProfileScreen, GestoreSettingsScreen, GestoreCreateEventScreen, GestorePRManagementScreen, GestoreCompaniesScreen, GestoreStationsScreen, GestoreWarehouseScreen (3 tabs), GestoreSuppliersScreen, GestorePersonnelScreen (4 role tabs), GestoreReportsScreen (4 tabs), GestoreCashierScreen, GestoreUsersScreen
+- **Public/Client**: Events, Venues, EventDetail, VenueDetail, Tickets, Cart, Checkout, Account, Wallet, etc.
+- **PR/Scanner**: PRDashboard, PREventsScreen, PRGuestListScreen, ScannerDashboard, ScannerEventsScreen, ScannerScanScreen
+
+All screens follow consistent patterns: useTheme hook, Italian labels, testID attributes, RefreshControl, Loading states, Card/GlassCard/Badge components.
 
 ### Additional Modules
 -   **Italian Fiscal Validation**: Server-side validation for Italian fiscal identifiers.
