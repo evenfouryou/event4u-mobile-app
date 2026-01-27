@@ -443,7 +443,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         }
       >
         {/* Hero Image Section */}
-        <View style={[styles.heroContainer, { paddingTop: insets.top }]}>
+        <View style={styles.heroContainer}>
           {event.eventImageUrl ? (
             <Image
               source={{ uri: event.eventImageUrl }}
@@ -459,22 +459,27 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
             />
           )}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.8)']}
+            colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.85)']}
+            locations={[0, 0.3, 1]}
             style={styles.heroOverlay}
           />
+          
+          {/* Back button - positioned at top with safe area */}
+          <View style={[styles.heroTop, { paddingTop: insets.top + spacing.sm }]}>
+            <Pressable
+              onPress={() => {
+                triggerHaptic('light');
+                onGoBack();
+              }}
+              style={styles.heroBackButton}
+              testID="button-back"
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </Pressable>
+          </View>
+          
+          {/* Content at bottom */}
           <View style={styles.heroContent}>
-            <View style={styles.heroTop}>
-              <Pressable
-                onPress={() => {
-                  triggerHaptic('light');
-                  onGoBack();
-                }}
-                style={styles.heroBackButton}
-                testID="button-back"
-              >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-              </Pressable>
-            </View>
             <View style={styles.heroCenter}>
               <Text style={styles.heroTitle} numberOfLines={2}>{event.eventName}</Text>
             </View>
@@ -1421,7 +1426,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   heroContainer: {
-    height: 280,
+    height: 320,
     position: 'relative',
   },
   heroImage: {
@@ -1434,42 +1439,50 @@ const styles = StyleSheet.create({
   },
   heroContent: {
     ...StyleSheet.absoluteFillObject,
-    padding: spacing.lg,
-    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    justifyContent: 'flex-end',
     zIndex: 10,
   },
   heroTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    zIndex: 20,
   },
   heroBackButton: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
   },
   heroInfo: {
-    gap: spacing.sm,
+    gap: spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
   },
   heroTitle: {
-    fontSize: typography.fontSize['3xl'],
+    fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
     color: '#fff',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   heroMeta: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    gap: spacing.xl,
   },
   heroMetaItem: {
     flexDirection: 'row',
@@ -1479,7 +1492,6 @@ const styles = StyleSheet.create({
   heroMetaText: {
     fontSize: typography.fontSize.sm,
     color: '#fff',
-    opacity: 0.9,
   },
   shareCard: {
     margin: spacing.lg,
