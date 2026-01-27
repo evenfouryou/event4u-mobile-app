@@ -67,6 +67,36 @@ import {
   GestoreFloorPlanViewerScreen,
   GestoreTableManagementScreen,
   GestoreGuestListScreen,
+  GestoreLocationsScreen,
+  GestoreLocationDetailScreen,
+  GestoreStationDetailScreen,
+  GestorePurchaseOrdersScreen,
+  GestoreConsumptionTrackingScreen,
+  GestoreNightFileScreen,
+  GestoreBeverageScreen,
+  GestorePRWalletScreen,
+  GestorePRListsScreen,
+  GestorePRRewardsScreen,
+  GestoreFloorPlanEditorScreen,
+  GestoreScannerHistoryScreen,
+  GestoreScannerStatsScreen,
+  GestoreSIAETicketingConsoleScreen,
+  GestoreSIAEBoxOfficeScreen,
+  GestoreSIAETransactionsScreen,
+  GestoreSIAENameChangesScreen,
+  GestoreSIAENumberedSeatsScreen,
+  GestoreSIAETicketTypesScreen,
+  GestoreSIAESubscriptionsScreen,
+  GestoreSIAEResalesScreen,
+  GestoreSIAETransmissionsScreen,
+  GestoreSIAEAuditLogScreen,
+  GestoreSIAEConfigScreen,
+  GestoreSIAEReportC1Screen,
+  GestoreSIAEReportC2Screen,
+  GestoreImportScreen,
+  GestorePrinterSettingsScreen,
+  GestoreBillingScreen,
+  GestoreEventPageEditorScreen,
 } from '@/screens/gestore';
 
 import {
@@ -147,6 +177,37 @@ type Screen =
   | { name: 'gestoreFloorPlan'; params: { eventId: string } }
   | { name: 'gestoreTableManagement'; params: { eventId: string } }
   | { name: 'gestoreGuestList'; params: { eventId: string } }
+  // Phase 4 screens
+  | { name: 'gestoreLocations' }
+  | { name: 'gestoreLocationDetail'; params: { locationId: string } }
+  | { name: 'gestoreStationDetail'; params: { stationId: string } }
+  | { name: 'gestorePurchaseOrders' }
+  | { name: 'gestoreConsumptionTracking' }
+  | { name: 'gestoreNightFile' }
+  | { name: 'gestoreBeverage' }
+  | { name: 'gestorePRWallet' }
+  | { name: 'gestorePRLists' }
+  | { name: 'gestorePRRewards' }
+  | { name: 'gestoreFloorPlanEditor'; params: { eventId: string } }
+  | { name: 'gestoreScannerHistory' }
+  | { name: 'gestoreScannerStats' }
+  | { name: 'gestoreSIAETicketingConsole' }
+  | { name: 'gestoreSIAEBoxOffice' }
+  | { name: 'gestoreSIAETransactions' }
+  | { name: 'gestoreSIAENameChanges' }
+  | { name: 'gestoreSIAENumberedSeats' }
+  | { name: 'gestoreSIAETicketTypes' }
+  | { name: 'gestoreSIAESubscriptions' }
+  | { name: 'gestoreSIAEResales' }
+  | { name: 'gestoreSIAETransmissions' }
+  | { name: 'gestoreSIAEAuditLog' }
+  | { name: 'gestoreSIAEConfig' }
+  | { name: 'gestoreSIAEReportC1' }
+  | { name: 'gestoreSIAEReportC2' }
+  | { name: 'gestoreImport' }
+  | { name: 'gestorePrinterSettings' }
+  | { name: 'gestoreBilling' }
+  | { name: 'gestoreEventPageEditor'; params: { eventId: string } }
   // Admin screens
   | { name: 'adminDashboard' }
   | { name: 'adminGestori' }
@@ -802,6 +863,68 @@ export function AppNavigator() {
             onBack={goBack}
           />
         );
+
+      // ========== PHASE 4 GESTORE SCREENS ==========
+      case 'gestoreLocations':
+        return <GestoreLocationsScreen onBack={goBack} onLocationPress={(location) => navigate({ name: 'gestoreLocationDetail', params: { locationId: location.id } })} />;
+      case 'gestoreLocationDetail':
+        return <GestoreLocationDetailScreen locationId={currentScreen.params.locationId} onBack={goBack} />;
+      case 'gestoreStationDetail':
+        return <GestoreStationDetailScreen stationId={currentScreen.params.stationId} onBack={goBack} />;
+      case 'gestorePurchaseOrders':
+        return <GestorePurchaseOrdersScreen onBack={goBack} />;
+      case 'gestoreConsumptionTracking':
+        return <GestoreConsumptionTrackingScreen onBack={goBack} />;
+      case 'gestoreNightFile':
+        return <GestoreNightFileScreen onBack={goBack} />;
+      case 'gestoreBeverage':
+        return <GestoreBeverageScreen onBack={goBack} />;
+      case 'gestorePRWallet':
+        return <GestorePRWalletScreen onBack={goBack} />;
+      case 'gestorePRLists':
+        return <GestorePRListsScreen onBack={goBack} />;
+      case 'gestorePRRewards':
+        return <GestorePRRewardsScreen onBack={goBack} />;
+      case 'gestoreFloorPlanEditor':
+        return <GestoreFloorPlanEditorScreen locationId={currentScreen.params.eventId} onBack={goBack} />;
+      case 'gestoreScannerHistory':
+        return <GestoreScannerHistoryScreen onBack={goBack} />;
+      case 'gestoreScannerStats':
+        return <GestoreScannerStatsScreen onBack={goBack} />;
+      case 'gestoreSIAETicketingConsole':
+        return <GestoreSIAETicketingConsoleScreen onBack={goBack} />;
+      case 'gestoreSIAEBoxOffice':
+        return <GestoreSIAEBoxOfficeScreen onBack={goBack} />;
+      case 'gestoreSIAETransactions':
+        return <GestoreSIAETransactionsScreen onBack={goBack} />;
+      case 'gestoreSIAENameChanges':
+        return <GestoreSIAENameChangesScreen onBack={goBack} />;
+      case 'gestoreSIAENumberedSeats':
+        return <GestoreSIAENumberedSeatsScreen onBack={goBack} />;
+      case 'gestoreSIAETicketTypes':
+        return <GestoreSIAETicketTypesScreen onBack={goBack} />;
+      case 'gestoreSIAESubscriptions':
+        return <GestoreSIAESubscriptionsScreen onBack={goBack} />;
+      case 'gestoreSIAEResales':
+        return <GestoreSIAEResalesScreen onBack={goBack} />;
+      case 'gestoreSIAETransmissions':
+        return <GestoreSIAETransmissionsScreen onBack={goBack} />;
+      case 'gestoreSIAEAuditLog':
+        return <GestoreSIAEAuditLogScreen onBack={goBack} />;
+      case 'gestoreSIAEConfig':
+        return <GestoreSIAEConfigScreen onBack={goBack} />;
+      case 'gestoreSIAEReportC1':
+        return <GestoreSIAEReportC1Screen onBack={goBack} />;
+      case 'gestoreSIAEReportC2':
+        return <GestoreSIAEReportC2Screen onBack={goBack} />;
+      case 'gestoreImport':
+        return <GestoreImportScreen onBack={goBack} />;
+      case 'gestorePrinterSettings':
+        return <GestorePrinterSettingsScreen onBack={goBack} />;
+      case 'gestoreBilling':
+        return <GestoreBillingScreen onBack={goBack} />;
+      case 'gestoreEventPageEditor':
+        return <GestoreEventPageEditorScreen eventId={currentScreen.params.eventId} onBack={goBack} />;
 
       // ========== ADMIN SCREENS ==========
       case 'adminDashboard':

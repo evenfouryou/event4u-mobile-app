@@ -1068,6 +1068,83 @@ class ApiClient {
     }
   }
 
+  // Import API Methods
+  async getImportHistory(): Promise<ImportData[]> {
+    try {
+      return await this.get<ImportData[]>('/api/gestore/imports');
+    } catch {
+      return [];
+    }
+  }
+
+  async processImport(type: string, fileName: string): Promise<ImportData> {
+    return this.post<ImportData>('/api/gestore/imports', { type, fileName });
+  }
+
+  // Printer API Methods
+  async getPrinters(): Promise<PrinterConfig[]> {
+    try {
+      return await this.get<PrinterConfig[]>('/api/gestore/printers');
+    } catch {
+      return [];
+    }
+  }
+
+  async addPrinter(data: { name: string; type: string; address: string; paperSize: string }): Promise<PrinterConfig> {
+    return this.post<PrinterConfig>('/api/gestore/printers', data);
+  }
+
+  async testPrinter(printerId: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/gestore/printers/${printerId}/test`, {});
+  }
+
+  async setDefaultPrinter(printerId: string): Promise<{ success: boolean }> {
+    return this.patch<{ success: boolean }>(`/api/gestore/printers/${printerId}/default`, {});
+  }
+
+  async deletePrinter(printerId: string): Promise<{ success: boolean }> {
+    return this.delete<{ success: boolean }>(`/api/gestore/printers/${printerId}`);
+  }
+
+  // Invoice API Methods
+  async getInvoices(): Promise<Invoice[]> {
+    try {
+      return await this.get<Invoice[]>('/api/gestore/invoices');
+    } catch {
+      return [];
+    }
+  }
+
+  async createInvoice(data: { customerName: string; amount: number; eventName?: string }): Promise<Invoice> {
+    return this.post<Invoice>('/api/gestore/invoices', data);
+  }
+
+  async updateInvoiceStatus(invoiceId: string, status: 'paid' | 'pending' | 'overdue'): Promise<Invoice> {
+    return this.patch<Invoice>(`/api/gestore/invoices/${invoiceId}`, { status });
+  }
+
+  // Event Page API Methods
+  async getEventsList(): Promise<Array<{ id: string; name: string }>> {
+    try {
+      const events = await this.get<any[]>('/api/gestore/events');
+      return events.map(e => ({ id: e.id, name: e.name || e.eventName }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getEventPageData(eventId: string): Promise<EventPageData> {
+    return this.get<EventPageData>(`/api/gestore/events/${eventId}/page`);
+  }
+
+  async updateEventPage(eventId: string, data: { description: string; socialLinks: { facebook?: string; instagram?: string; twitter?: string }; images: string[] }): Promise<EventPageData> {
+    return this.patch<EventPageData>(`/api/gestore/events/${eventId}/page`, data);
+  }
+
+  async toggleEventPagePublish(eventId: string): Promise<{ success: boolean; isPublished: boolean }> {
+    return this.post<{ success: boolean; isPublished: boolean }>(`/api/gestore/events/${eventId}/page/toggle-publish`, {});
+  }
+
   // SIAE API Methods
   async getSIAEDashboard(): Promise<SIAEDashboardStats> {
     try {
@@ -1214,6 +1291,206 @@ class ApiClient {
 
   async printSIAEBoxOfficeReceipt(): Promise<{ success: boolean }> {
     return this.post('/api/gestore/siae/box-office/print-receipt', {});
+  }
+
+  async getSIAESeatingData(eventId: string): Promise<SIAESeatingData> {
+    try {
+      return await this.get<SIAESeatingData>(`/api/gestore/siae/seating/${eventId}`);
+    } catch {
+      return {
+        eventId,
+        eventName: '',
+        totalSeats: 0,
+        soldSeats: 0,
+        availableSeats: 0,
+        blockedSeats: 0,
+        sections: [],
+        seats: [],
+      };
+    }
+  }
+
+  async updateSIAESeatStatus(eventId: string, seatId: string, status: 'available' | 'sold' | 'blocked'): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/seating/${eventId}/seats/${seatId}/status`, { status });
+  }
+
+  async getSIAETicketTypes(eventId: string): Promise<SIAETicketType[]> {
+    try {
+      return await this.get<SIAETicketType[]>(`/api/gestore/siae/events/${eventId}/ticket-types`);
+    } catch {
+      return [];
+    }
+  }
+
+  async createSIAETicketType(eventId: string, data: {
+    name: string;
+    price: number;
+    siaeCode: string;
+    available: number;
+    category: string;
+    isActive: boolean;
+  }): Promise<SIAETicketType> {
+    return this.post(`/api/gestore/siae/events/${eventId}/ticket-types`, data);
+  }
+
+  async updateSIAETicketType(eventId: string, ticketTypeId: string, data: Partial<{
+    name: string;
+    price: number;
+    siaeCode: string;
+    available: number;
+    category: string;
+    isActive: boolean;
+  }>): Promise<SIAETicketType> {
+    return this.patch(`/api/gestore/siae/events/${eventId}/ticket-types/${ticketTypeId}`, data);
+  }
+
+  async deleteSIAETicketType(eventId: string, ticketTypeId: string): Promise<{ success: boolean }> {
+    return this.delete(`/api/gestore/siae/events/${eventId}/ticket-types/${ticketTypeId}`);
+  }
+
+  async getSIAESubscriptions(): Promise<SIAESubscription[]> {
+    try {
+      return await this.get<SIAESubscription[]>('/api/gestore/siae/subscriptions');
+    } catch {
+      return [];
+    }
+  }
+
+  async createSIAESubscription(data: {
+    name: string;
+    price: number;
+    validFrom: string;
+    validTo: string;
+    eventsIncluded: number;
+    isActive: boolean;
+  }): Promise<SIAESubscription> {
+    return this.post('/api/gestore/siae/subscriptions', data);
+  }
+
+  async updateSIAESubscription(subscriptionId: string, data: Partial<{
+    name: string;
+    price: number;
+    validFrom: string;
+    validTo: string;
+    eventsIncluded: number;
+    isActive: boolean;
+  }>): Promise<SIAESubscription> {
+    return this.patch(`/api/gestore/siae/subscriptions/${subscriptionId}`, data);
+  }
+
+  async deleteSIAESubscription(subscriptionId: string): Promise<{ success: boolean }> {
+    return this.delete(`/api/gestore/siae/subscriptions/${subscriptionId}`);
+  }
+
+  async getSIAEResaleListings(): Promise<SIAEResaleListing[]> {
+    try {
+      return await this.get<SIAEResaleListing[]>('/api/gestore/siae/resales');
+    } catch {
+      return [];
+    }
+  }
+
+  async approveSIAEResale(resaleId: string): Promise<SIAEResaleListing> {
+    return this.post(`/api/gestore/siae/resales/${resaleId}/approve`, {});
+  }
+
+  async rejectSIAEResale(resaleId: string): Promise<SIAEResaleListing> {
+    return this.post(`/api/gestore/siae/resales/${resaleId}/reject`, {});
+  }
+
+  // SIAE Transmissions Methods
+  async getSIAETransmissions(): Promise<SIAETransmission[]> {
+    try {
+      return await this.get<SIAETransmission[]>('/api/gestore/siae/transmissions');
+    } catch {
+      return [];
+    }
+  }
+
+  async retrySIAETransmission(transmissionId: string): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/transmissions/${transmissionId}/retry`, {});
+  }
+
+  async downloadSIAEReceipt(transmissionId: string): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/transmissions/${transmissionId}/download-receipt`, {});
+  }
+
+  // SIAE Audit Log Methods
+  async getSIAEAuditLog(): Promise<SIAEAuditEntry[]> {
+    try {
+      return await this.get<SIAEAuditEntry[]>('/api/gestore/siae/audit-log');
+    } catch {
+      return [];
+    }
+  }
+
+  async exportSIAEAuditLog(): Promise<{ success: boolean }> {
+    return this.post('/api/gestore/siae/audit-log/export', {});
+  }
+
+  // SIAE Config Methods
+  async getSIAEConfig(): Promise<SIAEConfig> {
+    try {
+      return await this.get<SIAEConfig>('/api/gestore/siae/config');
+    } catch {
+      return {
+        codiceFiscale: '',
+        partitaIVA: '',
+        smartCardConnected: false,
+        emailAddress: '',
+        defaultCategories: [],
+        printerConfigured: false,
+        printerName: '',
+      };
+    }
+  }
+
+  async updateSIAEConfig(config: SIAEConfig): Promise<SIAEConfig> {
+    return this.patch('/api/gestore/siae/config', config);
+  }
+
+  async testSIAEConnection(): Promise<{ success: boolean; message?: string }> {
+    return this.post('/api/gestore/siae/config/test-connection', {});
+  }
+
+  async getSIAEC1Report(eventId: string, date: string): Promise<SIAEC1Report | null> {
+    try {
+      return await this.get<SIAEC1Report>(`/api/gestore/siae/reports/c1?eventId=${eventId}&date=${date}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async generateSIAEC1Report(eventId: string, date: string): Promise<SIAEC1Report> {
+    return this.post('/api/gestore/siae/reports/c1/generate', { eventId, date });
+  }
+
+  async transmitSIAEC1Report(reportId: string): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/reports/c1/${reportId}/transmit`, {});
+  }
+
+  async previewSIAEC1ReportPDF(reportId: string): Promise<{ success: boolean }> {
+    return this.get(`/api/gestore/siae/reports/c1/${reportId}/preview-pdf`);
+  }
+
+  async getSIAEC2Report(periodType: 'weekly' | 'monthly'): Promise<SIAEC2Report | null> {
+    try {
+      return await this.get<SIAEC2Report>(`/api/gestore/siae/reports/c2?periodType=${periodType}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async validateSIAEC2Report(reportId: string): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/reports/c2/${reportId}/validate`, {});
+  }
+
+  async exportSIAEC2ReportPDF(reportId: string): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/reports/c2/${reportId}/export-pdf`, {});
+  }
+
+  async exportSIAEC2ReportXML(reportId: string): Promise<{ success: boolean }> {
+    return this.post(`/api/gestore/siae/reports/c2/${reportId}/export-xml`, {});
   }
 
   async getFloorPlan(eventId: string): Promise<FloorPlanData> {
@@ -2097,6 +2374,38 @@ export interface SIAEReport {
   errorMessage?: string;
 }
 
+export interface SIAEC1Report {
+  id: string;
+  eventId: string;
+  eventName: string;
+  reportDate: string;
+  openTime: string;
+  closeTime: string;
+  ticketsSold: number;
+  totalRevenue: number;
+  refunds: number;
+  refundAmount: number;
+  cancellations: number;
+  cancellationAmount: number;
+  signatureStatus: 'pending' | 'signed' | 'error';
+  transmissionStatus: 'draft' | 'sent' | 'confirmed' | 'error';
+}
+
+export interface SIAEC2Report {
+  id: string;
+  periodType: 'weekly' | 'monthly';
+  startDate: string;
+  endDate: string;
+  totalEvents: number;
+  totalTickets: number;
+  totalRevenue: number;
+  totalRefunds: number;
+  revenueByDay: Array<{ date: string; amount: number }>;
+  ticketsByCategory: Array<{ category: string; count: number; revenue: number }>;
+  validationStatus: 'valid' | 'invalid' | 'pending';
+  validationErrors?: string[];
+}
+
 export interface SIAETransaction {
   id: string;
   transactionDate: string;
@@ -2145,6 +2454,38 @@ export interface SIAECard {
   status: 'active' | 'pending' | 'expired';
 }
 
+export interface SIAESeat {
+  id: string;
+  row: string;
+  seatNumber: number;
+  section: string;
+  status: 'available' | 'sold' | 'blocked';
+  ticketCode?: string;
+  holderName?: string;
+}
+
+export interface SIAESeatingData {
+  eventId: string;
+  eventName: string;
+  totalSeats: number;
+  soldSeats: number;
+  availableSeats: number;
+  blockedSeats: number;
+  sections: string[];
+  seats: SIAESeat[];
+}
+
+export interface SIAETicketType {
+  id: string;
+  name: string;
+  price: number;
+  siaeCode: string;
+  available: number;
+  sold: number;
+  isActive: boolean;
+  category: string;
+}
+
 export interface SIAETicketingData {
   eventId: string;
   eventName: string;
@@ -2161,6 +2502,31 @@ export interface SIAEBoxOfficeData {
   sessionTransactions: number;
   sessionTotal: number;
   ticketTypes: Array<{id: string; name: string; price: number}>;
+}
+
+export interface SIAESubscription {
+  id: string;
+  name: string;
+  price: number;
+  validFrom: string;
+  validTo: string;
+  eventsIncluded: number;
+  subscribersCount: number;
+  isActive: boolean;
+  totalRevenue: number;
+}
+
+export interface SIAEResaleListing {
+  id: string;
+  ticketCode: string;
+  eventName: string;
+  originalPrice: number;
+  resalePrice: number;
+  sellerName: string;
+  status: 'pending' | 'active' | 'sold' | 'expired';
+  commission: number;
+  listedDate: string;
+  soldDate?: string;
 }
 
 export interface FloorPlanZone {
@@ -2198,6 +2564,53 @@ export interface ReportStats {
   inventoryValue: number;
   lowStockCount: number;
   staffPerformance: Array<{ id: string; name: string; role: string; scans: number; rating: number }>;
+}
+
+// Import Types
+export interface ImportData {
+  id: string;
+  type: 'products' | 'customers' | 'prices' | 'guests';
+  fileName: string;
+  importDate: string;
+  recordsCount: number;
+  status: 'success' | 'partial' | 'failed';
+  errors?: string[];
+}
+
+// Printer Types
+export interface PrinterConfig {
+  id: string;
+  name: string;
+  type: 'usb' | 'network' | 'bluetooth';
+  address: string;
+  isDefault: boolean;
+  paperSize: 'A4' | 'thermal_80mm' | 'thermal_58mm';
+  status: 'ready' | 'offline' | 'error';
+  queueCount: number;
+}
+
+// Invoice Types
+export interface Invoice {
+  id: string;
+  number: string;
+  customerName: string;
+  amount: number;
+  issueDate: string;
+  dueDate: string;
+  status: 'paid' | 'pending' | 'overdue';
+  eventId?: string;
+  eventName?: string;
+}
+
+// Event Page Types
+export interface EventPageData {
+  eventId: string;
+  eventName: string;
+  description: string;
+  images: string[];
+  socialLinks: { facebook?: string; instagram?: string; twitter?: string };
+  isPublished: boolean;
+  lastModified: string;
 }
 
 // Cashier Types
@@ -2538,6 +2951,41 @@ export interface FloorPlanEditorData {
   zones: FloorPlanEditorZone[];
   tables: FloorPlanEditorTable[];
   stages: FloorPlanEditorStage[];
+}
+
+// SIAE Transmission Types
+export interface SIAETransmission {
+  id: string;
+  transmissionDate: string;
+  reportType: 'RCA' | 'RMG' | 'RPM';
+  status: 'sent' | 'pending' | 'error' | 'confirmed';
+  eventId?: string;
+  eventName?: string;
+  errorMessage?: string;
+  xmlContent?: string;
+}
+
+// SIAE Audit Entry Types
+export interface SIAEAuditEntry {
+  id: string;
+  timestamp: string;
+  operation: 'emission' | 'refund' | 'cancellation' | 'name_change';
+  userId: string;
+  userName: string;
+  ticketCode: string;
+  amount: number;
+  details?: string;
+}
+
+// SIAE Config Types
+export interface SIAEConfig {
+  codiceFiscale: string;
+  partitaIVA: string;
+  smartCardConnected: boolean;
+  emailAddress: string;
+  defaultCategories: string[];
+  printerConfigured: boolean;
+  printerName?: string;
 }
 
 export const api = new ApiClient(API_BASE_URL);
