@@ -14,7 +14,14 @@ if ('serviceWorker' in navigator) {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                if (confirm('Nuova versione disponibile! Vuoi aggiornare?')) {
+                const lang = localStorage.getItem('i18nextLng') || 'it';
+                const messages: Record<string, string> = {
+                  it: 'Nuova versione disponibile! Vuoi aggiornare?',
+                  en: 'New version available! Do you want to update?',
+                  fr: 'Nouvelle version disponible! Voulez-vous mettre à jour?',
+                  de: 'Neue Version verfügbar! Möchten Sie aktualisieren?'
+                };
+                if (confirm(messages[lang] || messages.en)) {
                   newWorker.postMessage({ type: 'SKIP_WAITING' });
                   window.location.reload();
                 }
