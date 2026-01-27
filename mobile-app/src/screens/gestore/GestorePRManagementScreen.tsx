@@ -10,18 +10,18 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { StaffMember } from '@/lib/api';
+import api, { GestorePR } from '@/lib/api';
 
-type FilterType = 'all' | 'scanner' | 'pr' | 'bartender' | 'cashier';
+type FilterType = 'all' | 'active' | 'top';
 
-interface GestoreStaffScreenProps {
+interface GestorePRManagementScreenProps {
   onBack: () => void;
 }
 
-export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
+export function GestorePRManagementScreen({ onBack }: GestorePRManagementScreenProps) {
   const { colors } = useTheme();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
+  const [prs, setPrs] = useState<GestorePR[]>([]);
+  const [filteredPrs, setFilteredPrs] = useState<GestorePR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,7 +29,7 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadStaff();
+    loadPrs();
   }, []);
 
   useEffect(() => {
@@ -43,110 +43,106 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
   }, [isLoading]);
 
   useEffect(() => {
-    filterStaff();
-  }, [staff, activeFilter, searchQuery]);
+    filterPrs();
+  }, [prs, activeFilter, searchQuery]);
 
-  const loadStaff = async () => {
+  const loadPrs = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getGestoreStaff();
-      setStaff(data);
+      const data = await api.getGestorePRs();
+      setPrs(data);
     } catch (error) {
-      console.error('Error loading staff:', error);
-      setStaff([]);
+      console.error('Error loading PRs:', error);
+      setPrs([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filterStaff = () => {
-    let filtered = [...staff];
+  const filterPrs = () => {
+    let filtered = [...prs];
 
-    if (activeFilter !== 'all') {
-      filtered = filtered.filter(member => member.role === activeFilter);
+    if (activeFilter === 'active') {
+      filtered = filtered.filter(pr => pr.status === 'active');
+    } else if (activeFilter === 'top') {
+      filtered = filtered
+        .filter(pr => pr.status === 'active')
+        .sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
+        .slice(0, 10);
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(member =>
-        member.name.toLowerCase().includes(query) ||
-        member.email?.toLowerCase().includes(query)
+      filtered = filtered.filter(pr =>
+        pr.name.toLowerCase().includes(query) ||
+        pr.email?.toLowerCase().includes(query) ||
+        pr.prCode?.toLowerCase().includes(query)
       );
     }
 
-    setFilteredStaff(filtered);
+    setFilteredPrs(filtered);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadStaff();
+    await loadPrs();
     setRefreshing(false);
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'scanner':
-        return <Badge variant="default">Scanner</Badge>;
-      case 'pr':
-        return <Badge variant="success">PR</Badge>;
-      case 'bartender':
-        return <Badge variant="warning">Bartender</Badge>;
-      case 'cashier':
-        return <Badge variant="secondary">Cassiere</Badge>;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="success">Attivo</Badge>;
+      case 'inactive':
+        return <Badge variant="secondary">Inattivo</Badge>;
+      case 'pending':
+        return <Badge variant="warning">In attesa</Badge>;
       default:
-        return <Badge variant="outline">{role}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const getRoleIcon = (role: string): keyof typeof Ionicons.glyphMap => {
-    switch (role) {
-      case 'scanner':
-        return 'scan-outline';
-      case 'pr':
-        return 'people-outline';
-      case 'bartender':
-        return 'wine-outline';
-      case 'cashier':
-        return 'cash-outline';
-      default:
-        return 'person-outline';
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
   const filters: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'Tutti' },
-    { id: 'scanner', label: 'Scanner' },
-    { id: 'pr', label: 'PR' },
-    { id: 'bartender', label: 'Bartender' },
-    { id: 'cashier', label: 'Cassieri' },
+    { id: 'all', label: 'Tutti i PR' },
+    { id: 'active', label: 'Attivi' },
+    { id: 'top', label: 'Top Performer' },
   ];
 
-  const renderStaffMember = ({ item }: { item: StaffMember }) => (
+  const renderPrMember = ({ item }: { item: GestorePR }) => (
     <Pressable
       onPress={() => {
         triggerHaptic('light');
       }}
+      testID={`pr-item-${item.id}`}
     >
-      <Card style={styles.staffCard} testID={`staff-${item.id}`}>
-        <View style={styles.staffContent}>
+      <Card style={styles.prCard} testID={`pr-card-${item.id}`}>
+        <View style={styles.prContent}>
           <Avatar
             name={item.name}
             size="md"
             testID={`avatar-${item.id}`}
           />
-          <View style={styles.staffInfo}>
-            <Text style={styles.staffName}>{item.name}</Text>
-            <Text style={styles.staffEmail}>{item.email || '-'}</Text>
-            <View style={styles.staffMeta}>
-              <Ionicons name={getRoleIcon(item.role)} size={14} color={colors.mutedForeground} />
-              <Text style={styles.staffMetaText}>{item.eventsAssigned || 0} eventi assegnati</Text>
+          <View style={styles.prInfo}>
+            <Text style={styles.prName}>{item.name}</Text>
+            <Text style={styles.prEmail}>{item.email || item.prCode || '-'}</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.statText}>{item.invites || 0} inviti</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Ionicons name="checkmark-circle-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.statText}>{item.conversions || 0} conversioni</Text>
+              </View>
             </View>
           </View>
-          <View style={styles.staffActions}>
-            {getRoleBadge(item.role)}
-            <Badge variant={item.status === 'active' ? 'success' : 'secondary'}>
-              {item.status === 'active' ? 'Attivo' : 'Inattivo'}
-            </Badge>
+          <View style={styles.prActions}>
+            {getStatusBadge(item.status)}
+            <Text style={styles.earningsText}>{formatCurrency(item.earnings || 0)}</Text>
           </View>
         </View>
       </Card>
@@ -159,7 +155,7 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
         showLogo
         showBack
         onBack={onBack}
-        testID="header-staff"
+        testID="header-pr-management"
       />
 
       <View style={styles.searchContainer}>
@@ -167,14 +163,14 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Cerca staff..."
+            placeholder="Cerca PR..."
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            testID="input-search"
+            testID="input-search-pr"
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')}>
+            <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </Pressable>
           )}
@@ -214,11 +210,11 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
       </View>
 
       {showLoader ? (
-        <Loading text="Caricamento staff..." />
-      ) : filteredStaff.length > 0 ? (
+        <Loading text="Caricamento PR..." />
+      ) : filteredPrs.length > 0 ? (
         <FlatList
-          data={filteredStaff}
-          renderItem={renderStaffMember}
+          data={filteredPrs}
+          renderItem={renderPrMember}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -232,10 +228,10 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
         />
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={64} color={colors.mutedForeground} />
-          <Text style={styles.emptyTitle}>Nessun membro staff</Text>
+          <Ionicons name="megaphone-outline" size={64} color={colors.mutedForeground} />
+          <Text style={styles.emptyTitle}>Nessun PR trovato</Text>
           <Text style={styles.emptyText}>
-            {searchQuery ? 'Prova con una ricerca diversa' : 'Aggiungi membri staff dal pannello web'}
+            {searchQuery ? 'Prova con una ricerca diversa' : 'Aggiungi PR dal pannello web'}
           </Text>
         </View>
       )}
@@ -296,39 +292,49 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.md,
   },
-  staffCard: {
+  prCard: {
     padding: spacing.md,
   },
-  staffContent: {
+  prContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  staffInfo: {
+  prInfo: {
     flex: 1,
   },
-  staffName: {
+  prName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: staticColors.foreground,
   },
-  staffEmail: {
+  prEmail: {
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
   },
-  staffMeta: {
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginTop: spacing.xs,
   },
-  staffMetaText: {
+  statText: {
     fontSize: typography.fontSize.xs,
     color: staticColors.mutedForeground,
   },
-  staffActions: {
+  prActions: {
     alignItems: 'flex-end',
     gap: spacing.xs,
+  },
+  earningsText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+    color: staticColors.primary,
   },
   emptyState: {
     flex: 1,
@@ -351,4 +357,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GestoreStaffScreen;
+export default GestorePRManagementScreen;

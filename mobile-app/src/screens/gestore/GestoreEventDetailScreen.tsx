@@ -138,8 +138,8 @@ export function GestoreEventDetailScreen({ eventId, onBack }: GestoreEventDetail
         </GlassCard>
 
         <GlassCard style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: `${staticColors.purple}20` }]}>
-            <Ionicons name="checkmark-circle" size={24} color={staticColors.purple} />
+          <View style={[styles.statIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+            <Ionicons name="checkmark-circle" size={24} color="#8B5CF6" />
           </View>
           <Text style={styles.statValue}>{event?.checkedIn || 0}</Text>
           <Text style={styles.statLabel}>Check-in</Text>
@@ -228,13 +228,13 @@ export function GestoreEventDetailScreen({ eventId, onBack }: GestoreEventDetail
         <Card key={index} style={styles.ticketTypeCard}>
           <View style={styles.ticketTypeHeader}>
             <Text style={styles.ticketTypeName}>{type.name}</Text>
-            <Badge variant={type.available > 0 ? 'success' : 'destructive'}>
-              {type.available > 0 ? 'Disponibile' : 'Esaurito'}
+            <Badge variant={(type.available ?? 0) > 0 ? 'success' : 'destructive'}>
+              {(type.available ?? 0) > 0 ? 'Disponibile' : 'Esaurito'}
             </Badge>
           </View>
           <View style={styles.ticketTypeStats}>
             <Text style={styles.ticketTypePrice}>{formatCurrency(type.price)}</Text>
-            <Text style={styles.ticketTypeSold}>{type.sold}/{type.quantity} venduti</Text>
+            <Text style={styles.ticketTypeSold}>{type.sold}/{type.capacity} venduti</Text>
           </View>
         </Card>
       )) || (
@@ -273,7 +273,7 @@ export function GestoreEventDetailScreen({ eventId, onBack }: GestoreEventDetail
         <Card key={index} style={styles.listCard}>
           <View style={styles.listHeader}>
             <Text style={styles.listName}>{list.name}</Text>
-            <Badge variant="secondary">{list.count} ospiti</Badge>
+            <Badge variant="secondary">{list.guestsCount} ospiti</Badge>
           </View>
           <View style={styles.listStats}>
             <View style={styles.listStat}>
@@ -282,7 +282,7 @@ export function GestoreEventDetailScreen({ eventId, onBack }: GestoreEventDetail
             </View>
             <View style={styles.listStat}>
               <Ionicons name="person-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.listStatText}>PR: {list.prName || '-'}</Text>
+              <Text style={styles.listStatText}>Lista: {list.name}</Text>
             </View>
           </View>
         </Card>
@@ -327,8 +327,8 @@ export function GestoreEventDetailScreen({ eventId, onBack }: GestoreEventDetail
             </Badge>
           </View>
           <View style={styles.tableInfo}>
-            <Text style={styles.tablePrice}>{formatCurrency(table.minSpend)}</Text>
-            <Text style={styles.tableSeats}>{table.seats} posti</Text>
+            <Text style={styles.tableSeats}>{table.capacity} posti</Text>
+            {table.bookedBy && <Text style={styles.tableSeats}>Prenotato da: {table.bookedBy}</Text>}
           </View>
         </Card>
       )) || (

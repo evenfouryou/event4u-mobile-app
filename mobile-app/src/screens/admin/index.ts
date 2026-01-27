@@ -1,5 +1,8 @@
 export { AdminDashboard } from './AdminDashboard';
 export { AdminGestoriScreen } from './AdminGestoriScreen';
+export { AdminGestoreDetailScreen } from './AdminGestoreDetailScreen';
 export { AdminEventsScreen } from './AdminEventsScreen';
 export { AdminBillingScreen } from './AdminBillingScreen';
 export { AdminSettingsScreen } from './AdminSettingsScreen';
+export { AdminCompaniesScreen } from './AdminCompaniesScreen';
+export { AdminUsersScreen } from './AdminUsersScreen';

@@ -861,9 +861,33 @@ class ApiClient {
     }
   }
 
+  async getGestorePriceLists(): Promise<PriceList[]> {
+    try {
+      return await this.get<PriceList[]>('/api/gestore/inventory/price-lists');
+    } catch {
+      return [];
+    }
+  }
+
   async getGestoreStaff(): Promise<GestoreStaffMember[]> {
     try {
       return await this.get<GestoreStaffMember[]>('/api/gestore/staff');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestorePRs(): Promise<GestorePR[]> {
+    try {
+      return await this.get<GestorePR[]>('/api/gestore/prs');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreCompanies(): Promise<GestoreCompany[]> {
+    try {
+      return await this.get<GestoreCompany[]>('/api/gestore/companies');
     } catch {
       return [];
     }
@@ -938,6 +962,10 @@ class ApiClient {
     }
   }
 
+  async getAdminGestoreDetail(gestoreId: string): Promise<AdminGestoreDetail> {
+    return this.get<AdminGestoreDetail>(`/api/admin/gestori/${gestoreId}`);
+  }
+
   async getAdminEvents(): Promise<AdminEvent[]> {
     try {
       return await this.get<AdminEvent[]>('/api/admin/events');
@@ -957,6 +985,22 @@ class ApiClient {
   async getAdminInvoices(): Promise<Invoice[]> {
     try {
       return await this.get<Invoice[]>('/api/admin/billing/invoices');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminCompanies(): Promise<AdminCompany[]> {
+    try {
+      return await this.get<AdminCompany[]>('/api/admin/companies');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminUsers(): Promise<AdminUser[]> {
+    try {
+      return await this.get<AdminUser[]>('/api/admin/users');
     } catch {
       return [];
     }
@@ -1000,6 +1044,26 @@ export interface GestoreEventDetail extends GestoreEvent {
   ticketTypes: GestoreTicketType[];
   stations: GestoreStation[];
   staff: GestoreStaffMember[];
+  // Additional stats for event hub
+  guestsCount?: number;
+  checkedIn?: number;
+  ticketsAvailable?: number;
+  ticketRevenue?: number;
+  guestsCheckedIn?: number;
+  guestLists?: Array<{ id: string; name: string; guestsCount: number; checkedIn: number }>;
+  tablesTotal?: number;
+  tablesBooked?: number;
+  tablesRevenue?: number;
+  tables?: Array<{ id: string; name: string; capacity: number; status: string; bookedBy?: string }>;
+  staffCount?: number;
+  scannersCount?: number;
+  prCount?: number;
+  productsCount?: number;
+  stationsCount?: number;
+  consumptionTotal?: number;
+  expenses?: number;
+  profit?: number;
+  consumptionRevenue?: number;
 }
 
 export interface GestoreTicketType {
@@ -1008,6 +1072,8 @@ export interface GestoreTicketType {
   price: number;
   capacity: number;
   sold: number;
+  available?: number;
+  quantity?: number;
 }
 
 export interface GestoreStation {
@@ -1026,6 +1092,9 @@ export interface GestoreStaffMember {
   status: string;
   eventsAssigned: number;
 }
+
+// Alias for backward compatibility
+export type StaffMember = GestoreStaffMember;
 
 export interface GestoreInventoryItem {
   id: string;
@@ -1053,6 +1122,17 @@ export interface InventoryCategory {
   name: string;
   productsCount: number;
   icon?: string;
+}
+
+export interface PriceList {
+  id: string;
+  name: string;
+  description?: string;
+  productsCount: number;
+  status: 'active' | 'inactive' | 'draft';
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface GestoreInventoryStats {
@@ -1117,6 +1197,29 @@ export interface Company {
   address?: string;
 }
 
+export interface GestorePR {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  prCode?: string;
+  status: string;
+  invites?: number;
+  conversions?: number;
+  earnings?: number;
+  eventsCount?: number;
+}
+
+export interface GestoreCompany {
+  id: string;
+  name: string;
+  vatNumber?: string;
+  status: string;
+  eventsCount?: number;
+  staffCount?: number;
+  locationsCount?: number;
+}
+
 // Admin Types
 export interface AdminDashboardStats {
   totalGestori: number;
@@ -1147,6 +1250,49 @@ export interface AdminGestore {
   siaeEnabled?: boolean;
 }
 
+export interface AdminGestoreCompany {
+  id: string;
+  name: string;
+  vatNumber?: string;
+  status: string;
+  eventsCount?: number;
+  locationsCount?: number;
+  siaeEnabled?: boolean;
+}
+
+export interface AdminGestoreEvent {
+  id: string;
+  name: string;
+  startDate?: string;
+  endDate?: string;
+  locationName?: string;
+  status: string;
+  ticketsSold?: number;
+  revenue?: number;
+}
+
+export interface AdminGestoreUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+export interface AdminGestoreDetail extends AdminGestore {
+  phone?: string;
+  createdAt?: string;
+  companiesCount?: number;
+  usersCount?: number;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionExpiresAt?: string;
+  companies?: AdminGestoreCompany[];
+  events?: AdminGestoreEvent[];
+  users?: AdminGestoreUser[];
+}
+
 export interface AdminEvent {
   id: string;
   name: string;
@@ -1157,6 +1303,31 @@ export interface AdminEvent {
   ticketsSold?: number;
   revenue?: number;
   capacity?: number;
+}
+
+export interface AdminCompany {
+  id: string;
+  name: string;
+  gestoreName?: string;
+  gestoreId?: string;
+  vatNumber?: string;
+  status: string;
+  eventsCount?: number;
+  locationsCount?: number;
+  siaeEnabled?: boolean;
+  createdAt?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  status: string;
+  lastLoginAt?: string;
+  createdAt?: string;
+  companyName?: string;
 }
 
 export interface BillingStats {

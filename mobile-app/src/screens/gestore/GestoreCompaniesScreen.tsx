@@ -4,24 +4,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
-import { Avatar } from '@/components/Avatar';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { StaffMember } from '@/lib/api';
+import api, { GestoreCompany } from '@/lib/api';
 
-type FilterType = 'all' | 'scanner' | 'pr' | 'bartender' | 'cashier';
+type FilterType = 'all' | 'active' | 'inactive';
 
-interface GestoreStaffScreenProps {
+interface GestoreCompaniesScreenProps {
   onBack: () => void;
 }
 
-export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
+export function GestoreCompaniesScreen({ onBack }: GestoreCompaniesScreenProps) {
   const { colors } = useTheme();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
+  const [companies, setCompanies] = useState<GestoreCompany[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<GestoreCompany[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,7 +28,7 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadStaff();
+    loadCompanies();
   }, []);
 
   useEffect(() => {
@@ -43,110 +42,97 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
   }, [isLoading]);
 
   useEffect(() => {
-    filterStaff();
-  }, [staff, activeFilter, searchQuery]);
+    filterCompanies();
+  }, [companies, activeFilter, searchQuery]);
 
-  const loadStaff = async () => {
+  const loadCompanies = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getGestoreStaff();
-      setStaff(data);
+      const data = await api.getGestoreCompanies();
+      setCompanies(data);
     } catch (error) {
-      console.error('Error loading staff:', error);
-      setStaff([]);
+      console.error('Error loading companies:', error);
+      setCompanies([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filterStaff = () => {
-    let filtered = [...staff];
+  const filterCompanies = () => {
+    let filtered = [...companies];
 
-    if (activeFilter !== 'all') {
-      filtered = filtered.filter(member => member.role === activeFilter);
+    if (activeFilter === 'active') {
+      filtered = filtered.filter(company => company.status === 'active');
+    } else if (activeFilter === 'inactive') {
+      filtered = filtered.filter(company => company.status === 'inactive');
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(member =>
-        member.name.toLowerCase().includes(query) ||
-        member.email?.toLowerCase().includes(query)
+      filtered = filtered.filter(company =>
+        company.name.toLowerCase().includes(query) ||
+        company.vatNumber?.toLowerCase().includes(query)
       );
     }
 
-    setFilteredStaff(filtered);
+    setFilteredCompanies(filtered);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadStaff();
+    await loadCompanies();
     setRefreshing(false);
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'scanner':
-        return <Badge variant="default">Scanner</Badge>;
-      case 'pr':
-        return <Badge variant="success">PR</Badge>;
-      case 'bartender':
-        return <Badge variant="warning">Bartender</Badge>;
-      case 'cashier':
-        return <Badge variant="secondary">Cassiere</Badge>;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="success">Attiva</Badge>;
+      case 'inactive':
+        return <Badge variant="secondary">Inattiva</Badge>;
+      case 'pending':
+        return <Badge variant="warning">In attesa</Badge>;
       default:
-        return <Badge variant="outline">{role}</Badge>;
-    }
-  };
-
-  const getRoleIcon = (role: string): keyof typeof Ionicons.glyphMap => {
-    switch (role) {
-      case 'scanner':
-        return 'scan-outline';
-      case 'pr':
-        return 'people-outline';
-      case 'bartender':
-        return 'wine-outline';
-      case 'cashier':
-        return 'cash-outline';
-      default:
-        return 'person-outline';
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const filters: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'Tutti' },
-    { id: 'scanner', label: 'Scanner' },
-    { id: 'pr', label: 'PR' },
-    { id: 'bartender', label: 'Bartender' },
-    { id: 'cashier', label: 'Cassieri' },
+    { id: 'all', label: 'Tutte' },
+    { id: 'active', label: 'Attive' },
+    { id: 'inactive', label: 'Inattive' },
   ];
 
-  const renderStaffMember = ({ item }: { item: StaffMember }) => (
+  const renderCompany = ({ item }: { item: GestoreCompany }) => (
     <Pressable
       onPress={() => {
         triggerHaptic('light');
       }}
+      testID={`company-item-${item.id}`}
     >
-      <Card style={styles.staffCard} testID={`staff-${item.id}`}>
-        <View style={styles.staffContent}>
-          <Avatar
-            name={item.name}
-            size="md"
-            testID={`avatar-${item.id}`}
-          />
-          <View style={styles.staffInfo}>
-            <Text style={styles.staffName}>{item.name}</Text>
-            <Text style={styles.staffEmail}>{item.email || '-'}</Text>
-            <View style={styles.staffMeta}>
-              <Ionicons name={getRoleIcon(item.role)} size={14} color={colors.mutedForeground} />
-              <Text style={styles.staffMetaText}>{item.eventsAssigned || 0} eventi assegnati</Text>
+      <Card style={styles.companyCard} testID={`company-card-${item.id}`}>
+        <View style={styles.companyContent}>
+          <View style={styles.companyIcon}>
+            <Ionicons name="business-outline" size={28} color={colors.primary} />
+          </View>
+          <View style={styles.companyInfo}>
+            <Text style={styles.companyName}>{item.name}</Text>
+            {item.vatNumber && (
+              <Text style={styles.companyVat}>P.IVA: {item.vatNumber}</Text>
+            )}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.statText}>{item.eventsCount || 0} eventi</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Ionicons name="people-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.statText}>{item.staffCount || 0} staff</Text>
+              </View>
             </View>
           </View>
-          <View style={styles.staffActions}>
-            {getRoleBadge(item.role)}
-            <Badge variant={item.status === 'active' ? 'success' : 'secondary'}>
-              {item.status === 'active' ? 'Attivo' : 'Inattivo'}
-            </Badge>
+          <View style={styles.companyActions}>
+            {getStatusBadge(item.status)}
           </View>
         </View>
       </Card>
@@ -159,7 +145,7 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
         showLogo
         showBack
         onBack={onBack}
-        testID="header-staff"
+        testID="header-companies"
       />
 
       <View style={styles.searchContainer}>
@@ -167,14 +153,14 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Cerca staff..."
+            placeholder="Cerca azienda..."
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            testID="input-search"
+            testID="input-search-company"
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')}>
+            <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </Pressable>
           )}
@@ -214,11 +200,11 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
       </View>
 
       {showLoader ? (
-        <Loading text="Caricamento staff..." />
-      ) : filteredStaff.length > 0 ? (
+        <Loading text="Caricamento aziende..." />
+      ) : filteredCompanies.length > 0 ? (
         <FlatList
-          data={filteredStaff}
-          renderItem={renderStaffMember}
+          data={filteredCompanies}
+          renderItem={renderCompany}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -232,10 +218,10 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
         />
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={64} color={colors.mutedForeground} />
-          <Text style={styles.emptyTitle}>Nessun membro staff</Text>
+          <Ionicons name="business-outline" size={64} color={colors.mutedForeground} />
+          <Text style={styles.emptyTitle}>Nessuna azienda trovata</Text>
           <Text style={styles.emptyText}>
-            {searchQuery ? 'Prova con una ricerca diversa' : 'Aggiungi membri staff dal pannello web'}
+            {searchQuery ? 'Prova con una ricerca diversa' : 'Aggiungi aziende dal pannello web'}
           </Text>
         </View>
       )}
@@ -296,39 +282,51 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.md,
   },
-  staffCard: {
+  companyCard: {
     padding: spacing.md,
   },
-  staffContent: {
+  companyContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  staffInfo: {
+  companyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: staticColors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  companyInfo: {
     flex: 1,
   },
-  staffName: {
+  companyName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: staticColors.foreground,
   },
-  staffEmail: {
+  companyVat: {
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
   },
-  staffMeta: {
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginTop: spacing.xs,
   },
-  staffMetaText: {
+  statText: {
     fontSize: typography.fontSize.xs,
     color: staticColors.mutedForeground,
   },
-  staffActions: {
+  companyActions: {
     alignItems: 'flex-end',
-    gap: spacing.xs,
   },
   emptyState: {
     flex: 1,
@@ -351,4 +349,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GestoreStaffScreen;
+export default GestoreCompaniesScreen;

@@ -41,6 +41,8 @@ import {
   GestoreEventsScreen,
   GestoreEventDetailScreen,
   GestoreInventoryScreen,
+  GestoreProductsScreen,
+  GestorePriceListsScreen,
   GestoreStaffScreen,
   GestoreScannerScreen,
   GestoreMarketingScreen,
@@ -48,14 +50,19 @@ import {
   GestoreProfileScreen,
   GestoreSettingsScreen,
   GestoreCreateEventScreen,
+  GestorePRManagementScreen,
+  GestoreCompaniesScreen,
 } from '@/screens/gestore';
 
 import {
   AdminDashboard,
   AdminGestoriScreen,
+  AdminGestoreDetailScreen,
   AdminEventsScreen,
   AdminBillingScreen,
   AdminSettingsScreen,
+  AdminCompaniesScreen,
+  AdminUsersScreen,
 } from '@/screens/admin';
 
 type Screen =
@@ -101,12 +108,20 @@ type Screen =
   | { name: 'gestoreAccounting' }
   | { name: 'gestoreProfile' }
   | { name: 'gestoreSettings' }
+  // Gestore additional screens
+  | { name: 'gestoreProducts' }
+  | { name: 'gestorePriceLists' }
+  | { name: 'gestorePRManagement' }
+  | { name: 'gestoreCompanies' }
   // Admin screens
   | { name: 'adminDashboard' }
   | { name: 'adminGestori' }
+  | { name: 'adminGestoreDetail'; params: { gestoreId: string } }
   | { name: 'adminEvents' }
   | { name: 'adminBilling' }
-  | { name: 'adminSettings' };
+  | { name: 'adminSettings' }
+  | { name: 'adminCompanies' }
+  | { name: 'adminUsers' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -543,7 +558,7 @@ export function AppNavigator() {
         return (
           <GestoreCreateEventScreen
             onBack={goBack}
-            onSuccess={(eventId) => navigate({ name: 'gestoreEventDetail', params: { eventId } })}
+            onEventCreated={(eventId: string) => navigate({ name: 'gestoreEventDetail', params: { eventId } })}
           />
         );
 
@@ -586,13 +601,41 @@ export function AppNavigator() {
         return (
           <GestoreProfileScreen
             onBack={goBack}
-            onLogout={() => resetTo({ name: 'landing' })}
           />
         );
 
       case 'gestoreSettings':
         return (
           <GestoreSettingsScreen
+            onBack={goBack}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'gestoreProducts':
+        return (
+          <GestoreProductsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestorePriceLists':
+        return (
+          <GestorePriceListsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestorePRManagement':
+        return (
+          <GestorePRManagementScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreCompanies':
+        return (
+          <GestoreCompaniesScreen
             onBack={goBack}
           />
         );
@@ -602,9 +645,13 @@ export function AppNavigator() {
         return (
           <AdminDashboard
             onNavigateGestori={() => navigate({ name: 'adminGestori' })}
+            onNavigateCompanies={() => navigate({ name: 'adminCompanies' })}
             onNavigateEvents={() => navigate({ name: 'adminEvents' })}
+            onNavigateUsers={() => navigate({ name: 'adminUsers' })}
             onNavigateBilling={() => navigate({ name: 'adminBilling' })}
             onNavigateSettings={() => navigate({ name: 'adminSettings' })}
+            onNavigateProfile={() => navigate({ name: 'adminSettings' })}
+            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
@@ -613,6 +660,15 @@ export function AppNavigator() {
         return (
           <AdminGestoriScreen
             onBack={goBack}
+            onGestorePress={(gestoreId: string) => navigate({ name: 'adminGestoreDetail', params: { gestoreId } })}
+          />
+        );
+
+      case 'adminGestoreDetail':
+        return (
+          <AdminGestoreDetailScreen
+            gestoreId={currentScreen.params.gestoreId}
+            onBack={goBack}
           />
         );
 
@@ -620,6 +676,7 @@ export function AppNavigator() {
         return (
           <AdminEventsScreen
             onBack={goBack}
+            onEventPress={(eventId: string) => navigate({ name: 'adminEvents' })}
           />
         );
 
@@ -634,6 +691,23 @@ export function AppNavigator() {
         return (
           <AdminSettingsScreen
             onBack={goBack}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'adminCompanies':
+        return (
+          <AdminCompaniesScreen
+            onBack={goBack}
+            onItemPress={(companyId: string) => navigate({ name: 'adminCompanies' })}
+          />
+        );
+
+      case 'adminUsers':
+        return (
+          <AdminUsersScreen
+            onBack={goBack}
+            onItemPress={(userId: string) => navigate({ name: 'adminUsers' })}
           />
         );
 

@@ -10,26 +10,27 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { StaffMember } from '@/lib/api';
+import api, { AdminUser } from '@/lib/api';
 
-type FilterType = 'all' | 'scanner' | 'pr' | 'bartender' | 'cashier';
+type RoleFilterType = 'all' | 'admin' | 'gestore' | 'operator' | 'pr' | 'scanner';
 
-interface GestoreStaffScreenProps {
+interface AdminUsersScreenProps {
   onBack: () => void;
+  onItemPress: (id: string) => void;
 }
 
-export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
+export function AdminUsersScreen({ onBack, onItemPress }: AdminUsersScreenProps) {
   const { colors } = useTheme();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<RoleFilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadStaff();
+    loadUsers();
   }, []);
 
   useEffect(() => {
@@ -43,110 +44,145 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
   }, [isLoading]);
 
   useEffect(() => {
-    filterStaff();
-  }, [staff, activeFilter, searchQuery]);
+    filterUsers();
+  }, [users, activeFilter, searchQuery]);
 
-  const loadStaff = async () => {
+  const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getGestoreStaff();
-      setStaff(data);
+      const data = await api.getAdminUsers();
+      setUsers(data);
     } catch (error) {
-      console.error('Error loading staff:', error);
-      setStaff([]);
+      console.error('Error loading users:', error);
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filterStaff = () => {
-    let filtered = [...staff];
+  const filterUsers = () => {
+    let filtered = [...users];
 
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(member => member.role === activeFilter);
+      filtered = filtered.filter(u => u.role?.toLowerCase() === activeFilter);
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(member =>
-        member.name.toLowerCase().includes(query) ||
-        member.email?.toLowerCase().includes(query)
+      filtered = filtered.filter(u =>
+        u.firstName?.toLowerCase().includes(query) ||
+        u.lastName?.toLowerCase().includes(query) ||
+        u.email?.toLowerCase().includes(query) ||
+        u.companyName?.toLowerCase().includes(query)
       );
     }
 
-    setFilteredStaff(filtered);
+    setFilteredUsers(filtered);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadStaff();
+    await loadUsers();
     setRefreshing(false);
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="success">Attivo</Badge>;
+      case 'inactive':
+        return <Badge variant="secondary">Inattivo</Badge>;
+      case 'pending':
+        return <Badge variant="warning">In attesa</Badge>;
+      case 'suspended':
+        return <Badge variant="destructive">Sospeso</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'scanner':
-        return <Badge variant="default">Scanner</Badge>;
+    switch (role?.toLowerCase()) {
+      case 'admin':
+        return <Badge variant="default">Admin</Badge>;
+      case 'gestore':
+        return <Badge variant="default">Gestore</Badge>;
+      case 'operator':
+        return <Badge variant="secondary">Operatore</Badge>;
       case 'pr':
-        return <Badge variant="success">PR</Badge>;
-      case 'bartender':
-        return <Badge variant="warning">Bartender</Badge>;
-      case 'cashier':
-        return <Badge variant="secondary">Cassiere</Badge>;
+        return <Badge variant="outline">PR</Badge>;
+      case 'scanner':
+        return <Badge variant="outline">Scanner</Badge>;
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
   };
 
-  const getRoleIcon = (role: string): keyof typeof Ionicons.glyphMap => {
-    switch (role) {
-      case 'scanner':
-        return 'scan-outline';
-      case 'pr':
-        return 'people-outline';
-      case 'bartender':
-        return 'wine-outline';
-      case 'cashier':
-        return 'cash-outline';
-      default:
-        return 'person-outline';
-    }
+  const formatLastLogin = (dateString?: string) => {
+    if (!dateString) return 'Mai';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Oggi';
+    if (diffDays === 1) return 'Ieri';
+    if (diffDays < 7) return `${diffDays} giorni fa`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} settimane fa`;
+    return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
   };
 
-  const filters: { id: FilterType; label: string }[] = [
+  const filters: { id: RoleFilterType; label: string }[] = [
     { id: 'all', label: 'Tutti' },
-    { id: 'scanner', label: 'Scanner' },
+    { id: 'admin', label: 'Admin' },
+    { id: 'gestore', label: 'Gestori' },
+    { id: 'operator', label: 'Operatori' },
     { id: 'pr', label: 'PR' },
-    { id: 'bartender', label: 'Bartender' },
-    { id: 'cashier', label: 'Cassieri' },
+    { id: 'scanner', label: 'Scanner' },
   ];
 
-  const renderStaffMember = ({ item }: { item: StaffMember }) => (
+  const renderUser = ({ item }: { item: AdminUser }) => (
     <Pressable
       onPress={() => {
         triggerHaptic('light');
+        onItemPress(item.id);
       }}
+      testID={`user-item-${item.id}`}
     >
-      <Card style={styles.staffCard} testID={`staff-${item.id}`}>
-        <View style={styles.staffContent}>
-          <Avatar
-            name={item.name}
-            size="md"
-            testID={`avatar-${item.id}`}
+      <Card style={styles.userCard} testID={`user-card-${item.id}`}>
+        <View style={styles.userContent}>
+          <Avatar 
+            name={`${item.firstName} ${item.lastName}`} 
+            size="lg" 
+            testID={`avatar-user-${item.id}`} 
           />
-          <View style={styles.staffInfo}>
-            <Text style={styles.staffName}>{item.name}</Text>
-            <Text style={styles.staffEmail}>{item.email || '-'}</Text>
-            <View style={styles.staffMeta}>
-              <Ionicons name={getRoleIcon(item.role)} size={14} color={colors.mutedForeground} />
-              <Text style={styles.staffMetaText}>{item.eventsAssigned || 0} eventi assegnati</Text>
-            </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{item.firstName} {item.lastName}</Text>
+            <Text style={styles.userEmail}>{item.email}</Text>
+            {item.companyName && (
+              <View style={styles.userMeta}>
+                <Ionicons name="business-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.userMetaText}>{item.companyName}</Text>
+              </View>
+            )}
           </View>
-          <View style={styles.staffActions}>
+          <View style={styles.userActions}>
+            {getStatusBadge(item.status)}
+            <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+          </View>
+        </View>
+
+        <View style={styles.userDivider} />
+
+        <View style={styles.userFooter}>
+          <View style={styles.userRole}>
             {getRoleBadge(item.role)}
-            <Badge variant={item.status === 'active' ? 'success' : 'secondary'}>
-              {item.status === 'active' ? 'Attivo' : 'Inattivo'}
-            </Badge>
+          </View>
+          <View style={styles.userLastLogin}>
+            <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+            <Text style={styles.userLastLoginText}>
+              Ultimo accesso: {formatLastLogin(item.lastLoginAt)}
+            </Text>
           </View>
         </View>
       </Card>
@@ -159,7 +195,7 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
         showLogo
         showBack
         onBack={onBack}
-        testID="header-staff"
+        testID="header-users"
       />
 
       <View style={styles.searchContainer}>
@@ -167,14 +203,14 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Cerca staff..."
+            placeholder="Cerca utenti..."
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            testID="input-search"
+            testID="input-search-users"
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')}>
+            <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search-users">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </Pressable>
           )}
@@ -198,7 +234,7 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
                 styles.filterChip,
                 activeFilter === item.id && styles.filterChipActive,
               ]}
-              testID={`filter-${item.id}`}
+              testID={`filter-users-${item.id}`}
             >
               <Text
                 style={[
@@ -214,11 +250,11 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
       </View>
 
       {showLoader ? (
-        <Loading text="Caricamento staff..." />
-      ) : filteredStaff.length > 0 ? (
+        <Loading text="Caricamento utenti..." />
+      ) : filteredUsers.length > 0 ? (
         <FlatList
-          data={filteredStaff}
-          renderItem={renderStaffMember}
+          data={filteredUsers}
+          renderItem={renderUser}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -229,13 +265,14 @@ export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
               tintColor={colors.primary}
             />
           }
+          testID="list-users"
         />
       ) : (
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={64} color={colors.mutedForeground} />
-          <Text style={styles.emptyTitle}>Nessun membro staff</Text>
+          <Text style={styles.emptyTitle}>Nessun utente trovato</Text>
           <Text style={styles.emptyText}>
-            {searchQuery ? 'Prova con una ricerca diversa' : 'Aggiungi membri staff dal pannello web'}
+            {searchQuery ? 'Prova con una ricerca diversa' : 'Gli utenti appariranno qui'}
           </Text>
         </View>
       )}
@@ -296,39 +333,61 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.md,
   },
-  staffCard: {
+  userCard: {
     padding: spacing.md,
   },
-  staffContent: {
+  userContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  staffInfo: {
+  userInfo: {
     flex: 1,
   },
-  staffName: {
+  userName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: staticColors.foreground,
   },
-  staffEmail: {
+  userEmail: {
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
   },
-  staffMeta: {
+  userMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
-  staffMetaText: {
+  userMetaText: {
     fontSize: typography.fontSize.xs,
     color: staticColors.mutedForeground,
   },
-  staffActions: {
+  userActions: {
     alignItems: 'flex-end',
     gap: spacing.xs,
+  },
+  userDivider: {
+    height: 1,
+    backgroundColor: staticColors.border,
+    marginVertical: spacing.md,
+  },
+  userFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userRole: {
+    flexDirection: 'row',
+  },
+  userLastLogin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  userLastLoginText: {
+    fontSize: typography.fontSize.xs,
+    color: staticColors.mutedForeground,
   },
   emptyState: {
     flex: 1,
@@ -351,4 +410,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GestoreStaffScreen;
+export default AdminUsersScreen;
