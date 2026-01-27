@@ -3628,6 +3628,72 @@
       "performanceByBundle": "Performance by Bundle",
       "revenueLabel": "Revenue",
       "noBundlesCreated": "No bundles created"
-    }
+    },
+    "emailTitle": "Email Marketing",
+    "emailDescription": "Manage email templates and campaigns",
+    "emailTemplates": "Email Templates",
+    "templateName": "Template Name",
+    "emailSubject": "Email Subject",
+    "type": "Type",
+    "newsletter": "Newsletter",
+    "draft": "Draft",
+    "scheduled": "Scheduled",
+    "sent": "Sent"
+  },
+  "aiAnalysis": {
+    "title": "AI Analysis",
+    "description": "Intelligent analysis and AI chat about your data",
+    "insights": "Automatic Insights",
+    "insightsDesc": "Intelligent analysis of your data",
+    "chat": "Chat with AI",
+    "chatDesc": "Ask questions about your data",
+    "suggestedQuestions": "Suggested questions:",
+    "error": "Error",
+    "analyzeError": "Unable to analyze data",
+    "suggestedQ1": "What are the best-selling products this month?",
+    "suggestedQ2": "Are there any products at risk of running out?",
+    "suggestedQ3": "Which event had the highest consumption?",
+    "suggestedQ4": "Give me suggestions to optimize inventory",
+    "noInsights": "No insights available at the moment",
+    "askQuestion": "Ask a question about your data...",
+    "analyzing": "Analyzing...",
+    "send": "Send"
+  },
+  "prManagement": {
+    "title": "PR Management",
+    "accessDenied": "Access Denied",
+    "totalPR": "Total PR",
+    "active": "Active",
+    "totalEarnings": "Total Earnings",
+    "toPay": "To Pay",
+    "prProfiles": "PR Profiles",
+    "manageProfiles": "Manage your company's PR profiles",
+    "noPRFound": "No PR found",
+    "name": "Name",
+    "phone": "Phone"
+  },
+  "loyalty": {
+    "title": "Loyalty Program",
+    "description": "Manage the loyalty program for your customers",
+    "programActive": "Program active",
+    "enrolledCustomers": "Enrolled Customers",
+    "activePoints": "Active Points",
+    "totalPointsIssued": "Total Points Issued",
+    "pointsRedeemed": "Points Redeemed",
+    "levelDistribution": "Level Distribution",
+    "programConfig": "Program Configuration",
+    "programConfigDesc": "Set the basic parameters of the loyalty program"
+  },
+  "referral": {
+    "title": "Referral Program",
+    "description": "Manage the referral program",
+    "totalReferrals": "Total Referrals",
+    "invitesMade": "Invites made",
+    "conversions": "Conversions",
+    "purchasesCompleted": "Purchases completed",
+    "conversionRate": "Conversion Rate",
+    "convertedReferrals": "Converted referrals",
+    "activeCodes": "Active Codes",
+    "customersWithCode": "Customers with code"
   }
 }

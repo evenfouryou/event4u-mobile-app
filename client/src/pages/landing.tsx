@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { triggerHaptic } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSelector } from "@/components/language-selector";
 import { useTranslation } from 'react-i18next';
 
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
@@ -119,6 +120,7 @@ export default function Landing() {
                 <Link href="/locali" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-venues">
                   {t('public.nav.venues')}
                 </Link>
+                <LanguageSelector />
                 <ThemeToggle />
                 {isAuthenticated ? (
                   <Link href="/account">
@@ -399,6 +401,7 @@ export default function Landing() {
             <BrandLogo variant="horizontal" className="h-10 w-auto" />
             
             <div className="flex items-center gap-3">
+              <LanguageSelector />
               <ThemeToggle />
               {isAuthenticated ? (
                 <Link href="/account" onClick={handleLinkPress}>

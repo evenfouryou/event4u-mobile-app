@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,6 +49,7 @@ type Stock = {
 
 export default function ReturnToWarehouse() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);

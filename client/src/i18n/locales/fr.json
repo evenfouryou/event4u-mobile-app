@@ -3974,7 +3974,17 @@
     "createCampaign": "Créer une Campagne",
     "editCampaign": "Modifier la Campagne",
     "deleteCampaign": "Supprimer la Campagne",
-    "noCampaigns": "Aucune campagne"
+    "noCampaigns": "Aucune campagne",
+    "emailTitle": "Email Marketing",
+    "emailDescription": "Gérez les modèles et campagnes email",
+    "emailTemplates": "Modèles Email",
+    "templateName": "Nom du Modèle",
+    "emailSubject": "Objet de l'Email",
+    "type": "Type",
+    "newsletter": "Newsletter",
+    "draft": "Brouillon",
+    "scheduled": "Programmée",
+    "sent": "Envoyée"
   },
   "eventHub": {
     "selectEvent": "Sélectionnez un événement",
@@ -4028,5 +4038,61 @@
     "status": "Statut",
     "actions": "Actions",
     "total": "Total"
+  },
+  "aiAnalysis": {
+    "title": "Analyse IA",
+    "description": "Analyse intelligente et chat IA sur vos données",
+    "insights": "Insights Automatiques",
+    "insightsDesc": "Analyse intelligente de vos données",
+    "chat": "Chat avec l'IA",
+    "chatDesc": "Posez des questions sur vos données",
+    "suggestedQuestions": "Questions suggérées :",
+    "error": "Erreur",
+    "analyzeError": "Impossible d'analyser les données",
+    "suggestedQ1": "Quels sont les produits les plus vendus ce mois-ci ?",
+    "suggestedQ2": "Y a-t-il des produits qui risquent de manquer ?",
+    "suggestedQ3": "Quel événement a eu la consommation la plus élevée ?",
+    "suggestedQ4": "Donnez-moi des suggestions pour optimiser les stocks",
+    "noInsights": "Aucun insight disponible pour le moment",
+    "askQuestion": "Posez une question sur vos données...",
+    "analyzing": "Analyse en cours...",
+    "send": "Envoyer"
+  },
+  "prManagement": {
+    "title": "Gestion PR",
+    "accessDenied": "Accès Refusé",
+    "totalPR": "Total PR",
+    "active": "Actifs",
+    "totalEarnings": "Gains Totaux",
+    "toPay": "À Payer",
+    "prProfiles": "Profils PR",
+    "manageProfiles": "Gérez les profils PR de votre entreprise",
+    "noPRFound": "Aucun PR trouvé",
+    "name": "Nom",
+    "phone": "Téléphone"
+  },
+  "loyalty": {
+    "title": "Programme de Fidélité",
+    "description": "Gérez le programme de fidélité pour vos clients",
+    "programActive": "Programme actif",
+    "enrolledCustomers": "Clients Inscrits",
+    "activePoints": "Points Actifs",
+    "totalPointsIssued": "Points Totaux Émis",
+    "pointsRedeemed": "Points Échangés",
+    "levelDistribution": "Distribution par Niveau",
+    "programConfig": "Configuration du Programme",
+    "programConfigDesc": "Définissez les paramètres de base du programme de fidélité"
+  },
+  "referral": {
+    "title": "Programme de Parrainage",
+    "description": "Gérez le programme de parrainage",
+    "totalReferrals": "Parrainages Totaux",
+    "invitesMade": "Invitations effectuées",
+    "conversions": "Conversions",
+    "purchasesCompleted": "Achats effectués",
+    "conversionRate": "Taux de Conversion",
+    "convertedReferrals": "Parrainages convertis",
+    "activeCodes": "Codes Actifs",
+    "customersWithCode": "Clients avec code"
   }
 }

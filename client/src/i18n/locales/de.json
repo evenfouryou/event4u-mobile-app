@@ -3934,7 +3934,17 @@
     "createCampaign": "Kampagne erstellen",
     "editCampaign": "Kampagne bearbeiten",
     "deleteCampaign": "Kampagne löschen",
-    "noCampaigns": "Keine Kampagnen"
+    "noCampaigns": "Keine Kampagnen",
+    "emailTitle": "E-Mail-Marketing",
+    "emailDescription": "E-Mail-Vorlagen und Kampagnen verwalten",
+    "emailTemplates": "E-Mail-Vorlagen",
+    "templateName": "Vorlagenname",
+    "emailSubject": "E-Mail-Betreff",
+    "type": "Typ",
+    "newsletter": "Newsletter",
+    "draft": "Entwurf",
+    "scheduled": "Geplant",
+    "sent": "Gesendet"
   },
   "eventHub": {
     "selectEvent": "Veranstaltung auswählen",
@@ -3955,5 +3965,61 @@
     "zoneName": "Zonenname",
     "zoneCapacity": "Zonenkapazität",
     "saveChanges": "Änderungen speichern"
+  },
+  "aiAnalysis": {
+    "title": "KI-Analyse",
+    "description": "Intelligente Analyse und KI-Chat über Ihre Daten",
+    "insights": "Automatische Insights",
+    "insightsDesc": "Intelligente Analyse Ihrer Daten",
+    "chat": "Chat mit KI",
+    "chatDesc": "Stellen Sie Fragen zu Ihren Daten",
+    "suggestedQuestions": "Vorgeschlagene Fragen:",
+    "error": "Fehler",
+    "analyzeError": "Daten konnten nicht analysiert werden",
+    "suggestedQ1": "Welche Produkte wurden diesen Monat am meisten verkauft?",
+    "suggestedQ2": "Gibt es Produkte, die knapp werden könnten?",
+    "suggestedQ3": "Welches Event hatte den höchsten Verbrauch?",
+    "suggestedQ4": "Geben Sie mir Vorschläge zur Optimierung der Bestände",
+    "noInsights": "Derzeit keine Insights verfügbar",
+    "askQuestion": "Stellen Sie eine Frage zu Ihren Daten...",
+    "analyzing": "Analysiere...",
+    "send": "Senden"
+  },
+  "prManagement": {
+    "title": "PR-Verwaltung",
+    "accessDenied": "Zugriff Verweigert",
+    "totalPR": "Gesamt PR",
+    "active": "Aktiv",
+    "totalEarnings": "Gesamteinnahmen",
+    "toPay": "Zu Zahlen",
+    "prProfiles": "PR-Profile",
+    "manageProfiles": "Verwalten Sie die PR-Profile Ihres Unternehmens",
+    "noPRFound": "Kein PR gefunden",
+    "name": "Name",
+    "phone": "Telefon"
+  },
+  "loyalty": {
+    "title": "Treueprogramm",
+    "description": "Verwalten Sie das Treueprogramm für Ihre Kunden",
+    "programActive": "Programm aktiv",
+    "enrolledCustomers": "Angemeldete Kunden",
+    "activePoints": "Aktive Punkte",
+    "totalPointsIssued": "Ausgegebene Gesamtpunkte",
+    "pointsRedeemed": "Eingelöste Punkte",
+    "levelDistribution": "Levelverteilung",
+    "programConfig": "Programmkonfiguration",
+    "programConfigDesc": "Legen Sie die Grundparameter des Treueprogramms fest"
+  },
+  "referral": {
+    "title": "Empfehlungsprogramm",
+    "description": "Verwalten Sie das Empfehlungsprogramm",
+    "totalReferrals": "Empfehlungen Gesamt",
+    "invitesMade": "Einladungen erfolgt",
+    "conversions": "Konversionen",
+    "purchasesCompleted": "Abgeschlossene Käufe",
+    "conversionRate": "Konversionsrate",
+    "convertedReferrals": "Konvertierte Empfehlungen",
+    "activeCodes": "Aktive Codes",
+    "customersWithCode": "Kunden mit Code"
   }
 }

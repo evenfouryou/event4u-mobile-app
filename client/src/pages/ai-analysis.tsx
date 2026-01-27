@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from '@/components/mobile-primitives';
 import { useLocation } from 'wouter';
+import { useTranslation } from 'react-i18next';
 
 interface Insight {
   title: string;
@@ -48,6 +49,7 @@ export default function AIAnalysis() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
 
@@ -72,8 +74,8 @@ export default function AIAnalysis() {
     onError: () => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: "Impossibile analizzare i dati",
+        title: t('aiAnalysis.error'),
+        description: t('aiAnalysis.analyzeError'),
         variant: "destructive",
       });
     },
@@ -127,15 +129,15 @@ export default function AIAnalysis() {
   };
 
   const suggestedQuestions = [
-    { icon: TrendingUp, text: "Quali sono i prodotti più venduti questo mese?" },
-    { icon: AlertTriangle, text: "Ci sono prodotti che rischiano di finire?" },
-    { icon: Sparkles, text: "Quale evento ha avuto il consumo più alto?" },
-    { icon: Lightbulb, text: "Dammi suggerimenti per ottimizzare le scorte" },
+    { icon: TrendingUp, text: t('aiAnalysis.suggestedQ1') },
+    { icon: AlertTriangle, text: t('aiAnalysis.suggestedQ2') },
+    { icon: Sparkles, text: t('aiAnalysis.suggestedQ3') },
+    { icon: Lightbulb, text: t('aiAnalysis.suggestedQ4') },
   ];
 
   const header = (
     <MobileHeader
-      title="Analisi AI"
+      title={t('aiAnalysis.title')}
       leftAction={
         <HapticButton
           variant="ghost"
@@ -166,9 +168,9 @@ export default function AIAnalysis() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Brain className="h-8 w-8 text-primary" />
-              Analisi AI
+              {t('aiAnalysis.title')}
             </h1>
-            <p className="text-muted-foreground">Analisi intelligente e chat con l'AI sui tuoi dati</p>
+            <p className="text-muted-foreground">{t('aiAnalysis.description')}</p>
           </div>
         </div>
 
@@ -177,9 +179,9 @@ export default function AIAnalysis() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Insights Automatici
+                {t('aiAnalysis.insights')}
               </CardTitle>
-              <CardDescription>Analisi intelligente dei tuoi dati</CardDescription>
+              <CardDescription>{t('aiAnalysis.insightsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {insightsLoading ? (
@@ -215,7 +217,7 @@ export default function AIAnalysis() {
                 })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  Nessun insight disponibile al momento
+                  {t('aiAnalysis.noInsights')}
                 </div>
               )}
             </CardContent>
@@ -225,9 +227,9 @@ export default function AIAnalysis() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-[#00CED1]" />
-                Chat con l'AI
+                {t('aiAnalysis.chat')}
               </CardTitle>
-              <CardDescription>Fai domande sui tuoi dati</CardDescription>
+              <CardDescription>{t('aiAnalysis.chatDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {conversationHistory.length > 0 ? (
