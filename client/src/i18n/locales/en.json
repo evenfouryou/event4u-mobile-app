@@ -820,8 +820,6 @@
     "selectAnEvent": "Select an event",
     "ongoing": "Ongoing",
     "scheduled": "Scheduled",
-    "transfer": "Transfer",
-    "eventStock": "Event Stock",
     "inEventStock": "In event stock",
     "consume": "Consume",
     "returnToWarehouse": "Return to Warehouse",
@@ -1111,7 +1109,42 @@
         "comingSoon": "Coming Soon",
         "limited": "Limited Availability",
         "custom": "Custom"
-      }
+      },
+      "newType": "New Type",
+      "saleSettings": "Sale Settings",
+      "saleSettingsDesc": "Control event visibility and ticketing status",
+      "showInPublic": "Show event in public showcase",
+      "ticketingActive": "Ticketing active",
+      "ticketingSuspended": "Ticketing suspended",
+      "ticketingClosed": "Ticketing closed",
+      "statusActive": "Active",
+      "statusSuspended": "Suspended",
+      "statusClosed": "Closed",
+      "publicTicketLink": "Public Ticket Link",
+      "publicEvent": "Public Event",
+      "hiddenEvent": "Hidden Event",
+      "saleActive": "Sale Active",
+      "saleSuspended": "Sale Suspended",
+      "saleClosed": "Sale Closed",
+      "typesList": "Types List",
+      "typesListDesc": "Manage ticket types for this event",
+      "noTypes": "No ticket types configured",
+      "createFirstType": "Create the first type",
+      "createTypeDesc": "Create a new ticket type for this event",
+      "editTicketType": "Edit Ticket Type",
+      "editTypeDesc": "Edit details for type \"{{name}}\"",
+      "deleteTicketType": "Delete Ticket Type",
+      "deleteTypeConfirm": "Are you sure you want to delete the type \"{{name}}\"? This action cannot be undone.",
+      "code": "Code",
+      "prices": "Prices",
+      "capacity": "Capacity",
+      "availability": "Availability",
+      "active": "Active",
+      "fullPrice": "Full",
+      "reducedPrice": "Reduced",
+      "presale": "Presale",
+      "available": "available",
+      "always": "Always"
     },
     "numberedSeatsPage": {
       "title": "Numbered Seats",
@@ -1168,7 +1201,15 @@
         "seatInfo": "Seat Information",
         "pricing": "Pricing",
         "positionInfo": "Position"
-      }
+      },
+      "selectASector": "Select a Sector",
+      "selectSectorToManage": "Select a sector to view and manage numbered seats",
+      "blocked": "Blocked",
+      "createNewSeats": "Create new seats for this sector",
+      "standard": "Standard",
+      "vip": "VIP",
+      "premium": "Premium",
+      "accessibility": "Accessibility"
     },
     "activationCardsPage": {
       "title": "SIAE Card Reader",
@@ -2361,24 +2402,59 @@
   },
   "settings": {
     "title": "Settings",
-    "general": "General",
+    "subtitle": "Manage your profile and preferences",
+    "profile": {
+      "title": "Profile",
+      "description": "Your personal information",
+      "editProfile": "Edit Profile"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Customize your experience"
+    },
+    "table": {
+      "setting": "Setting",
+      "description": "Description",
+      "action": "Action"
+    },
+    "theme": {
+      "darkTheme": "Dark Theme",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "pushNotifications": "Push Notifications",
+      "receiveUpdates": "Receive important updates"
+    },
+    "privacy": {
+      "title": "Privacy & Security",
+      "description": "Manage your data",
+      "viewOptions": "View Options",
+      "dialogDescription": "Manage your account's privacy and security settings",
+      "twoFactor": "Two-factor authentication",
+      "saveHistory": "Save activity history"
+    },
+    "advanced": {
+      "title": "Advanced Preferences",
+      "description": "App settings",
+      "dialogDescription": "Configure advanced application settings",
+      "compactMode": "Compact mode",
+      "animations": "Animations"
+    },
     "appearance": "Appearance",
-    "theme": "Theme",
-    "darkMode": "Dark Mode",
-    "lightMode": "Light Mode",
-    "system": "System",
-    "notifications": "Notifications",
-    "emailNotifications": "Email Notifications",
-    "pushNotifications": "Push Notifications",
-    "security": "Security",
-    "twoFactor": "Two-Factor Authentication",
-    "sessions": "Sessions",
-    "apiKeys": "API Keys",
-    "integrations": "Integrations",
-    "company": "Company",
-    "companyInfo": "Company Info",
-    "branding": "Branding",
-    "logo": "Logo"
+    "other": "Other",
+    "logout": {
+      "title": "Log Out",
+      "description": "Disconnect from this device",
+      "button": "Log Out"
+    },
+    "version": "Event4U v1.0.0",
+    "roles": {
+      "manager": "Company Manager",
+      "superAdmin": "Super Admin",
+      "bartender": "Bartender"
+    }
   },
   "admin": {
     "title": "Administration",
@@ -2855,62 +2931,6 @@
       "ongoing": "Ongoing",
       "completed": "Completed",
       "cancelled": "Cancelled"
-    }
-  },
-  "settings": {
-    "title": "Settings",
-    "subtitle": "Manage your profile and preferences",
-    "profile": {
-      "title": "Profile",
-      "description": "Your personal information",
-      "editProfile": "Edit Profile"
-    },
-    "preferences": {
-      "title": "Preferences",
-      "description": "Customize your experience"
-    },
-    "table": {
-      "setting": "Setting",
-      "description": "Description",
-      "action": "Action"
-    },
-    "theme": {
-      "darkTheme": "Dark Theme",
-      "active": "Active",
-      "inactive": "Inactive"
-    },
-    "notifications": {
-      "title": "Notifications",
-      "pushNotifications": "Push Notifications",
-      "receiveUpdates": "Receive important updates"
-    },
-    "privacy": {
-      "title": "Privacy & Security",
-      "description": "Manage your data",
-      "viewOptions": "View Options",
-      "dialogDescription": "Manage your account's privacy and security settings",
-      "twoFactor": "Two-factor authentication",
-      "saveHistory": "Save activity history"
-    },
-    "advanced": {
-      "title": "Advanced Preferences",
-      "description": "App settings",
-      "dialogDescription": "Configure advanced application settings",
-      "compactMode": "Compact mode",
-      "animations": "Animations"
-    },
-    "appearance": "Appearance",
-    "other": "Other",
-    "logout": {
-      "title": "Log Out",
-      "description": "Disconnect from this device",
-      "button": "Log Out"
-    },
-    "version": "Event4U v1.0.0",
-    "roles": {
-      "manager": "Company Manager",
-      "superAdmin": "Super Admin",
-      "bartender": "Bartender"
     }
   },
   "public": {
