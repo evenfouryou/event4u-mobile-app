@@ -25,3 +25,5 @@ export { AdminSIAESubscriptionsScreen } from './AdminSIAESubscriptionsScreen';
 export { AdminStripeScreen } from './AdminStripeScreen';
 export { AdminPrinterSettingsScreen } from './AdminPrinterSettingsScreen';
 export { AdminDigitalTemplatesScreen } from './AdminDigitalTemplatesScreen';
+export { AdminBillingReportsScreen } from './AdminBillingReportsScreen';
+export { AdminSIAEAuditLogsScreen } from './AdminSIAEAuditLogsScreen';

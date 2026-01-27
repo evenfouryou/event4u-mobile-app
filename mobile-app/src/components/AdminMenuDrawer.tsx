@@ -58,6 +58,12 @@ interface AdminMenuDrawerProps {
   onNavigateSIAEConsole: () => void;
   onNavigateSIAETransactions: () => void;
   onNavigateSIAEMonitor: () => void;
+  onNavigateSIAEBoxOffice: () => void;
+  onNavigateSIAETransmissions: () => void;
+  onNavigateSIAETicketTypes: () => void;
+  onNavigateSIAEResales: () => void;
+  onNavigateSIAESubscriptions: () => void;
+  onNavigateSIAEAuditLogs: () => void;
   onNavigateBillingPlans: () => void;
   onNavigateBillingOrganizers: () => void;
   onNavigateBillingInvoices: () => void;
@@ -86,6 +92,12 @@ export function AdminMenuDrawer({
   onNavigateSIAEConsole,
   onNavigateSIAETransactions,
   onNavigateSIAEMonitor,
+  onNavigateSIAEBoxOffice,
+  onNavigateSIAETransmissions,
+  onNavigateSIAETicketTypes,
+  onNavigateSIAEResales,
+  onNavigateSIAESubscriptions,
+  onNavigateSIAEAuditLogs,
   onNavigateBillingPlans,
   onNavigateBillingOrganizers,
   onNavigateBillingInvoices,
@@ -184,6 +196,12 @@ export function AdminMenuDrawer({
         { id: 'siae-customers', label: 'Clienti', icon: 'people-outline', onPress: onNavigateSIAECustomers, description: 'Anagrafica clienti' },
         { id: 'siae-console', label: 'Console', icon: 'terminal', onPress: onNavigateSIAEConsole, description: 'Operazioni avanzate' },
         { id: 'siae-transactions', label: 'Transazioni', icon: 'swap-horizontal', onPress: onNavigateSIAETransactions, description: 'Storico operazioni' },
+        { id: 'siae-boxoffice', label: 'Cassa', icon: 'cash-outline', onPress: onNavigateSIAEBoxOffice, description: 'Sessioni di cassa' },
+        { id: 'siae-tickettypes', label: 'Tipi Biglietti', icon: 'pricetag', onPress: onNavigateSIAETicketTypes, description: 'Categorie SIAE' },
+        { id: 'siae-subscriptions', label: 'Abbonamenti', icon: 'calendar-number', onPress: onNavigateSIAESubscriptions, description: 'Abbonamenti attivi' },
+        { id: 'siae-resales', label: 'Rivendite', icon: 'repeat', onPress: onNavigateSIAEResales, description: 'Mercato secondario' },
+        { id: 'siae-transmissions', label: 'Trasmissioni', icon: 'cloud-upload', onPress: onNavigateSIAETransmissions, description: 'Invii report SIAE' },
+        { id: 'siae-auditlogs', label: 'Log Audit', icon: 'document-text-outline', onPress: onNavigateSIAEAuditLogs, description: 'Traccia operazioni' },
         { id: 'name-changes', label: 'Nominativi', icon: 'swap-vertical', onPress: onNavigateNameChanges, description: 'Cambio intestatario' },
       ],
     },

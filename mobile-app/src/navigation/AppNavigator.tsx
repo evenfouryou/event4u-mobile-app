@@ -119,6 +119,16 @@ import {
   AdminSIAECustomersScreen,
   AdminSIAEConsoleScreen,
   AdminSIAETransactionsScreen,
+  AdminSIAEBoxOfficeScreen,
+  AdminSIAETransmissionsScreen,
+  AdminSIAETicketTypesScreen,
+  AdminSIAEResalesScreen,
+  AdminSIAESubscriptionsScreen,
+  AdminSIAEAuditLogsScreen,
+  AdminStripeScreen,
+  AdminPrinterSettingsScreen,
+  AdminDigitalTemplatesScreen,
+  AdminBillingReportsScreen,
 } from '@/screens/admin';
 
 type Screen =
@@ -235,7 +245,20 @@ type Screen =
   | { name: 'adminSIAEApprovals' }
   | { name: 'adminSIAECustomers' }
   | { name: 'adminSIAEConsole' }
-  | { name: 'adminSIAETransactions' };
+  | { name: 'adminSIAETransactions' }
+  | { name: 'adminSIAEBoxOffice' }
+  | { name: 'adminSIAETransmissions' }
+  | { name: 'adminSIAETicketTypes' }
+  | { name: 'adminSIAEResales' }
+  | { name: 'adminSIAESubscriptions' }
+  | { name: 'adminSIAEAuditLogs' }
+  | { name: 'adminStripe' }
+  | { name: 'adminPrinter' }
+  | { name: 'adminDigitalTemplates' }
+  | { name: 'adminBillingReports' }
+  | { name: 'adminBillingPlans' }
+  | { name: 'adminBillingOrganizers' }
+  | { name: 'adminBillingInvoices' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -954,9 +977,9 @@ export function AppNavigator() {
             onNavigateProfile={() => navigate({ name: 'adminSettings' })}
             onNavigateNameChanges={() => navigate({ name: 'adminNameChanges' })}
             onNavigateSIAEMonitor={() => navigate({ name: 'adminSIAEMonitor' })}
-            onNavigatePrinter={() => navigate({ name: 'adminSettings' })}
-            onNavigateDigitalTemplates={() => navigate({ name: 'adminSettings' })}
-            onNavigateStripeAdmin={() => navigate({ name: 'adminBilling' })}
+            onNavigatePrinter={() => navigate({ name: 'adminPrinter' })}
+            onNavigateDigitalTemplates={() => navigate({ name: 'adminDigitalTemplates' })}
+            onNavigateStripeAdmin={() => navigate({ name: 'adminStripe' })}
             onNavigateSIAEApprovals={() => navigate({ name: 'adminSIAEApprovals' })}
             onNavigateSIAETables={() => navigate({ name: 'adminSIAETables' })}
             onNavigateSIAECards={() => navigate({ name: 'adminSIAECards' })}
@@ -964,10 +987,16 @@ export function AppNavigator() {
             onNavigateSIAECustomers={() => navigate({ name: 'adminSIAECustomers' })}
             onNavigateSIAEConsole={() => navigate({ name: 'adminSIAEConsole' })}
             onNavigateSIAETransactions={() => navigate({ name: 'adminSIAETransactions' })}
-            onNavigateBillingPlans={() => navigate({ name: 'adminBilling' })}
-            onNavigateBillingOrganizers={() => navigate({ name: 'adminBilling' })}
-            onNavigateBillingInvoices={() => navigate({ name: 'adminBilling' })}
-            onNavigateBillingReports={() => navigate({ name: 'adminBilling' })}
+            onNavigateSIAEBoxOffice={() => navigate({ name: 'adminSIAEBoxOffice' })}
+            onNavigateSIAETransmissions={() => navigate({ name: 'adminSIAETransmissions' })}
+            onNavigateSIAETicketTypes={() => navigate({ name: 'adminSIAETicketTypes' })}
+            onNavigateSIAEResales={() => navigate({ name: 'adminSIAEResales' })}
+            onNavigateSIAESubscriptions={() => navigate({ name: 'adminSIAESubscriptions' })}
+            onNavigateSIAEAuditLogs={() => navigate({ name: 'adminSIAEAuditLogs' })}
+            onNavigateBillingPlans={() => navigate({ name: 'adminBillingPlans' })}
+            onNavigateBillingOrganizers={() => navigate({ name: 'adminBillingOrganizers' })}
+            onNavigateBillingInvoices={() => navigate({ name: 'adminBillingInvoices' })}
+            onNavigateBillingReports={() => navigate({ name: 'adminBillingReports' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
@@ -1101,6 +1130,97 @@ export function AppNavigator() {
       case 'adminSIAETransactions':
         return (
           <AdminSIAETransactionsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEBoxOffice':
+        return (
+          <AdminSIAEBoxOfficeScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAETransmissions':
+        return (
+          <AdminSIAETransmissionsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAETicketTypes':
+        return (
+          <AdminSIAETicketTypesScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEResales':
+        return (
+          <AdminSIAEResalesScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAESubscriptions':
+        return (
+          <AdminSIAESubscriptionsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEAuditLogs':
+        return (
+          <AdminSIAEAuditLogsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminStripe':
+        return (
+          <AdminStripeScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminPrinter':
+        return (
+          <AdminPrinterSettingsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminDigitalTemplates':
+        return (
+          <AdminDigitalTemplatesScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminBillingReports':
+        return (
+          <AdminBillingReportsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminBillingPlans':
+        return (
+          <AdminBillingScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminBillingOrganizers':
+        return (
+          <AdminBillingScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminBillingInvoices':
+        return (
+          <AdminBillingScreen
             onBack={goBack}
           />
         );

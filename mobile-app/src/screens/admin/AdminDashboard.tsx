@@ -36,6 +36,12 @@ interface AdminDashboardProps {
   onNavigateSIAECustomers?: () => void;
   onNavigateSIAEConsole?: () => void;
   onNavigateSIAETransactions?: () => void;
+  onNavigateSIAEBoxOffice?: () => void;
+  onNavigateSIAETransmissions?: () => void;
+  onNavigateSIAETicketTypes?: () => void;
+  onNavigateSIAEResales?: () => void;
+  onNavigateSIAESubscriptions?: () => void;
+  onNavigateSIAEAuditLogs?: () => void;
   onNavigateBillingPlans?: () => void;
   onNavigateBillingOrganizers?: () => void;
   onNavigateBillingInvoices?: () => void;
@@ -94,6 +100,12 @@ export function AdminDashboard({
   onNavigateSIAECustomers,
   onNavigateSIAEConsole,
   onNavigateSIAETransactions,
+  onNavigateSIAEBoxOffice,
+  onNavigateSIAETransmissions,
+  onNavigateSIAETicketTypes,
+  onNavigateSIAEResales,
+  onNavigateSIAESubscriptions,
+  onNavigateSIAEAuditLogs,
   onNavigateBillingPlans,
   onNavigateBillingOrganizers,
   onNavigateBillingInvoices,
@@ -300,6 +312,12 @@ export function AdminDashboard({
         onNavigateSIAEConsole={() => handleMenuNavigation(onNavigateSIAEConsole)}
         onNavigateSIAETransactions={() => handleMenuNavigation(onNavigateSIAETransactions)}
         onNavigateSIAEMonitor={onNavigateSIAEMonitor}
+        onNavigateSIAEBoxOffice={() => handleMenuNavigation(onNavigateSIAEBoxOffice)}
+        onNavigateSIAETransmissions={() => handleMenuNavigation(onNavigateSIAETransmissions)}
+        onNavigateSIAETicketTypes={() => handleMenuNavigation(onNavigateSIAETicketTypes)}
+        onNavigateSIAEResales={() => handleMenuNavigation(onNavigateSIAEResales)}
+        onNavigateSIAESubscriptions={() => handleMenuNavigation(onNavigateSIAESubscriptions)}
+        onNavigateSIAEAuditLogs={() => handleMenuNavigation(onNavigateSIAEAuditLogs)}
         onNavigateBillingPlans={() => handleMenuNavigation(onNavigateBillingPlans)}
         onNavigateBillingOrganizers={() => handleMenuNavigation(onNavigateBillingOrganizers)}
         onNavigateBillingInvoices={() => handleMenuNavigation(onNavigateBillingInvoices)}
