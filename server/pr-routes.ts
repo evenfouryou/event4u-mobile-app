@@ -67,7 +67,7 @@ async function resolvePrIdentity(req: Request): Promise<{ userId: string | null;
 
 // Middleware to check authentication
 // FIX 2026-01-25: Accept both passport authentication AND PR session authentication
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   // Check passport authentication (normal login)
   if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
@@ -79,6 +79,30 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     // Attach prProfileId to request for downstream use
     (req as any).prProfileId = prSession.id;
     return next();
+  }
+  
+  // Check Bearer token authentication (for mobile app)
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    // Token format: "pr_<profileId>" for PR profiles
+    if (token.startsWith('pr_')) {
+      const profileId = token.substring(3);
+      try {
+        const profile = await db.select().from(prProfiles).where(eq(prProfiles.id, profileId)).limit(1);
+        if (profile.length > 0) {
+          (req as any).prProfileId = profileId;
+          // Also set up session-like data for consistency
+          if (!req.session) {
+            (req.session as any) = {};
+          }
+          (req.session as any).prProfile = profile[0];
+          return next();
+        }
+      } catch (error) {
+        console.error('[PR Auth] Token verification failed:', error);
+      }
+    }
   }
   
   return res.status(401).json({ error: "Non autenticato" });

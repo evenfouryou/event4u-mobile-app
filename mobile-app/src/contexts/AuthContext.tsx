@@ -36,6 +36,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_CREDENTIALS_KEY = 'event4u_credentials';
 const AUTH_USER_KEY = 'event4u_user';
+const AUTH_TOKEN_KEY = 'event4u_auth_token';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -67,11 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body.email = identifier;
       }
 
-      const response = await api.post<{ user: User; message: string }>('/api/auth/login', body);
+      const response = await api.post<{ user: User; message: string; token?: string }>('/api/auth/login', body);
       
       if (response.user) {
         setUser(response.user);
         await saveUser(response.user);
+        
+        // Save and use auth token if provided
+        if (response.token) {
+          await SecureStore.setItemAsync(AUTH_TOKEN_KEY, response.token);
+          api.setAuthToken(response.token);
+          console.log('[Auth] New token saved after re-authentication');
+        }
+        
         console.log('[Auth] Re-authenticated successfully');
         return true;
       }
@@ -82,8 +91,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Set up the re-auth handler on mount
+  // Load saved token and set up the re-auth handler on mount
   useEffect(() => {
+    const loadSavedToken = async () => {
+      try {
+        const savedToken = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+        if (savedToken) {
+          api.setAuthToken(savedToken);
+          console.log('[Auth] Loaded saved auth token');
+        }
+      } catch (error) {
+        console.error('[Auth] Error loading saved token:', error);
+      }
+    };
+    
+    loadSavedToken();
     api.setReAuthHandler(reAuthenticate);
   }, []);
 
@@ -99,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await SecureStore.deleteItemAsync(AUTH_CREDENTIALS_KEY);
       await SecureStore.deleteItemAsync(AUTH_USER_KEY);
+      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+      api.setAuthToken(null);
     } catch (error) {
       console.error('Error clearing stored data:', error);
     }
@@ -189,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body.email = identifier;
       }
 
-      const response = await api.post<{ user: User; message: string }>('/api/auth/login', body);
+      const response = await api.post<{ user: User; message: string; token?: string }>('/api/auth/login', body);
 
       if (response.user) {
         setUser(response.user);
@@ -197,6 +221,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Save credentials and user for persistence
         await saveCredentials(identifier, password);
         await saveUser(response.user);
+        
+        // Save and use auth token if provided (for mobile app Bearer token auth)
+        if (response.token) {
+          await SecureStore.setItemAsync(AUTH_TOKEN_KEY, response.token);
+          api.setAuthToken(response.token);
+          console.log('[Auth] Token saved and set for API requests');
+        }
         
         // Prefetch dashboard data for instant navigation (Instagram-style)
         const role = response.user.role;

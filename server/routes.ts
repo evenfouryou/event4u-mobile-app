@@ -1122,7 +1122,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 prCode: prProfile.prCode,
                 role: 'pr',
                 companyId: prProfile.companyId
-              }
+              },
+              // Token for mobile app authentication (Bearer token)
+              token: `pr_${prProfile.id}`
             });
           });
         }
