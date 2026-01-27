@@ -1393,22 +1393,37 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     const { eventId } = req.params;
     const user = req.user as any;
     
+    console.log("[PR AddGuest] === START ===");
+    console.log("[PR AddGuest] eventId:", eventId);
+    console.log("[PR AddGuest] req.body:", JSON.stringify(req.body));
+    console.log("[PR AddGuest] req.user:", user?.id, user?.role);
+    console.log("[PR AddGuest] prProfileId from req:", (req as any).prProfileId);
+    
     // Resolve PR identity
     // FIX 2026-01-27: Accept either userId OR prProfileId (mobile app PR may not have linked userId)
     const { userId, prProfileId } = await resolvePrIdentity(req);
+    console.log("[PR AddGuest] Resolved identity - userId:", userId, "prProfileId:", prProfileId);
+    
     if (!userId && !prProfileId) {
+      console.log("[PR AddGuest] FAIL: No identity resolved");
       return res.status(401).json({ error: "Non autenticato" });
     }
     
     // Find all lists for this event that PR has access to
     const allLists = await prStorage.getGuestListsByEvent(eventId);
+    console.log("[PR AddGuest] All lists for event:", allLists.length);
+    
     if (allLists.length === 0) {
+      console.log("[PR AddGuest] FAIL: No lists for event");
       return res.status(404).json({ error: "Nessuna lista disponibile per questo evento" });
     }
     
     // Filter active lists
     const activeLists = allLists.filter(l => l.isActive);
+    console.log("[PR AddGuest] Active lists:", activeLists.length);
+    
     if (activeLists.length === 0) {
+      console.log("[PR AddGuest] FAIL: No active lists");
       return res.status(400).json({ error: "Nessuna lista attiva per questo evento" });
     }
     
@@ -1424,6 +1439,7 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
           )
         )
       );
+    console.log("[PR AddGuest] PR assignments found:", prAssignments.length, prAssignments.map(a => ({ id: a.id, userId: a.userId, prProfileId: a.prProfileId })));
     
     // Get list assignments if PR has specific ones
     let accessibleListIds: string[] = [];
@@ -1433,6 +1449,8 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
         .from(prListAssignments)
         .where(inArray(prListAssignments.prAssignmentId, prAssignmentIds));
       
+      console.log("[PR AddGuest] List assignments:", listAssignments.length);
+      
       if (listAssignments.length > 0) {
         accessibleListIds = listAssignments.map(la => la.listId);
       }
@@ -1441,9 +1459,11 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     // Also include lists created by the PR
     const listsCreatedByPr = activeLists.filter(l => l.createdByUserId === userId);
     const listsCreatedByPrIds = listsCreatedByPr.map(l => l.id);
+    console.log("[PR AddGuest] Lists created by PR:", listsCreatedByPrIds.length);
     
     // Combine: assigned lists + lists created by PR
     const allAccessibleIds = Array.from(new Set([...accessibleListIds, ...listsCreatedByPrIds]));
+    console.log("[PR AddGuest] All accessible list IDs:", allAccessibleIds);
     
     // If PR has no specific assignments, they can add to any active list
     let targetList;
@@ -1451,32 +1471,44 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
       targetList = activeLists.find(l => allAccessibleIds.includes(l.id));
     } else {
       // Fallback: use first active list
+      console.log("[PR AddGuest] Using fallback - first active list");
       targetList = activeLists[0];
     }
     
     if (!targetList) {
+      console.log("[PR AddGuest] FAIL: No accessible list found");
       return res.status(400).json({ error: "Nessuna lista accessibile trovata" });
     }
     
+    console.log("[PR AddGuest] Target list:", targetList.id, targetList.name, "capacity:", targetList.currentCount, "/", targetList.maxCapacity);
+    
     // Check capacity
     if (targetList.maxCapacity && targetList.currentCount >= targetList.maxCapacity) {
+      console.log("[PR AddGuest] FAIL: List full");
       return res.status(400).json({ error: "Lista piena" });
     }
     
     // Create entry
-    const validated = insertListEntrySchema.omit({ qrCode: true }).parse({
+    const entryData = {
       ...req.body,
       listId: targetList.id,
       eventId: eventId,
       companyId: targetList.companyId,
       addedByUserId: userId,
-    });
+    };
+    console.log("[PR AddGuest] Entry data before validation:", JSON.stringify(entryData));
+    
+    const validated = insertListEntrySchema.omit({ qrCode: true }).parse(entryData);
+    console.log("[PR AddGuest] Validated entry:", JSON.stringify(validated));
     
     const entry = await prStorage.createGuestListEntry(validated);
+    console.log("[PR AddGuest] SUCCESS - Created entry:", entry.id, entry.firstName, entry.lastName, entry.qrCode);
+    
     res.status(201).json(entry);
   } catch (error: any) {
-    console.error("Error adding guest to event:", error);
+    console.error("[PR AddGuest] ERROR:", error.message, error.stack);
     if (error instanceof z.ZodError) {
+      console.error("[PR AddGuest] Zod validation errors:", JSON.stringify(error.errors));
       return res.status(400).json({ error: "Dati non validi", details: error.errors });
     }
     res.status(500).json({ error: error.message });
