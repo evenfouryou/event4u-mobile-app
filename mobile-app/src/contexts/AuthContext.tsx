@@ -68,17 +68,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body.email = identifier;
       }
 
-      const response = await api.post<{ user: User; message: string; token?: string }>('/api/auth/login', body);
+      // Use postDirect to avoid triggering another re-auth cycle
+      const response = await api.postDirect<{ user: User; message: string; token?: string }>('/api/auth/login', body);
       
       if (response.user) {
         setUser(response.user);
         await saveUser(response.user);
         
-        // Save and use auth token if provided
+        // Save and use auth token if provided - this is critical for the retry to work
         if (response.token) {
           await SecureStore.setItemAsync(AUTH_TOKEN_KEY, response.token);
           api.setAuthToken(response.token);
-          console.log('[Auth] New token saved after re-authentication');
+          console.log('[Auth] New token saved after re-authentication:', response.token.substring(0, 10) + '...');
+        } else {
+          console.log('[Auth] Warning: No token received from login response');
         }
         
         console.log('[Auth] Re-authenticated successfully');

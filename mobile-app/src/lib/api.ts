@@ -297,6 +297,26 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'POST', body });
   }
 
+  // Direct POST that bypasses re-auth handler (used for login during re-authentication)
+  async postDirect<T>(endpoint: string, body?: any): Promise<T> {
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    return fetchManager.fetch<T>(
+      `${this.baseUrl}${endpoint}`,
+      {
+        method: 'POST',
+        headers: requestHeaders,
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'include',
+      },
+      {
+        cacheKey: `POST_${endpoint}_direct`,
+      }
+    );
+  }
+
   put<T>(endpoint: string, body?: any) {
     return this.request<T>(endpoint, { method: 'PUT', body });
   }
