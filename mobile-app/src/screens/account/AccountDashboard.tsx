@@ -212,6 +212,18 @@ export function AccountDashboard({
               testID="avatar-header"
             />
           </Pressable>
+          {hasPrAccount && onNavigatePrDashboard && (
+            <Pressable
+              onPress={() => {
+                triggerHaptic('light');
+                onNavigatePrDashboard();
+              }}
+              style={styles.switchButton}
+              testID="button-switch-to-pr"
+            >
+              <Ionicons name="swap-horizontal" size={20} color={staticColors.primary} />
+            </Pressable>
+          )}
         </View>
       </View>
       <ScrollView
@@ -428,11 +440,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   walletIconGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  switchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: staticColors.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: staticColors.primary,
   },
   walletBadge: {
     position: 'absolute',
