@@ -11,6 +11,7 @@ import { SkeletonEventCard } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PublicEvent } from '@/lib/api';
+import { getCurrentLocation, requestLocationPermission, UserLocation } from '@/lib/location';
 
 const { width } = Dimensions.get('window');
 
@@ -47,10 +48,14 @@ export function LandingScreen({
 }: LandingScreenProps) {
   const { colors, gradients } = useTheme();
   const [events, setEvents] = useState<PublicEvent[]>([]);
+  const [nearbyEvents, setNearbyEvents] = useState<PublicEvent[]>([]);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     loadEvents();
+    loadLocationAndNearbyEvents();
   }, []);
 
   useEffect(() => {
@@ -58,6 +63,26 @@ export function LandingScreen({
       setShowSkeleton(false);
     }
   }, [events]);
+
+  const loadLocationAndNearbyEvents = async () => {
+    setLocationLoading(true);
+    try {
+      const location = await getCurrentLocation();
+      if (location) {
+        setUserLocation(location);
+        const nearbyData = await api.getPublicEvents({ 
+          limit: 10, 
+          userLat: location.latitude, 
+          userLng: location.longitude 
+        });
+        setNearbyEvents(nearbyData);
+      }
+    } catch (error) {
+      console.error('Error loading nearby events:', error);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
 
   const loadEvents = async () => {
     try {
@@ -179,6 +204,83 @@ export function LandingScreen({
             ))}
           </View>
         </View>
+
+        {/* Nearby Events Section - only shown when location is available */}
+        {(userLocation || locationLoading) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="location" size={20} color={staticColors.primary} />
+                <Text style={styles.sectionTitle}>Eventi Vicino a Te</Text>
+              </View>
+              {!userLocation && !locationLoading && (
+                <Pressable 
+                  onPress={async () => {
+                    triggerHaptic('light');
+                    await loadLocationAndNearbyEvents();
+                  }}
+                >
+                  <Text style={styles.seeAll}>Abilita posizione</Text>
+                </Pressable>
+              )}
+            </View>
+            
+            {locationLoading ? (
+              <View style={styles.locationLoadingContainer}>
+                <ActivityIndicator size="small" color={staticColors.primary} />
+                <Text style={styles.locationLoadingText}>Ricerca eventi vicini...</Text>
+              </View>
+            ) : nearbyEvents.length === 0 ? (
+              <View style={styles.emptyNearbyContainer}>
+                <Ionicons name="location-outline" size={32} color={staticColors.mutedForeground} />
+                <Text style={styles.emptyNearbyText}>Nessun evento trovato nella tua zona</Text>
+              </View>
+            ) : (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.eventsScroll}
+              >
+                {nearbyEvents.map((event) => (
+                  <Pressable
+                    key={`nearby-${event.id}`}
+                    style={styles.eventCard}
+                    onPress={() => {
+                      triggerHaptic('light');
+                      onNavigateEvents();
+                    }}
+                    testID={`nearby-event-card-${event.id}`}
+                  >
+                    <Image
+                      source={{ uri: event.eventImageUrl || 'https://images.unsplash.com/photo-1571266028243-d220c6a8b0e8?w=400' }}
+                      style={styles.eventImage}
+                    />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.9)']}
+                      style={styles.eventGradient}
+                    >
+                      <Badge variant="teal" size="sm">
+                        <Ionicons name="location" size={10} color="#fff" style={{ marginRight: 4 }} />
+                        {formatEventDate(event.eventStart)}
+                      </Badge>
+                      <Text style={styles.eventName} numberOfLines={2}>{event.eventName}</Text>
+                      <View style={styles.eventInfo}>
+                        <Ionicons name="location-outline" size={14} color={staticColors.mutedForeground} />
+                        <Text style={styles.eventVenue} numberOfLines={1}>{event.locationName}</Text>
+                      </View>
+                      <View style={styles.eventFooter}>
+                        <Text style={styles.eventTime}>{formatEventTime(event.eventStart)}</Text>
+                        <Text style={styles.eventPrice}>
+                          {event.minPrice ? `da €${event.minPrice}` : 'Gratuito'}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -386,6 +488,33 @@ const styles = StyleSheet.create({
     color: staticColors.foreground,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  locationLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
+  },
+  locationLoadingText: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.mutedForeground,
+  },
+  emptyNearbyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+  },
+  emptyNearbyText: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.mutedForeground,
+    textAlign: 'center',
   },
   seeAll: {
     fontSize: typography.fontSize.sm,
