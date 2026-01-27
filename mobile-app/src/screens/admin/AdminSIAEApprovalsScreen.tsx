@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { SIAEApproval as APISIAEApproval } from '@/lib/api';
 
 interface AdminSIAEApprovalsScreenProps {
   onBack: () => void;
@@ -58,15 +59,19 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
   const loadApprovals = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setApprovals([
-        { id: '1', eventName: 'Concerto Estate 2024', gestoreName: 'Marco Rossi', companyName: 'Event Club Milano', eventDate: '2024-07-15', submittedAt: '2024-01-27T10:30:00', reportType: 'RCA', ticketsSold: 1250, totalRevenue: 37500, status: 'pending' },
-        { id: '2', eventName: 'Festival Jazz Roma', gestoreName: 'Giulia Bianchi', companyName: 'Party Roma SRL', eventDate: '2024-06-20', submittedAt: '2024-01-27T09:15:00', reportType: 'RMG', ticketsSold: 890, totalRevenue: 22250, status: 'pending' },
-        { id: '3', eventName: 'Teatro Classico', gestoreName: 'Luca Verdi', companyName: 'Concerti Torino', eventDate: '2024-05-10', submittedAt: '2024-01-26T14:20:00', reportType: 'RCA', ticketsSold: 320, totalRevenue: 9600, status: 'approved' },
-        { id: '4', eventName: 'Danza Moderna', gestoreName: 'Anna Neri', companyName: 'Teatro Napoli', eventDate: '2024-04-22', submittedAt: '2024-01-26T11:45:00', reportType: 'RPM', ticketsSold: 180, totalRevenue: 5400, status: 'approved' },
-        { id: '5', eventName: 'DJ Night Club', gestoreName: 'Paolo Gialli', companyName: 'Music Live Firenze', eventDate: '2024-03-15', submittedAt: '2024-01-25T16:30:00', reportType: 'RMG', ticketsSold: 450, totalRevenue: 11250, status: 'rejected', rejectionReason: 'Dati incompleti nel report mensile' },
-        { id: '6', eventName: 'Opera Prima', gestoreName: 'Sara Blu', companyName: 'Festival Bologna', eventDate: '2024-08-01', submittedAt: '2024-01-27T08:00:00', reportType: 'RCA', ticketsSold: 560, totalRevenue: 28000, status: 'pending' },
-      ]);
+      const data = await api.getAdminSIAEApprovals();
+      setApprovals(data.map(a => ({
+        id: a.id,
+        eventName: a.details || 'Richiesta SIAE',
+        gestoreName: a.companyName,
+        companyName: a.companyName,
+        eventDate: a.requestDate,
+        submittedAt: a.requestDate,
+        reportType: 'RCA' as const,
+        ticketsSold: 0,
+        totalRevenue: 0,
+        status: a.status,
+      })));
     } catch (error) {
       console.error('Error loading SIAE approvals:', error);
     } finally {

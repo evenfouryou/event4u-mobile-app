@@ -1,0 +1,225 @@
+Obiettivo
+
+Realizzare l’Admin in formato App con:
+
+Parità totale con il sito (stesse sezioni, sottosezioni, funzioni reali, stessi flussi).
+
+Design secondo linee guida da app (mobile-first, componenti nativi/da app, usabilità touch), senza copiare in modo “web” layout e pattern che in app sono sbagliati.
+
+Principio guida:
+
+Funzionalità e contenuti = identici al sito.
+
+UI/UX = coerente con design app (non web travestito).
+
+1) Menu / Navigazione — Fix obbligatori
+
+Il menu non deve aprirsi a destra: deve essere sidebar/drawer a sinistra.
+
+Comportamento:
+
+Mobile: hamburger → drawer da sinistra, overlay, swipe per chiudere, focus/scroll lock.
+
+Tablet: sidebar sinistra collassabile.
+
+Desktop (se previsto): sidebar sinistra stabile o collassabile.
+
+Il menu deve integrarsi con l’app: stessa topbar, stesse animazioni, stessa gerarchia visiva.
+
+Vincolo: ordine e voci del menu identiche al sito, ma con presentazione da app (icona + label, gruppi, accordion, ecc.).
+
+2) Parità totale col sito — NO finto / NO placeholder
+
+Ogni sezione del menu va implementata.
+
+Ogni sottosezione va implementata.
+
+Ogni funzione deve essere reale e completa (non demo, non mock, non “coming soon”).
+
+Vietato:
+
+pulsanti che non fanno nulla,
+
+pagine vuote,
+
+dati finti,
+
+funzioni simulate.
+
+Regola: se sul sito si può fare, sull’app si deve poter fare allo stesso modo (o migliore in UX, ma stessa logica).
+
+3) Linee guida Design App (OBBLIGATORIE) — Non uscire fuori rotta
+3.1 Pattern UI da app (non da sito)
+
+Mobile-first: layout a colonna, contenuti verticali, niente griglie “web” complesse su mobile.
+
+Touch-friendly:
+
+target minimi (tap) coerenti con app,
+
+spaziature adeguate,
+
+evitare elementi troppo piccoli/cliccabili stile web.
+
+Navigazione app:
+
+gerarchia chiara: lista → dettaglio → modifica,
+
+back coerente,
+
+drawer solo per sezioni top-level (dove ha senso), altrimenti tabs/stack.
+
+3.2 Coerenza visiva con l’app
+
+Stessi:
+
+font,
+
+palette,
+
+border radius,
+
+ombre (se usate),
+
+component library (se esistente),
+
+icone e stile (outline/filled coerenti),
+
+micro-animazioni (aperture pannelli, transizioni).
+
+Evitare “copia grafica web” se rompe UX mobile:
+si copia l’identità visiva, non la rigidità del layout web.
+
+3.3 Componenti app consigliati (se presenti nell’app)
+
+Liste con card/row, “chevron” per dettagli
+
+Bottom sheet / modal sheet per azioni rapide
+
+Form a step se lunghi (wizard)
+
+Search bar sticky + filtri in sheet
+
+Tabelle: vietate in versione web pura su mobile
+→ sostituire con:
+
+lista “record” con campi principali + espansione,
+
+dettaglio record con sezioni,
+
+eventuale vista tabellare solo su tablet/desktop.
+
+3.4 Regola d’oro (anti-errore)
+
+Non inventare un nuovo design.
+
+Non stravolgere l’IA del sito.
+
+Convertire il sito in app significa:
+
+stessa struttura e funzioni,
+
+UI adattata correttamente a pattern mobile.
+
+4) Implementazione funzionale (completa)
+
+Per ogni pagina/sezione replicare:
+
+Liste: ricerca, filtri, ordinamenti, paginazione/infinite scroll (se sensato)
+
+CRUD completo: crea / modifica / elimina (dove esiste sul sito)
+
+Validazioni come nel sito (più messaggi chiari)
+
+Stati reali: loading, empty, error, retry
+
+Permessi/ruoli e visibilità (se nel sito)
+
+Dettaglio record (schede/sezioni)
+
+Logica identica del sito (stessi campi, stesse regole, stessi endpoint reali)
+
+5) Revisione completa (Audit → Piano → Fix)
+A) Audit (inventario e gap)
+
+Estrarre dal sito:
+
+lista completa menu,
+
+sottosezioni,
+
+funzioni per pagina.
+
+Confrontare con app:
+
+cosa manca,
+
+cosa è incompleto,
+
+cosa è finto.
+
+B) Lista problemi + priorità
+
+Bloccanti
+
+menu a sinistra + navigazione corretta
+
+sezioni mancanti
+
+funzioni non reali
+
+Funzionali
+
+CRUD incompleti
+
+filtri/ricerca non coerenti
+
+permessi/ruoli
+
+Design App polish
+
+allineamenti, spacing, tipografia
+
+componenti non touch-friendly
+
+pattern web da sostituire con pattern app
+
+C) Fix + implementazione
+
+Implementare tutto end-to-end con API reali.
+
+Rimuovere ogni mock/placeholder.
+
+Rifinire UI secondo linee guida app.
+
+6) Criteri di accettazione (Definition of Done)
+
+Una sezione è “finita” solo se:
+
+esiste (come nel sito) con stessa voce menu e sottovoce
+
+funziona davvero (nessun finto)
+
+UX è da app (touch-first, layout verticale, no tabelle web su mobile)
+
+UI è coerente con stile dell’app e identità del sito
+
+stati: loading/empty/error gestiti
+
+navigazione stabile e consistente
+
+7) Output finale richiesto
+
+Admin app completa con menu a sinistra
+
+Copia funzionale 1:1 del sito (struttura + funzioni)
+
+Design app coerente e curato (senza pattern web fuori rotta)
+
+Report finale:
+
+elenco completo sezioni implementate
+
+gap risolti
+
+note tecniche e scelte UX (solo se necessarie)

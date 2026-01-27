@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { SIAECard as APISIAECard } from '@/lib/api';
 
 interface AdminSIAECardsScreenProps {
   onBack: () => void;
@@ -56,15 +57,24 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
   const loadCards = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCards([
-        { id: '1', serialNumber: 'SIAE-2024-001234', gestoreName: 'Marco Rossi', companyName: 'Event Club Milano', status: 'active', activationDate: '2024-01-15', expirationDate: '2025-01-15', lastUsed: '2024-01-27', transactionCount: 156 },
-        { id: '2', serialNumber: 'SIAE-2024-001235', gestoreName: 'Giulia Bianchi', companyName: 'Party Roma SRL', status: 'active', activationDate: '2024-01-10', expirationDate: '2025-01-10', lastUsed: '2024-01-26', transactionCount: 89 },
-        { id: '3', serialNumber: 'SIAE-2023-000890', gestoreName: 'Luca Verdi', companyName: 'Concerti Torino', status: 'expired', activationDate: '2023-01-05', expirationDate: '2024-01-05', lastUsed: '2024-01-04', transactionCount: 234 },
-        { id: '4', serialNumber: 'SIAE-2024-001236', gestoreName: 'Anna Neri', companyName: 'Teatro Napoli', status: 'inactive', activationDate: '2024-01-20', expirationDate: '2025-01-20', lastUsed: null, transactionCount: 0 },
-        { id: '5', serialNumber: 'SIAE-2023-000567', gestoreName: 'Paolo Gialli', companyName: 'Music Live Firenze', status: 'revoked', activationDate: '2023-06-01', expirationDate: '2024-06-01', lastUsed: '2023-11-15', transactionCount: 45 },
-        { id: '6', serialNumber: 'SIAE-2024-001237', gestoreName: 'Sara Blu', companyName: 'Festival Bologna', status: 'active', activationDate: '2024-01-22', expirationDate: '2025-01-22', lastUsed: '2024-01-27', transactionCount: 12 },
-      ]);
+      const data = await api.getAdminSIAECards();
+      setCards(data.map(c => {
+        let mappedStatus: 'active' | 'inactive' | 'expired' | 'revoked' = 'inactive';
+        if (c.status === 'active') mappedStatus = 'active';
+        else if (c.status === 'expired') mappedStatus = 'expired';
+        else if ((c as any).status === 'revoked') mappedStatus = 'revoked';
+        return {
+          id: c.id,
+          serialNumber: c.serialNumber,
+          gestoreName: c.companyName,
+          companyName: c.companyName,
+          status: mappedStatus,
+          activationDate: c.issueDate,
+          expirationDate: c.expiryDate || '',
+          lastUsed: null,
+          transactionCount: 0,
+        };
+      }));
     } catch (error) {
       console.error('Error loading SIAE cards:', error);
     } finally {

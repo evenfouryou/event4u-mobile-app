@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api from '@/lib/api';
 
 interface AdminSIAEConfigScreenProps {
   onBack: () => void;
@@ -87,7 +88,19 @@ export function AdminSIAEConfigScreen({ onBack }: AdminSIAEConfigScreenProps) {
   const loadConfig = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const data = await api.getSIAEConfig();
+      setConfig(prev => ({
+        ...prev,
+        apiEndpoint: 'https://api.siae.it/v2',
+        validationEnabled: true,
+        testMode: false,
+      }));
+      setConnectionStatus(prev => ({
+        ...prev,
+        isConnected: data.smartCardConnected,
+        certificateValid: data.smartCardConnected,
+        lastCheck: new Date().toISOString(),
+      }));
     } catch (error) {
       console.error('Error loading SIAE config:', error);
     } finally {

@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { SiteSettings as APISiteSettings } from '@/lib/api';
 
 interface AdminSiteSettingsScreenProps {
   onBack: () => void;
@@ -69,7 +70,13 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
   const loadSettings = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const data = await api.getAdminSiteSettings();
+      setSettings(prev => ({
+        ...prev,
+        maintenanceMode: data.maintenanceMode,
+        registrationEnabled: data.allowRegistrations,
+        contactEmail: data.supportEmail || prev.contactEmail,
+      }));
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -87,7 +94,11 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
     try {
       setIsSaving(true);
       triggerHaptic('medium');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.updateAdminSiteSettings({
+        maintenanceMode: settings.maintenanceMode,
+        allowRegistrations: settings.registrationEnabled,
+        supportEmail: settings.contactEmail,
+      });
       Alert.alert('Successo', 'Impostazioni salvate con successo');
     } catch (error) {
       Alert.alert('Errore', 'Impossibile salvare le impostazioni');

@@ -146,12 +146,11 @@ export function AdminMenuDrawer({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={[styles.drawer, { paddingTop: insets.top + spacing.md, backgroundColor: colors.card }]}>
           <View style={styles.drawerHeader}>
             <Text style={[styles.drawerTitle, { color: colors.foreground }]}>Admin Menu</Text>
@@ -229,6 +228,7 @@ export function AdminMenuDrawer({
             </Text>
           </View>
         </View>
+        <Pressable style={styles.backdrop} onPress={onClose} />
       </View>
     </Modal>
   );
@@ -240,13 +240,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   backdrop: {
-    flex: 0.15,
+    flex: 0.2,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   drawer: {
-    flex: 0.85,
-    borderTopLeftRadius: borderRadius.xl,
-    borderBottomLeftRadius: borderRadius.xl,
+    flex: 0.8,
+    borderTopRightRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   drawerHeader: {
     flexDirection: 'row',

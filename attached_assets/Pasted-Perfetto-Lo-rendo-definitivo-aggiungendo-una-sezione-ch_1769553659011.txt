@@ -1,0 +1,230 @@
+Perfetto. Lo rendo definitivo aggiungendo una sezione chiara e non interpretabile sui **DATI REALI + API REALI + DATABASE REALE**, integrata nel documento senza cambiare la struttura.
+
+---
+
+# Script / Prompt AI — Revisione completa Admin App
+
+## (Design App + Parità Sito + API Reali + Dati Reali)
+
+---
+
+## 🎯 Obiettivo
+
+Realizzare l’**Admin in formato App** con:
+
+1. **Parità totale con il sito** (stesse sezioni, sottosezioni, funzioni reali, stessi flussi).
+2. **Design secondo linee guida da app** (mobile-first, componenti nativi/da app, usabilità touch).
+3. **Connessione esclusiva a dati reali tramite API backend reali**.
+
+---
+
+## Principio guida
+
+* **Funzionalità e contenuti = identici al sito**
+* **UI/UX = coerente con design app**
+* **Dati = esclusivamente reali**
+* **Zero simulazioni**
+
+---
+
+# 🚨 VINCOLO ASSOLUTO — DATI REALI OBBLIGATORI
+
+### È obbligatorio che:
+
+* Tutti i dati provengano da **database reale**
+* Ogni schermata sia collegata a **endpoint backend reali**
+* Ogni azione modifichi realmente il database
+* Ogni stato visualizzato sia coerente con dati effettivi
+
+---
+
+## ❌ È vietato utilizzare:
+
+* Dati mock
+* JSON statici
+* Array hardcoded nel frontend
+* Funzioni simulate
+* `setTimeout` per simulare chiamate
+* Placeholder non collegati
+* Flag demo/test
+* API finte
+* Pagine UI non connesse al backend
+
+---
+
+## 🔌 Connessione Tecnica Obbligatoria
+
+Per ogni modulo:
+
+* GET → recupero dati reale
+* POST → creazione reale
+* PUT/PATCH → aggiornamento reale
+* DELETE → eliminazione reale
+* Gestione errori da risposta API reale
+* Stato loading legato a chiamata reale
+* Stato empty basato su risposta reale
+
+Se una funzione esiste nel sito:
+
+* Deve usare **lo stesso endpoint o logica backend equivalente**
+* Deve rispettare le stesse regole di validazione
+* Deve aggiornare realmente il database
+
+---
+
+# 1️⃣ Menu / Navigazione — Fix obbligatori
+
+* Menu **a sinistra**
+* Drawer da sinistra su mobile
+* Sidebar su tablet/desktop
+* Stesso ordine e struttura del sito
+
+Ogni voce:
+
+* Deve aprire una pagina reale
+* Deve essere collegata a dati reali
+* Non può essere placeholder
+
+---
+
+# 2️⃣ Parità totale col sito — Zero finzioni
+
+* Ogni sezione implementata
+* Ogni sottosezione implementata
+* Ogni funzione realmente operativa
+* Stessi campi
+* Stesse regole
+* Stessi flussi logici
+
+Se nel sito:
+
+* Si salva → deve salvare realmente
+* Si filtra → filtro reale lato API
+* Si cambia stato → update reale
+* Si calcola → logica backend reale
+
+---
+
+# 3️⃣ Linee guida Design App (OBBLIGATORIE)
+
+## 3.1 Pattern UI da app (non web)
+
+* Mobile-first
+* Layout verticale
+* Touch-friendly
+* Niente tabelle web pure su mobile
+* Lista → dettaglio → modifica
+* Bottom sheet per azioni rapide
+* Search bar + filtri in sheet
+
+---
+
+## 3.2 Coerenza visiva
+
+* Stessa palette del sito
+* Stesso font
+* Stesse icone
+* Stesso stile visivo
+* Adattamento corretto a UI mobile
+
+⚠ Non copiare rigidamente layout web se rompe UX mobile.
+
+---
+
+## 3.3 Tabelle (Regola Specifica)
+
+* Vietate tabelle web classiche su mobile
+* Sostituire con:
+
+  * card lista
+  * espansione dettagli
+  * vista tabellare solo su tablet/desktop
+
+---
+
+# 4️⃣ Implementazione funzionale completa
+
+Ogni pagina deve includere:
+
+* CRUD reale
+* Filtri reali
+* Ricerca reale
+* Permessi reali
+* Validazioni reali
+* Loading state reale
+* Error state reale
+* Empty state reale
+
+---
+
+# 5️⃣ Revisione completa (Audit → Fix)
+
+## A) Audit
+
+* Estrarre mappa completa del sito
+* Confronto 1:1 con app
+* Individuare:
+
+  * mancanze
+  * funzioni non connesse
+  * parti con dati finti
+
+---
+
+## B) Priorità
+
+### Bloccanti
+
+* Menu a sinistra
+* Sezioni mancanti
+* Funzioni non collegate a API
+
+### Funzionali
+
+* CRUD incompleti
+* Filtri non backend
+* Permessi non coerenti
+
+### Design App
+
+* Pattern web da correggere
+* Spaziature
+* Touch UX
+
+---
+
+# 6️⃣ Definition of Done (Non negoziabile)
+
+Una sezione è completa solo se:
+
+✔ Esiste come nel sito
+✔ È collegata a API reali
+✔ Usa database reale
+✔ Nessun mock
+✔ Nessun dato statico
+✔ Nessuna funzione simulata
+✔ UX coerente con app
+✔ Stati loading/error reali
+✔ Funziona end-to-end
+
+---
+
+# 7️⃣ Output Finale Richiesto
+
+1. Admin app completa
+2. Menu a sinistra
+3. Parità funzionale totale
+4. Collegamento esclusivo a dati reali
+5. Zero mock
+6. Design coerente con linee guida app
+7. Report tecnico finale con:
+
+   * sezioni implementate
+   * endpoint collegati
+   * eventuali modifiche strutturali
+
+---
+
+Adesso è blindato anche lato **dati reali + backend reale + database reale**.
+
+Se vuoi lo rendiamo ancora più tecnico per React + Express (con struttura chiamate API, gestione token JWT, interceptor errori, struttura folder, naming endpoint), così diventa un documento direttamente eseguibile dal team dev senza possibilità di interpretazioni creative.

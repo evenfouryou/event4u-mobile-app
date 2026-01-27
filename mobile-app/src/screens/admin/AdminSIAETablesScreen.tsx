@@ -10,6 +10,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
+import api, { SIAETable as APISIAETable } from '@/lib/api';
 
 interface AdminSIAETablesScreenProps {
   onBack: () => void;
@@ -56,17 +57,18 @@ export function AdminSIAETablesScreen({ onBack }: AdminSIAETablesScreenProps) {
   const loadTables = async () => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setTables([
-        { id: '1', code: 'T01', name: 'Concerti Musica Leggera', description: 'Eventi musicali pop/rock', category: 'Musica', ivaRate: 10, siaePercentage: 8.5, isActive: true, lastUpdated: '2024-01-15' },
-        { id: '2', code: 'T02', name: 'Concerti Musica Classica', description: 'Concerti orchestra e musica classica', category: 'Musica', ivaRate: 10, siaePercentage: 6.0, isActive: true, lastUpdated: '2024-01-15' },
-        { id: '3', code: 'T03', name: 'Teatro Prosa', description: 'Spettacoli teatrali di prosa', category: 'Teatro', ivaRate: 10, siaePercentage: 5.0, isActive: true, lastUpdated: '2024-01-10' },
-        { id: '4', code: 'T04', name: 'Teatro Musicale', description: 'Musical e operette', category: 'Teatro', ivaRate: 10, siaePercentage: 7.0, isActive: true, lastUpdated: '2024-01-10' },
-        { id: '5', code: 'T05', name: 'Danza e Balletto', description: 'Spettacoli di danza', category: 'Danza', ivaRate: 10, siaePercentage: 4.5, isActive: true, lastUpdated: '2024-01-08' },
-        { id: '6', code: 'T06', name: 'Discoteche', description: 'Locali da ballo e discoteche', category: 'Intrattenimento', ivaRate: 22, siaePercentage: 10.0, isActive: true, lastUpdated: '2024-01-05' },
-        { id: '7', code: 'T07', name: 'Cinema', description: 'Proiezioni cinematografiche', category: 'Cinema', ivaRate: 10, siaePercentage: 3.0, isActive: false, lastUpdated: '2023-12-20' },
-        { id: '8', code: 'T08', name: 'Feste Private', description: 'Eventi privati con musica', category: 'Privato', ivaRate: 22, siaePercentage: 5.0, isActive: true, lastUpdated: '2024-01-12' },
-      ]);
+      const data = await api.getAdminSIAETables();
+      setTables(data.map(t => ({
+        id: t.id,
+        code: t.code,
+        name: t.tableName,
+        description: t.description,
+        category: t.category,
+        ivaRate: 10,
+        siaePercentage: 5.0,
+        isActive: t.isActive,
+        lastUpdated: t.lastUpdated,
+      })));
     } catch (error) {
       console.error('Error loading SIAE tables:', error);
     } finally {
