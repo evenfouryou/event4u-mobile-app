@@ -59,6 +59,14 @@ import {
   GestoreReportsScreen,
   GestoreCashierScreen,
   GestoreUsersScreen,
+  GestoreSIAEDashboardScreen,
+  GestoreSIAEEventsScreen,
+  GestoreSIAEReportsScreen,
+  GestoreSIAECustomersScreen,
+  GestoreSIAECardsScreen,
+  GestoreFloorPlanViewerScreen,
+  GestoreTableManagementScreen,
+  GestoreGuestListScreen,
 } from '@/screens/gestore';
 
 import {
@@ -72,6 +80,7 @@ import {
   AdminUsersScreen,
   AdminEventDetailScreen,
   AdminNameChangesScreen,
+  AdminSIAEMonitorScreen,
 } from '@/screens/admin';
 
 type Screen =
@@ -129,6 +138,15 @@ type Screen =
   | { name: 'gestoreReports' }
   | { name: 'gestoreCashier' }
   | { name: 'gestoreUsers' }
+  // SIAE screens
+  | { name: 'gestoreSIAEDashboard' }
+  | { name: 'gestoreSIAEEvents' }
+  | { name: 'gestoreSIAEReports' }
+  | { name: 'gestoreSIAECustomers' }
+  | { name: 'gestoreSIAECards' }
+  | { name: 'gestoreFloorPlan'; params: { eventId: string } }
+  | { name: 'gestoreTableManagement'; params: { eventId: string } }
+  | { name: 'gestoreGuestList'; params: { eventId: string } }
   // Admin screens
   | { name: 'adminDashboard' }
   | { name: 'adminGestori' }
@@ -139,7 +157,8 @@ type Screen =
   | { name: 'adminCompanies' }
   | { name: 'adminUsers' }
   | { name: 'adminEventDetail'; params: { eventId: string } }
-  | { name: 'adminNameChanges' };
+  | { name: 'adminNameChanges' }
+  | { name: 'adminSIAEMonitor' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -561,6 +580,7 @@ export function AppNavigator() {
             onNavigateReports={() => navigate({ name: 'gestoreReports' })}
             onNavigateCashier={() => navigate({ name: 'gestoreCashier' })}
             onNavigateUsers={() => navigate({ name: 'gestoreUsers' })}
+            onNavigateSIAE={() => navigate({ name: 'gestoreSIAEDashboard' })}
             onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
@@ -718,6 +738,71 @@ export function AppNavigator() {
           />
         );
 
+      // ========== SIAE SCREENS ==========
+      case 'gestoreSIAEDashboard':
+        return (
+          <GestoreSIAEDashboardScreen
+            onBack={goBack}
+            onNavigateEvents={() => navigate({ name: 'gestoreSIAEEvents' })}
+            onNavigateReports={() => navigate({ name: 'gestoreSIAEReports' })}
+            onNavigateCustomers={() => navigate({ name: 'gestoreSIAECustomers' })}
+            onNavigateCards={() => navigate({ name: 'gestoreSIAECards' })}
+          />
+        );
+
+      case 'gestoreSIAEEvents':
+        return (
+          <GestoreSIAEEventsScreen
+            onBack={goBack}
+            onEventPress={(eventId: string) => navigate({ name: 'gestoreEventDetail', params: { eventId } })}
+          />
+        );
+
+      case 'gestoreSIAEReports':
+        return (
+          <GestoreSIAEReportsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreSIAECustomers':
+        return (
+          <GestoreSIAECustomersScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreSIAECards':
+        return (
+          <GestoreSIAECardsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreFloorPlan':
+        return (
+          <GestoreFloorPlanViewerScreen
+            eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreTableManagement':
+        return (
+          <GestoreTableManagementScreen
+            eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreGuestList':
+        return (
+          <GestoreGuestListScreen
+            eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
       // ========== ADMIN SCREENS ==========
       case 'adminDashboard':
         return (
@@ -730,6 +815,7 @@ export function AppNavigator() {
             onNavigateSettings={() => navigate({ name: 'adminSettings' })}
             onNavigateProfile={() => navigate({ name: 'adminSettings' })}
             onNavigateNameChanges={() => navigate({ name: 'adminNameChanges' })}
+            onNavigateSIAEMonitor={() => navigate({ name: 'adminSIAEMonitor' })}
             onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
@@ -801,6 +887,13 @@ export function AppNavigator() {
       case 'adminNameChanges':
         return (
           <AdminNameChangesScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSIAEMonitor':
+        return (
+          <AdminSIAEMonitorScreen
             onBack={goBack}
           />
         );

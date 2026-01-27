@@ -1004,6 +1004,146 @@ class ApiClient {
     }
   }
 
+  // SIAE API Methods
+  async getSIAEDashboard(): Promise<SIAEDashboardStats> {
+    try {
+      return await this.get<SIAEDashboardStats>('/api/gestore/siae/dashboard');
+    } catch {
+      return {
+        moduleEnabled: false,
+        pendingReportsCount: 0,
+        recentActivity: [],
+        pendingRCACount: 0,
+        monthlyRMGStatus: null,
+        annualRPMStatus: null,
+        transmissionErrors: [],
+        pendingCorrections: 0,
+      };
+    }
+  }
+
+  async getSIAEEvents(status?: string): Promise<SIAEEvent[]> {
+    try {
+      const query = status && status !== 'all' ? `?status=${status}` : '';
+      return await this.get<SIAEEvent[]>(`/api/gestore/siae/events${query}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getSIAEReports(type: 'rca' | 'rmg' | 'rpm'): Promise<SIAEReport[]> {
+    try {
+      return await this.get<SIAEReport[]>(`/api/gestore/siae/reports?type=${type}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getSIAECustomers(): Promise<SIAECustomer[]> {
+    try {
+      return await this.get<SIAECustomer[]>('/api/gestore/siae/customers');
+    } catch {
+      return [];
+    }
+  }
+
+  async getSIAECards(): Promise<SIAECard[]> {
+    try {
+      return await this.get<SIAECard[]>('/api/gestore/siae/cards');
+    } catch {
+      return [];
+    }
+  }
+
+  async getFloorPlan(eventId: string): Promise<FloorPlanData> {
+    try {
+      return await this.get<FloorPlanData>(`/api/gestore/events/${eventId}/floor-plan`);
+    } catch {
+      return {
+        id: '',
+        eventId,
+        eventName: '',
+        width: 400,
+        height: 300,
+        zones: [],
+      };
+    }
+  }
+
+  // Admin SIAE Monitor Methods
+  async getAdminSIAEMonitorStats(): Promise<AdminSIAEMonitorStats> {
+    try {
+      return await this.get<AdminSIAEMonitorStats>('/api/admin/siae/stats');
+    } catch {
+      return {
+        totalEvents: 0,
+        pendingReports: 0,
+        transmissionErrors: 0,
+        successRate: 0,
+        totalGestori: 0,
+        activeGestori: 0,
+      };
+    }
+  }
+
+  async getAdminSIAEActivities(): Promise<AdminSIAEActivity[]> {
+    try {
+      return await this.get<AdminSIAEActivity[]>('/api/admin/siae/activities');
+    } catch {
+      return [];
+    }
+  }
+
+  // Event Table Methods
+  async getEventTables(eventId: string): Promise<EventTable[]> {
+    try {
+      return await this.get<EventTable[]>(`/api/gestore/events/${eventId}/tables`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getEventTableStats(eventId: string): Promise<EventTableStats> {
+    try {
+      return await this.get<EventTableStats>(`/api/gestore/events/${eventId}/tables/stats`);
+    } catch {
+      return { total: 0, available: 0, reserved: 0, occupied: 0 };
+    }
+  }
+
+  async reserveTable(eventId: string, tableId: string, guestName?: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/gestore/events/${eventId}/tables/${tableId}/reserve`, { guestName });
+  }
+
+  async releaseTable(eventId: string, tableId: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/gestore/events/${eventId}/tables/${tableId}/release`);
+  }
+
+  // Event Guest Methods
+  async getEventGuests(eventId: string): Promise<EventGuest[]> {
+    try {
+      return await this.get<EventGuest[]>(`/api/gestore/events/${eventId}/guests`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getEventGuestStats(eventId: string): Promise<EventGuestStats> {
+    try {
+      return await this.get<EventGuestStats>(`/api/gestore/events/${eventId}/guests/stats`);
+    } catch {
+      return { total: 0, confirmed: 0, pending: 0, cancelled: 0, checkedIn: 0 };
+    }
+  }
+
+  async sendGuestReminders(eventId: string, guestIds: string[]): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/gestore/events/${eventId}/guests/send-reminders`, { guestIds });
+  }
+
+  async bulkCheckInGuests(eventId: string, guestIds: string[]): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/gestore/events/${eventId}/guests/bulk-checkin`, { guestIds });
+  }
+
   async getGestoreCashierStats(eventId?: string): Promise<CashierStats> {
     try {
       const query = eventId ? `?eventId=${eventId}` : '';
@@ -1587,6 +1727,111 @@ export interface Personnel {
   lastActiveAt?: string;
 }
 
+// SIAE Types
+export type SIAEReportStatus = 'pending' | 'sent' | 'approved' | 'error';
+
+export interface SIAEDashboardStats {
+  moduleEnabled: boolean;
+  pendingReportsCount: number;
+  recentActivity: Array<{
+    id: string;
+    type: 'rca' | 'rmg' | 'rpm';
+    description: string;
+    status: SIAEReportStatus;
+    date: string;
+  }>;
+  pendingRCACount: number;
+  monthlyRMGStatus: SIAEReportStatus | null;
+  annualRPMStatus: SIAEReportStatus | null;
+  transmissionErrors: Array<{
+    id: string;
+    reportType: 'rca' | 'rmg' | 'rpm';
+    errorMessage: string;
+    date: string;
+  }>;
+  pendingCorrections: number;
+}
+
+export interface SIAEEvent {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  venueName: string;
+  ticketCount: number;
+  rcaStatus: SIAEReportStatus;
+  rcaTransmissionDate: string | null;
+  rcaResponseDate: string | null;
+  rcaProtocolNumber: string | null;
+}
+
+export interface SIAEReport {
+  id: string;
+  type: 'rca' | 'rmg' | 'rpm';
+  status: SIAEReportStatus;
+  transmissionDate: string | null;
+  responseDate: string | null;
+  protocolNumber: string | null;
+  eventId?: string;
+  eventName?: string;
+  date?: string;
+  eventsCount?: number;
+  month?: number;
+  year?: number;
+  totalTickets?: number;
+  totalRevenue?: number;
+  errorMessage?: string;
+}
+
+export interface SIAECustomer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fiscalCode: string | null;
+  cardNumber: string | null;
+  registrationDate: string;
+  status: 'active' | 'suspended' | 'expired';
+  address?: string;
+  phone?: string;
+  email?: string;
+  documentType?: string;
+  documentNumber?: string;
+}
+
+export interface SIAECard {
+  id: string;
+  cardNumber: string;
+  customerId: string;
+  customerName: string;
+  activationDate: string | null;
+  expiryDate: string | null;
+  status: 'active' | 'pending' | 'expired';
+}
+
+export interface FloorPlanZone {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  status: 'available' | 'occupied' | 'selected' | 'reserved';
+  totalSeats: number;
+  availableSeats: number;
+  price: number;
+  description?: string;
+}
+
+export interface FloorPlanData {
+  id: string;
+  eventId: string;
+  eventName: string;
+  imageUrl?: string;
+  width: number;
+  height: number;
+  zones: FloorPlanZone[];
+}
+
 // Reports Types
 export interface ReportStats {
   totalRevenue: number;
@@ -1704,6 +1949,67 @@ export interface GuestSearchResult {
   tableName?: string;
   guestCount?: number;
   checkedInAt?: string | null;
+}
+
+// Admin SIAE Monitor Types
+export interface AdminSIAEMonitorStats {
+  totalEvents: number;
+  pendingReports: number;
+  transmissionErrors: number;
+  successRate: number;
+  totalGestori: number;
+  activeGestori: number;
+}
+
+export interface AdminSIAEActivity {
+  id: string;
+  gestoreId: string;
+  gestoreName: string;
+  eventId?: string;
+  eventName?: string;
+  reportType: 'rca' | 'rmg' | 'rpm';
+  status: SIAEReportStatus;
+  timestamp: string;
+}
+
+// Event Table Types
+export interface EventTable {
+  id: string;
+  number: string;
+  capacity: number;
+  status: 'available' | 'reserved' | 'occupied';
+  guestName?: string;
+  guestId?: string;
+  minSpend?: number;
+}
+
+export interface EventTableStats {
+  total: number;
+  available: number;
+  reserved: number;
+  occupied: number;
+}
+
+// Event Guest Types
+export interface EventGuest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  status: 'confirmed' | 'pending' | 'cancelled';
+  type: 'vip' | 'regular' | 'comp';
+  ticketType?: string;
+  checkedIn: boolean;
+  checkedInAt?: string;
+}
+
+export interface EventGuestStats {
+  total: number;
+  confirmed: number;
+  pending: number;
+  cancelled: number;
+  checkedIn: number;
 }
 
 export const api = new ApiClient(API_BASE_URL);

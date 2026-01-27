@@ -35,6 +35,7 @@ interface GestoreDashboardProps {
   onNavigateReports: () => void;
   onNavigateCashier: () => void;
   onNavigateUsers: () => void;
+  onNavigateSIAE: () => void;
   onSwitchToClient?: () => void;
   onLogout: () => void;
 }
@@ -76,6 +77,7 @@ export function GestoreDashboard({
   onNavigateReports,
   onNavigateCashier,
   onNavigateUsers,
+  onNavigateSIAE,
   onSwitchToClient,
   onLogout,
 }: GestoreDashboardProps) {
@@ -564,7 +566,21 @@ export function GestoreDashboard({
                   </Card>
                 </Pressable>
 
-                <View style={styles.menuItem} />
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateSIAE();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-siae"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                      <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+                    </View>
+                    <Text style={styles.menuLabel}>SIAE</Text>
+                  </Card>
+                </Pressable>
               </View>
             </View>
 

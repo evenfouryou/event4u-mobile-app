@@ -8,3 +8,4 @@ export { AdminSettingsScreen } from './AdminSettingsScreen';
 export { AdminCompaniesScreen } from './AdminCompaniesScreen';
 export { AdminUsersScreen } from './AdminUsersScreen';
 export { AdminNameChangesScreen } from './AdminNameChangesScreen';
+export { AdminSIAEMonitorScreen } from './AdminSIAEMonitorScreen';

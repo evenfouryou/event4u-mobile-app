@@ -23,6 +23,7 @@ interface AdminDashboardProps {
   onNavigateSettings: () => void;
   onNavigateProfile: () => void;
   onNavigateNameChanges: () => void;
+  onNavigateSIAEMonitor: () => void;
   onSwitchToClient?: () => void;
   onLogout: () => void;
 }
@@ -53,6 +54,7 @@ export function AdminDashboard({
   onNavigateSettings,
   onNavigateProfile,
   onNavigateNameChanges,
+  onNavigateSIAEMonitor,
   onSwitchToClient,
   onLogout,
 }: AdminDashboardProps) {
@@ -337,6 +339,22 @@ export function AdminDashboard({
                       <Ionicons name="swap-horizontal" size={24} color={staticColors.pink} />
                     </View>
                     <Text style={styles.menuLabel}>Cambio Nominativo</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateSIAEMonitor();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-siae-monitor"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                      <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+                    </View>
+                    <Text style={styles.menuLabel}>Monitor SIAE</Text>
                   </Card>
                 </Pressable>
               </View>
