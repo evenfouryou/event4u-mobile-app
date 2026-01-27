@@ -10,6 +10,7 @@ import { Button } from '@/components/Button';
 import { ActionCard } from '@/components/ActionCard';
 import { CustomizeActionsModal } from '@/components/CustomizeActionsModal';
 import { SkeletonDashboard } from '@/components/Loading';
+import { Avatar } from '@/components/Avatar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { PrProfile, PrWallet, PrEvent } from '@/lib/api';
@@ -95,30 +96,38 @@ export function PRDashboard({
     return configs[actionId];
   };
 
-  const renderQuickActions = () => {
-    const visibleActions = quickActions.slice(0, 4);
-    const rows: PrQuickAction[][] = [];
-    for (let i = 0; i < visibleActions.length; i += 2) {
-      rows.push(visibleActions.slice(i, i + 2));
-    }
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buongiorno';
+    if (hour < 18) return 'Buon pomeriggio';
+    return 'Buonasera';
+  };
 
-    return rows.map((row, rowIndex) => (
-      <View key={rowIndex} style={styles.actionRow}>
-        {row.map(actionId => {
+  const renderQuickActions = () => {
+    const visibleActions = quickActions.slice(0, 5);
+
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.actionsScrollContent}
+      >
+        {visibleActions.map(actionId => {
           const config = getActionConfig(actionId);
           return (
-            <ActionCard
-              key={actionId}
-              icon={config.icon}
-              label={config.label}
-              gradient={config.gradient}
-              onPress={config.onPress}
-              testID={`action-${actionId}`}
-            />
+            <View key={actionId} style={styles.actionCardWrapper}>
+              <ActionCard
+                icon={config.icon}
+                label={config.label}
+                gradient={config.gradient}
+                onPress={config.onPress}
+                testID={`action-${actionId}`}
+              />
+            </View>
           );
         })}
-      </View>
-    ));
+      </ScrollView>
+    );
   };
 
   const walletBalance = wallet?.balance || 0;
@@ -134,22 +143,46 @@ export function PRDashboard({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Badge variant="golden" style={styles.prBadge}>
-            <Text style={styles.prBadgeText}>PR</Text>
-          </Badge>
-          <Text style={styles.headerTitle}>Dashboard</Text>
+      <View style={styles.topHeader}>
+        <View style={styles.headerLogoContainer}>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
+            resizeMode="contain"
+          />
         </View>
-        <Pressable
-          onPress={() => {
-            triggerHaptic('light');
-            onSwitchToClient();
-          }}
-          style={styles.switchButton}
-        >
-          <Ionicons name="swap-horizontal" size={20} color={staticColors.primary} />
-        </Pressable>
+        <View style={styles.headerRightActions}>
+          <Pressable
+            onPress={() => {
+              triggerHaptic('light');
+              onNavigateWallet();
+            }}
+            style={styles.walletIconButton}
+            testID="button-wallet-icon"
+          >
+            <LinearGradient
+              colors={gradients.golden}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.walletIconGradient}
+            >
+              <Ionicons name="wallet" size={18} color={colors.primaryForeground} />
+            </LinearGradient>
+            <View style={styles.walletBadge}>
+              <Text style={styles.walletBadgeText}>{walletBalance.toFixed(0)}</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              triggerHaptic('light');
+              onSwitchToClient();
+            }}
+            style={styles.switchButton}
+            testID="button-switch-to-client"
+          >
+            <Ionicons name="swap-horizontal" size={20} color={staticColors.primary} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -165,23 +198,28 @@ export function PRDashboard({
         }
       >
         {profile && (
-          <GlassCard style={styles.profileCard}>
-            <View style={styles.profileHeader}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>
-                  {profile.firstName?.[0] || ''}{profile.lastName?.[0] || ''}
+          <View style={styles.greetingContainer}>
+            <View style={styles.greetingContent}>
+              <Avatar
+                name={`${profile.firstName || ''} ${profile.lastName || ''}`}
+                size="lg"
+                testID="avatar-pr"
+              />
+              <View style={styles.greetingText}>
+                <Text style={styles.greeting}>
+                  {getGreeting()}, <Text style={styles.greetingName}>{profile.firstName}</Text>
                 </Text>
-              </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>
-                  {profile.displayName || `${profile.firstName} ${profile.lastName}`}
-                </Text>
-                <Badge variant="outline" size="sm">
-                  <Text style={styles.prCodeText}>Codice: {profile.prCode}</Text>
-                </Badge>
+                <View style={styles.prBadgeRow}>
+                  <Badge variant="golden" size="sm">
+                    <Text style={styles.prBadgeText}>PR Dashboard</Text>
+                  </Badge>
+                  <Badge variant="outline" size="sm" style={styles.prCodeBadge}>
+                    <Text style={styles.prCodeText}>{profile.prCode}</Text>
+                  </Badge>
+                </View>
               </View>
             </View>
-          </GlassCard>
+          </View>
         )}
 
         <View style={styles.statsRow}>
