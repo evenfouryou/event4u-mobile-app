@@ -861,6 +861,14 @@ class ApiClient {
     }
   }
 
+  async getBeverageData(): Promise<BeverageData> {
+    try {
+      return await this.get<BeverageData>('/api/gestore/beverages');
+    } catch {
+      return { catalog: [], sales: [], stock: [] };
+    }
+  }
+
   async getGestoreCategories(): Promise<InventoryCategory[]> {
     try {
       return await this.get<InventoryCategory[]>('/api/gestore/inventory/categories');
@@ -992,6 +1000,14 @@ class ApiClient {
   async getSuppliers(): Promise<Supplier[]> {
     try {
       return await this.get<Supplier[]>('/api/gestore/suppliers');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestorePurchaseOrders(): Promise<GestorePurchaseOrder[]> {
+    try {
+      return await this.get<GestorePurchaseOrder[]>('/api/gestore/purchase-orders');
     } catch {
       return [];
     }
@@ -1181,6 +1197,21 @@ class ApiClient {
     }
   }
 
+  async getConsumptionData(eventId?: string): Promise<ConsumptionData> {
+    try {
+      const query = eventId ? `?eventId=${eventId}` : '';
+      return await this.get<ConsumptionData>(`/api/gestore/consumption${query}`);
+    } catch {
+      return {
+        eventId: '',
+        eventName: '',
+        totalSales: 0,
+        totalTransactions: 0,
+        stations: [],
+      };
+    }
+  }
+
   async getGestoreCashierTransactions(eventId?: string): Promise<CashierTransaction[]> {
     try {
       const query = eventId ? `?eventId=${eventId}` : '';
@@ -1195,6 +1226,26 @@ class ApiClient {
       return await this.get<CashierEvent[]>('/api/gestore/cashier/events');
     } catch {
       return [];
+    }
+  }
+
+  async getNightFileData(eventId: string): Promise<NightFileData> {
+    try {
+      return await this.get<NightFileData>(`/api/gestore/night-file/${eventId}`);
+    } catch {
+      return {
+        eventId,
+        eventName: '',
+        date: new Date().toISOString().split('T')[0],
+        status: 'open',
+        totalRevenue: 0,
+        ticketsSold: 0,
+        guestsEntered: 0,
+        activeStations: 0,
+        breakdown: [],
+        cashReconciliation: { expected: 0, counted: 0, difference: 0 },
+        staffSummary: [],
+      };
     }
   }
 
@@ -1414,6 +1465,19 @@ export interface Supplier {
   status?: 'active' | 'inactive';
   lastOrderDate?: string;
   totalOrders?: number;
+}
+
+export interface GestorePurchaseOrder {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  supplierName: string;
+  createdAt: string;
+  expectedDelivery?: string;
+  totalAmount: number;
+  itemsCount: number;
+  status: 'pending' | 'approved' | 'delivered' | 'cancelled';
+  notes?: string;
 }
 
 export interface GestoreStaffMember {
@@ -1929,6 +1993,35 @@ export interface CashierEvent {
   status: 'active' | 'upcoming' | 'ended';
 }
 
+export interface NightFileData {
+  eventId: string;
+  eventName: string;
+  date: string;
+  status: 'open' | 'closing' | 'closed';
+  totalRevenue: number;
+  ticketsSold: number;
+  guestsEntered: number;
+  activeStations: number;
+  breakdown: Array<{category: string; amount: number; transactions: number}>;
+  cashReconciliation: {expected: number; counted: number; difference: number};
+  staffSummary: Array<{name: string; role: string; hours: number; tips: number}>;
+}
+
+export interface ConsumptionData {
+  eventId: string;
+  eventName: string;
+  totalSales: number;
+  totalTransactions: number;
+  stations: Array<{
+    id: string;
+    name: string;
+    type: string;
+    sales: number;
+    transactions: number;
+    topProducts: Array<{ name: string; quantity: number }>;
+  }>;
+}
+
 // Company User Types
 export interface CompanyUser {
   id: string;
@@ -2065,6 +2158,36 @@ export interface EventGuestStats {
   pending: number;
   cancelled: number;
   checkedIn: number;
+}
+
+// Beverage Data Types
+export interface BeverageCatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  available: boolean;
+}
+
+export interface BeverageSalesItem {
+  beverageId: string;
+  name: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface BeverageStockItem {
+  beverageId: string;
+  name: string;
+  currentStock: number;
+  minStock: number;
+  status: 'ok' | 'low' | 'out';
+}
+
+export interface BeverageData {
+  catalog: BeverageCatalogItem[];
+  sales: BeverageSalesItem[];
+  stock: BeverageStockItem[];
 }
 
 export const api = new ApiClient(API_BASE_URL);
