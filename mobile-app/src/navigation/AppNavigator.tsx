@@ -52,6 +52,13 @@ import {
   GestoreCreateEventScreen,
   GestorePRManagementScreen,
   GestoreCompaniesScreen,
+  GestoreStationsScreen,
+  GestoreWarehouseScreen,
+  GestoreSuppliersScreen,
+  GestorePersonnelScreen,
+  GestoreReportsScreen,
+  GestoreCashierScreen,
+  GestoreUsersScreen,
 } from '@/screens/gestore';
 
 import {
@@ -63,6 +70,8 @@ import {
   AdminSettingsScreen,
   AdminCompaniesScreen,
   AdminUsersScreen,
+  AdminEventDetailScreen,
+  AdminNameChangesScreen,
 } from '@/screens/admin';
 
 type Screen =
@@ -113,6 +122,13 @@ type Screen =
   | { name: 'gestorePriceLists' }
   | { name: 'gestorePRManagement' }
   | { name: 'gestoreCompanies' }
+  | { name: 'gestoreStations' }
+  | { name: 'gestoreWarehouse' }
+  | { name: 'gestoreSuppliers' }
+  | { name: 'gestorePersonnel' }
+  | { name: 'gestoreReports' }
+  | { name: 'gestoreCashier' }
+  | { name: 'gestoreUsers' }
   // Admin screens
   | { name: 'adminDashboard' }
   | { name: 'adminGestori' }
@@ -121,7 +137,9 @@ type Screen =
   | { name: 'adminBilling' }
   | { name: 'adminSettings' }
   | { name: 'adminCompanies' }
-  | { name: 'adminUsers' };
+  | { name: 'adminUsers' }
+  | { name: 'adminEventDetail'; params: { eventId: string } }
+  | { name: 'adminNameChanges' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -640,6 +658,55 @@ export function AppNavigator() {
           />
         );
 
+      case 'gestoreStations':
+        return (
+          <GestoreStationsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreWarehouse':
+        return (
+          <GestoreWarehouseScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreSuppliers':
+        return (
+          <GestoreSuppliersScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestorePersonnel':
+        return (
+          <GestorePersonnelScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreReports':
+        return (
+          <GestoreReportsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreCashier':
+        return (
+          <GestoreCashierScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreUsers':
+        return (
+          <GestoreUsersScreen
+            onBack={goBack}
+          />
+        );
+
       // ========== ADMIN SCREENS ==========
       case 'adminDashboard':
         return (
@@ -676,7 +743,7 @@ export function AppNavigator() {
         return (
           <AdminEventsScreen
             onBack={goBack}
-            onEventPress={(eventId: string) => navigate({ name: 'adminEvents' })}
+            onEventPress={(eventId: string) => navigate({ name: 'adminEventDetail', params: { eventId } })}
           />
         );
 
@@ -708,6 +775,21 @@ export function AppNavigator() {
           <AdminUsersScreen
             onBack={goBack}
             onItemPress={(userId: string) => navigate({ name: 'adminUsers' })}
+          />
+        );
+
+      case 'adminEventDetail':
+        return (
+          <AdminEventDetailScreen
+            eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
+      case 'adminNameChanges':
+        return (
+          <AdminNameChangesScreen
+            onBack={goBack}
           />
         );
 

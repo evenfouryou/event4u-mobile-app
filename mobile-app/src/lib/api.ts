@@ -945,6 +945,107 @@ class ApiClient {
     }
   }
 
+  async getGestoreStations(): Promise<GestoreStation[]> {
+    try {
+      return await this.get<GestoreStation[]>('/api/gestore/stations');
+    } catch {
+      return [];
+    }
+  }
+
+  async getWarehouseItems(): Promise<WarehouseItem[]> {
+    try {
+      return await this.get<WarehouseItem[]>('/api/gestore/warehouse/items');
+    } catch {
+      return [];
+    }
+  }
+
+  async getWarehouseMovements(): Promise<WarehouseMovement[]> {
+    try {
+      return await this.get<WarehouseMovement[]>('/api/gestore/warehouse/movements');
+    } catch {
+      return [];
+    }
+  }
+
+  async getSuppliers(): Promise<Supplier[]> {
+    try {
+      return await this.get<Supplier[]>('/api/gestore/suppliers');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestorePersonnel(role?: string): Promise<Personnel[]> {
+    try {
+      const query = role && role !== 'all' ? `?role=${role}` : '';
+      return await this.get<Personnel[]>(`/api/gestore/personnel${query}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreReportStats(period: string, type: string): Promise<ReportStats> {
+    try {
+      return await this.get<ReportStats>(`/api/gestore/reports?period=${period}&type=${type}`);
+    } catch {
+      return {
+        totalRevenue: 0,
+        revenueGrowth: 0,
+        avgAttendance: 0,
+        attendanceGrowth: 0,
+        topProducts: [],
+        eventPerformance: [],
+        inventoryValue: 0,
+        lowStockCount: 0,
+        staffPerformance: [],
+      };
+    }
+  }
+
+  async getGestoreCashierStats(eventId?: string): Promise<CashierStats> {
+    try {
+      const query = eventId ? `?eventId=${eventId}` : '';
+      return await this.get<CashierStats>(`/api/gestore/cashier/stats${query}`);
+    } catch {
+      return {
+        transactionsCount: 0,
+        totalSales: 0,
+        avgTicketValue: 0,
+        cashDrawerStatus: 'closed',
+        cashBalance: 0,
+        cardPayments: 0,
+        cashPayments: 0,
+      };
+    }
+  }
+
+  async getGestoreCashierTransactions(eventId?: string): Promise<CashierTransaction[]> {
+    try {
+      const query = eventId ? `?eventId=${eventId}` : '';
+      return await this.get<CashierTransaction[]>(`/api/gestore/cashier/transactions${query}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreCashierEvents(): Promise<CashierEvent[]> {
+    try {
+      return await this.get<CashierEvent[]>('/api/gestore/cashier/events');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreCompanyUsers(): Promise<CompanyUser[]> {
+    try {
+      return await this.get<CompanyUser[]>('/api/gestore/company-users');
+    } catch {
+      return [];
+    }
+  }
+
   // Admin API Methods
   async getAdminDashboard(): Promise<AdminDashboardStats> {
     try {
@@ -1004,6 +1105,26 @@ class ApiClient {
     } catch {
       return [];
     }
+  }
+
+  async getAdminEventDetail(eventId: string): Promise<AdminEventDetail> {
+    return this.get<AdminEventDetail>(`/api/admin/events/${eventId}`);
+  }
+
+  async getNameChanges(): Promise<NameChangeRequest[]> {
+    try {
+      return await this.get<NameChangeRequest[]>('/api/admin/name-changes');
+    } catch {
+      return [];
+    }
+  }
+
+  async approveNameChange(id: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/approve`);
+  }
+
+  async rejectNameChange(id: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/reject`);
   }
 }
 
@@ -1081,6 +1202,45 @@ export interface GestoreStation {
   name: string;
   type: string;
   status: string;
+  eventId?: string;
+  eventName?: string;
+  staffCount?: number;
+  productsCount?: number;
+  inventoryStatus?: 'ok' | 'low' | 'empty';
+}
+
+export interface WarehouseItem {
+  id: string;
+  name: string;
+  currentQty: number;
+  minQty: number;
+  unit?: string;
+  location?: string;
+  categoryId?: string;
+  categoryName?: string;
+}
+
+export interface WarehouseMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  type: 'in' | 'out' | 'transfer';
+  quantity: number;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface Supplier {
+  id: string;
+  companyName: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  status?: 'active' | 'inactive';
+  lastOrderDate?: string;
+  totalOrders?: number;
 }
 
 export interface GestoreStaffMember {
@@ -1330,6 +1490,73 @@ export interface AdminUser {
   companyName?: string;
 }
 
+export interface AdminEventDetail {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  status: string;
+  gestoreName?: string;
+  locationName?: string;
+  capacity?: number;
+  ticketsSold?: number;
+  ticketsAvailable?: number;
+  ticketRevenue?: number;
+  revenue?: number;
+  tablesTotal?: number;
+  tablesBooked?: number;
+  tablesRevenue?: number;
+  staffCount?: number;
+  scannersCount?: number;
+  prCount?: number;
+  guestsCount?: number;
+  checkedIn?: number;
+  consumptionRevenue?: number;
+  expenses?: number;
+  profit?: number;
+  createdAt?: string;
+  ticketTypes?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    capacity: number;
+    sold: number;
+  }>;
+  tables?: Array<{
+    id: string;
+    name: string;
+    capacity: number;
+    status: string;
+    bookedBy?: string;
+  }>;
+  staff?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    email?: string;
+    phone?: string;
+    status: string;
+  }>;
+}
+
+export interface NameChangeRequest {
+  id: string;
+  originalFirstName: string;
+  originalLastName: string;
+  newFirstName: string;
+  newLastName: string;
+  ticketCode?: string;
+  eventName?: string;
+  eventId?: string;
+  requesterName?: string;
+  requesterId?: string;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt?: string;
+  processedAt?: string;
+  processedBy?: string;
+}
+
 export interface BillingStats {
   totalRevenue: number;
   monthlyRevenue: number;
@@ -1344,6 +1571,76 @@ export interface Invoice {
   amount: number;
   status: string;
   date: string;
+}
+
+// Personnel Types
+export interface Personnel {
+  id: string;
+  name: string;
+  role: 'bartender' | 'security' | 'promoter' | 'scanner' | 'cashier' | 'staff';
+  phone?: string;
+  email?: string;
+  status: 'active' | 'inactive';
+  eventsAssigned: number;
+  rating?: number;
+  avatarUrl?: string;
+  lastActiveAt?: string;
+}
+
+// Reports Types
+export interface ReportStats {
+  totalRevenue: number;
+  revenueGrowth: number;
+  avgAttendance: number;
+  attendanceGrowth: number;
+  topProducts: Array<{ id: string; name: string; quantity: number; revenue: number }>;
+  eventPerformance: Array<{ id: string; name: string; ticketsSold: number; revenue: number; rating: number }>;
+  inventoryValue: number;
+  lowStockCount: number;
+  staffPerformance: Array<{ id: string; name: string; role: string; scans: number; rating: number }>;
+}
+
+// Cashier Types
+export interface CashierStats {
+  transactionsCount: number;
+  totalSales: number;
+  avgTicketValue: number;
+  cashDrawerStatus: 'open' | 'closed' | 'balanced';
+  cashBalance: number;
+  cardPayments: number;
+  cashPayments: number;
+}
+
+export interface CashierTransaction {
+  id: string;
+  time: string;
+  amount: number;
+  paymentMethod: 'cash' | 'card' | 'wallet' | 'other';
+  items: number;
+  status: 'completed' | 'pending' | 'refunded';
+  customerName?: string;
+  receiptNumber?: string;
+}
+
+export interface CashierEvent {
+  id: string;
+  name: string;
+  date: string;
+  status: 'active' | 'upcoming' | 'ended';
+}
+
+// Company User Types
+export interface CompanyUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  role: 'admin' | 'manager' | 'staff' | 'scanner' | 'cashier' | 'pr';
+  status: 'active' | 'inactive' | 'pending';
+  lastLoginAt?: string;
+  avatarUrl?: string;
+  createdAt?: string;
 }
 
 // Scanner Types
