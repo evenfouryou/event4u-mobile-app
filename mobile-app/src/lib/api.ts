@@ -825,6 +825,14 @@ class ApiClient {
     }
   }
 
+  async getGestoreStationDetail(stationId: string): Promise<GestoreStationDetail | null> {
+    try {
+      return await this.get<GestoreStationDetail>(`/api/gestore/stations/${stationId}`);
+    } catch {
+      return null;
+    }
+  }
+
   async createGestoreEvent(data: any): Promise<{ id: string }> {
     return this.post<{ id: string }>('/api/gestore/events', data);
   }
@@ -891,6 +899,18 @@ class ApiClient {
     } catch {
       return [];
     }
+  }
+
+  async getGestoreLocations(): Promise<GestoreLocation[]> {
+    try {
+      return await this.get<GestoreLocation[]>('/api/gestore/locations');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreLocationDetail(locationId: string): Promise<GestoreLocationDetail> {
+    return this.get<GestoreLocationDetail>(`/api/gestore/locations/${locationId}`);
   }
 
   async getGestoreCampaigns(): Promise<MarketingCampaign[]> {
@@ -1349,6 +1369,19 @@ export interface GestoreStation {
   inventoryStatus?: 'ok' | 'low' | 'empty';
 }
 
+export interface GestoreStationDetail {
+  id: string;
+  name: string;
+  type: 'bar' | 'food' | 'entrance' | 'vip' | 'cloakroom';
+  eventId?: string;
+  eventName?: string;
+  status: 'active' | 'inactive';
+  totalSales: number;
+  transactionCount: number;
+  staff: Array<{id: string; name: string; role: string; shift: string}>;
+  products: Array<{id: string; name: string; price: number; stock: number; category: string}>;
+}
+
 export interface WarehouseItem {
   id: string;
   name: string;
@@ -1518,6 +1551,28 @@ export interface GestoreCompany {
   eventsCount?: number;
   staffCount?: number;
   locationsCount?: number;
+}
+
+export interface GestoreLocation {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  capacity: number;
+  eventsCount: number;
+  status: 'active' | 'inactive';
+  imageUrl?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+}
+
+export interface GestoreLocationDetail extends GestoreLocation {
+  description?: string;
+  amenities: string[];
+  parkingSpots: number;
+  accessibilityFeatures: string[];
+  events: Array<{id: string; name: string; date: string; status: string}>;
+  floorPlanUrl?: string;
 }
 
 // Admin Types
