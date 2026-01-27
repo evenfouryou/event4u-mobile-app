@@ -755,7 +755,7 @@ class ApiClient {
     }
   }
 
-  async getScannerStats(): Promise<ScannerStats> {
+  async getScannerStatsBasic(): Promise<ScannerStats> {
     try {
       return await this.get<ScannerStats>('/api/e4u/scanner/stats');
     } catch (error) {
@@ -1205,7 +1205,7 @@ class ApiClient {
     }
   }
 
-  async approveNameChange(id: string): Promise<void> {
+  async approveNameChangeGestore(id: string): Promise<void> {
     try {
       await this.post(`/api/gestore/siae/name-changes/${id}/approve`);
     } catch (error) {
@@ -1214,7 +1214,7 @@ class ApiClient {
     }
   }
 
-  async rejectNameChange(id: string): Promise<void> {
+  async rejectNameChangeGestore(id: string): Promise<void> {
     try {
       await this.post(`/api/gestore/siae/name-changes/${id}/reject`);
     } catch (error) {
@@ -1792,11 +1792,11 @@ class ApiClient {
     }
   }
 
-  async approveNameChange(id: string): Promise<{ success: boolean }> {
+  async approveNameChangeAdmin(id: string): Promise<{ success: boolean }> {
     return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/approve`);
   }
 
-  async rejectNameChange(id: string): Promise<{ success: boolean }> {
+  async rejectNameChangeAdmin(id: string): Promise<{ success: boolean }> {
     return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/reject`);
   }
 }
@@ -2417,7 +2417,7 @@ export interface SIAETransaction {
   eventName: string;
 }
 
-export interface NameChangeRequest {
+export interface SIAENameChangeRequest {
   id: string;
   ticketCode: string;
   eventName: string;
@@ -2590,7 +2590,7 @@ export interface PrinterConfig {
 }
 
 // Invoice Types
-export interface Invoice {
+export interface GestoreInvoice {
   id: string;
   number: string;
   customerName: string;

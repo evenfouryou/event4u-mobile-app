@@ -938,6 +938,20 @@ export function AppNavigator() {
             onNavigateProfile={() => navigate({ name: 'adminSettings' })}
             onNavigateNameChanges={() => navigate({ name: 'adminNameChanges' })}
             onNavigateSIAEMonitor={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigatePrinter={() => navigate({ name: 'adminSettings' })}
+            onNavigateDigitalTemplates={() => navigate({ name: 'adminSettings' })}
+            onNavigateStripeAdmin={() => navigate({ name: 'adminBilling' })}
+            onNavigateSIAEApprovals={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAETables={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAECards={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAEConfig={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAECustomers={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAEConsole={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateSIAETransactions={() => navigate({ name: 'adminSIAEMonitor' })}
+            onNavigateBillingPlans={() => navigate({ name: 'adminBilling' })}
+            onNavigateBillingOrganizers={() => navigate({ name: 'adminBilling' })}
+            onNavigateBillingInvoices={() => navigate({ name: 'adminBilling' })}
+            onNavigateBillingReports={() => navigate({ name: 'adminBilling' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
         );
