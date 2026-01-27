@@ -221,7 +221,7 @@ export function AdminBillingScreen({ onBack }: AdminBillingScreenProps) {
         <View style={styles.planFeatures}>
           <Text style={styles.planFeature}>Tutto incluso in Pro</Text>
           <Text style={styles.planFeature}>API dedicate</Text>
-          <Text style={styles.planFeature}>Account manager</Text>
+          <Text style={styles.planFeature}>Gestore dedicato</Text>
           <Text style={styles.planFeature}>SLA garantito</Text>
         </View>
       </Card>

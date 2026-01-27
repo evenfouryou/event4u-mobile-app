@@ -845,6 +845,22 @@ class ApiClient {
     }
   }
 
+  async getGestoreProducts(): Promise<InventoryProduct[]> {
+    try {
+      return await this.get<InventoryProduct[]>('/api/gestore/inventory/products');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreCategories(): Promise<InventoryCategory[]> {
+    try {
+      return await this.get<InventoryCategory[]>('/api/gestore/inventory/categories');
+    } catch {
+      return [];
+    }
+  }
+
   async getGestoreStaff(): Promise<GestoreStaffMember[]> {
     try {
       return await this.get<GestoreStaffMember[]>('/api/gestore/staff');
@@ -1019,6 +1035,24 @@ export interface GestoreInventoryItem {
   minStock: number;
   unitPrice: number;
   status: string;
+}
+
+export interface InventoryProduct {
+  id: string;
+  name: string;
+  categoryId?: string;
+  categoryName?: string;
+  currentStock: number;
+  minStock: number;
+  unitPrice: number;
+  status: string;
+}
+
+export interface InventoryCategory {
+  id: string;
+  name: string;
+  productsCount: number;
+  icon?: string;
 }
 
 export interface GestoreInventoryStats {

@@ -91,7 +91,7 @@ export function GestoreDashboard({
       const data = await api.getGestoreDashboard();
       setStats(data);
     } catch (error) {
-      console.error('Error loading manager dashboard:', error);
+      console.error('Error loading gestore dashboard:', error);
       setStats({
         activeEvents: 0,
         totalGuests: 0,
@@ -175,7 +175,7 @@ export function GestoreDashboard({
             <Avatar
               name={`${user?.firstName || ''} ${user?.lastName || ''}`}
               size="sm"
-              testID="avatar-manager"
+              testID="avatar-gestore"
             />
           </Pressable>
         </View>
@@ -229,7 +229,7 @@ export function GestoreDashboard({
 
               <GlassCard style={styles.statCard}>
                 <View style={styles.statIcon}>
-                  <Ionicons name="ticket" size={24} color={staticColors.purple} />
+                  <Ionicons name="ticket" size={24} color="#8B5CF6" />
                 </View>
                 <Text style={styles.statValue}>{stats.pendingTickets}</Text>
                 <Text style={styles.statLabel}>Biglietti Venduti</Text>
@@ -332,8 +332,8 @@ export function GestoreDashboard({
                   testID="menu-marketing"
                 >
                   <Card style={styles.menuCard}>
-                    <View style={[styles.menuIcon, { backgroundColor: `${staticColors.pink}20` }]}>
-                      <Ionicons name="megaphone" size={24} color={staticColors.pink} />
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(236, 72, 153, 0.15)' }]}>
+                      <Ionicons name="megaphone" size={24} color="#EC4899" />
                     </View>
                     <Text style={styles.menuLabel}>Marketing</Text>
                   </Card>

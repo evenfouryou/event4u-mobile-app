@@ -100,20 +100,20 @@ export function GestoreInventoryScreen({ onBack }: GestoreInventoryScreenProps) 
           <Text style={styles.productName}>{item.name}</Text>
           <Text style={styles.productCategory}>{item.categoryName || 'Senza categoria'}</Text>
         </View>
-        {getStockBadge(item.stock, item.minStock || 10)}
+        {getStockBadge(item.currentStock, item.minStock || 10)}
       </View>
       <View style={styles.productDivider} />
       <View style={styles.productStats}>
         <View style={styles.productStat}>
-          <Text style={styles.productStatValue}>{item.stock}</Text>
+          <Text style={styles.productStatValue}>{item.currentStock}</Text>
           <Text style={styles.productStatLabel}>Stock</Text>
         </View>
         <View style={styles.productStat}>
-          <Text style={styles.productStatValue}>{formatCurrency(item.price)}</Text>
+          <Text style={styles.productStatValue}>{formatCurrency(item.unitPrice)}</Text>
           <Text style={styles.productStatLabel}>Prezzo</Text>
         </View>
         <View style={styles.productStat}>
-          <Text style={styles.productStatValue}>{item.unit || 'pz'}</Text>
+          <Text style={styles.productStatValue}>pz</Text>
           <Text style={styles.productStatLabel}>Unità</Text>
         </View>
       </View>
@@ -123,8 +123,8 @@ export function GestoreInventoryScreen({ onBack }: GestoreInventoryScreenProps) 
   const renderCategory = ({ item }: { item: InventoryCategory }) => (
     <Card style={styles.categoryCard} testID={`category-${item.id}`}>
       <View style={styles.categoryContent}>
-        <View style={[styles.categoryIcon, { backgroundColor: item.color ? `${item.color}20` : `${staticColors.primary}20` }]}>
-          <Ionicons name="folder" size={24} color={item.color || staticColors.primary} />
+        <View style={[styles.categoryIcon, { backgroundColor: `${staticColors.primary}20` }]}>
+          <Ionicons name="folder" size={24} color={staticColors.primary} />
         </View>
         <View style={styles.categoryInfo}>
           <Text style={styles.categoryName}>{item.name}</Text>
@@ -172,7 +172,7 @@ export function GestoreInventoryScreen({ onBack }: GestoreInventoryScreenProps) 
             testID="input-search"
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')}>
+            <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
               <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
             </Pressable>
           )}
