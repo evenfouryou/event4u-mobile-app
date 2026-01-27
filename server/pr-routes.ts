@@ -1394,8 +1394,9 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     const user = req.user as any;
     
     // Resolve PR identity
+    // FIX 2026-01-27: Accept either userId OR prProfileId (mobile app PR may not have linked userId)
     const { userId, prProfileId } = await resolvePrIdentity(req);
-    if (!userId) {
+    if (!userId && !prProfileId) {
       return res.status(401).json({ error: "Non autenticato" });
     }
     
