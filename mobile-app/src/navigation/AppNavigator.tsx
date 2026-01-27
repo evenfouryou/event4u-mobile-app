@@ -550,6 +550,17 @@ export function AppNavigator() {
             onNavigateAccounting={() => navigate({ name: 'gestoreAccounting' })}
             onNavigateProfile={() => navigate({ name: 'gestoreProfile' })}
             onNavigateSettings={() => navigate({ name: 'gestoreSettings' })}
+            onNavigateProducts={() => navigate({ name: 'gestoreProducts' })}
+            onNavigatePriceLists={() => navigate({ name: 'gestorePriceLists' })}
+            onNavigatePRManagement={() => navigate({ name: 'gestorePRManagement' })}
+            onNavigateCompanies={() => navigate({ name: 'gestoreCompanies' })}
+            onNavigateStations={() => navigate({ name: 'gestoreStations' })}
+            onNavigateWarehouse={() => navigate({ name: 'gestoreWarehouse' })}
+            onNavigateSuppliers={() => navigate({ name: 'gestoreSuppliers' })}
+            onNavigatePersonnel={() => navigate({ name: 'gestorePersonnel' })}
+            onNavigateReports={() => navigate({ name: 'gestoreReports' })}
+            onNavigateCashier={() => navigate({ name: 'gestoreCashier' })}
+            onNavigateUsers={() => navigate({ name: 'gestoreUsers' })}
             onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />

@@ -24,6 +24,17 @@ interface GestoreDashboardProps {
   onNavigateAccounting: () => void;
   onNavigateProfile: () => void;
   onNavigateSettings: () => void;
+  onNavigateProducts: () => void;
+  onNavigatePriceLists: () => void;
+  onNavigatePRManagement: () => void;
+  onNavigateCompanies: () => void;
+  onNavigateStations: () => void;
+  onNavigateWarehouse: () => void;
+  onNavigateSuppliers: () => void;
+  onNavigatePersonnel: () => void;
+  onNavigateReports: () => void;
+  onNavigateCashier: () => void;
+  onNavigateUsers: () => void;
   onSwitchToClient?: () => void;
   onLogout: () => void;
 }
@@ -54,6 +65,17 @@ export function GestoreDashboard({
   onNavigateAccounting,
   onNavigateProfile,
   onNavigateSettings,
+  onNavigateProducts,
+  onNavigatePriceLists,
+  onNavigatePRManagement,
+  onNavigateCompanies,
+  onNavigateStations,
+  onNavigateWarehouse,
+  onNavigateSuppliers,
+  onNavigatePersonnel,
+  onNavigateReports,
+  onNavigateCashier,
+  onNavigateUsers,
   onSwitchToClient,
   onLogout,
 }: GestoreDashboardProps) {
@@ -354,6 +376,195 @@ export function GestoreDashboard({
                     <Text style={styles.menuLabel}>Contabilità</Text>
                   </Card>
                 </Pressable>
+              </View>
+            </View>
+
+            {/* Gestione Avanzata Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Gestione Avanzata</Text>
+              <View style={styles.menuGrid}>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateProducts();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-products"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: `${staticColors.teal}20` }]}>
+                      <Ionicons name="cube" size={24} color={staticColors.teal} />
+                    </View>
+                    <Text style={styles.menuLabel}>Prodotti</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigatePriceLists();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-pricelists"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: `${staticColors.golden}20` }]}>
+                      <Ionicons name="pricetags" size={24} color={staticColors.golden} />
+                    </View>
+                    <Text style={styles.menuLabel}>Listini</Text>
+                  </Card>
+                </Pressable>
+              </View>
+              <View style={styles.menuGrid}>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateWarehouse();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-warehouse"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                      <Ionicons name="archive" size={24} color="#8B5CF6" />
+                    </View>
+                    <Text style={styles.menuLabel}>Magazzino</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateSuppliers();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-suppliers"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                      <Ionicons name="business" size={24} color="#3B82F6" />
+                    </View>
+                    <Text style={styles.menuLabel}>Fornitori</Text>
+                  </Card>
+                </Pressable>
+              </View>
+              <View style={styles.menuGrid}>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigatePersonnel();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-personnel"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                      <Ionicons name="people" size={24} color="#10B981" />
+                    </View>
+                    <Text style={styles.menuLabel}>Personale</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateStations();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-stations"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                      <Ionicons name="storefront" size={24} color="#F59E0B" />
+                    </View>
+                    <Text style={styles.menuLabel}>Stazioni</Text>
+                  </Card>
+                </Pressable>
+              </View>
+              <View style={styles.menuGrid}>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigatePRManagement();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-pr"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(236, 72, 153, 0.15)' }]}>
+                      <Ionicons name="person-add" size={24} color="#EC4899" />
+                    </View>
+                    <Text style={styles.menuLabel}>PR</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateCompanies();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-companies"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                      <Ionicons name="briefcase" size={24} color="#6366F1" />
+                    </View>
+                    <Text style={styles.menuLabel}>Aziende</Text>
+                  </Card>
+                </Pressable>
+              </View>
+              <View style={styles.menuGrid}>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateReports();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-reports"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(14, 165, 233, 0.15)' }]}>
+                      <Ionicons name="analytics" size={24} color="#0EA5E9" />
+                    </View>
+                    <Text style={styles.menuLabel}>Report</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateCashier();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-cashier"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                      <Ionicons name="cash" size={24} color="#22C55E" />
+                    </View>
+                    <Text style={styles.menuLabel}>Cassa</Text>
+                  </Card>
+                </Pressable>
+              </View>
+              <View style={styles.menuGrid}>
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateUsers();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-users"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                      <Ionicons name="person-circle" size={24} color="#A855F7" />
+                    </View>
+                    <Text style={styles.menuLabel}>Utenti</Text>
+                  </Card>
+                </Pressable>
+
+                <View style={styles.menuItem} />
               </View>
             </View>
 
