@@ -2252,6 +2252,57 @@ router.get("/api/siae/customers", requireAuth, requireGestore, async (req: Reque
   }
 });
 
+router.get("/api/siae/customers/search", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { q } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      return res.json([]);
+    }
+    
+    const searchTerm = `%${q.toLowerCase()}%`;
+    
+    // Cerca in tutti i clienti registrati (non solo quelli con biglietti)
+    const customers = await db
+      .select({
+        id: siaeCustomers.id,
+        uniqueCode: siaeCustomers.uniqueCode,
+        firstName: siaeCustomers.firstName,
+        lastName: siaeCustomers.lastName,
+        email: siaeCustomers.email,
+        phone: siaeCustomers.phone,
+        phoneVerified: siaeCustomers.phoneVerified,
+        emailVerified: siaeCustomers.emailVerified,
+        isActive: siaeCustomers.isActive,
+        blockedUntil: siaeCustomers.blockedUntil,
+        blockReason: siaeCustomers.blockReason,
+        birthDate: siaeCustomers.birthDate,
+        birthPlace: siaeCustomers.birthPlace,
+        registrationCompleted: siaeCustomers.registrationCompleted,
+        createdAt: siaeCustomers.createdAt,
+        updatedAt: siaeCustomers.updatedAt,
+      })
+      .from(siaeCustomers)
+      .where(
+        or(
+          sql`LOWER(${siaeCustomers.firstName}) LIKE ${searchTerm}`,
+          sql`LOWER(${siaeCustomers.lastName}) LIKE ${searchTerm}`,
+          sql`LOWER(${siaeCustomers.email}) LIKE ${searchTerm}`,
+          sql`${siaeCustomers.phone} LIKE ${searchTerm}`,
+          sql`LOWER(${siaeCustomers.uniqueCode}) LIKE ${searchTerm}`
+        )
+      )
+      .orderBy(desc(siaeCustomers.createdAt))
+      .limit(50);
+    
+    res.json(customers);
+  } catch (error: any) {
+    console.error("[SIAE] Error searching customers:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/api/siae/customers/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const customer = await siaeStorage.getSiaeCustomer(req.params.id);
