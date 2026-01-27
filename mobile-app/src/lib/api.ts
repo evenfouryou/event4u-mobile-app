@@ -128,6 +128,24 @@ export interface StripeConfigResponse {
   publishableKey: string;
 }
 
+export interface StripeModeResponse {
+  mode: string;
+  isProduction: boolean;
+}
+
+export interface StripeTransactionData {
+  id: string;
+  transactionCode: string;
+  ticketedEventId: string;
+  customerId: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  paymentMethod?: string;
+  totalAmount: number;
+  ticketsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PrProfile {
   id: string;
   companyId: string;
@@ -1188,6 +1206,14 @@ class ApiClient {
     }
   }
 
+  async getSIAEResales(): Promise<SIAEResale[]> {
+    try {
+      return await this.get<SIAEResale[]>('/api/siae/resales/all');
+    } catch {
+      return [];
+    }
+  }
+
   async exportSIAETransactionsXML(): Promise<void> {
     try {
       await this.post('/api/gestore/siae/transactions/export-xml');
@@ -1234,6 +1260,14 @@ class ApiClient {
   async getSIAECards(): Promise<SIAECard[]> {
     try {
       return await this.get<SIAECard[]>('/api/gestore/siae/cards');
+    } catch {
+      return [];
+    }
+  }
+
+  async getSIAESubscriptions(): Promise<SIAESubscription[]> {
+    try {
+      return await this.get<SIAESubscription[]>('/api/siae/subscriptions');
     } catch {
       return [];
     }
@@ -1420,6 +1454,18 @@ class ApiClient {
     try {
       return await this.get<SIAEAuditEntry[]>('/api/gestore/siae/audit-log');
     } catch {
+      return [];
+    }
+  }
+
+  async getSIAEAuditLogs(companyId?: string): Promise<SiaeAuditLog[]> {
+    try {
+      const endpoint = companyId
+        ? `/api/admin/siae/companies/${companyId}/audit-logs`
+        : '/api/siae/companies/audit-logs';
+      return await this.get<SiaeAuditLog[]>(endpoint);
+    } catch (error) {
+      console.error('Error fetching SIAE audit logs:', error);
       return [];
     }
   }
@@ -1862,6 +1908,23 @@ class ApiClient {
     }
   }
 
+  // Admin Stripe API
+  async getStripeTransactions(): Promise<StripeTransactionData[]> {
+    try {
+      return await this.get<StripeTransactionData[]>('/api/siae/transactions');
+    } catch {
+      return [];
+    }
+  }
+
+  async getStripeMode(): Promise<StripeModeResponse> {
+    try {
+      return await this.get<StripeModeResponse>('/api/public/stripe-mode');
+    } catch {
+      return { mode: 'sandbox', isProduction: false };
+    }
+  }
+
   // Admin Site Settings API
   async getAdminSiteSettings(): Promise<SiteSettings> {
     try {
@@ -1910,6 +1973,34 @@ class ApiClient {
 
   async updateAdminSIAETable(id: string, data: Partial<SIAETable>): Promise<SIAETable> {
     return this.put<SIAETable>(`/api/admin/siae/tables/${id}`, data);
+  }
+
+  async getAdminSIAETicketTypes(): Promise<(SIAETicketType & { companyId?: string })[]> {
+    try {
+      return await this.get<(SIAETicketType & { companyId?: string })[]>('/api/siae/ticket-types');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminSIAEBoxOfficeSessions(): Promise<(SiaeBoxOfficeSession & { userName?: string; emissionChannelName?: string })[]> {
+    try {
+      return await this.get<(SiaeBoxOfficeSession & { userName?: string; emissionChannelName?: string })[]>('/api/siae/admin/box-office/sessions');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminDigitalTemplates(): Promise<DigitalTicketTemplate[]> {
+    try {
+      return await this.get<DigitalTicketTemplate[]>('/api/admin/digital-ticket-templates');
+    } catch {
+      return [];
+    }
+  }
+
+  async updateAdminDigitalTemplate(id: string, data: Partial<DigitalTicketTemplate>): Promise<DigitalTicketTemplate> {
+    return this.put<DigitalTicketTemplate>(`/api/admin/digital-ticket-templates/${id}`, data);
   }
 
   // Gestore Marketing API - Loyalty
@@ -2716,6 +2807,32 @@ export interface SIAETransaction {
   eventName: string;
 }
 
+export interface SIAEResale {
+  id: string;
+  originalTicketId: string;
+  newTicketId: string | null;
+  sellerId: string;
+  buyerId: string | null;
+  originalPrice: string | number;
+  resalePrice: string | number;
+  platformFee: string | number;
+  prezzoMassimo: string | number | null;
+  causaleRivendita: string;
+  causaleDettaglio: string | null;
+  venditoreVerificato: boolean;
+  venditoreDocumentoTipo: string | null;
+  acquirenteVerificato: boolean;
+  status: 'pending' | 'listed' | 'sold' | 'fulfilled' | 'cancelled' | 'paid' | 'reserved' | 'expired' | 'rejected';
+  ticketCode?: string;
+  eventName?: string;
+  eventDate?: string;
+  sectorName?: string;
+  sellerName?: string;
+  buyerName?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface SIAENameChangeRequest {
   id: string;
   ticketCode: string;
@@ -2751,6 +2868,22 @@ export interface SIAECard {
   activationDate: string | null;
   expiryDate: string | null;
   status: 'active' | 'pending' | 'expired';
+}
+
+export interface SIAESubscription {
+  id: string;
+  subscriptionCode: string;
+  customerId: string;
+  holderFirstName: string;
+  holderLastName: string;
+  status: 'active' | 'pending' | 'expired' | 'cancelled';
+  validFrom: string;
+  validTo: string;
+  eventsCount: number;
+  totalAmount: number | string;
+  companyId?: string;
+  companyName?: string;
+  eventName?: string;
 }
 
 export interface SIAESeat {
@@ -2801,6 +2934,26 @@ export interface SIAEBoxOfficeData {
   sessionTransactions: number;
   sessionTotal: number;
   ticketTypes: Array<{id: string; name: string; price: number}>;
+}
+
+export interface SiaeBoxOfficeSession {
+  id: string;
+  userId: string;
+  emissionChannelId: string;
+  locationId: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  cashTotal: string | number;
+  cardTotal: string | number;
+  ticketsSold: number;
+  ticketsCancelled: number;
+  expectedCash: string | number | null;
+  actualCash: string | number | null;
+  difference: string | number | null;
+  status: 'open' | 'closed' | 'reconciled';
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SIAESubscription {
@@ -3276,6 +3429,24 @@ export interface SIAEAuditEntry {
   details?: string;
 }
 
+// SIAE Audit Log Types (detailed audit log for admin)
+export interface SiaeAuditLog {
+  id: string;
+  companyId: string;
+  userId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  description: string | null;
+  oldData: string | null;
+  newData: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  fiscalSealCode: string | null;
+  cardCode: string | null;
+  createdAt: string;
+}
+
 // SIAE Config Types
 export interface SIAEConfig {
   codiceFiscale: string;
@@ -3415,6 +3586,46 @@ export interface SIAETable {
   category: string;
   isActive: boolean;
   lastUpdated: string;
+}
+
+export interface DigitalTicketTemplate {
+  id: string;
+  companyId?: string | null;
+  name: string;
+  description?: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+  logoUrl?: string | null;
+  logoPosition: 'top-left' | 'top-center' | 'top-right';
+  logoSize: 'small' | 'medium' | 'large';
+  qrSize: number;
+  qrPosition: 'center' | 'bottom-center' | 'bottom-left';
+  qrStyle: 'square' | 'rounded' | 'dots';
+  qrForegroundColor: string;
+  qrBackgroundColor: string;
+  backgroundStyle: 'solid' | 'gradient' | 'pattern';
+  gradientDirection: 'to-bottom' | 'to-right' | 'radial';
+  showEventName: boolean;
+  showEventDate: boolean;
+  showEventTime: boolean;
+  showVenue: boolean;
+  showPrice: boolean;
+  showTicketType: boolean;
+  showSector: boolean;
+  showSeat: boolean;
+  showBuyerName: boolean;
+  showFiscalSeal: boolean;
+  showPerforatedEdge: boolean;
+  fontFamily: string;
+  titleFontSize: number;
+  bodyFontSize: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Gestore Marketing - Loyalty Types
