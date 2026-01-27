@@ -36,6 +36,28 @@ import { PRProfileScreen } from '@/screens/pr/PRProfileScreen';
 
 import { ScannerDashboard, ScannerEventsScreen, ScannerScanScreen, ScannerProfileScreen } from '@/screens/scanner';
 
+import {
+  GestoreDashboard,
+  GestoreEventsScreen,
+  GestoreEventDetailScreen,
+  GestoreInventoryScreen,
+  GestoreStaffScreen,
+  GestoreScannerScreen,
+  GestoreMarketingScreen,
+  GestoreAccountingScreen,
+  GestoreProfileScreen,
+  GestoreSettingsScreen,
+  GestoreCreateEventScreen,
+} from '@/screens/gestore';
+
+import {
+  AdminDashboard,
+  AdminGestoriScreen,
+  AdminEventsScreen,
+  AdminBillingScreen,
+  AdminSettingsScreen,
+} from '@/screens/admin';
+
 type Screen =
   | { name: 'splash' }
   | { name: 'landing' }
@@ -66,7 +88,25 @@ type Screen =
   | { name: 'scannerDashboard' }
   | { name: 'scannerEvents' }
   | { name: 'scannerScan'; params: { eventId: string } }
-  | { name: 'scannerProfile' };
+  | { name: 'scannerProfile' }
+  // Gestore screens
+  | { name: 'gestoreDashboard' }
+  | { name: 'gestoreEvents' }
+  | { name: 'gestoreEventDetail'; params: { eventId: string } }
+  | { name: 'gestoreCreateEvent' }
+  | { name: 'gestoreInventory' }
+  | { name: 'gestoreStaff' }
+  | { name: 'gestoreScanner' }
+  | { name: 'gestoreMarketing' }
+  | { name: 'gestoreAccounting' }
+  | { name: 'gestoreProfile' }
+  | { name: 'gestoreSettings' }
+  // Admin screens
+  | { name: 'adminDashboard' }
+  | { name: 'adminGestori' }
+  | { name: 'adminEvents' }
+  | { name: 'adminBilling' }
+  | { name: 'adminSettings' };
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -193,6 +233,12 @@ export function AppNavigator() {
                   break;
                 case 'pr':
                   resetTo({ name: 'prDashboard' });
+                  break;
+                case 'gestore':
+                  resetTo({ name: 'gestoreDashboard' });
+                  break;
+                case 'super_admin':
+                  resetTo({ name: 'adminDashboard' });
                   break;
                 default:
                   resetTo({ name: 'accountDashboard' });
@@ -455,6 +501,138 @@ export function AppNavigator() {
         return (
           <ScannerScanScreen
             eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
+      // ========== GESTORE SCREENS ==========
+      case 'gestoreDashboard':
+        return (
+          <GestoreDashboard
+            onNavigateEvents={() => navigate({ name: 'gestoreEvents' })}
+            onNavigateInventory={() => navigate({ name: 'gestoreInventory' })}
+            onNavigateStaff={() => navigate({ name: 'gestoreStaff' })}
+            onNavigateScanner={() => navigate({ name: 'gestoreScanner' })}
+            onNavigateMarketing={() => navigate({ name: 'gestoreMarketing' })}
+            onNavigateAccounting={() => navigate({ name: 'gestoreAccounting' })}
+            onNavigateProfile={() => navigate({ name: 'gestoreProfile' })}
+            onNavigateSettings={() => navigate({ name: 'gestoreSettings' })}
+            onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'gestoreEvents':
+        return (
+          <GestoreEventsScreen
+            onBack={goBack}
+            onEventPress={(eventId) => navigate({ name: 'gestoreEventDetail', params: { eventId } })}
+            onCreateEvent={() => navigate({ name: 'gestoreCreateEvent' })}
+          />
+        );
+
+      case 'gestoreEventDetail':
+        return (
+          <GestoreEventDetailScreen
+            eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreCreateEvent':
+        return (
+          <GestoreCreateEventScreen
+            onBack={goBack}
+            onSuccess={(eventId) => navigate({ name: 'gestoreEventDetail', params: { eventId } })}
+          />
+        );
+
+      case 'gestoreInventory':
+        return (
+          <GestoreInventoryScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreStaff':
+        return (
+          <GestoreStaffScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreScanner':
+        return (
+          <GestoreScannerScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreMarketing':
+        return (
+          <GestoreMarketingScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreAccounting':
+        return (
+          <GestoreAccountingScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'gestoreProfile':
+        return (
+          <GestoreProfileScreen
+            onBack={goBack}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'gestoreSettings':
+        return (
+          <GestoreSettingsScreen
+            onBack={goBack}
+          />
+        );
+
+      // ========== ADMIN SCREENS ==========
+      case 'adminDashboard':
+        return (
+          <AdminDashboard
+            onNavigateGestori={() => navigate({ name: 'adminGestori' })}
+            onNavigateEvents={() => navigate({ name: 'adminEvents' })}
+            onNavigateBilling={() => navigate({ name: 'adminBilling' })}
+            onNavigateSettings={() => navigate({ name: 'adminSettings' })}
+            onLogout={() => resetTo({ name: 'landing' })}
+          />
+        );
+
+      case 'adminGestori':
+        return (
+          <AdminGestoriScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminEvents':
+        return (
+          <AdminEventsScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminBilling':
+        return (
+          <AdminBillingScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'adminSettings':
+        return (
+          <AdminSettingsScreen
             onBack={goBack}
           />
         );
