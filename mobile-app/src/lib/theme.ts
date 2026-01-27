@@ -20,6 +20,8 @@ export const colors = {
   warningForeground: '#000000',
   teal: '#00CED1',
   golden: '#FFD700',
+  purple: '#8B5CF6',
+  pink: '#EC4899',
   glass: 'rgba(255, 255, 255, 0.05)',
   glassBorder: 'rgba(255, 255, 255, 0.1)',
 };

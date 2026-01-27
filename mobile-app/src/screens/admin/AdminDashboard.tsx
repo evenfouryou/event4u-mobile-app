@@ -22,6 +22,7 @@ interface AdminDashboardProps {
   onNavigateBilling: () => void;
   onNavigateSettings: () => void;
   onNavigateProfile: () => void;
+  onNavigateNameChanges: () => void;
   onSwitchToClient?: () => void;
   onLogout: () => void;
 }
@@ -51,6 +52,7 @@ export function AdminDashboard({
   onNavigateBilling,
   onNavigateSettings,
   onNavigateProfile,
+  onNavigateNameChanges,
   onSwitchToClient,
   onLogout,
 }: AdminDashboardProps) {
@@ -319,6 +321,22 @@ export function AdminDashboard({
                       <Ionicons name="cog" size={24} color={staticColors.teal} />
                     </View>
                     <Text style={styles.menuLabel}>Impostazioni</Text>
+                  </Card>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerHaptic('light');
+                    onNavigateNameChanges();
+                  }}
+                  style={styles.menuItem}
+                  testID="menu-name-changes"
+                >
+                  <Card style={styles.menuCard}>
+                    <View style={[styles.menuIcon, { backgroundColor: `${staticColors.pink}20` }]}>
+                      <Ionicons name="swap-horizontal" size={24} color={staticColors.pink} />
+                    </View>
+                    <Text style={styles.menuLabel}>Cambio Nominativo</Text>
                   </Card>
                 </Pressable>
               </View>

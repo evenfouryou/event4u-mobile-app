@@ -718,6 +718,7 @@ export function AppNavigator() {
             onNavigateBilling={() => navigate({ name: 'adminBilling' })}
             onNavigateSettings={() => navigate({ name: 'adminSettings' })}
             onNavigateProfile={() => navigate({ name: 'adminSettings' })}
+            onNavigateNameChanges={() => navigate({ name: 'adminNameChanges' })}
             onSwitchToClient={() => resetTo({ name: 'accountDashboard' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />

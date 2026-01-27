@@ -62,7 +62,7 @@ export function GestoreUsersScreen({ onBack }: GestoreUsersScreenProps) {
   const filters: { id: RoleFilter; label: string }[] = [
     { id: 'all', label: 'Tutti' },
     { id: 'admin', label: 'Admin' },
-    { id: 'manager', label: 'Manager' },
+    { id: 'manager', label: 'Gestore' },
     { id: 'staff', label: 'Staff' },
     { id: 'scanner', label: 'Scanner' },
     { id: 'cashier', label: 'Cassieri' },
@@ -74,7 +74,7 @@ export function GestoreUsersScreen({ onBack }: GestoreUsersScreenProps) {
       case 'admin':
         return 'Amministratore';
       case 'manager':
-        return 'Manager';
+        return 'Gestore';
       case 'staff':
         return 'Staff';
       case 'scanner':
