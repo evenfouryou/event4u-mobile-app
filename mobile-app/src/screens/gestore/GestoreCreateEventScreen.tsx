@@ -10,14 +10,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api from '@/lib/api';
 
-interface ManagerCreateEventScreenProps {
+interface GestoreCreateEventScreenProps {
   onBack: () => void;
   onEventCreated: (eventId: string) => void;
 }
 
 type StepType = 'basic' | 'datetime' | 'location' | 'tickets' | 'review';
 
-export function ManagerCreateEventScreen({ onBack, onEventCreated }: ManagerCreateEventScreenProps) {
+export function GestoreCreateEventScreen({ onBack, onEventCreated }: GestoreCreateEventScreenProps) {
   const { colors } = useTheme();
   const [currentStep, setCurrentStep] = useState<StepType>('basic');
   const [saving, setSaving] = useState(false);
@@ -79,7 +79,7 @@ export function ManagerCreateEventScreen({ onBack, onEventCreated }: ManagerCrea
   const handleCreate = async () => {
     try {
       setSaving(true);
-      const event = await api.createManagerEvent({
+      const event = await api.createGestoreEvent({
         name: formData.name,
         description: formData.description,
         startDate: `${formData.startDate}T${formData.startTime || '20:00'}:00`,
@@ -574,4 +574,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerCreateEventScreen;
+export default GestoreCreateEventScreen;

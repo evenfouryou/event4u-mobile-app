@@ -11,20 +11,20 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { ManagerEvent } from '@/lib/api';
+import api, { GestoreEvent } from '@/lib/api';
 
 type FilterType = 'all' | 'upcoming' | 'active' | 'past' | 'draft';
 
-interface ManagerEventsScreenProps {
+interface GestoreEventsScreenProps {
   onBack: () => void;
   onEventPress: (eventId: string) => void;
   onCreateEvent: () => void;
 }
 
-export function ManagerEventsScreen({ onBack, onEventPress, onCreateEvent }: ManagerEventsScreenProps) {
+export function GestoreEventsScreen({ onBack, onEventPress, onCreateEvent }: GestoreEventsScreenProps) {
   const { colors, gradients } = useTheme();
-  const [events, setEvents] = useState<ManagerEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<ManagerEvent[]>([]);
+  const [events, setEvents] = useState<GestoreEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<GestoreEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +52,7 @@ export function ManagerEventsScreen({ onBack, onEventPress, onCreateEvent }: Man
   const loadEvents = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getManagerEvents();
+      const data = await api.getGestoreEvents();
       setEvents(data);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -119,7 +119,7 @@ export function ManagerEventsScreen({ onBack, onEventPress, onCreateEvent }: Man
     });
   };
 
-  const renderEvent = ({ item }: { item: ManagerEvent }) => (
+  const renderEvent = ({ item }: { item: GestoreEvent }) => (
     <Pressable
       onPress={() => {
         triggerHaptic('light');
@@ -455,4 +455,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerEventsScreen;
+export default GestoreEventsScreen;

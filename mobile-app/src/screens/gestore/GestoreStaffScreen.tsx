@@ -14,11 +14,11 @@ import api, { StaffMember } from '@/lib/api';
 
 type FilterType = 'all' | 'scanner' | 'pr' | 'bartender' | 'cashier';
 
-interface ManagerStaffScreenProps {
+interface GestoreStaffScreenProps {
   onBack: () => void;
 }
 
-export function ManagerStaffScreen({ onBack }: ManagerStaffScreenProps) {
+export function GestoreStaffScreen({ onBack }: GestoreStaffScreenProps) {
   const { colors } = useTheme();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
@@ -49,7 +49,7 @@ export function ManagerStaffScreen({ onBack }: ManagerStaffScreenProps) {
   const loadStaff = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getManagerStaff();
+      const data = await api.getGestoreStaff();
       setStaff(data);
     } catch (error) {
       console.error('Error loading staff:', error);
@@ -351,4 +351,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerStaffScreen;
+export default GestoreStaffScreen;

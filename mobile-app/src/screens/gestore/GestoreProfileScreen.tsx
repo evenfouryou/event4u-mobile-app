@@ -12,16 +12,16 @@ import { Loading } from '@/components/Loading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { ManagerProfile, Company } from '@/lib/api';
+import api, { GestoreProfile, Company } from '@/lib/api';
 
-interface ManagerProfileScreenProps {
+interface GestoreProfileScreenProps {
   onBack: () => void;
 }
 
-export function ManagerProfileScreen({ onBack }: ManagerProfileScreenProps) {
+export function GestoreProfileScreen({ onBack }: GestoreProfileScreenProps) {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const [profile, setProfile] = useState<ManagerProfile | null>(null);
+  const [profile, setProfile] = useState<GestoreProfile | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
@@ -53,8 +53,8 @@ export function ManagerProfileScreen({ onBack }: ManagerProfileScreenProps) {
     try {
       setIsLoading(true);
       const [profileData, companyData] = await Promise.all([
-        api.getManagerProfile(),
-        api.getManagerCompany(),
+        api.getGestoreProfile(),
+        api.getGestoreCompany(),
       ]);
       setProfile(profileData);
       setCompany(companyData);
@@ -74,7 +74,7 @@ export function ManagerProfileScreen({ onBack }: ManagerProfileScreenProps) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await api.updateManagerProfile(formData);
+      await api.updateGestoreProfile(formData);
       await loadProfile();
       setEditing(false);
       Alert.alert('Successo', 'Profilo aggiornato');
@@ -459,4 +459,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerProfileScreen;
+export default GestoreProfileScreen;

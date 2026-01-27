@@ -799,6 +799,346 @@ class ApiClient {
   async denyAccess(entryId: string, reason?: string): Promise<{ success: boolean }> {
     return this.post<{ success: boolean }>(`/api/reservations/deny-access/${entryId}`, { reason });
   }
+
+  // Gestore API Methods
+  async getGestoreDashboard(): Promise<GestoreDashboardStats> {
+    try {
+      return await this.get<GestoreDashboardStats>('/api/gestore/dashboard');
+    } catch {
+      return { activeEvents: 0, totalGuests: 0, monthlyRevenue: 0, pendingTickets: 0, upcomingEvents: [] };
+    }
+  }
+
+  async getGestoreEvents(): Promise<GestoreEvent[]> {
+    try {
+      return await this.get<GestoreEvent[]>('/api/gestore/events');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreEventDetail(eventId: string): Promise<GestoreEventDetail | null> {
+    try {
+      return await this.get<GestoreEventDetail>(`/api/gestore/events/${eventId}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async createGestoreEvent(data: any): Promise<{ id: string }> {
+    return this.post<{ id: string }>('/api/gestore/events', data);
+  }
+
+  async getGestoreInventory(): Promise<GestoreInventoryItem[]> {
+    try {
+      return await this.get<GestoreInventoryItem[]>('/api/gestore/inventory');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreInventoryStats(): Promise<GestoreInventoryStats> {
+    try {
+      return await this.get<GestoreInventoryStats>('/api/gestore/inventory/stats');
+    } catch {
+      return { totalItems: 0, lowStockItems: 0, totalValue: 0, categoriesCount: 0 };
+    }
+  }
+
+  async getGestoreStaff(): Promise<GestoreStaffMember[]> {
+    try {
+      return await this.get<GestoreStaffMember[]>('/api/gestore/staff');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreCampaigns(): Promise<MarketingCampaign[]> {
+    try {
+      return await this.get<MarketingCampaign[]>('/api/gestore/marketing/campaigns');
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreMarketingStats(): Promise<MarketingStats> {
+    try {
+      return await this.get<MarketingStats>('/api/gestore/marketing/stats');
+    } catch {
+      return { totalCampaigns: 0, activeCampaigns: 0, totalEmails: 0, openRate: 0 };
+    }
+  }
+
+  async getGestoreAccountingStats(period: string): Promise<AccountingStats> {
+    try {
+      return await this.get<AccountingStats>(`/api/gestore/accounting/stats?period=${period}`);
+    } catch {
+      return { totalRevenue: 0, ticketRevenue: 0, tableRevenue: 0, consumptionRevenue: 0, expenses: 0, profit: 0 };
+    }
+  }
+
+  async getGestoreTransactions(period: string): Promise<Transaction[]> {
+    try {
+      return await this.get<Transaction[]>(`/api/gestore/accounting/transactions?period=${period}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getGestoreProfile(): Promise<GestoreProfile> {
+    try {
+      return await this.get<GestoreProfile>('/api/gestore/profile');
+    } catch {
+      return { id: '' };
+    }
+  }
+
+  async updateGestoreProfile(data: any): Promise<GestoreProfile> {
+    return this.patch<GestoreProfile>('/api/gestore/profile', data);
+  }
+
+  async getGestoreCompany(): Promise<Company | null> {
+    try {
+      return await this.get<Company>('/api/gestore/company');
+    } catch {
+      return null;
+    }
+  }
+
+  // Admin API Methods
+  async getAdminDashboard(): Promise<AdminDashboardStats> {
+    try {
+      return await this.get<AdminDashboardStats>('/api/admin/dashboard');
+    } catch {
+      return { totalGestori: 0, activeGestori: 0, totalEvents: 0, totalUsers: 0, monthlyRevenue: 0, recentGestori: [] };
+    }
+  }
+
+  async getAdminGestori(): Promise<AdminGestore[]> {
+    try {
+      return await this.get<AdminGestore[]>('/api/admin/gestori');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminEvents(): Promise<AdminEvent[]> {
+    try {
+      return await this.get<AdminEvent[]>('/api/admin/events');
+    } catch {
+      return [];
+    }
+  }
+
+  async getAdminBillingStats(): Promise<BillingStats> {
+    try {
+      return await this.get<BillingStats>('/api/admin/billing/stats');
+    } catch {
+      return { totalRevenue: 0, monthlyRevenue: 0, activeSubscriptions: 0, pendingInvoices: 0 };
+    }
+  }
+
+  async getAdminInvoices(): Promise<Invoice[]> {
+    try {
+      return await this.get<Invoice[]>('/api/admin/billing/invoices');
+    } catch {
+      return [];
+    }
+  }
+}
+
+// Gestore Types
+export interface GestoreDashboardStats {
+  activeEvents: number;
+  totalGuests: number;
+  monthlyRevenue: number;
+  pendingTickets: number;
+  upcomingEvents: GestoreUpcomingEvent[];
+}
+
+export interface GestoreUpcomingEvent {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  guestsCount: number;
+  ticketsSold: number;
+}
+
+export interface GestoreEvent {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  location: string;
+  status: string;
+  ticketsSold: number;
+  capacity?: number;
+  revenue: number;
+  imageUrl?: string;
+}
+
+export interface GestoreEventDetail extends GestoreEvent {
+  description?: string;
+  isPublic: boolean;
+  ticketTypes: GestoreTicketType[];
+  stations: GestoreStation[];
+  staff: GestoreStaffMember[];
+}
+
+export interface GestoreTicketType {
+  id: string;
+  name: string;
+  price: number;
+  capacity: number;
+  sold: number;
+}
+
+export interface GestoreStation {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+}
+
+export interface GestoreStaffMember {
+  id: string;
+  name: string;
+  role: string;
+  email?: string;
+  phone?: string;
+  status: string;
+  eventsAssigned: number;
+}
+
+export interface GestoreInventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  currentStock: number;
+  minStock: number;
+  unitPrice: number;
+  status: string;
+}
+
+export interface GestoreInventoryStats {
+  totalItems: number;
+  lowStockItems: number;
+  totalValue: number;
+  categoriesCount: number;
+}
+
+export interface MarketingCampaign {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  sentCount?: number;
+  openCount?: number;
+  clickCount?: number;
+  scheduledAt?: string;
+}
+
+export interface MarketingStats {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalEmails: number;
+  openRate: number;
+}
+
+export interface AccountingStats {
+  totalRevenue: number;
+  ticketRevenue: number;
+  tableRevenue: number;
+  consumptionRevenue: number;
+  expenses: number;
+  profit: number;
+}
+
+export interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface GestoreProfile {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  eventsCount?: number;
+  staffCount?: number;
+  ticketsSold?: number;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  type?: string;
+  vatNumber?: string;
+  address?: string;
+}
+
+// Admin Types
+export interface AdminDashboardStats {
+  totalGestori: number;
+  activeGestori: number;
+  totalEvents: number;
+  totalUsers: number;
+  monthlyRevenue: number;
+  recentGestori: AdminRecentGestore[];
+}
+
+export interface AdminRecentGestore {
+  id: string;
+  name: string;
+  companyName: string;
+  eventsCount: number;
+  status: string;
+}
+
+export interface AdminGestore {
+  id: string;
+  name: string;
+  email?: string;
+  companyName?: string;
+  status: string;
+  eventsCount?: number;
+  ticketsSold?: number;
+  revenue?: number;
+  siaeEnabled?: boolean;
+}
+
+export interface AdminEvent {
+  id: string;
+  name: string;
+  startDate: string;
+  gestoreName?: string;
+  location?: string;
+  status: string;
+  ticketsSold?: number;
+  revenue?: number;
+  capacity?: number;
+}
+
+export interface BillingStats {
+  totalRevenue: number;
+  monthlyRevenue: number;
+  activeSubscriptions: number;
+  pendingInvoices: number;
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  clientName: string;
+  amount: number;
+  status: string;
+  date: string;
 }
 
 // Scanner Types

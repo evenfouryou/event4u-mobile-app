@@ -13,11 +13,11 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { ScannerOperator } from '@/lib/api';
 
-interface ManagerScannerScreenProps {
+interface GestoreScannerScreenProps {
   onBack: () => void;
 }
 
-export function ManagerScannerScreen({ onBack }: ManagerScannerScreenProps) {
+export function GestoreScannerScreen({ onBack }: GestoreScannerScreenProps) {
   const { colors } = useTheme();
   const [operators, setOperators] = useState<ScannerOperator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +41,7 @@ export function ManagerScannerScreen({ onBack }: ManagerScannerScreenProps) {
   const loadOperators = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getManagerScannerOperators();
+      const data = await api.getGestoreScannerOperators();
       setOperators(data);
     } catch (error) {
       console.error('Error loading scanner operators:', error);
@@ -313,4 +313,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerScannerScreen;
+export default GestoreScannerScreen;

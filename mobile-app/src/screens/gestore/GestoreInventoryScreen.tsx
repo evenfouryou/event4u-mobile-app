@@ -13,11 +13,11 @@ import api, { InventoryProduct, InventoryCategory } from '@/lib/api';
 
 type TabType = 'products' | 'categories' | 'movements' | 'priceLists';
 
-interface ManagerInventoryScreenProps {
+interface GestoreInventoryScreenProps {
   onBack: () => void;
 }
 
-export function ManagerInventoryScreen({ onBack }: ManagerInventoryScreenProps) {
+export function GestoreInventoryScreen({ onBack }: GestoreInventoryScreenProps) {
   const { colors } = useTheme();
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [categories, setCategories] = useState<InventoryCategory[]>([]);
@@ -45,8 +45,8 @@ export function ManagerInventoryScreen({ onBack }: ManagerInventoryScreenProps) 
     try {
       setIsLoading(true);
       const [productsData, categoriesData] = await Promise.all([
-        api.getManagerProducts(),
-        api.getManagerCategories(),
+        api.getGestoreProducts(),
+        api.getGestoreCategories(),
       ]);
       setProducts(productsData);
       setCategories(categoriesData);
@@ -405,4 +405,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerInventoryScreen;
+export default GestoreInventoryScreen;

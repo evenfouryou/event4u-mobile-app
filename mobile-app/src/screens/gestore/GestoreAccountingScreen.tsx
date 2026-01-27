@@ -13,11 +13,11 @@ import api, { AccountingStats, Transaction } from '@/lib/api';
 
 type PeriodType = 'today' | 'week' | 'month' | 'year';
 
-interface ManagerAccountingScreenProps {
+interface GestoreAccountingScreenProps {
   onBack: () => void;
 }
 
-export function ManagerAccountingScreen({ onBack }: ManagerAccountingScreenProps) {
+export function GestoreAccountingScreen({ onBack }: GestoreAccountingScreenProps) {
   const { colors } = useTheme();
   const [stats, setStats] = useState<AccountingStats>({
     totalRevenue: 0,
@@ -51,8 +51,8 @@ export function ManagerAccountingScreen({ onBack }: ManagerAccountingScreenProps
     try {
       setIsLoading(true);
       const [statsData, transactionsData] = await Promise.all([
-        api.getManagerAccountingStats(activePeriod),
-        api.getManagerTransactions(activePeriod),
+        api.getGestoreAccountingStats(activePeriod),
+        api.getGestoreTransactions(activePeriod),
       ]);
       setStats(statsData);
       setTransactions(transactionsData);
@@ -424,4 +424,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerAccountingScreen;
+export default GestoreAccountingScreen;

@@ -15,7 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api from '@/lib/api';
 
-interface ManagerDashboardProps {
+interface GestoreDashboardProps {
   onNavigateEvents: () => void;
   onNavigateInventory: () => void;
   onNavigateStaff: () => void;
@@ -45,7 +45,7 @@ interface UpcomingEvent {
   ticketsSold: number;
 }
 
-export function ManagerDashboard({
+export function GestoreDashboard({
   onNavigateEvents,
   onNavigateInventory,
   onNavigateStaff,
@@ -56,7 +56,7 @@ export function ManagerDashboard({
   onNavigateSettings,
   onSwitchToClient,
   onLogout,
-}: ManagerDashboardProps) {
+}: GestoreDashboardProps) {
   const { user, logout } = useAuth();
   const { colors, gradients } = useTheme();
   const insets = useSafeAreaInsets();
@@ -88,7 +88,7 @@ export function ManagerDashboard({
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getManagerDashboard();
+      const data = await api.getGestoreDashboard();
       setStats(data);
     } catch (error) {
       console.error('Error loading manager dashboard:', error);
@@ -627,4 +627,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerDashboard;
+export default GestoreDashboard;

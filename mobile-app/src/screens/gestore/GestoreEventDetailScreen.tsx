@@ -11,18 +11,18 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { ManagerEventDetail } from '@/lib/api';
+import api, { GestoreEventDetail } from '@/lib/api';
 
 type TabType = 'overview' | 'ticketing' | 'guests' | 'tables' | 'staff' | 'inventory' | 'finance';
 
-interface ManagerEventDetailScreenProps {
+interface GestoreEventDetailScreenProps {
   eventId: string;
   onBack: () => void;
 }
 
-export function ManagerEventDetailScreen({ eventId, onBack }: ManagerEventDetailScreenProps) {
+export function GestoreEventDetailScreen({ eventId, onBack }: GestoreEventDetailScreenProps) {
   const { colors, gradients } = useTheme();
-  const [event, setEvent] = useState<ManagerEventDetail | null>(null);
+  const [event, setEvent] = useState<GestoreEventDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +45,7 @@ export function ManagerEventDetailScreen({ eventId, onBack }: ManagerEventDetail
   const loadEventDetail = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getManagerEventDetail(eventId);
+      const data = await api.getGestoreEventDetail(eventId);
       setEvent(data);
     } catch (error) {
       console.error('Error loading event detail:', error);
@@ -899,4 +899,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerEventDetailScreen;
+export default GestoreEventDetailScreen;

@@ -10,12 +10,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 
-interface ManagerSettingsScreenProps {
+interface GestoreSettingsScreenProps {
   onBack: () => void;
   onLogout: () => void;
 }
 
-export function ManagerSettingsScreen({ onBack, onLogout }: ManagerSettingsScreenProps) {
+export function GestoreSettingsScreen({ onBack, onLogout }: GestoreSettingsScreenProps) {
   const { user, logout } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
@@ -353,4 +353,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerSettingsScreen;
+export default GestoreSettingsScreen;

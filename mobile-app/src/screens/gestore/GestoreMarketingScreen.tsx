@@ -11,11 +11,11 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { MarketingCampaign, MarketingStats } from '@/lib/api';
 
-interface ManagerMarketingScreenProps {
+interface GestoreMarketingScreenProps {
   onBack: () => void;
 }
 
-export function ManagerMarketingScreen({ onBack }: ManagerMarketingScreenProps) {
+export function GestoreMarketingScreen({ onBack }: GestoreMarketingScreenProps) {
   const { colors } = useTheme();
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([]);
   const [stats, setStats] = useState<MarketingStats>({
@@ -46,8 +46,8 @@ export function ManagerMarketingScreen({ onBack }: ManagerMarketingScreenProps) 
     try {
       setIsLoading(true);
       const [campaignsData, statsData] = await Promise.all([
-        api.getManagerCampaigns(),
-        api.getManagerMarketingStats(),
+        api.getGestoreCampaigns(),
+        api.getGestoreMarketingStats(),
       ]);
       setCampaigns(campaignsData);
       setStats(statsData);
@@ -337,4 +337,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManagerMarketingScreen;
+export default GestoreMarketingScreen;
