@@ -167,7 +167,7 @@ export default function AccountHome() {
             </Card>
           </Link>
           
-          <Link href="/account/tickets">
+          <Link href="/account/my-qr">
             <Card className="hover-elevate cursor-pointer h-full">
               <CardContent className="pt-6 flex flex-col items-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
@@ -344,7 +344,7 @@ export default function AccountHome() {
           </motion.div>
         </Link>
         
-        <Link href="/account/tickets">
+        <Link href="/account/my-qr">
           <motion.div 
             className="bg-card rounded-2xl p-5 min-h-[130px] flex flex-col items-center justify-center gap-3"
             whileTap={{ scale: 0.95 }}
