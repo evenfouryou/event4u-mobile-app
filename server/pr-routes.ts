@@ -3329,18 +3329,28 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
 
     const { eventLists, listEntries: listEntriesTable } = await import("@shared/schema");
 
+    console.log("[my/guest-list-entries] Searching for user:", { id: user.id, email: user.email, phone: user.phone });
+
+    // Normalize phone number - strip all non-digits
+    const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+    
     // Build conditions to find list entries by clientUserId, email, or phone
     const conditions = [eq(listEntriesTable.clientUserId, user.id)];
     if (user.email) {
       conditions.push(eq(listEntriesTable.email, user.email));
+      // Also try lowercase match
+      conditions.push(eq(listEntriesTable.email, user.email.toLowerCase()));
     }
     if (user.phone) {
+      const userPhoneDigits = normalizePhone(user.phone);
+      // Try multiple phone formats
       conditions.push(eq(listEntriesTable.phone, user.phone));
-      // Also try normalized phone formats
-      if (user.phone.startsWith('+39')) {
-        conditions.push(eq(listEntriesTable.phone, user.phone.slice(3)));
-      } else if (!user.phone.startsWith('+')) {
-        conditions.push(eq(listEntriesTable.phone, '+39' + user.phone));
+      conditions.push(eq(listEntriesTable.phone, userPhoneDigits));
+      conditions.push(eq(listEntriesTable.phone, '+39' + userPhoneDigits));
+      conditions.push(eq(listEntriesTable.phone, '39' + userPhoneDigits));
+      // If has country code, try without
+      if (userPhoneDigits.startsWith('39') && userPhoneDigits.length > 10) {
+        conditions.push(eq(listEntriesTable.phone, userPhoneDigits.slice(2)));
       }
     }
 
@@ -3352,6 +3362,8 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       .from(listEntriesTable)
       .innerJoin(eventLists, eq(listEntriesTable.listId, eventLists.id))
       .where(or(...conditions));
+    
+    console.log("[my/guest-list-entries] Found", userEntries.length, "entries");
 
     // Enrich with event data
     const entries = await Promise.all(userEntries.map(async ({ entry, list }) => {
