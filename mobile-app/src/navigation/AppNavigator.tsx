@@ -283,7 +283,7 @@ export function useCart() {
 }
 
 export function AppNavigator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<Screen>({ name: 'splash' });
   const [history, setHistory] = useState<Screen[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -352,7 +352,26 @@ export function AppNavigator() {
   };
 
   const handleSplashReady = (authenticated: boolean) => {
-    if (authenticated) {
+    if (authenticated && user?.role) {
+      // Navigate to the appropriate dashboard based on user role
+      switch (user.role) {
+        case 'scanner':
+          resetTo({ name: 'scannerDashboard' });
+          break;
+        case 'pr':
+          resetTo({ name: 'prDashboard' });
+          break;
+        case 'gestore':
+          resetTo({ name: 'gestoreDashboard' });
+          break;
+        case 'super_admin':
+          resetTo({ name: 'adminDashboard' });
+          break;
+        default:
+          resetTo({ name: 'accountDashboard' });
+      }
+    } else if (authenticated) {
+      // User is authenticated but role not yet loaded, default to account
       resetTo({ name: 'accountDashboard' });
     } else {
       resetTo({ name: 'landing' });
