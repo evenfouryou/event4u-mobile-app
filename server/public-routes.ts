@@ -4642,6 +4642,11 @@ router.get("/api/public/account/list-entries", async (req, res) => {
       .orderBy(desc(events.startDatetime));
 
     console.log("[PUBLIC-LIST] Found", entries.length, "entries");
+    
+    // Log entries with qrCode status for debugging
+    entries.forEach((e, i) => {
+      console.log(`[PUBLIC-LIST] Entry ${i}: id=${e.id}, name=${e.firstName} ${e.lastName}, qrCode=${e.qrCode ? 'YES' : 'NULL'}`);
+    });
 
     // De-duplicate by entry id (user might match multiple conditions)
     const uniqueEntries = Array.from(
