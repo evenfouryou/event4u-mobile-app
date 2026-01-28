@@ -169,15 +169,33 @@ class FetchManager {
           const response = await this.fetchWithTimeout(url, requestOptions, timeout);
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+            const text = await response.text();
+            let errorMessage = `HTTP ${response.status}`;
+            try {
+              const errorData = JSON.parse(text);
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch {
+              // Response is not JSON (possibly HTML error page)
+              if (text.startsWith('<!') || text.startsWith('<html')) {
+                errorMessage = `Server error (${response.status})`;
+              } else {
+                errorMessage = text.substring(0, 100) || errorMessage;
+              }
+            }
+            throw new Error(errorMessage);
           }
 
           if (response.status === 204) {
             return {} as T;
           }
 
-          const data = await response.json();
+          const text = await response.text();
+          let data: T;
+          try {
+            data = JSON.parse(text);
+          } catch {
+            throw new Error('Invalid server response - not JSON');
+          }
 
           if (method === 'GET') {
             this.setCache(effectiveCacheKey, data, cacheTTL, staleTTL);

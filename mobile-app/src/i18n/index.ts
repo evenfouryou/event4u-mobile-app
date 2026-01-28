@@ -53,7 +53,7 @@ i18n
     resources,
     lng: getDeviceLanguage(),
     fallbackLng: 'it',
-    compatibilityJSON: 'v4',
+    compatibilityJSON: 'v3',
     interpolation: {
       escapeValue: false,
     },
