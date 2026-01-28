@@ -2768,6 +2768,11 @@ router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) =>
       customerId: customerSession.id,
     };
     
+    // Clear customer session to prevent conflicts
+    delete (req.session as any).customer;
+    delete (req.session as any).customerMode;
+    delete (req.session as any).activeRole;
+    
     // Set up PR session
     (req.session as any).prProfile = {
       id: prProfile.id,
@@ -2852,6 +2857,60 @@ router.get("/api/session/pr-switch-status", (req: Request, res: Response) => {
   res.json({
     hasOriginalPrSession: !!originalPrSession?.prProfileId,
   });
+});
+
+// Check if the current session has an original customer session (for switching back)
+router.get("/api/session/customer-switch-status", (req: Request, res: Response) => {
+  const originalCustomerSession = (req.session as any).originalCustomerSession;
+  res.json({
+    hasOriginalCustomerSession: !!originalCustomerSession?.customerId,
+  });
+});
+
+// Switch back from PR to Customer mode (for customers who switched from Customer to PR earlier)
+router.post("/api/pr/switch-back-to-customer", async (req: Request, res: Response) => {
+  try {
+    const originalCustomerSession = (req.session as any).originalCustomerSession;
+    
+    if (!originalCustomerSession?.customerId) {
+      return res.status(400).json({ error: "Nessuna sessione cliente originale trovata" });
+    }
+    
+    // Verify the customer still exists
+    const [customer] = await db.select().from(siaeCustomers)
+      .where(eq(siaeCustomers.id, originalCustomerSession.customerId));
+    
+    if (!customer) {
+      delete (req.session as any).originalCustomerSession;
+      return res.status(404).json({ error: "Account cliente non trovato" });
+    }
+    
+    // Clear PR session data
+    delete (req.session as any).prProfile;
+    delete (req.session as any).originalCustomerSession;
+    
+    // Restore customer session
+    (req.session as any).customer = {
+      id: customer.id,
+    };
+    
+    req.session.save((err) => {
+      if (err) {
+        console.error("[SWITCH-BACK-CUSTOMER] Error saving session:", err);
+        return res.status(500).json({ error: "Errore nel ripristino della sessione cliente" });
+      }
+      
+      console.log(`[SWITCH-BACK-CUSTOMER] PR switched back to customer mode (customer: ${customer.id})`);
+      res.json({ 
+        success: true, 
+        message: "Tornato alla modalità cliente",
+        redirectTo: '/account'
+      });
+    });
+  } catch (error: any) {
+    console.error("Error switching back to customer mode:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;

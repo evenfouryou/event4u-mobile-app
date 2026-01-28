@@ -821,7 +821,7 @@ export function AppSidebar() {
           </Button>
         )}
 
-        {/* Switch back to PR mode - for users in customer mode (PR who switched) */}
+        {/* Switch to PR mode - for clients with linked PR profiles */}
         {isCliente && (user as any).canSwitchToPr && (
           <Button
             variant="outline"
@@ -829,7 +829,13 @@ export function AppSidebar() {
             className="w-full justify-start mb-2 text-muted-foreground hover:text-foreground"
             onClick={async () => {
               try {
-                const res = await fetch('/api/switch-role/pr', {
+                // Use different endpoint based on account type
+                // For OTP customers: /api/customer/switch-to-pr
+                // For passport users in customer mode: /api/switch-role/pr
+                const isOtpCustomer = (user as any).accountType === 'customer';
+                const endpoint = isOtpCustomer ? '/api/customer/switch-to-pr' : '/api/switch-role/pr';
+                
+                const res = await fetch(endpoint, {
                   method: 'POST',
                   credentials: 'include',
                 });
@@ -837,15 +843,26 @@ export function AppSidebar() {
                 if (data.success && data.redirectTo) {
                   queryClient.clear();
                   window.location.href = data.redirectTo;
+                } else if (data.error) {
+                  toast({
+                    title: "Errore",
+                    description: data.error,
+                    variant: "destructive",
+                  });
                 }
               } catch (error) {
                 console.error("Error switching to PR mode:", error);
+                toast({
+                  title: "Errore",
+                  description: "Impossibile passare alla modalità PR",
+                  variant: "destructive",
+                });
               }
             }}
             data-testid="button-switch-to-pr"
           >
             <ArrowLeftRight className="h-4 w-4 mr-3" />
-            Torna a Modalità PR
+            Passa a Dashboard PR
           </Button>
         )}
 

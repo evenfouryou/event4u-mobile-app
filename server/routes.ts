@@ -1321,6 +1321,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (customer) {
           const { passwordHash, ...customerData } = customer;
+          
+          // Check if customer has a linked PR profile (by phone or email)
+          let linkedPrProfile = null;
+          if (customer.phone) {
+            const normalizedPhone = customer.phone.replace(/\D/g, '');
+            const phoneWithPrefix = '+39' + normalizedPhone.replace(/^39/, '');
+            const phoneWithoutPrefix = normalizedPhone.replace(/^39/, '');
+            
+            const [profileByPhone] = await db.select().from(prProfiles)
+              .where(and(
+                eq(prProfiles.isActive, true),
+                or(
+                  eq(prProfiles.phone, customer.phone),
+                  eq(prProfiles.phone, phoneWithPrefix),
+                  eq(prProfiles.phone, phoneWithoutPrefix)
+                )
+              ));
+            if (profileByPhone) linkedPrProfile = profileByPhone;
+          }
+          
+          if (!linkedPrProfile && customer.email) {
+            const [profileByEmail] = await db.select().from(prProfiles)
+              .where(and(
+                eq(prProfiles.isActive, true),
+                eq(prProfiles.email, customer.email)
+              ));
+            if (profileByEmail) linkedPrProfile = profileByEmail;
+          }
+          
           return res.json({
             id: customer.id,
             email: customer.email,
@@ -1329,7 +1358,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             phone: customer.phone,
             role: 'cliente',
             isCustomer: true,
-            accountType: 'customer'
+            accountType: 'customer',
+            canSwitchToPr: !!linkedPrProfile,
+            linkedPrProfileId: linkedPrProfile?.id || null
           });
         }
       }

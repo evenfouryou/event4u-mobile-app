@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Home, 
   Calendar, 
@@ -19,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePrAuth } from "@/hooks/usePrAuth";
 import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +53,19 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
   const [location, navigate] = useLocation();
   const { user } = useAuth();
   const { prProfile } = usePrAuth();
+  const { toast } = useToast();
+
+  // Check if user has an original customer session (switched from customer to PR)
+  const { data: sessionInfo } = useQuery<{ hasOriginalCustomerSession: boolean }>({
+    queryKey: ["/api/session/customer-switch-status"],
+    queryFn: async () => {
+      const res = await fetch('/api/session/customer-switch-status', { credentials: 'include' });
+      if (!res.ok) return { hasOriginalCustomerSession: false };
+      return res.json();
+    },
+    retry: false,
+  });
+  const hasOriginalCustomerSession = sessionInfo?.hasOriginalCustomerSession ?? false;
 
   const navItems: NavItem[] = [
     { 
@@ -157,16 +172,43 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
             </SidebarContent>
 
             <SidebarFooter className="p-4 border-t space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => navigate("/account/home")}
-                data-testid="button-switch-to-client"
-              >
-                <ArrowRightLeft className="h-4 w-4" />
-                Passa ad Account Cliente
-              </Button>
+              {hasOriginalCustomerSession && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 border-primary/50 text-primary hover:bg-primary/10"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/pr/switch-back-to-customer', {
+                        method: 'POST',
+                        credentials: 'include',
+                      });
+                      const data = await res.json();
+                      if (data.success && data.redirectTo) {
+                        queryClient.clear();
+                        window.location.href = data.redirectTo;
+                      } else if (data.error) {
+                        toast({
+                          title: "Errore",
+                          description: data.error,
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error switching back to customer:", error);
+                      toast({
+                        title: "Errore",
+                        description: "Impossibile tornare alla modalità cliente",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-switch-back-to-client"
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                  Torna ad Account Cliente
+                </Button>
+              )}
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <Button
