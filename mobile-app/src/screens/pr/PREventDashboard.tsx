@@ -62,7 +62,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('guests');
   const [showAddGuest, setShowAddGuest] = useState(false);
   const [showBatchAdd, setShowBatchAdd] = useState(false);
-  const [listViewMode, setListViewMode] = useState<'list' | 'add'>('list');
+  const [listViewMode, setListViewMode] = useState<'list' | 'add' | 'cancelled'>('list');
   const [tableViewMode, setTableViewMode] = useState<'list' | 'add'>('list');
   const [newGuest, setNewGuest] = useState({ firstName: '', lastName: '', phonePrefix: '+39', phone: '', gender: 'M' as 'M' | 'F', listId: '' });
   const [adding, setAdding] = useState(false);
@@ -648,7 +648,7 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         {/* Guests Tab */}
         {activeTab === 'guests' && (
           <>
-            {/* Mode Toggle: Vedi Lista / Aggiungi */}
+            {/* Mode Toggle: Vedi Lista / Aggiungi / Cancellate */}
             <View style={styles.modeToggleRow}>
               <Pressable
                 onPress={() => {
@@ -662,11 +662,11 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               >
                 <Ionicons 
                   name="eye-outline" 
-                  size={20} 
+                  size={18} 
                   color={listViewMode === 'list' ? staticColors.primary : staticColors.mutedForeground} 
                 />
                 <Text style={[styles.modeButtonText, listViewMode === 'list' && styles.modeButtonTextActive]}>
-                  Vedi Lista
+                  Lista
                 </Text>
               </Pressable>
               <Pressable
@@ -679,11 +679,30 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               >
                 <Ionicons 
                   name="add-circle-outline" 
-                  size={20} 
+                  size={18} 
                   color={listViewMode === 'add' ? staticColors.primary : staticColors.mutedForeground} 
                 />
                 <Text style={[styles.modeButtonText, listViewMode === 'add' && styles.modeButtonTextActive]}>
                   Aggiungi
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setListViewMode('cancelled');
+                  setShowAddGuest(false);
+                  setShowBatchAdd(false);
+                  triggerHaptic('light');
+                }}
+                style={[styles.modeButton, listViewMode === 'cancelled' && styles.modeButtonActiveCancelled]}
+                testID="button-cancelled-mode"
+              >
+                <Ionicons 
+                  name="close-circle-outline" 
+                  size={18} 
+                  color={listViewMode === 'cancelled' ? staticColors.destructive : staticColors.mutedForeground} 
+                />
+                <Text style={[styles.modeButtonText, listViewMode === 'cancelled' && styles.modeButtonTextActiveCancelled]}>
+                  Cancellate
                 </Text>
               </Pressable>
             </View>
@@ -1050,14 +1069,14 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
             {/* Guest List - only show in list mode */}
             {listViewMode === 'list' && (
-              guests.length === 0 ? (
+              guests.filter(g => g.status !== 'cancelled').length === 0 ? (
                 <View style={styles.emptyState}>
                   <Ionicons name="people-outline" size={48} color={staticColors.mutedForeground} />
                   <Text style={styles.emptyText}>Nessun ospite nella lista</Text>
                   <Text style={styles.emptySubtext}>Aggiungi ospiti per iniziare</Text>
                 </View>
               ) : (
-                guests.map((guest) => (
+                guests.filter(g => g.status !== 'cancelled').map((guest) => (
                   <Card key={guest.id} style={styles.guestCard}>
                     <View style={styles.guestInfo}>
                       <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
@@ -1082,6 +1101,34 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                           <Ionicons name="close-circle-outline" size={20} color={staticColors.destructive} />
                         </Pressable>
                       )}
+                    </View>
+                  </Card>
+                ))
+              )
+            )}
+
+            {/* Cancelled View Mode */}
+            {listViewMode === 'cancelled' && (
+              guests.filter(g => g.status === 'cancelled').length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="close-circle-outline" size={48} color={staticColors.mutedForeground} />
+                  <Text style={styles.emptyText}>Nessuna cancellazione</Text>
+                  <Text style={styles.emptySubtext}>Le prenotazioni cancellate appariranno qui</Text>
+                </View>
+              ) : (
+                guests.filter(g => g.status === 'cancelled').map((guest) => (
+                  <Card key={guest.id} style={[styles.guestCard, { borderLeftWidth: 3, borderLeftColor: staticColors.destructive }]}>
+                    <View style={styles.guestInfo}>
+                      <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
+                      {guest.phone && (
+                        <View style={styles.guestPhoneRow}>
+                          <Ionicons name="call-outline" size={14} color={staticColors.mutedForeground} />
+                          <Text style={[styles.guestPhone, { color: staticColors.mutedForeground }]}>{guest.phone}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.guestActions}>
+                      <Badge variant="destructive">Cancellato</Badge>
                     </View>
                   </Card>
                 ))
@@ -2219,12 +2266,19 @@ const styles = StyleSheet.create({
     borderColor: staticColors.primary,
     backgroundColor: `${staticColors.primary}15`,
   },
+  modeButtonActiveCancelled: {
+    borderColor: staticColors.destructive,
+    backgroundColor: `${staticColors.destructive}15`,
+  },
   modeButtonText: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography.fontSize.sm,
     fontWeight: '600',
     color: staticColors.mutedForeground,
   },
   modeButtonTextActive: {
     color: staticColors.primary,
+  },
+  modeButtonTextActiveCancelled: {
+    color: staticColors.destructive,
   },
 });
