@@ -1517,14 +1517,21 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     }
     
     // Create entry
-    // FIX 2026-01-27: Store prProfileId in createdBy field for PR without userId
+    // FIX 2026-01-28: Ensure all required fields are set with defaults
     const entryData = {
-      ...req.body,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      phone: req.body.phone || null,
+      email: req.body.email || null,
+      gender: req.body.gender || null,
+      notes: req.body.notes || null,
       listId: targetList.id,
       eventId: eventId,
       companyId: targetList.companyId,
-      addedByUserId: userId, // Can be null for PR without linked user account
-      createdBy: prProfileId || userId, // Store prProfileId for identification
+      status: 'pending', // Explicit default
+      plusOnes: req.body.plusOnes || 0, // Explicit default
+      addedByUserId: userId || null, // Can be null for PR without linked user account
+      createdBy: prProfileId || userId || null, // Store prProfileId for identification
       createdByRole: 'pr',
     };
     console.log("[PR AddGuest] Entry data before validation:", JSON.stringify(entryData));
