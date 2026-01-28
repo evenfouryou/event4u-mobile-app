@@ -29,7 +29,7 @@ import {
   eventLists,
 } from "@shared/schema";
 import { z } from "zod";
-import { like, or, eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
+import { like, or, eq, and, desc, isNull, inArray, sql, gt, gte, lte, not } from "drizzle-orm";
 
 const router = Router();
 
