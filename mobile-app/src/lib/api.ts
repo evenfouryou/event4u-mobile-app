@@ -1800,7 +1800,7 @@ class ApiClient {
 
   async getAdminEvents(): Promise<AdminEvent[]> {
     try {
-      return await this.get<AdminEvent[]>('/api/admin/events');
+      return await this.get<AdminEvent[]>('/api/events');
     } catch {
       return [];
     }
@@ -1855,7 +1855,7 @@ class ApiClient {
   }
 
   async getAdminEventDetail(eventId: string): Promise<AdminEventDetail> {
-    return this.get<AdminEventDetail>(`/api/admin/events/${eventId}`);
+    return this.get<AdminEventDetail>(`/api/events/${eventId}`);
   }
 
   async getNameChanges(): Promise<NameChangeRequest[]> {
