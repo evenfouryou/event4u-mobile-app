@@ -2704,14 +2704,21 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
     const type = parts[1]; // LST or TBL
     
     if (type === 'LST') {
-      // Find list entry by QR code
-      const [entry] = await db.select()
+      // Find list entry by QR code with list name
+      const [entryWithList] = await db.select({
+        entry: listEntries,
+        listName: eventLists.name,
+      })
         .from(listEntries)
+        .leftJoin(eventLists, eq(listEntries.listId, eventLists.id))
         .where(eq(listEntries.qrCode, qrCode));
       
-      if (!entry) {
+      if (!entryWithList) {
         return res.status(404).json({ message: "Voce lista non trovata" });
       }
+      
+      const entry = entryWithList.entry;
+      const listName = entryWithList.listName;
       
       if (eventId && entry.eventId !== eventId) {
         return res.status(400).json({ message: "QR code non valido per questo evento" });
@@ -2749,15 +2756,32 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         .returning();
       
       return res.json({
+        success: true,
         type: 'list',
         entry: updated,
+        listName,
         message: "Check-in completato con successo",
+        person: {
+          firstName: updated.firstName || '',
+          lastName: updated.lastName || '',
+          type: 'lista',
+          listName,
+          plusOnes: updated.plusOnes || 0,
+        },
       });
     } else if (type === 'TBL') {
-      // Find table guest by QR code
-      const [guest] = await db.select()
+      // Find table guest by QR code with table type name
+      const [guestWithTable] = await db.select({
+        guest: tableGuests,
+        tableTypeName: tableTypes.name,
+      })
         .from(tableGuests)
+        .leftJoin(tableReservations, eq(tableGuests.reservationId, tableReservations.id))
+        .leftJoin(tableTypes, eq(tableReservations.tableTypeId, tableTypes.id))
         .where(eq(tableGuests.qrCode, qrCode));
+      
+      const guest = guestWithTable?.guest;
+      const tableName = guestWithTable?.tableTypeName;
       
       if (!guest) {
         return res.status(404).json({ message: "Ospite tavolo non trovato" });
@@ -2808,9 +2832,17 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         .returning();
       
       return res.json({
+        success: true,
         type: 'table',
         guest: updated,
+        tableName,
         message: "Check-in completato con successo",
+        person: {
+          firstName: updated.firstName || '',
+          lastName: updated.lastName || '',
+          type: 'tavolo',
+          tableTypeName: tableName,
+        },
       });
     } else {
       return res.status(400).json({ message: "Tipo QR code non riconosciuto" });

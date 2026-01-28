@@ -625,9 +625,34 @@ export function ScannerScanScreen({ eventId, onBack }: ScannerScanScreenProps) {
                   {lastScan.guestName}
                 </Text>
               )}
+              {(lastScan?.listName || lastScan?.tableName) && (
+                <View style={styles.resultMeta}>
+                  <Ionicons 
+                    name={lastScan?.entryType === 'list' ? 'list-outline' : lastScan?.entryType === 'table' ? 'grid-outline' : 'ticket-outline'} 
+                    size={16} 
+                    color={colors.primary} 
+                  />
+                  <Text style={[styles.resultMetaText, { color: colors.primary }]}>
+                    {lastScan?.listName || lastScan?.tableName}
+                  </Text>
+                </View>
+              )}
+              {lastScan?.guestCount && lastScan.guestCount > 1 && (
+                <View style={styles.resultMeta}>
+                  <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
+                  <Text style={[styles.resultMetaText, { color: colors.mutedForeground }]}>
+                    {lastScan.guestCount} ospiti
+                  </Text>
+                </View>
+              )}
               <Text style={[styles.resultMessage, { color: colors.mutedForeground }]}>
                 {lastScan?.message}
               </Text>
+              {lastScan?.alreadyCheckedIn && lastScan?.checkedInAt && (
+                <Text style={[styles.resultAlreadyCheckedIn, { color: staticColors.warning }]}>
+                  Già entrato alle {new Date(lastScan.checkedInAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              )}
             </View>
           </Animated.View>
         </View>
@@ -1024,5 +1049,20 @@ const styles = StyleSheet.create({
   resultMessage: {
     fontSize: typography.fontSize.base,
     textAlign: 'center',
+  },
+  resultMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  resultMetaText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+  },
+  resultAlreadyCheckedIn: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+    marginTop: spacing.sm,
   },
 });

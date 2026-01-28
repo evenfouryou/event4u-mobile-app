@@ -782,7 +782,24 @@ class ApiClient {
   }
 
   async scanEntry(eventId: string, code: string): Promise<ScanResult> {
-    return this.post<ScanResult>('/api/reservations/scan', { eventId, code });
+    const response = await this.post<any>('/api/e4u/scan', { eventId, qrCode: code });
+    return {
+      success: response.success ?? true,
+      message: response.message || 'Check-in completato',
+      entryType: response.type === 'list' ? 'list' : response.type === 'table' ? 'table' : 'ticket',
+      guestName: response.person 
+        ? `${response.person.firstName || ''} ${response.person.lastName || ''}`.trim()
+        : response.entry 
+          ? `${response.entry.firstName || ''} ${response.entry.lastName || ''}`.trim()
+          : response.guest
+            ? `${response.guest.firstName || ''} ${response.guest.lastName || ''}`.trim()
+            : undefined,
+      guestCount: response.person?.guestCount || response.person?.plusOnes || response.entry?.plusOnes || 1,
+      listName: response.person?.listName || response.listName,
+      tableName: response.person?.tableTypeName || response.tableName,
+      alreadyCheckedIn: response.alreadyCheckedIn,
+      checkedInAt: response.checkedInAt,
+    };
   }
 
   async searchGuests(eventId: string, query: string): Promise<GuestSearchResult[]> {
@@ -806,12 +823,22 @@ class ApiClient {
   }
 
   async manualCheckIn(eventId: string, entryId: string, entryType: 'list' | 'table'): Promise<ScanResult> {
-    return this.post<ScanResult>('/api/reservations/scan', { 
-      eventId, 
-      entryId,
+    const endpoint = entryType === 'list' 
+      ? `/api/e4u/entries/${entryId}/check-in`
+      : `/api/e4u/guests/${entryId}/check-in`;
+    
+    const response = await this.post<any>(endpoint, {});
+    return {
+      success: true,
+      message: response.message || 'Check-in completato',
       entryType,
-      manual: true 
-    });
+      guestName: `${response.firstName || ''} ${response.lastName || ''}`.trim(),
+      guestCount: response.plusOnes || response.guestCount || 1,
+      listName: response.listName,
+      tableName: response.tableName,
+      alreadyCheckedIn: response.status === 'checked_in',
+      checkedInAt: response.checkedInAt,
+    };
   }
 
   async denyAccess(entryId: string, reason?: string): Promise<{ success: boolean }> {
