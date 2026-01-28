@@ -1520,6 +1520,56 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     
     // Create entry
     // FIX 2026-01-28: Use addedByPrProfileId to track which PR added the entry
+    // FIX 2026-01-28: Auto-link entry to existing client by phone or email
+    let clientUserId: string | null = null;
+    
+    const guestPhone = req.body.phone;
+    const guestEmail = req.body.email;
+    
+    if (guestPhone || guestEmail) {
+      // Try to find an existing user by phone or email
+      const { users: usersTable } = await import("@shared/schema");
+      const normalizePhone = (p: string) => p.replace(/\D/g, '');
+      
+      let existingUser = null;
+      
+      if (guestPhone) {
+        const phoneDigits = normalizePhone(guestPhone);
+        // Search by phone in various formats
+        const phoneConditions = [
+          eq(usersTable.phone, guestPhone),
+          eq(usersTable.phone, phoneDigits),
+          eq(usersTable.phone, '+39' + phoneDigits),
+          eq(usersTable.phone, '39' + phoneDigits),
+        ];
+        if (phoneDigits.startsWith('39') && phoneDigits.length > 10) {
+          phoneConditions.push(eq(usersTable.phone, phoneDigits.slice(2)));
+        }
+        
+        const [foundByPhone] = await db.select({ id: usersTable.id })
+          .from(usersTable)
+          .where(or(...phoneConditions))
+          .limit(1);
+        existingUser = foundByPhone;
+      }
+      
+      if (!existingUser && guestEmail) {
+        const [foundByEmail] = await db.select({ id: usersTable.id })
+          .from(usersTable)
+          .where(or(
+            eq(usersTable.email, guestEmail),
+            eq(usersTable.email, guestEmail.toLowerCase())
+          ))
+          .limit(1);
+        existingUser = foundByEmail;
+      }
+      
+      if (existingUser) {
+        clientUserId = existingUser.id;
+        console.log("[PR AddGuest] Found existing client user:", clientUserId);
+      }
+    }
+    
     const entryData = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
@@ -1532,6 +1582,7 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
       companyId: targetList.companyId,
       status: 'pending', // Explicit default
       plusOnes: req.body.plusOnes || 0, // Explicit default
+      clientUserId: clientUserId, // Link to existing client if found
       addedByUserId: userId || null, // Can be null for PR without linked user account
       addedByPrProfileId: prProfileId || null, // PR profile ID for filtering
       createdBy: userId || null, // Must be valid users.id
