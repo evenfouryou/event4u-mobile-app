@@ -1074,6 +1074,9 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       id: customer.id,
     };
     
+    // Set activeRole to cliente for auth compatibility
+    (req.session as any).activeRole = 'cliente';
+    
     // Also set customerMode for compatibility
     (req.session as any).customerMode = {
       customerId: customer.id,
