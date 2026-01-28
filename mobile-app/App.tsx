@@ -4,7 +4,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AppNavigator } from '@/navigation/AppNavigator';
+import '@/i18n';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,10 +24,12 @@ function AppContent() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
-            <AppNavigator />
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+              <AppNavigator />
+            </AuthProvider>
+          </LanguageProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
