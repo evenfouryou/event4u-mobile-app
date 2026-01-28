@@ -1187,19 +1187,24 @@ router.get("/api/pr/events/:eventId/guest-entries", requireAuth, async (req: Req
     // Also check if entries were created with their prProfileId stored somewhere
     
     // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
+    // FIX 2026-01-28: Check BOTH addedByPrProfileId AND addedByUserId for backwards compatibility
+    // Old entries may only have addedByUserId, new entries have both
     let userEntries: typeof allEntries = [];
     
-    if (prProfileId) {
-      // FIX 2026-01-28: Filter by addedByPrProfileId (primary method for PRs)
-      userEntries = allEntries.filter(entry => 
-        (entry as any).addedByPrProfileId === prProfileId
-      );
-      console.log("[PR GetGuests] Filtered by prProfileId, found:", userEntries.length);
-    } else if (userId) {
-      // Fallback: PR with linked userId but no prProfileId - filter by addedByUserId
-      userEntries = allEntries.filter(entry => entry.addedByUserId === userId);
-      console.log("[PR GetGuests] Filtered by userId, found:", userEntries.length);
-    }
+    userEntries = allEntries.filter(entry => {
+      const entryPrProfileId = (entry as any).addedByPrProfileId;
+      const entryUserId = entry.addedByUserId;
+      
+      // Match if:
+      // 1. Entry's prProfileId matches our prProfileId
+      // 2. OR entry's addedByUserId matches our userId (for legacy entries)
+      const matchesPrProfile = prProfileId && entryPrProfileId === prProfileId;
+      const matchesUserId = userId && entryUserId === userId;
+      
+      return matchesPrProfile || matchesUserId;
+    });
+    
+    console.log("[PR GetGuests] Filtered by prProfileId:", prProfileId, "OR userId:", userId, "found:", userEntries.length);
     
     res.json(userEntries);
   } catch (error: any) {
