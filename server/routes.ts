@@ -9368,10 +9368,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/my-reservations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const userEmail = req.user.email;
       
-      // Get all list entries for this user
+      // Get all list entries for this user by clientUserId OR email match
       const userEntries = await db.select().from(listEntries)
-        .where(eq(listEntries.clientUserId, String(userId)));
+        .where(
+          or(
+            eq(listEntries.clientUserId, String(userId)),
+            userEmail ? eq(listEntries.email, userEmail) : sql`false`
+          )
+        );
       
       // Get related events and lists
       const eventIds = [...new Set(userEntries.map(e => e.eventId))];
