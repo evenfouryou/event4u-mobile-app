@@ -9364,6 +9364,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/my-reservations - Get user's list entries with QR codes
+  app.get('/api/my-reservations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get all list entries for this user
+      const userEntries = await db.select().from(listEntries)
+        .where(eq(listEntries.clientUserId, String(userId)));
+      
+      // Get related events and lists
+      const eventIds = [...new Set(userEntries.map(e => e.eventId))];
+      const listIds = [...new Set(userEntries.map(e => e.listId))];
+      
+      const relatedEvents = eventIds.length > 0
+        ? await db.select().from(events).where(sql`${events.id} IN (${sql.join(eventIds.map(id => sql`${id}`), sql`, `)})`)
+        : [];
+      
+      const relatedLists = listIds.length > 0
+        ? await db.select().from(eventLists).where(sql`${eventLists.id} IN (${sql.join(listIds.map(id => sql`${id}`), sql`, `)})`)
+        : [];
+      
+      // Get locations for events
+      const locationIds = [...new Set(relatedEvents.map(e => e.locationId).filter(Boolean))];
+      const relatedLocations = locationIds.length > 0
+        ? await db.select().from(locations).where(sql`${locations.id} IN (${sql.join(locationIds.map(id => sql`${id}`), sql`, `)})`)
+        : [];
+      
+      const response = userEntries.map(entry => {
+        const event = relatedEvents.find(e => e.id === entry.eventId);
+        const list = relatedLists.find(l => l.id === entry.listId);
+        const location = event?.locationId ? relatedLocations.find(l => l.id === event.locationId) : null;
+        
+        return {
+          id: entry.id,
+          eventId: entry.eventId,
+          eventName: event?.name || 'Evento',
+          eventDate: event?.startDatetime?.toISOString() || null,
+          eventEndDate: event?.endDatetime?.toISOString() || null,
+          locationName: location?.name || null,
+          locationAddress: location?.address || null,
+          listName: list?.name || 'Lista',
+          firstName: entry.firstName,
+          lastName: entry.lastName,
+          plusOnes: entry.plusOnes || 0,
+          plusOnesNames: entry.plusOnesNames || [],
+          qrCode: entry.qrCode,
+          status: entry.status,
+          checkedInAt: entry.checkedInAt?.toISOString() || null,
+          createdAt: entry.createdAt?.toISOString() || null
+        };
+      });
+      
+      // Sort by event date (upcoming first)
+      response.sort((a, b) => {
+        if (!a.eventDate) return 1;
+        if (!b.eventDate) return -1;
+        return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+      });
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error('Error fetching user reservations:', error);
+      res.status(500).json({ message: 'Failed to fetch reservations' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Setup WebSocket bridge relay (SIAE smart card)

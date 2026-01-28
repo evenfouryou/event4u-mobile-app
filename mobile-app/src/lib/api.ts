@@ -77,6 +77,25 @@ export interface TicketsResponse {
   total: number;
 }
 
+export interface MyReservation {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventDate: string | null;
+  eventEndDate: string | null;
+  locationName: string | null;
+  locationAddress: string | null;
+  listName: string;
+  firstName: string;
+  lastName: string;
+  plusOnes: number;
+  plusOnesNames: string[];
+  qrCode: string | null;
+  status: string;
+  checkedInAt: string | null;
+  createdAt: string | null;
+}
+
 export interface Wallet {
   id: string;
   balance: number;
@@ -405,6 +424,10 @@ class ApiClient {
 
   async getMyTickets(): Promise<TicketsResponse> {
     return this.get<TicketsResponse>('/api/public/account/tickets');
+  }
+
+  async getMyReservations(): Promise<MyReservation[]> {
+    return this.get<MyReservation[]>('/api/my-reservations');
   }
 
   async getTicketById(id: string): Promise<Ticket> {
