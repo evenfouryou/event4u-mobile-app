@@ -304,14 +304,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // CRITICAL: Clear local data FIRST before any API calls
+    // This ensures user is logged out even if the app closes during logout
+    console.log('[Auth] Starting logout - clearing local data first');
+    
+    // Immediately clear in-memory state
+    setUser(null);
+    api.setAuthToken(null);
+    api.clearCache();
+    
+    // Clear all stored credentials synchronously to prevent re-auth on restart
     try {
-      await api.post('/api/auth/logout', {});
+      await Promise.all([
+        SecureStore.deleteItemAsync(AUTH_CREDENTIALS_KEY),
+        SecureStore.deleteItemAsync(AUTH_USER_KEY),
+        SecureStore.deleteItemAsync(AUTH_TOKEN_KEY),
+      ]);
+      console.log('[Auth] Local credentials cleared successfully');
     } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      await clearStoredData();
-      api.clearCache();
+      console.error('[Auth] Error clearing local credentials:', error);
+    }
+    
+    // Then try to logout on server (optional, local logout already complete)
+    try {
+      await api.postDirect('/api/auth/logout', {});
+      console.log('[Auth] Server logout successful');
+    } catch (error) {
+      // Server logout failed but local logout already done - this is OK
+      console.log('[Auth] Server logout failed (already logged out locally):', error);
     }
   };
 
