@@ -172,7 +172,8 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
             </SidebarContent>
 
             <SidebarFooter className="p-4 border-t space-y-2">
-              {hasOriginalCustomerSession && (
+              {/* Button for customers who switched to PR - go back to their customer account */}
+              {hasOriginalCustomerSession ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -207,6 +208,43 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
                 >
                   <ArrowRightLeft className="h-4 w-4" />
                   Torna ad Account Cliente
+                </Button>
+              ) : (
+                /* Button for regular PR users - switch to customer mode (creates/links account) */
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/pr/switch-to-customer', {
+                        method: 'POST',
+                        credentials: 'include',
+                      });
+                      const data = await res.json();
+                      if (data.success && data.redirect) {
+                        queryClient.clear();
+                        window.location.href = data.redirect;
+                      } else if (data.error) {
+                        toast({
+                          title: "Errore",
+                          description: data.error,
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error switching to customer:", error);
+                      toast({
+                        title: "Errore",
+                        description: "Impossibile passare alla modalità cliente",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-switch-to-client"
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                  Passa a Modalità Cliente
                 </Button>
               )}
               <div className="flex items-center gap-2">
