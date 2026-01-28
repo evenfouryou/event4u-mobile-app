@@ -144,14 +144,14 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
   };
 
   const renderStatCard = (stat: StatCard) => (
-    <Card key={stat.testID} style={styles.statCard} testID={`card-${stat.testID}`}>
-      <View style={styles.statContent}>
-        <View style={[styles.statIcon, { backgroundColor: stat.color + '20' }]}>
+    <Card key={stat.testID} style={dynamicStyles.statCard} testID={`card-${stat.testID}`}>
+      <View style={dynamicStyles.statContent}>
+        <View style={[dynamicStyles.statIcon, { backgroundColor: stat.color + '20' }]}>
           <Ionicons name={stat.icon as any} size={24} color={stat.color} />
         </View>
-        <View style={styles.statText}>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
-          <Text style={[styles.statValue, { color: colors.foreground, fontWeight: '700' }]}>
+        <View style={dynamicStyles.statText}>
+          <Text style={[dynamicStyles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
+          <Text style={[dynamicStyles.statValue, { color: colors.foreground, fontWeight: '700' }]}>
             {stat.value}
           </Text>
         </View>
@@ -170,13 +170,13 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
     });
 
     return (
-      <Card style={styles.transactionCard} testID={`card-transaction-${item.id}`}>
-        <View style={styles.transactionHeader}>
-          <View style={styles.transactionInfo}>
-            <Text style={[styles.transactionCode, { color: colors.foreground, fontWeight: '600' }]}>
+      <Card style={dynamicStyles.transactionCard} testID={`card-transaction-${item.id}`}>
+        <View style={dynamicStyles.transactionHeader}>
+          <View style={dynamicStyles.transactionInfo}>
+            <Text style={[dynamicStyles.transactionCode, { color: colors.foreground, fontWeight: '600' }]}>
               {item.transactionCode}
             </Text>
-            <Text style={[styles.transactionDate, { color: colors.mutedForeground }]}>
+            <Text style={[dynamicStyles.transactionDate, { color: colors.mutedForeground }]}>
               {formattedDate}
             </Text>
           </View>
@@ -185,23 +185,23 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
           </Badge>
         </View>
 
-        <View style={styles.transactionDetails}>
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Importo:</Text>
-            <Text style={[styles.detailValue, { color: colors.foreground, fontWeight: '600' }]}>
+        <View style={dynamicStyles.transactionDetails}>
+          <View style={dynamicStyles.detailRow}>
+            <Text style={[dynamicStyles.detailLabel, { color: colors.mutedForeground }]}>Importo:</Text>
+            <Text style={[dynamicStyles.detailValue, { color: colors.foreground, fontWeight: '600' }]}>
               €{Number(item.totalAmount).toFixed(2)}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Biglietti:</Text>
-            <Text style={[styles.detailValue, { color: colors.foreground, fontWeight: '600' }]}>
+          <View style={dynamicStyles.detailRow}>
+            <Text style={[dynamicStyles.detailLabel, { color: colors.mutedForeground }]}>Biglietti:</Text>
+            <Text style={[dynamicStyles.detailValue, { color: colors.foreground, fontWeight: '600' }]}>
               {item.ticketsCount}
             </Text>
           </View>
           {item.paymentMethod && (
-            <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Pagamento:</Text>
-              <Text style={[styles.detailValue, { color: colors.foreground, fontWeight: '600' }]}>
+            <View style={dynamicStyles.detailRow}>
+              <Text style={[dynamicStyles.detailLabel, { color: colors.mutedForeground }]}>Pagamento:</Text>
+              <Text style={[dynamicStyles.detailValue, { color: colors.foreground, fontWeight: '600' }]}>
                 {item.paymentMethod}
               </Text>
             </View>
@@ -219,14 +219,14 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
     { key: 'refunded' as const, label: 'Rimborsate' },
   ];
 
+  const dynamicStyles = createStyles(colors, insets);
+
   if (showLoader) {
     return <Loading text="Caricamento dati Stripe..." />;
   }
 
-  const styles_ = createStyles(colors, insets);
-
   return (
-    <View style={[styles_.container, { backgroundColor: colors.background }]}>
+    <View style={[dynamicStyles.container, { backgroundColor: colors.background }]}>
       <Header
         title="Stripe"
         subtitle="Gestione Pagamenti"
@@ -236,19 +236,19 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
       />
 
       <ScrollView
-        style={styles_.scrollView}
-        contentContainerStyle={styles_.scrollContent}
+        style={dynamicStyles.scrollView}
+        contentContainerStyle={dynamicStyles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={staticColors.primary} />
         }
       >
         {/* Stripe Mode Indicator */}
-        <Card style={styles_.modeCard}>
-          <View style={styles_.modeContent}>
+        <Card style={dynamicStyles.modeCard}>
+          <View style={dynamicStyles.modeContent}>
             <View
               style={[
-                styles_.modeIcon,
+                dynamicStyles.modeIcon,
                 {
                   backgroundColor: stripeMode.isProduction
                     ? staticColors.success + '20'
@@ -262,12 +262,12 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
                 color={stripeMode.isProduction ? staticColors.success : staticColors.warning}
               />
             </View>
-            <View style={styles_.modeText}>
-              <Text style={[styles_.modeLabel, { color: colors.mutedForeground }]}>Connessione Stripe</Text>
+            <View style={dynamicStyles.modeText}>
+              <Text style={[dynamicStyles.modeLabel, { color: colors.mutedForeground }]}>Connessione Stripe</Text>
               <Badge
                 variant={stripeMode.isProduction ? 'success' : 'warning'}
                 size="sm"
-                style={styles_.modeBadge}
+                style={dynamicStyles.modeBadge}
               >
                 {stripeMode.isProduction ? 'Produzione' : 'Sandbox'}
               </Badge>
@@ -276,17 +276,17 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
         </Card>
 
         {/* Stats Cards */}
-        <View style={styles_.statsContainer}>
+        <View style={dynamicStyles.statsContainer}>
           {stats.map(renderStatCard)}
         </View>
 
         {/* Filter Buttons */}
-        <View style={styles_.filterContainer}>
+        <View style={dynamicStyles.filterContainer}>
           {filterOptions.map(filter => (
             <Pressable
               key={filter.key}
               style={[
-                styles_.filterChip,
+                dynamicStyles.filterChip,
                 {
                   backgroundColor:
                     selectedStatus === filter.key ? staticColors.primary : colors.card,
@@ -301,7 +301,7 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
             >
               <Text
                 style={[
-                  styles_.filterText,
+                  dynamicStyles.filterText,
                   {
                     color: selectedStatus === filter.key ? '#FFFFFF' : colors.foreground,
                     fontWeight: '500',
@@ -315,8 +315,8 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
         </View>
 
         {/* Transaction Count */}
-        <View style={styles_.countContainer}>
-          <Text style={[styles_.countText, { color: colors.mutedForeground }]}>
+        <View style={dynamicStyles.countContainer}>
+          <Text style={[dynamicStyles.countText, { color: colors.mutedForeground }]}>
             {filteredTransactions.length} transazion{filteredTransactions.length !== 1 ? 'i' : 'e'} trovate
           </Text>
         </View>
@@ -332,22 +332,22 @@ export function AdminStripeScreen({ onBack }: AdminStripeScreenProps) {
             renderItem={renderTransactionCard}
             keyExtractor={item => item.id}
             scrollEnabled={false}
-            style={styles_.transactionList}
+            style={dynamicStyles.transactionList}
             testID="list-transactions"
           />
         ) : (
-          <View style={styles_.emptyState}>
+          <View style={dynamicStyles.emptyState}>
             <Ionicons name="swap-horizontal-outline" size={48} color={colors.mutedForeground} />
-            <Text style={[styles_.emptyTitle, { color: colors.foreground, fontWeight: '600' }]}>
+            <Text style={[dynamicStyles.emptyTitle, { color: colors.foreground, fontWeight: '600' }]}>
               Nessuna Transazione
             </Text>
-            <Text style={[styles_.emptyText, { color: colors.mutedForeground }]}>
+            <Text style={[dynamicStyles.emptyText, { color: colors.mutedForeground }]}>
               Non ci sono transazioni che corrispondono ai filtri selezionati
             </Text>
           </View>
         )}
 
-        <View style={styles_.bottomSpacing} />
+        <View style={dynamicStyles.bottomSpacing} />
       </ScrollView>
     </View>
   );
