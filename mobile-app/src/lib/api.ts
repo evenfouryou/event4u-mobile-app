@@ -1824,7 +1824,7 @@ class ApiClient {
 
   async getAdminCompanies(): Promise<AdminCompany[]> {
     try {
-      return await this.get<AdminCompany[]>('/api/admin/companies');
+      return await this.get<AdminCompany[]>('/api/companies');
     } catch {
       return [];
     }
@@ -1832,7 +1832,7 @@ class ApiClient {
 
   async getAdminCompanyDetail(companyId: string): Promise<any> {
     try {
-      return await this.get(`/api/admin/companies/${companyId}`);
+      return await this.get(`/api/companies/${companyId}`);
     } catch {
       return null;
     }
@@ -1840,7 +1840,7 @@ class ApiClient {
 
   async getAdminUsers(): Promise<AdminUser[]> {
     try {
-      return await this.get<AdminUser[]>('/api/admin/users');
+      return await this.get<AdminUser[]>('/api/users');
     } catch {
       return [];
     }
@@ -1848,7 +1848,7 @@ class ApiClient {
 
   async getAdminUserDetail(userId: string): Promise<any> {
     try {
-      return await this.get(`/api/admin/users/${userId}`);
+      return await this.get(`/api/users/${userId}`);
     } catch {
       return null;
     }
