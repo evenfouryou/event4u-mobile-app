@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/input-otp";
 import { triggerHaptic } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
+import { AddressAutocomplete, AddressComponents } from "@/components/address-autocomplete";
+import { useCallback } from "react";
 
 type AccountType = "cliente" | "gestore" | null;
 
@@ -148,6 +150,25 @@ export default function Register() {
       acceptPrivacy: false,
     },
   });
+
+  interface ProvinceData {
+    id: string;
+    code: string;
+    name: string;
+    regionName: string;
+    regionCode: string;
+  }
+
+  const { data: provincesData } = useQuery<ProvinceData[]>({
+    queryKey: ['/api/geo/provinces/all'],
+  });
+
+  const handleAddressSelect = useCallback((address: AddressComponents) => {
+    if (address.street) clienteForm.setValue('street', address.street);
+    if (address.city) clienteForm.setValue('city', address.city);
+    if (address.postalCode) clienteForm.setValue('postalCode', address.postalCode);
+    if (address.province) clienteForm.setValue('province', address.province.toUpperCase().slice(0, 2));
+  }, [clienteForm]);
 
   const gestoreMutation = useMutation({
     mutationFn: async (data: GestoreFormValues) => {
@@ -1539,10 +1560,12 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>{t('auth.street')}</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input placeholder={t('auth.placeholders.street')} {...field} className="pl-10" data-testid="input-street" />
-                        </div>
+                        <AddressAutocomplete
+                          value={field.value}
+                          onAddressSelect={handleAddressSelect}
+                          placeholder={t('auth.placeholders.street')}
+                          data-testid="input-street"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1582,9 +1605,23 @@ export default function Register() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t('auth.province')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('auth.placeholders.province')} maxLength={2} {...field} className="uppercase" data-testid="input-province" />
-                      </FormControl>
+                      <Select 
+                        value={field.value} 
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-province">
+                            <SelectValue placeholder={t('auth.placeholders.province')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {provincesData?.map((province) => (
+                            <SelectItem key={province.code} value={province.code}>
+                              {province.name} ({province.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1925,15 +1962,13 @@ export default function Register() {
                     <FormItem>
                       <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.street')}</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            {...field}
-                            placeholder={t('auth.placeholders.street')}
-                            className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
-                            data-testid="input-street"
-                          />
-                        </div>
+                        <AddressAutocomplete
+                          value={field.value}
+                          onAddressSelect={handleAddressSelect}
+                          placeholder={t('auth.placeholders.street')}
+                          className="[&_input]:h-14 [&_input]:text-base [&_input]:bg-muted/30 [&_input]:border-border [&_input]:text-foreground [&_input]:rounded-xl"
+                          data-testid="input-street-mobile"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1997,15 +2032,23 @@ export default function Register() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.province')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder={t('auth.placeholders.province')}
-                          maxLength={2}
-                          className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl uppercase"
-                          data-testid="input-province"
-                        />
-                      </FormControl>
+                      <Select 
+                        value={field.value} 
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl" data-testid="select-province-mobile">
+                            <SelectValue placeholder={t('auth.placeholders.province')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {provincesData?.map((province) => (
+                            <SelectItem key={province.code} value={province.code}>
+                              {province.name} ({province.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -45,6 +45,107 @@ export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit
 export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
 export type SystemSetting = typeof systemSettings.$inferSelect;
 
+// Countries table - For international support
+export const countries = pgTable("countries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 2 }).notNull().unique(), // ISO 3166-1 alpha-2 (IT, DE, FR, US)
+  name: varchar("name", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }), // English name
+  phoneCode: varchar("phone_code", { length: 10 }), // +39, +49, etc.
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const countriesRelations = relations(countries, ({ many }) => ({
+  regions: many(regions),
+}));
+
+// Regions table - States/Regions for each country (e.g., Italian regioni)
+export const regions = pgTable("regions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryId: varchar("country_id").notNull().references(() => countries.id),
+  code: varchar("code", { length: 10 }).notNull(), // Region code (e.g., LOM for Lombardia)
+  name: varchar("name", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }),
+  istatCode: varchar("istat_code", { length: 10 }), // Italian ISTAT code
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_regions_country").on(table.countryId),
+]);
+
+export const regionsRelations = relations(regions, ({ one, many }) => ({
+  country: one(countries, {
+    fields: [regions.countryId],
+    references: [countries.id],
+  }),
+  provinces: many(provinces),
+}));
+
+// Provinces table - Provinces for each region (Italian province)
+export const provinces = pgTable("provinces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  regionId: varchar("region_id").notNull().references(() => regions.id),
+  code: varchar("code", { length: 5 }).notNull().unique(), // Province code (e.g., MI for Milano)
+  name: varchar("name", { length: 100 }).notNull(),
+  istatCode: varchar("istat_code", { length: 10 }), // Italian ISTAT code
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_provinces_region").on(table.regionId),
+]);
+
+export const provincesRelations = relations(provinces, ({ one, many }) => ({
+  region: one(regions, {
+    fields: [provinces.regionId],
+    references: [regions.id],
+  }),
+  cities: many(cities),
+}));
+
+// Cities table - For address autocomplete and targeting
+export const cities = pgTable("cities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provinceId: varchar("province_id").notNull().references(() => provinces.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  postalCodes: varchar("postal_codes").array().default(sql`ARRAY[]::varchar[]`), // Multiple CAP per city
+  istatCode: varchar("istat_code", { length: 10 }),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  population: integer("population"),
+  isCapoluogo: boolean("is_capoluogo").default(false), // Province capital
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_cities_province").on(table.provinceId),
+  index("idx_cities_name").on(table.name),
+]);
+
+export const citiesRelations = relations(cities, ({ one }) => ({
+  province: one(provinces, {
+    fields: [cities.provinceId],
+    references: [provinces.id],
+  }),
+}));
+
+// Insert schemas for geo tables
+export const insertCountrySchema = createInsertSchema(countries).omit({ id: true, createdAt: true });
+export const insertRegionSchema = createInsertSchema(regions).omit({ id: true, createdAt: true });
+export const insertProvinceSchema = createInsertSchema(provinces).omit({ id: true, createdAt: true });
+export const insertCitySchema = createInsertSchema(cities).omit({ id: true, createdAt: true });
+
+export type Country = typeof countries.$inferSelect;
+export type Region = typeof regions.$inferSelect;
+export type Province = typeof provinces.$inferSelect;
+export type City = typeof cities.$inferSelect;
+export type InsertCountry = z.infer<typeof insertCountrySchema>;
+export type InsertRegion = z.infer<typeof insertRegionSchema>;
+export type InsertProvince = z.infer<typeof insertProvinceSchema>;
+export type InsertCity = z.infer<typeof insertCitySchema>;
+
 // Users table - Required for Replit Auth + Extended for Event4U roles
 // Roles: super_admin, gestore, gestore_covisione, capo_staff, pr, warehouse, bartender, cassiere, cliente
 export const users = pgTable("users", {

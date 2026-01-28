@@ -86,4 +86,24 @@ All screens follow consistent patterns: useTheme hook, Italian labels, testID at
 -   **Replit OAuth**: Optional authentication.
 -   **OpenAI API**: For AI analytics (`gpt-4o-mini`).
 -   **MSG91 OTP**: For SMS OTP verification.
--   **Google Maps Platform**: For map functionalities.
+-   **Google Maps Platform**: For map functionalities and address autocomplete via Places API.
+
+### Geographic Data Management
+The system includes a comprehensive geographic database for Italy with hierarchical data:
+- **Countries**: ISO 3166-1 alpha-2 codes (currently Italy)
+- **Regions**: Italian regioni (20 regions with ISTAT codes)
+- **Provinces**: Italian province (107 provinces with 2-letter codes like MI, RM)
+- **Cities**: Municipalities with postal codes, coordinates, and population data
+
+API endpoints for geographic data:
+- `GET /api/geo/countries` - All active countries
+- `GET /api/geo/regions/by-code/:countryCode` - Regions by country code
+- `GET /api/geo/provinces/all` - All provinces with region info
+- `GET /api/geo/provinces/:regionId` - Provinces by region
+- `GET /api/geo/cities/search?q=` - City search with autocomplete
+- `POST /api/geo/seed` - Seeds Italian geographic data (idempotent)
+
+Registration form uses:
+- Google Maps Places autocomplete for address input (auto-fills city, province, postal code)
+- Province dropdown with all 107 Italian provinces from database
+- Geographic data enables customer targeting for marketing campaigns

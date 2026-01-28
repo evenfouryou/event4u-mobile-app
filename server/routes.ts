@@ -24,6 +24,7 @@ import loyaltyRoutes from "./loyalty-routes";
 import referralRoutes from "./referral-routes";
 import bundleRoutes from "./bundle-routes";
 import staffRoutes from "./staff-routes";
+import geoRoutes from "./geo-routes";
 import { startMarketingScheduler } from "./marketing-scheduler";
 import { setupTicketingWebSocket } from "./ticketing-websocket";
 import { startHoldCleanupJob } from "./hold-service";
@@ -179,6 +180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Staff management routes (gestione PR subordinati per Staff)
   app.use(staffRoutes);
+  
+  // Geographic data routes (countries, regions, provinces, cities)
+  app.use(geoRoutes);
   
   // Start marketing email scheduler
   startMarketingScheduler();
