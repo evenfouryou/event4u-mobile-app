@@ -9168,6 +9168,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/gestori/:gestoreId - Get gestore detail for admin
+  app.get('/api/admin/gestori/:gestoreId', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      const gestoreId = parseInt(req.params.gestoreId, 10);
+      if (isNaN(gestoreId)) {
+        return res.status(400).json({ message: 'Invalid gestore ID' });
+      }
+
+      // Get gestore user
+      const [gestore] = await db.select().from(users).where(eq(users.id, gestoreId));
+      if (!gestore || gestore.role !== 'gestore') {
+        return res.status(404).json({ message: 'Gestore not found' });
+      }
+
+      // Get company
+      const [company] = gestore.companyId 
+        ? await db.select().from(companies).where(eq(companies.id, gestore.companyId))
+        : [null];
+
+      // Get all companies managed by this gestore
+      const gestoreCompanies = await db.select().from(companies)
+        .where(eq(companies.ownerId, gestoreId));
+
+      // Get events for gestore's companies
+      const companyIds = gestoreCompanies.map(c => c.id);
+      const gestoreEvents = companyIds.length > 0 
+        ? await db.select().from(events).where(sql`${events.companyId} IN (${sql.join(companyIds, sql`, `)})`)
+        : [];
+
+      // Get users (staff) for gestore's companies
+      const gestoreUsers = companyIds.length > 0
+        ? await db.select().from(users).where(sql`${users.companyId} IN (${sql.join(companyIds, sql`, `)})`)
+        : [];
+
+      // Calculate stats
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const activeEvents = gestoreEvents.filter(e => new Date(e.startDatetime) >= now);
+      const pastEvents = gestoreEvents.filter(e => new Date(e.startDatetime) < now);
+
+      // Format response
+      const response = {
+        id: String(gestore.id),
+        name: [gestore.firstName, gestore.lastName].filter(Boolean).join(' ') || gestore.email || 'N/A',
+        email: gestore.email,
+        phone: gestore.phoneNumber || null,
+        avatar: gestore.profileImageUrl || null,
+        status: gestore.isActive !== false ? 'active' : 'inactive',
+        createdAt: gestore.createdAt?.toISOString() || new Date().toISOString(),
+        lastLogin: gestore.lastActiveAt?.toISOString() || null,
+        siaeEnabled: gestore.siaeModuleEnabled || false,
+        
+        // Stats
+        stats: {
+          totalEvents: gestoreEvents.length,
+          activeEvents: activeEvents.length,
+          pastEvents: pastEvents.length,
+          totalCompanies: gestoreCompanies.length,
+          totalStaff: gestoreUsers.length,
+          totalRevenue: 0, // Would need to calculate from tickets
+          monthlyRevenue: 0
+        },
+
+        // Companies list
+        companies: gestoreCompanies.map(c => ({
+          id: String(c.id),
+          name: c.name,
+          vatNumber: c.vatNumber || null,
+          status: c.isActive !== false ? 'active' : 'inactive',
+          eventsCount: gestoreEvents.filter(e => e.companyId === c.id).length,
+          createdAt: c.createdAt?.toISOString() || new Date().toISOString()
+        })),
+
+        // Recent events
+        events: gestoreEvents
+          .sort((a, b) => new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime())
+          .slice(0, 10)
+          .map(e => ({
+            id: String(e.id),
+            name: e.name,
+            date: e.startDatetime.toISOString(),
+            status: new Date(e.startDatetime) > now ? 'upcoming' : 'past',
+            companyId: String(e.companyId),
+            companyName: gestoreCompanies.find(c => c.id === e.companyId)?.name || 'N/A'
+          })),
+
+        // Staff users
+        users: gestoreUsers.slice(0, 20).map(u => ({
+          id: String(u.id),
+          name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || 'N/A',
+          email: u.email,
+          role: u.role,
+          status: u.isActive !== false ? 'active' : 'inactive'
+        }))
+      };
+
+      res.json(response);
+    } catch (error: any) {
+      console.error('Error fetching gestore detail:', error);
+      res.status(500).json({ message: 'Failed to fetch gestore detail' });
+    }
+  });
+
   // GET /api/gestore/dashboard - Gestore dashboard stats for mobile app
   app.get('/api/gestore/dashboard', isAuthenticated, async (req: any, res) => {
     try {
