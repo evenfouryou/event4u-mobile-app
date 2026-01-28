@@ -54,10 +54,20 @@ The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 a
 
 All screens follow consistent patterns: useTheme hook, Italian labels, testID attributes, RefreshControl, Loading states, Card/GlassCard/Badge components.
 
+**Internationalization (i18n):**
+- Full multilingual support with IT, EN, FR, DE languages
+- i18next with react-i18next for translations
+- LanguageContext provides `t()` function for translations
+- Language persistence via SecureStore
+- LanguageSelector component available in all settings screens
+- Translation files in `mobile-app/src/i18n/locales/`
+
 **Critical Mobile Development Patterns:**
 - Do NOT use `typography.weights` - always use literal fontWeight values ('700', '600', '500')
 - Card components do not accept style arrays - use spread operator for conditional styles: `style={{...styles.card, ...(condition ? styles.active : {})}}`
 - Use 'medium' instead of 'warning' for haptic feedback type
+- Access translations via `const { t } = useLanguage()` hook, then use `t('common.loading')` syntax
+- Use SecureStore for language persistence (not AsyncStorage)
 
 ### Additional Modules
 -   **Italian Fiscal Validation**: Server-side validation for Italian fiscal identifiers.
