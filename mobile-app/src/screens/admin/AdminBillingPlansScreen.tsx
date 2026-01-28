@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -12,19 +11,13 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { BillingPlan } from '@/lib/api';
 
-interface Plan extends BillingPlan {
-  subscriberCount?: number;
-  isPopular?: boolean;
-}
-
 interface AdminBillingPlansScreenProps {
   onBack: () => void;
 }
 
 export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,11 +40,7 @@ export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps
     try {
       setIsLoading(true);
       const data = await api.getAdminBillingPlans();
-      setPlans(data.map((p, index) => ({
-        ...p,
-        subscriberCount: 0,
-        isPopular: index === 1,
-      })));
+      setPlans(data);
     } catch (error) {
       console.error('Error loading plans:', error);
     } finally {
@@ -65,26 +54,60 @@ export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps
     setRefreshing(false);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (price: string) => {
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency: 'EUR',
-    }).format(amount);
+    }).format(parseFloat(price));
   };
 
-  const handleEditPlan = (plan: Plan) => {
+  const handleEditPlan = (plan: BillingPlan) => {
     triggerHaptic('medium');
+    Alert.alert('Modifica Piano', `Modifica ${plan.name} dal pannello web`);
   };
 
-  const handleTogglePlan = (plan: Plan) => {
+  const handleTogglePlan = async (plan: BillingPlan) => {
     triggerHaptic('medium');
-    setPlans(prev => prev.map(p => 
-      p.id === plan.id ? { ...p, isActive: !p.isActive } : p
-    ));
+    try {
+      await api.updateAdminBillingPlan(plan.id, { isActive: !plan.isActive });
+      await loadPlans();
+    } catch (error) {
+      console.error('Error toggling plan:', error);
+      Alert.alert('Errore', 'Impossibile aggiornare lo stato del piano');
+    }
   };
 
-  const totalSubscribers = plans.reduce((sum, plan) => sum + plan.subscriberCount, 0);
-  const monthlyRevenue = plans.reduce((sum, plan) => sum + (plan.isActive ? plan.price * plan.subscriberCount : 0), 0);
+  const handleDeactivatePlan = (plan: BillingPlan) => {
+    Alert.alert(
+      'Conferma Disattivazione',
+      `Sei sicuro di voler disattivare il piano "${plan.name}"?`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Disattiva',
+          style: 'destructive',
+          onPress: () => handleTogglePlan(plan),
+        },
+      ]
+    );
+  };
+
+  const activePlans = plans.filter(p => p.isActive).length;
+  const totalPlans = plans.length;
+
+  const getTypeLabel = (type: string) => {
+    return type === 'monthly' ? 'Mensile' : 'Per Evento';
+  };
+
+  const getDetailsText = (plan: BillingPlan) => {
+    if (plan.type === 'monthly' && plan.durationDays) {
+      return `${plan.durationDays} giorni`;
+    }
+    if (plan.type === 'per_event' && plan.eventsIncluded) {
+      return `${plan.eventsIncluded} eventi inclusi`;
+    }
+    return null;
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -114,14 +137,14 @@ export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps
         >
           <View style={styles.statsRow}>
             <GlassCard style={styles.statCard}>
-              <Ionicons name="people" size={24} color={staticColors.primary} />
-              <Text style={[styles.statValue, { color: colors.foreground }]}>{totalSubscribers}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Abbonati</Text>
+              <Ionicons name="layers" size={24} color={staticColors.primary} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>{totalPlans}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Piani Totali</Text>
             </GlassCard>
             <GlassCard style={styles.statCard}>
-              <Ionicons name="cash" size={24} color={staticColors.success} />
-              <Text style={[styles.statValue, { color: colors.foreground }]}>{formatCurrency(monthlyRevenue)}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>MRR</Text>
+              <Ionicons name="checkmark-circle" size={24} color={staticColors.success} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>{activePlans}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Attivi</Text>
             </GlassCard>
           </View>
 
@@ -130,7 +153,10 @@ export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps
             <Button
               variant="outline"
               size="sm"
-              onPress={() => triggerHaptic('medium')}
+              onPress={() => {
+                triggerHaptic('medium');
+                Alert.alert('Info', 'Crea nuovi piani dal pannello web');
+              }}
               testID="button-add-plan"
             >
               <Ionicons name="add" size={18} color={colors.foreground} />
@@ -138,62 +164,88 @@ export function AdminBillingPlansScreen({ onBack }: AdminBillingPlansScreenProps
             </Button>
           </View>
 
-          {plans.map((plan) => (
-            <Card 
-              key={plan.id} 
-              style={{...styles.planCard, ...(plan.isPopular ? styles.popularCard : {})}}
-              testID={`card-plan-${plan.id}`}
-            >
-              <View style={styles.planHeader}>
-                <View style={styles.planTitleRow}>
-                  <Text style={[styles.planName, { color: colors.foreground }]}>{plan.name}</Text>
-                  {plan.isPopular && <Badge variant="golden">Popolare</Badge>}
-                  {!plan.isActive && <Badge variant="secondary">Disattivo</Badge>}
-                </View>
-                <Pressable
-                  onPress={() => handleEditPlan(plan)}
-                  style={styles.editButton}
-                  testID={`button-edit-plan-${plan.id}`}
-                >
-                  <Ionicons name="create-outline" size={20} color={colors.mutedForeground} />
-                </Pressable>
-              </View>
-
-              <View style={styles.priceRow}>
-                <Text style={[styles.planPrice, { color: colors.primary }]}>{formatCurrency(plan.price)}</Text>
-                <Text style={[styles.priceInterval, { color: colors.mutedForeground }]}>
-                  /{plan.interval === 'monthly' ? 'mese' : 'anno'}
-                </Text>
-              </View>
-
-              <View style={styles.featuresContainer}>
-                {plan.features.map((feature, index) => (
-                  <View key={index} style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={16} color={staticColors.success} />
-                    <Text style={[styles.featureText, { color: colors.mutedForeground }]}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={[styles.planFooter, { borderTopColor: colors.border }]}>
-                <View style={styles.subscriberInfo}>
-                  <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
-                  <Text style={[styles.subscriberCount, { color: colors.mutedForeground }]}>
-                    {plan.subscriberCount} abbonati
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => handleTogglePlan(plan)}
-                  style={[styles.toggleButton, { backgroundColor: plan.isActive ? `${staticColors.success}20` : `${staticColors.destructive}20` }]}
-                  testID={`button-toggle-plan-${plan.id}`}
-                >
-                  <Text style={[styles.toggleText, { color: plan.isActive ? staticColors.success : staticColors.destructive }]}>
-                    {plan.isActive ? 'Attivo' : 'Disattivo'}
-                  </Text>
-                </Pressable>
-              </View>
+          {plans.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Ionicons name="layers-outline" size={48} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                Nessun piano configurato
+              </Text>
             </Card>
-          ))}
+          ) : (
+            plans.map((plan) => (
+              <Card 
+                key={plan.id} 
+                style={styles.planCard}
+                testID={`card-plan-${plan.id}`}
+              >
+                <View style={styles.planHeader}>
+                  <View style={styles.planTitleRow}>
+                    <Text style={[styles.planName, { color: colors.foreground }]}>{plan.name}</Text>
+                    <Badge variant={plan.type === 'monthly' ? 'default' : 'secondary'}>
+                      {getTypeLabel(plan.type)}
+                    </Badge>
+                  </View>
+                  <View style={styles.actionButtons}>
+                    <Pressable
+                      onPress={() => handleEditPlan(plan)}
+                      style={styles.actionButton}
+                      testID={`button-edit-plan-${plan.id}`}
+                    >
+                      <Ionicons name="create-outline" size={20} color={colors.mutedForeground} />
+                    </Pressable>
+                    {plan.isActive && (
+                      <Pressable
+                        onPress={() => handleDeactivatePlan(plan)}
+                        style={styles.actionButton}
+                        testID={`button-deactivate-plan-${plan.id}`}
+                      >
+                        <Ionicons name="ban-outline" size={20} color={staticColors.destructive} />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.priceRow}>
+                  <Text style={[styles.planPrice, { color: colors.primary }]}>
+                    {formatCurrency(plan.price)}
+                  </Text>
+                  <Text style={[styles.priceInterval, { color: colors.mutedForeground }]}>
+                    /{plan.type === 'monthly' ? 'mese' : 'evento'}
+                  </Text>
+                </View>
+
+                {getDetailsText(plan) && (
+                  <Text style={[styles.detailsText, { color: colors.mutedForeground }]}>
+                    {getDetailsText(plan)}
+                  </Text>
+                )}
+
+                {plan.description && (
+                  <Text style={[styles.descriptionText, { color: colors.mutedForeground }]}>
+                    {plan.description}
+                  </Text>
+                )}
+
+                <View style={[styles.planFooter, { borderTopColor: colors.border }]}>
+                  <Badge 
+                    variant={plan.isActive ? 'success' : 'destructive'}
+                    style={styles.statusBadge}
+                  >
+                    <View style={styles.statusContent}>
+                      <Ionicons 
+                        name={plan.isActive ? 'checkmark-circle' : 'close-circle'} 
+                        size={14} 
+                        color={plan.isActive ? staticColors.success : staticColors.destructive} 
+                      />
+                      <Text style={[styles.statusText, { color: plan.isActive ? staticColors.success : staticColors.destructive }]}>
+                        {plan.isActive ? 'Attivo' : 'Disattivato'}
+                      </Text>
+                    </View>
+                  </Badge>
+                </View>
+              </Card>
+            ))
+          )}
 
           <View style={styles.bottomSpacing} />
         </ScrollView>
@@ -246,13 +298,18 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
   },
+  emptyCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.base,
+    textAlign: 'center',
+  },
   planCard: {
     padding: spacing.lg,
     marginBottom: spacing.md,
-  },
-  popularCard: {
-    borderColor: staticColors.golden,
-    borderWidth: 1,
   },
   planHeader: {
     flexDirection: 'row',
@@ -264,12 +321,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     flex: 1,
+    flexWrap: 'wrap',
   },
   planName: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
   },
-  editButton: {
+  actionButtons: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  actionButton: {
     padding: spacing.xs,
   },
   priceRow: {
@@ -285,41 +347,34 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     marginLeft: spacing.xs,
   },
-  featuresContainer: {
-    marginTop: spacing.md,
-    gap: spacing.xs,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  featureText: {
+  detailsText: {
     fontSize: typography.fontSize.sm,
+    marginTop: spacing.xs,
+  },
+  descriptionText: {
+    fontSize: typography.fontSize.sm,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
   planFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
   },
-  subscriberInfo: {
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  subscriberCount: {
-    fontSize: typography.fontSize.sm,
-  },
-  toggleButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  toggleText: {
-    fontSize: typography.fontSize.sm,
+  statusText: {
+    fontSize: typography.fontSize.xs,
     fontWeight: '600',
   },
   bottomSpacing: {

@@ -3539,19 +3539,18 @@ export interface SIAEConfig {
   printerName?: string;
 }
 
-// Admin Billing Types
+// Admin Billing Types - OrganizerPlan from backend schema
 export interface BillingPlan {
   id: string;
   name: string;
-  description: string;
-  price: number;
-  interval: 'monthly' | 'yearly';
-  features: string[];
+  type: 'monthly' | 'per_event';
+  price: string;
+  durationDays: number | null;
+  eventsIncluded: number | null;
+  description: string | null;
   isActive: boolean;
-  maxEvents?: number;
-  maxTickets?: number;
-  ticketCommission: number;
-  walletCommission: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BillingOrganizer {

@@ -9,7 +9,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { BillingStats, Invoice } from '@/lib/api';
+import api, { BillingStats, Invoice, BillingPlan } from '@/lib/api';
 
 type TabType = 'overview' | 'invoices' | 'plans';
 
@@ -26,6 +26,7 @@ export function AdminBillingScreen({ onBack }: AdminBillingScreenProps) {
     pendingInvoices: 0,
   });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,12 +49,14 @@ export function AdminBillingScreen({ onBack }: AdminBillingScreenProps) {
   const loadBilling = async () => {
     try {
       setIsLoading(true);
-      const [statsData, invoicesData] = await Promise.all([
+      const [statsData, invoicesData, plansData] = await Promise.all([
         api.getAdminBillingStats(),
         api.getAdminInvoices(),
+        api.getAdminBillingPlans(),
       ]);
       setStats(statsData);
       setInvoices(invoicesData);
+      setPlans(plansData);
     } catch (error) {
       console.error('Error loading billing:', error);
     } finally {
@@ -183,48 +186,51 @@ export function AdminBillingScreen({ onBack }: AdminBillingScreenProps) {
     </View>
   );
 
+  const formatPlanPrice = (price: string) => {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(parseFloat(price));
+  };
+
   const renderPlans = () => (
     <View style={styles.tabContent}>
-      <Card style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <Text style={styles.planName}>Piano Base</Text>
-          <Badge variant="secondary">Starter</Badge>
-        </View>
-        <Text style={styles.planPrice}>{formatCurrency(29)}/mese</Text>
-        <View style={styles.planFeatures}>
-          <Text style={styles.planFeature}>Fino a 5 eventi/mese</Text>
-          <Text style={styles.planFeature}>500 biglietti/evento</Text>
-          <Text style={styles.planFeature}>Supporto email</Text>
-        </View>
-      </Card>
-
-      <Card style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <Text style={styles.planName}>Piano Pro</Text>
-          <Badge variant="default">Popolare</Badge>
-        </View>
-        <Text style={styles.planPrice}>{formatCurrency(79)}/mese</Text>
-        <View style={styles.planFeatures}>
-          <Text style={styles.planFeature}>Eventi illimitati</Text>
-          <Text style={styles.planFeature}>Biglietti illimitati</Text>
-          <Text style={styles.planFeature}>Supporto prioritario</Text>
-          <Text style={styles.planFeature}>SIAE incluso</Text>
-        </View>
-      </Card>
-
-      <Card style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <Text style={styles.planName}>Piano Enterprise</Text>
-          <Badge variant="success">Premium</Badge>
-        </View>
-        <Text style={styles.planPrice}>Custom</Text>
-        <View style={styles.planFeatures}>
-          <Text style={styles.planFeature}>Tutto incluso in Pro</Text>
-          <Text style={styles.planFeature}>API dedicate</Text>
-          <Text style={styles.planFeature}>Gestore dedicato</Text>
-          <Text style={styles.planFeature}>SLA garantito</Text>
-        </View>
-      </Card>
+      {plans.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="layers-outline" size={48} color={staticColors.mutedForeground} />
+          <Text style={styles.emptyText}>Nessun piano configurato</Text>
+        </Card>
+      ) : (
+        plans.map((plan) => (
+          <Card key={plan.id} style={styles.planCard} testID={`plan-${plan.id}`}>
+            <View style={styles.planHeader}>
+              <Text style={styles.planName}>{plan.name}</Text>
+              <Badge variant={plan.type === 'monthly' ? 'default' : 'secondary'}>
+                {plan.type === 'monthly' ? 'Mensile' : 'Per Evento'}
+              </Badge>
+            </View>
+            <Text style={styles.planPrice}>
+              {formatPlanPrice(plan.price)}/{plan.type === 'monthly' ? 'mese' : 'evento'}
+            </Text>
+            {plan.description && (
+              <Text style={styles.planDescription}>{plan.description}</Text>
+            )}
+            <View style={styles.planFeatures}>
+              {plan.durationDays && (
+                <Text style={styles.planFeature}>Durata: {plan.durationDays} giorni</Text>
+              )}
+              {plan.eventsIncluded && (
+                <Text style={styles.planFeature}>Eventi inclusi: {plan.eventsIncluded}</Text>
+              )}
+            </View>
+            <View style={styles.planFooter}>
+              <Badge variant={plan.isActive ? 'success' : 'destructive'}>
+                {plan.isActive ? 'Attivo' : 'Disattivato'}
+              </Badge>
+            </View>
+          </Card>
+        ))
+      )}
     </View>
   );
 
@@ -420,6 +426,20 @@ const styles = StyleSheet.create({
   planFeature: {
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
+  },
+  planDescription: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.mutedForeground,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
+  },
+  planFooter: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: staticColors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   emptyCard: {
     padding: spacing.xl,
