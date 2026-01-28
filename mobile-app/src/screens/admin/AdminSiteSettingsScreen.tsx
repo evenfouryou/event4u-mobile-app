@@ -15,20 +15,16 @@ interface AdminSiteSettingsScreenProps {
   onBack: () => void;
 }
 
-interface SiteSettings {
-  siteName: string;
-  siteDescription: string;
-  primaryColor: string;
-  secondaryColor: string;
-  logoUrl: string;
-  contactEmail: string;
-  supportPhone: string;
-  maintenanceMode: boolean;
-  registrationEnabled: boolean;
-  emailVerificationRequired: boolean;
-  maxEventsPerGestore: number;
-  defaultCommissionRate: number;
+interface LocalSettings {
+  cookie_consent_enabled: boolean;
+  cookie_consent_text: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  contact_email: string;
+  support_phone: string;
 }
+
+type TabId = 'cookies' | 'legal' | 'contact';
 
 export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps) {
   const { colors } = useTheme();
@@ -36,20 +32,22 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [settings, setSettings] = useState<SiteSettings>({
-    siteName: 'Event4U',
-    siteDescription: 'Piattaforma di gestione eventi e biglietteria',
-    primaryColor: '#FFD700',
-    secondaryColor: '#00CED1',
-    logoUrl: '',
-    contactEmail: 'support@event4u.it',
-    supportPhone: '+39 02 1234567',
-    maintenanceMode: false,
-    registrationEnabled: true,
-    emailVerificationRequired: true,
-    maxEventsPerGestore: 50,
-    defaultCommissionRate: 5,
+  const [activeTab, setActiveTab] = useState<TabId>('cookies');
+  const [hasChanges, setHasChanges] = useState(false);
+  const [settings, setSettings] = useState<LocalSettings>({
+    cookie_consent_enabled: true,
+    cookie_consent_text: '',
+    privacy_policy_url: '',
+    terms_of_service_url: '',
+    contact_email: '',
+    support_phone: '',
   });
+
+  const tabs: { id: TabId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { id: 'cookies', label: 'Cookie', icon: 'finger-print-outline' },
+    { id: 'legal', label: 'Legale', icon: 'document-text-outline' },
+    { id: 'contact', label: 'Contatti', icon: 'call-outline' },
+  ];
 
   useEffect(() => {
     loadSettings();
@@ -69,12 +67,15 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
     try {
       setIsLoading(true);
       const data = await api.getAdminSiteSettings();
-      setSettings(prev => ({
-        ...prev,
-        maintenanceMode: data.maintenanceMode,
-        registrationEnabled: data.allowRegistrations,
-        contactEmail: data.supportEmail || prev.contactEmail,
-      }));
+      setSettings({
+        cookie_consent_enabled: data.cookie_consent_enabled ?? true,
+        cookie_consent_text: data.cookie_consent_text || '',
+        privacy_policy_url: data.privacy_policy_url || '',
+        terms_of_service_url: data.terms_of_service_url || '',
+        contact_email: data.contact_email || '',
+        support_phone: data.support_phone || '',
+      });
+      setHasChanges(false);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -92,11 +93,8 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
     try {
       setIsSaving(true);
       triggerHaptic('medium');
-      await api.updateAdminSiteSettings({
-        maintenanceMode: settings.maintenanceMode,
-        allowRegistrations: settings.registrationEnabled,
-        supportEmail: settings.contactEmail,
-      });
+      await api.updateAdminSiteSettings(settings);
+      setHasChanges(false);
       Alert.alert('Successo', 'Impostazioni salvate con successo');
     } catch (error) {
       Alert.alert('Errore', 'Impossibile salvare le impostazioni');
@@ -105,18 +103,170 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
     }
   };
 
-  const updateSetting = <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => {
+  const updateSetting = <K extends keyof LocalSettings>(key: K, value: LocalSettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+    setHasChanges(true);
   };
 
-  const colorPresets = [
-    { name: 'Oro', color: '#FFD700' },
-    { name: 'Teal', color: '#00CED1' },
-    { name: 'Viola', color: '#8B5CF6' },
-    { name: 'Rosa', color: '#EC4899' },
-    { name: 'Blu', color: '#3B82F6' },
-    { name: 'Verde', color: '#10B981' },
-  ];
+  const renderCookiesTab = () => (
+    <View style={styles.tabContent}>
+      <Card style={styles.card} testID="card-cookies">
+        <View style={styles.cardHeader}>
+          <View style={[styles.cardIcon, { backgroundColor: `${staticColors.primary}20` }]}>
+            <Ionicons name="finger-print" size={24} color={staticColors.primary} />
+          </View>
+          <View style={styles.cardHeaderText}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Consenso Cookie</Text>
+            <Text style={[styles.cardDescription, { color: colors.mutedForeground }]}>
+              Configura il banner dei cookie secondo la normativa GDPR
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.settingRow, { backgroundColor: `${colors.muted}50` }]}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingLabel, { color: colors.foreground }]}>Abilita Banner Cookie</Text>
+            <Text style={[styles.settingDescription, { color: colors.mutedForeground }]}>
+              Mostra il banner di consenso cookie ai visitatori
+            </Text>
+          </View>
+          <Switch
+            value={settings.cookie_consent_enabled}
+            onValueChange={(value) => updateSetting('cookie_consent_enabled', value)}
+            trackColor={{ false: colors.border, true: staticColors.primary }}
+            thumbColor="#FFFFFF"
+            testID="switch-cookie-enabled"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Testo del Banner</Text>
+          <TextInput
+            style={[styles.textArea, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+            value={settings.cookie_consent_text}
+            onChangeText={(value) => updateSetting('cookie_consent_text', value)}
+            placeholder="Utilizziamo i cookie per migliorare la tua esperienza..."
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            testID="input-cookie-text"
+          />
+          <Text style={[styles.inputHint, { color: colors.mutedForeground }]}>
+            Questo testo verra mostrato nel banner dei cookie
+          </Text>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>URL Privacy Policy</Text>
+          <TextInput
+            style={[styles.textInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+            value={settings.privacy_policy_url}
+            onChangeText={(value) => updateSetting('privacy_policy_url', value)}
+            placeholder="https://esempio.com/privacy"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="url"
+            autoCapitalize="none"
+            testID="input-privacy-url"
+          />
+          <Text style={[styles.inputHint, { color: colors.mutedForeground }]}>
+            Link alla pagina della privacy policy
+          </Text>
+        </View>
+      </Card>
+    </View>
+  );
+
+  const renderLegalTab = () => (
+    <View style={styles.tabContent}>
+      <Card style={styles.card} testID="card-legal">
+        <View style={styles.cardHeader}>
+          <View style={[styles.cardIcon, { backgroundColor: `${staticColors.teal}20` }]}>
+            <Ionicons name="document-text" size={24} color={staticColors.teal} />
+          </View>
+          <View style={styles.cardHeaderText}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Documenti Legali</Text>
+            <Text style={[styles.cardDescription, { color: colors.mutedForeground }]}>
+              Configura i link ai documenti legali del sito
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>URL Termini di Servizio</Text>
+          <TextInput
+            style={[styles.textInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+            value={settings.terms_of_service_url}
+            onChangeText={(value) => updateSetting('terms_of_service_url', value)}
+            placeholder="https://esempio.com/termini"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="url"
+            autoCapitalize="none"
+            testID="input-terms-url"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>URL Privacy Policy</Text>
+          <TextInput
+            style={[styles.textInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+            value={settings.privacy_policy_url}
+            onChangeText={(value) => updateSetting('privacy_policy_url', value)}
+            placeholder="https://esempio.com/privacy"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="url"
+            autoCapitalize="none"
+            testID="input-privacy-url-legal"
+          />
+        </View>
+      </Card>
+    </View>
+  );
+
+  const renderContactTab = () => (
+    <View style={styles.tabContent}>
+      <Card style={styles.card} testID="card-contact">
+        <View style={styles.cardHeader}>
+          <View style={[styles.cardIcon, { backgroundColor: `${staticColors.purple}20` }]}>
+            <Ionicons name="call" size={24} color={staticColors.purple} />
+          </View>
+          <View style={styles.cardHeaderText}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Informazioni di Contatto</Text>
+            <Text style={[styles.cardDescription, { color: colors.mutedForeground }]}>
+              Configura le informazioni di contatto del sito
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Email di Contatto</Text>
+          <TextInput
+            style={[styles.textInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+            value={settings.contact_email}
+            onChangeText={(value) => updateSetting('contact_email', value)}
+            placeholder="info@esempio.com"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            testID="input-contact-email"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Telefono Supporto</Text>
+          <TextInput
+            style={[styles.textInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+            value={settings.support_phone}
+            onChangeText={(value) => updateSetting('support_phone', value)}
+            placeholder="+39 02 1234567"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="phone-pad"
+            testID="input-support-phone"
+          />
+        </View>
+      </Card>
+    </View>
+  );
 
   if (showLoader) {
     return (
@@ -143,209 +293,64 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
           />
         }
       >
-        <Text style={styles.title}>Impostazioni Sito</Text>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informazioni Generali</Text>
-          <Card style={styles.sectionCard} testID="card-general-info">
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Nome Sito</Text>
-              <TextInput
-                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
-                value={settings.siteName}
-                onChangeText={(value) => updateSetting('siteName', value)}
-                placeholderTextColor={colors.mutedForeground}
-                testID="input-site-name"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Descrizione</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea, { color: colors.foreground, borderColor: colors.border }]}
-                value={settings.siteDescription}
-                onChangeText={(value) => updateSetting('siteDescription', value)}
-                placeholderTextColor={colors.mutedForeground}
-                multiline
-                numberOfLines={3}
-                testID="input-site-description"
-              />
-            </View>
-          </Card>
+        <View style={styles.headerSection}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Impostazioni Sito</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+            Gestisci le impostazioni globali del sito, cookie e testi legali
+          </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Colori Tema</Text>
-          <Card style={styles.sectionCard} testID="card-theme-colors">
-            <Text style={styles.inputLabel}>Colore Primario</Text>
-            <View style={styles.colorGrid}>
-              {colorPresets.map((preset) => (
-                <Pressable
-                  key={preset.color}
-                  onPress={() => {
-                    triggerHaptic('light');
-                    updateSetting('primaryColor', preset.color);
-                  }}
-                  style={[
-                    styles.colorPreset,
-                    { backgroundColor: preset.color },
-                    settings.primaryColor === preset.color && styles.colorPresetSelected,
-                  ]}
-                  testID={`color-primary-${preset.name.toLowerCase()}`}
-                >
-                  {settings.primaryColor === preset.color && (
-                    <Ionicons name="checkmark" size={20} color="#000" />
-                  )}
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>Colore Secondario</Text>
-            <View style={styles.colorGrid}>
-              {colorPresets.map((preset) => (
-                <Pressable
-                  key={preset.color}
-                  onPress={() => {
-                    triggerHaptic('light');
-                    updateSetting('secondaryColor', preset.color);
-                  }}
-                  style={[
-                    styles.colorPreset,
-                    { backgroundColor: preset.color },
-                    settings.secondaryColor === preset.color && styles.colorPresetSelected,
-                  ]}
-                  testID={`color-secondary-${preset.name.toLowerCase()}`}
-                >
-                  {settings.secondaryColor === preset.color && (
-                    <Ionicons name="checkmark" size={20} color="#000" />
-                  )}
-                </Pressable>
-              ))}
-            </View>
-          </Card>
+        <View style={styles.tabsContainer}>
+          {tabs.map((tab) => (
+            <Pressable
+              key={tab.id}
+              onPress={() => {
+                triggerHaptic('selection');
+                setActiveTab(tab.id);
+              }}
+              style={[
+                styles.tab,
+                activeTab === tab.id && [styles.tabActive, { borderBottomColor: staticColors.primary }],
+              ]}
+              testID={`tab-${tab.id}`}
+            >
+              <Ionicons
+                name={tab.icon}
+                size={18}
+                color={activeTab === tab.id ? staticColors.primary : colors.mutedForeground}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: activeTab === tab.id ? staticColors.primary : colors.mutedForeground },
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contatti</Text>
-          <Card style={styles.sectionCard} testID="card-contacts">
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Supporto</Text>
-              <TextInput
-                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
-                value={settings.contactEmail}
-                onChangeText={(value) => updateSetting('contactEmail', value)}
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                testID="input-contact-email"
-              />
-            </View>
+        {activeTab === 'cookies' && renderCookiesTab()}
+        {activeTab === 'legal' && renderLegalTab()}
+        {activeTab === 'contact' && renderContactTab()}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Telefono Supporto</Text>
-              <TextInput
-                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
-                value={settings.supportPhone}
-                onChangeText={(value) => updateSetting('supportPhone', value)}
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="phone-pad"
-                testID="input-support-phone"
-              />
-            </View>
-          </Card>
-        </View>
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configurazione Sistema</Text>
-          <Card style={styles.sectionCard} testID="card-system-config">
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Modalità Manutenzione</Text>
-                <Text style={styles.switchDescription}>Disabilita l'accesso pubblico al sito</Text>
-              </View>
-              <Switch
-                value={settings.maintenanceMode}
-                onValueChange={(value) => updateSetting('maintenanceMode', value)}
-                trackColor={{ false: staticColors.secondary, true: staticColors.primary }}
-                thumbColor={staticColors.foreground}
-                testID="switch-maintenance-mode"
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Registrazione Abilitata</Text>
-                <Text style={styles.switchDescription}>Permetti nuove registrazioni gestori</Text>
-              </View>
-              <Switch
-                value={settings.registrationEnabled}
-                onValueChange={(value) => updateSetting('registrationEnabled', value)}
-                trackColor={{ false: staticColors.secondary, true: staticColors.primary }}
-                thumbColor={staticColors.foreground}
-                testID="switch-registration-enabled"
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Verifica Email Obbligatoria</Text>
-                <Text style={styles.switchDescription}>Richiedi verifica email per attivazione</Text>
-              </View>
-              <Switch
-                value={settings.emailVerificationRequired}
-                onValueChange={(value) => updateSetting('emailVerificationRequired', value)}
-                trackColor={{ false: staticColors.secondary, true: staticColors.primary }}
-                thumbColor={staticColors.foreground}
-                testID="switch-email-verification"
-              />
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Limiti e Commissioni</Text>
-          <Card style={styles.sectionCard} testID="card-limits">
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Max Eventi per Gestore</Text>
-              <TextInput
-                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
-                value={String(settings.maxEventsPerGestore)}
-                onChangeText={(value) => updateSetting('maxEventsPerGestore', parseInt(value) || 0)}
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="number-pad"
-                testID="input-max-events"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Commissione Default (%)</Text>
-              <TextInput
-                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
-                value={String(settings.defaultCommissionRate)}
-                onChangeText={(value) => updateSetting('defaultCommissionRate', parseFloat(value) || 0)}
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="decimal-pad"
-                testID="input-commission-rate"
-              />
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.saveSection}>
+      {hasChanges && (
+        <View style={[styles.saveBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <Button
             onPress={handleSave}
             loading={isSaving}
-            variant="golden"
+            style={styles.saveButton}
             testID="button-save-settings"
           >
-            Salva Impostazioni
+            <Ionicons name="save-outline" size={18} color="#000" style={styles.saveIcon} />
+            <Text style={styles.saveButtonText}>Salva Modifiche</Text>
           </Button>
         </View>
-      </ScrollView>
+      )}
     </View>
   );
 }
@@ -359,97 +364,144 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl + 80,
+  },
+  headerSection: {
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: typography.fontSize['2xl'],
+    fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: staticColors.foreground,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
   },
-  section: {
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  sectionTitle: {
+  subtitle: {
     fontSize: typography.fontSize.sm,
-    fontWeight: '600',
-    color: staticColors.mutedForeground,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  sectionCard: {
+  tabsContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    marginBottom: spacing.lg,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+  },
+  tabText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+  },
+  tabContent: {
+    gap: spacing.md,
+  },
+  card: {
+    padding: spacing.lg,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeaderText: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  cardDescription: {
+    fontSize: typography.fontSize.sm,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  settingLabel: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+  },
+  settingDescription: {
+    fontSize: typography.fontSize.sm,
   },
   inputGroup: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   inputLabel: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.foreground,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   textInput: {
-    height: 48,
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     fontSize: typography.fontSize.base,
-    backgroundColor: staticColors.background,
   },
   textArea: {
-    height: 80,
-    paddingTop: spacing.sm,
-    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: typography.fontSize.base,
+    minHeight: 100,
   },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+  inputHint: {
+    fontSize: typography.fontSize.xs,
     marginTop: spacing.xs,
   },
-  colorPreset: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
+  saveBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.lg,
+    borderTopWidth: 1,
+  },
+  saveButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  colorPresetSelected: {
-    borderWidth: 3,
-    borderColor: staticColors.foreground,
+  saveIcon: {
+    marginRight: spacing.sm,
   },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-  },
-  switchInfo: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  switchLabel: {
+  saveButtonText: {
+    color: '#000',
     fontSize: typography.fontSize.base,
-    fontWeight: '500',
-    color: staticColors.foreground,
+    fontWeight: '600',
   },
-  switchDescription: {
-    fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: staticColors.border,
-    marginVertical: spacing.xs,
-  },
-  saveSection: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+  bottomSpacing: {
+    height: spacing.xxl,
   },
 });
+
+export default AdminSiteSettingsScreen;

@@ -3633,6 +3633,12 @@ export interface SiteSettings {
   privacyUrl?: string;
   googleAnalyticsId?: string;
   facebookPixelId?: string;
+  cookie_consent_enabled?: boolean;
+  cookie_consent_text?: string;
+  privacy_policy_url?: string;
+  terms_of_service_url?: string;
+  contact_email?: string;
+  support_phone?: string;
 }
 
 // Admin SIAE Extended Types
