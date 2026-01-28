@@ -3,7 +3,6 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// Add parent node_modules to watch folders and resolution paths
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '..');
 
@@ -13,13 +12,10 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// Ensure proper source extension resolution
-config.resolver.sourceExts = ['js', 'jsx', 'json', 'ts', 'tsx', 'cjs', 'mjs'];
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'cjs', 'mjs'];
+config.resolver.assetExts = [...config.resolver.assetExts];
 
-// Use main field (commonjs) instead of module field (esm) for better compatibility
 config.resolver.resolverMainFields = ['react-native', 'main', 'browser'];
-
-// Disable package exports to use traditional resolution
 config.resolver.unstable_enablePackageExports = false;
 
 config.server = {
