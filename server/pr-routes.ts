@@ -1547,9 +1547,10 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     console.error("[PR AddGuest] ERROR:", error.message, error.stack);
     if (error instanceof z.ZodError) {
       console.error("[PR AddGuest] Zod validation errors:", JSON.stringify(error.errors));
-      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+      return res.status(400).json({ error: "Dati non validi: " + error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), details: error.errors });
     }
-    res.status(500).json({ error: error.message });
+    // Return detailed error for debugging
+    res.status(500).json({ error: `Errore server: ${error.message}` });
   }
 });
 

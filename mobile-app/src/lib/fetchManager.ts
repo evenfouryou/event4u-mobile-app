@@ -170,7 +170,7 @@ class FetchManager {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(errorData.message || `HTTP ${response.status}`);
+            throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
           }
 
           if (response.status === 204) {
