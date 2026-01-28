@@ -193,6 +193,7 @@ import type {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FloorPlanViewer } from "@/components/floor-plan-viewer";
+import { CancellationRequestsManager } from "@/components/cancellation-requests-manager";
 
 const sectorFormSchema = z.object({
   name: z.string().min(1, "Nome biglietto richiesto"),
@@ -10197,6 +10198,9 @@ export default function EventHub() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Cancellation Requests Section */}
+              <CancellationRequestsManager eventId={id} />
             </div>
           </TabsContent>
 

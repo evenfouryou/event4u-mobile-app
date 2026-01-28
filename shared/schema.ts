@@ -4505,6 +4505,7 @@ export const eventLists = pgTable("event_lists", {
   validTo: timestamp("valid_to"),
   price: decimal("price", { precision: 10, scale: 2 }).default('0'),
   isActive: boolean("is_active").notNull().default(true),
+  autoApproveCancellations: boolean("auto_approve_cancellations").notNull().default(false), // Auto-approva richieste di cancellazione
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -4762,6 +4763,60 @@ export const tableGuestsRelations = relations(tableGuests, ({ one }) => ({
   }),
 }));
 
+// Cancellation Requests - Richieste di cancellazione prenotazioni (liste/tavoli)
+export const cancellationRequests = pgTable("cancellation_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  // Tipo di prenotazione
+  reservationType: varchar("reservation_type", { length: 20 }).notNull(), // 'list_entry' o 'table_reservation'
+  listEntryId: varchar("list_entry_id").references(() => listEntries.id),
+  tableReservationId: varchar("table_reservation_id").references(() => tableReservations.id),
+  // Chi ha richiesto la cancellazione
+  requestedByUserId: varchar("requested_by_user_id").references(() => users.id),
+  requestedByPrProfileId: varchar("requested_by_pr_profile_id").references(() => prProfiles.id),
+  requestReason: text("request_reason"),
+  // Stato della richiesta
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
+  // Approvazione/Rifiuto
+  processedAt: timestamp("processed_at"),
+  processedByUserId: varchar("processed_by_user_id").references(() => users.id),
+  processedNote: text("processed_note"),
+  autoApproved: boolean("auto_approved").notNull().default(false), // Se approvato automaticamente
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const cancellationRequestsRelations = relations(cancellationRequests, ({ one }) => ({
+  event: one(events, {
+    fields: [cancellationRequests.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [cancellationRequests.companyId],
+    references: [companies.id],
+  }),
+  listEntry: one(listEntries, {
+    fields: [cancellationRequests.listEntryId],
+    references: [listEntries.id],
+  }),
+  tableReservation: one(tableReservations, {
+    fields: [cancellationRequests.tableReservationId],
+    references: [tableReservations.id],
+  }),
+  requestedByUser: one(users, {
+    fields: [cancellationRequests.requestedByUserId],
+    references: [users.id],
+  }),
+  requestedByPrProfile: one(prProfiles, {
+    fields: [cancellationRequests.requestedByPrProfileId],
+    references: [prProfiles.id],
+  }),
+  processedByUser: one(users, {
+    fields: [cancellationRequests.processedByUserId],
+    references: [users.id],
+  }),
+}));
+
 export const e4uStaffAssignmentsRelations = relations(e4uStaffAssignments, ({ one }) => ({
   event: one(events, {
     fields: [e4uStaffAssignments.eventId],
@@ -4864,6 +4919,12 @@ export const insertTableGuestSchema = createInsertSchema(tableGuests).omit({
 });
 export const updateTableGuestSchema = insertTableGuestSchema.partial().omit({ reservationId: true, eventId: true, companyId: true });
 
+export const insertCancellationRequestSchema = createInsertSchema(cancellationRequests).omit({
+  id: true,
+  createdAt: true,
+});
+export const updateCancellationRequestSchema = insertCancellationRequestSchema.partial().omit({ eventId: true, companyId: true, reservationType: true });
+
 export const insertE4uStaffAssignmentSchema = createInsertSchema(e4uStaffAssignments).omit({
   id: true,
   createdAt: true,
@@ -4910,6 +4971,10 @@ export type UpdateTableReservation = z.infer<typeof updateTableReservationSchema
 export type TableGuest = typeof tableGuests.$inferSelect;
 export type InsertTableGuest = z.infer<typeof insertTableGuestSchema>;
 export type UpdateTableGuest = z.infer<typeof updateTableGuestSchema>;
+
+export type CancellationRequest = typeof cancellationRequests.$inferSelect;
+export type InsertCancellationRequest = z.infer<typeof insertCancellationRequestSchema>;
+export type UpdateCancellationRequest = z.infer<typeof updateCancellationRequestSchema>;
 
 export type E4uStaffAssignment = typeof e4uStaffAssignments.$inferSelect;
 export type InsertE4uStaffAssignment = z.infer<typeof insertE4uStaffAssignmentSchema>;

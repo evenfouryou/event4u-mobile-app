@@ -281,6 +281,41 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
       setAdding(false);
     }
   };
+
+  const handleRequestCancellation = async (id: string, type: 'guest' | 'table') => {
+    Alert.alert(
+      'Richiedi Cancellazione',
+      'Vuoi richiedere la cancellazione di questa prenotazione?',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Conferma',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              triggerHaptic('medium');
+              let result;
+              if (type === 'guest') {
+                result = await api.requestGuestCancellation(id);
+              } else {
+                result = await api.requestTableCancellation(id);
+              }
+              if (result.success) {
+                triggerHaptic('success');
+                Alert.alert('Successo', result.message || 'Richiesta inviata');
+                await loadData();
+              } else {
+                Alert.alert('Errore', result.message || 'Impossibile inviare la richiesta');
+              }
+            } catch (error: any) {
+              console.error('Error requesting cancellation:', error);
+              Alert.alert('Errore', error.message || 'Impossibile inviare la richiesta');
+            }
+          }
+        }
+      ]
+    );
+  };
   
   const getLinkIcon = (type: EventLink['type']) => {
     switch (type) {
@@ -1036,7 +1071,18 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                         </Pressable>
                       )}
                     </View>
-                    {getStatusBadge(guest.status)}
+                    <View style={styles.guestActions}>
+                      {getStatusBadge(guest.status)}
+                      {guest.status !== 'cancelled' && guest.status !== 'checked_in' && guest.status !== 'arrived' && (
+                        <Pressable
+                          onPress={() => handleRequestCancellation(guest.id, 'guest')}
+                          style={styles.cancelButton}
+                          testID={`button-cancel-guest-${guest.id}`}
+                        >
+                          <Ionicons name="close-circle-outline" size={20} color={staticColors.destructive} />
+                        </Pressable>
+                      )}
+                    </View>
                   </Card>
                 ))
               )
@@ -1238,8 +1284,19 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
                       </View>
                       {table.booking && (
                         <View style={styles.bookingInfo}>
-                          <Text style={styles.bookingName}>{table.booking.guestName}</Text>
-                          <Text style={styles.bookingGuests}>{table.booking.guestCount} ospiti</Text>
+                          <View style={styles.bookingDetails}>
+                            <Text style={styles.bookingName}>{table.booking.guestName}</Text>
+                            <Text style={styles.bookingGuests}>{table.booking.guestCount} ospiti</Text>
+                          </View>
+                          {table.booking.status !== 'cancelled' && table.booking.id && (
+                            <Pressable
+                              onPress={() => handleRequestCancellation(table.booking!.id, 'table')}
+                              style={styles.cancelButton}
+                              testID={`button-cancel-table-${table.id}`}
+                            >
+                              <Ionicons name="close-circle-outline" size={20} color={staticColors.destructive} />
+                            </Pressable>
+                          )}
                         </View>
                       )}
                     </Card>
@@ -1811,6 +1868,14 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: staticColors.primary,
   },
+  guestActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  cancelButton: {
+    padding: spacing.xs,
+  },
   statusText: {
     fontSize: typography.fontSize.xs,
     fontWeight: '500',
@@ -1891,6 +1956,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: staticColors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bookingDetails: {
+    flex: 1,
   },
   bookingName: {
     fontSize: typography.fontSize.sm,

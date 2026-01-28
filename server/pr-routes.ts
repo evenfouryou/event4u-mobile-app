@@ -24,6 +24,9 @@ import {
   tableBookingParticipants,
   tableBookings,
   locations,
+  tableReservations,
+  cancellationRequests,
+  eventLists,
 } from "@shared/schema";
 import { z } from "zod";
 import { like, or, eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
@@ -3367,6 +3370,361 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
     res.json(entries);
   } catch (error: any) {
     console.error("Error getting user guest list entries:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== CANCELLATION REQUESTS ====================
+
+// PR requests cancellation of a list entry or table reservation
+router.post("/api/pr/cancellation-requests", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { reservationType, listEntryId, tableReservationId, requestReason } = req.body;
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    
+    if (!reservationType || (!listEntryId && !tableReservationId)) {
+      return res.status(400).json({ error: "Tipo di prenotazione e ID sono obbligatori" });
+    }
+    
+    let eventId: string;
+    let companyId: string;
+    let autoApprove = false;
+    
+    if (reservationType === 'list_entry' && listEntryId) {
+      // Get list entry and check if PR owns it
+      const [entry] = await db.select().from(listEntries).where(eq(listEntries.id, listEntryId));
+      if (!entry) {
+        return res.status(404).json({ error: "Prenotazione lista non trovata" });
+      }
+      
+      // Check if entry status allows cancellation
+      if (entry.status === 'cancelled' || entry.status === 'arrived') {
+        return res.status(400).json({ error: "Non è possibile cancellare questa prenotazione" });
+      }
+      
+      eventId = entry.eventId;
+      companyId = entry.companyId;
+      
+      // Check auto-approve setting on the list
+      const [list] = await db.select().from(eventLists).where(eq(eventLists.id, entry.listId));
+      if (list?.autoApproveCancellations) {
+        autoApprove = true;
+      }
+    } else if (reservationType === 'table_reservation' && tableReservationId) {
+      // Get table reservation
+      const [reservation] = await db.select().from(tableReservations).where(eq(tableReservations.id, tableReservationId));
+      if (!reservation) {
+        return res.status(404).json({ error: "Prenotazione tavolo non trovata" });
+      }
+      
+      if (reservation.status === 'cancelled') {
+        return res.status(400).json({ error: "Non è possibile cancellare questa prenotazione" });
+      }
+      
+      eventId = reservation.eventId;
+      companyId = reservation.companyId;
+    } else {
+      return res.status(400).json({ error: "Dati di prenotazione non validi" });
+    }
+    
+    // Check if there's already a pending cancellation request
+    const existingRequest = await db.select().from(cancellationRequests).where(
+      and(
+        eq(cancellationRequests.status, 'pending'),
+        reservationType === 'list_entry' 
+          ? eq(cancellationRequests.listEntryId, listEntryId!)
+          : eq(cancellationRequests.tableReservationId, tableReservationId!)
+      )
+    );
+    
+    if (existingRequest.length > 0) {
+      return res.status(400).json({ error: "Esiste già una richiesta di cancellazione in attesa" });
+    }
+    
+    // Create cancellation request
+    const [request] = await db.insert(cancellationRequests).values({
+      eventId,
+      companyId,
+      reservationType,
+      listEntryId: reservationType === 'list_entry' ? listEntryId : null,
+      tableReservationId: reservationType === 'table_reservation' ? tableReservationId : null,
+      requestedByUserId: userId,
+      requestedByPrProfileId: prProfileId,
+      requestReason,
+      status: autoApprove ? 'approved' : 'pending',
+      autoApproved: autoApprove,
+      processedAt: autoApprove ? new Date() : null,
+    }).returning();
+    
+    // If auto-approved, also update the original entry/reservation
+    if (autoApprove) {
+      if (reservationType === 'list_entry' && listEntryId) {
+        await db.update(listEntries)
+          .set({ status: 'cancelled' })
+          .where(eq(listEntries.id, listEntryId));
+      } else if (reservationType === 'table_reservation' && tableReservationId) {
+        await db.update(tableReservations)
+          .set({ status: 'cancelled' })
+          .where(eq(tableReservations.id, tableReservationId));
+      }
+    }
+    
+    res.json({ 
+      ...request, 
+      message: autoApprove 
+        ? 'Prenotazione cancellata automaticamente' 
+        : 'Richiesta di cancellazione inviata al gestore' 
+    });
+  } catch (error: any) {
+    console.error("Error creating cancellation request:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get cancellation requests for PR (their own requests)
+router.get("/api/pr/cancellation-requests", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { userId, prProfileId } = await resolvePrIdentity(req);
+    const { eventId, status } = req.query;
+    
+    let conditions = [];
+    if (prProfileId) {
+      conditions.push(eq(cancellationRequests.requestedByPrProfileId, prProfileId));
+    }
+    if (userId) {
+      conditions.push(eq(cancellationRequests.requestedByUserId, userId));
+    }
+    
+    let whereClause = or(...conditions)!;
+    
+    if (eventId) {
+      whereClause = and(whereClause, eq(cancellationRequests.eventId, eventId as string))!;
+    }
+    if (status) {
+      whereClause = and(whereClause, eq(cancellationRequests.status, status as string))!;
+    }
+    
+    const requests = await db.select().from(cancellationRequests)
+      .where(whereClause)
+      .orderBy(desc(cancellationRequests.createdAt));
+    
+    res.json(requests);
+  } catch (error: any) {
+    console.error("Error getting PR cancellation requests:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get cancellation requests for Gestore (all pending for their company/event)
+router.get("/api/gestore/cancellation-requests", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { eventId, status } = req.query;
+    
+    let whereClause: any = eq(cancellationRequests.companyId, user.companyId);
+    
+    if (eventId) {
+      whereClause = and(whereClause, eq(cancellationRequests.eventId, eventId as string));
+    }
+    if (status) {
+      whereClause = and(whereClause, eq(cancellationRequests.status, status as string));
+    }
+    
+    const requests = await db.select({
+      id: cancellationRequests.id,
+      eventId: cancellationRequests.eventId,
+      companyId: cancellationRequests.companyId,
+      reservationType: cancellationRequests.reservationType,
+      listEntryId: cancellationRequests.listEntryId,
+      tableReservationId: cancellationRequests.tableReservationId,
+      requestedByUserId: cancellationRequests.requestedByUserId,
+      requestedByPrProfileId: cancellationRequests.requestedByPrProfileId,
+      requestReason: cancellationRequests.requestReason,
+      status: cancellationRequests.status,
+      processedAt: cancellationRequests.processedAt,
+      processedByUserId: cancellationRequests.processedByUserId,
+      processedNote: cancellationRequests.processedNote,
+      autoApproved: cancellationRequests.autoApproved,
+      createdAt: cancellationRequests.createdAt,
+    })
+      .from(cancellationRequests)
+      .where(whereClause)
+      .orderBy(desc(cancellationRequests.createdAt));
+    
+    // Enrich with details about the reservation
+    const enrichedRequests = await Promise.all(requests.map(async (request) => {
+      let reservationDetails: any = {};
+      
+      if (request.reservationType === 'list_entry' && request.listEntryId) {
+        const [entry] = await db.select().from(listEntries).where(eq(listEntries.id, request.listEntryId));
+        if (entry) {
+          reservationDetails = {
+            guestName: `${entry.firstName} ${entry.lastName}`,
+            phone: entry.phone,
+            email: entry.email,
+          };
+          // Get list name
+          const [list] = await db.select().from(eventLists).where(eq(eventLists.id, entry.listId));
+          if (list) {
+            reservationDetails.listName = list.name;
+          }
+        }
+      } else if (request.reservationType === 'table_reservation' && request.tableReservationId) {
+        const [reservation] = await db.select().from(tableReservations).where(eq(tableReservations.id, request.tableReservationId));
+        if (reservation) {
+          reservationDetails = {
+            reservationName: reservation.reservationName,
+            phone: reservation.reservationPhone,
+          };
+        }
+      }
+      
+      // Get requester info
+      let requesterName = '';
+      if (request.requestedByPrProfileId) {
+        const [pr] = await db.select().from(prProfiles).where(eq(prProfiles.id, request.requestedByPrProfileId));
+        if (pr) {
+          requesterName = pr.displayName || `${pr.firstName} ${pr.lastName}`;
+        }
+      } else if (request.requestedByUserId) {
+        const [reqUser] = await db.select().from(users).where(eq(users.id, request.requestedByUserId));
+        if (reqUser) {
+          requesterName = reqUser.firstName && reqUser.lastName 
+            ? `${reqUser.firstName} ${reqUser.lastName}` 
+            : (reqUser.email || '');
+        }
+      }
+      
+      return {
+        ...request,
+        reservationDetails,
+        requesterName,
+      };
+    }));
+    
+    res.json(enrichedRequests);
+  } catch (error: any) {
+    console.error("Error getting gestore cancellation requests:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Gestore approves or rejects a cancellation request
+router.post("/api/gestore/cancellation-requests/:id/process", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { id } = req.params;
+    const { action, processedNote } = req.body; // action: 'approve' or 'reject'
+    
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: "Azione non valida. Usa 'approve' o 'reject'" });
+    }
+    
+    // Get the request
+    const [request] = await db.select().from(cancellationRequests).where(
+      and(
+        eq(cancellationRequests.id, id),
+        eq(cancellationRequests.companyId, user.companyId)
+      )
+    );
+    
+    if (!request) {
+      return res.status(404).json({ error: "Richiesta non trovata" });
+    }
+    
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: "Questa richiesta è già stata elaborata" });
+    }
+    
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    
+    // Update the request
+    await db.update(cancellationRequests)
+      .set({
+        status: newStatus,
+        processedAt: new Date(),
+        processedByUserId: user.id,
+        processedNote,
+      })
+      .where(eq(cancellationRequests.id, id));
+    
+    // If approved, update the original reservation status
+    if (action === 'approve') {
+      if (request.reservationType === 'list_entry' && request.listEntryId) {
+        await db.update(listEntries)
+          .set({ status: 'cancelled' })
+          .where(eq(listEntries.id, request.listEntryId));
+      } else if (request.reservationType === 'table_reservation' && request.tableReservationId) {
+        await db.update(tableReservations)
+          .set({ status: 'cancelled' })
+          .where(eq(tableReservations.id, request.tableReservationId));
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: action === 'approve' 
+        ? 'Richiesta di cancellazione approvata' 
+        : 'Richiesta di cancellazione rifiutata' 
+    });
+  } catch (error: any) {
+    console.error("Error processing cancellation request:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get count of pending cancellation requests for gestore dashboard
+router.get("/api/gestore/cancellation-requests/count", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { eventId } = req.query;
+    
+    let whereClause = and(
+      eq(cancellationRequests.companyId, user.companyId),
+      eq(cancellationRequests.status, 'pending')
+    );
+    
+    if (eventId) {
+      whereClause = and(whereClause, eq(cancellationRequests.eventId, eventId as string));
+    }
+    
+    const [result] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(cancellationRequests)
+      .where(whereClause);
+    
+    res.json({ count: result?.count || 0 });
+  } catch (error: any) {
+    console.error("Error getting cancellation requests count:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Toggle auto-approve cancellations for a list
+router.patch("/api/gestore/lists/:listId/auto-approve-cancellations", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { listId } = req.params;
+    const { enabled } = req.body;
+    
+    // Verify list belongs to gestore's company
+    const [list] = await db.select().from(eventLists).where(
+      and(
+        eq(eventLists.id, listId),
+        eq(eventLists.companyId, user.companyId)
+      )
+    );
+    
+    if (!list) {
+      return res.status(404).json({ error: "Lista non trovata" });
+    }
+    
+    await db.update(eventLists)
+      .set({ autoApproveCancellations: enabled })
+      .where(eq(eventLists.id, listId));
+    
+    res.json({ success: true, message: enabled ? 'Approvazione automatica attivata' : 'Approvazione automatica disattivata' });
+  } catch (error: any) {
+    console.error("Error updating auto-approve setting:", error);
     res.status(500).json({ error: error.message });
   }
 });

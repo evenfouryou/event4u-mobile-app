@@ -111,6 +111,13 @@ export default function PrLists() {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
+  const [cancelRequestDialog, setCancelRequestDialog] = useState<{
+    open: boolean;
+    type: 'list_entry' | 'table_reservation';
+    id: string;
+    name: string;
+  } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const form = useForm<GuestFormData>({
     resolver: zodResolver(guestFormSchema),
@@ -141,10 +148,7 @@ export default function PrLists() {
   // Add guest mutation
   const addGuestMutation = useMutation({
     mutationFn: async (data: GuestFormData) => {
-      return apiRequest(`/api/pr/events/${data.eventId}/guests`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", `/api/pr/events/${data.eventId}/guests`, data);
     },
     onSuccess: () => {
       toast({ title: "Ospite aggiunto!", description: "L'ospite è stato aggiunto alla lista." });
@@ -161,6 +165,43 @@ export default function PrLists() {
       });
     },
   });
+
+  // Request cancellation mutation
+  const requestCancellationMutation = useMutation({
+    mutationFn: async (data: { reservationType: 'list_entry' | 'table_reservation'; listEntryId?: string; tableReservationId?: string; requestReason?: string }) => {
+      return apiRequest('POST', '/api/pr/cancellation-requests', data);
+    },
+    onSuccess: (response: any) => {
+      toast({ 
+        title: response.message || "Richiesta inviata!", 
+        description: response.autoApproved 
+          ? "La prenotazione è stata cancellata automaticamente." 
+          : "La richiesta è stata inviata al gestore per l'approvazione."
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "guests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "tables"] });
+      setCancelRequestDialog(null);
+      setCancelReason("");
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Errore", 
+        description: error.message || "Impossibile inviare la richiesta di cancellazione.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRequestCancellation = () => {
+    if (!cancelRequestDialog) return;
+    
+    requestCancellationMutation.mutate({
+      reservationType: cancelRequestDialog.type,
+      listEntryId: cancelRequestDialog.type === 'list_entry' ? cancelRequestDialog.id : undefined,
+      tableReservationId: cancelRequestDialog.type === 'table_reservation' ? cancelRequestDialog.id : undefined,
+      requestReason: cancelReason || undefined,
+    });
+  };
 
   // Filter upcoming events
   const upcomingEvents = useMemo(() => {
@@ -399,7 +440,28 @@ export default function PrLists() {
                                     </Badge>
                                   </div>
                                 </div>
-                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                <div className="flex items-center gap-2">
+                                  {guest.status !== 'cancelled' && guest.status !== 'arrived' && guest.status !== 'entered' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancelRequestDialog({
+                                          open: true,
+                                          type: 'list_entry',
+                                          id: guest.id,
+                                          name: guest.guestName,
+                                        });
+                                      }}
+                                      data-testid={`btn-cancel-guest-${guest.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -477,7 +539,28 @@ export default function PrLists() {
                                     )}
                                   </div>
                                 </div>
-                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                <div className="flex items-center gap-2">
+                                  {table.status !== 'cancelled' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancelRequestDialog({
+                                          open: true,
+                                          type: 'table_reservation',
+                                          id: table.id,
+                                          name: table.customerName,
+                                        });
+                                      }}
+                                      data-testid={`btn-cancel-table-${table.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -650,6 +733,52 @@ export default function PrLists() {
                 </DialogFooter>
               </form>
             </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancellation Request Dialog */}
+        <Dialog open={!!cancelRequestDialog} onOpenChange={(open) => !open && setCancelRequestDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Richiedi Cancellazione</DialogTitle>
+              <DialogDescription>
+                Stai richiedendo la cancellazione per: <strong>{cancelRequestDialog?.name}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-2">Motivo (opzionale)</label>
+                <Input
+                  placeholder="Es. Cliente ha cancellato..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  data-testid="input-cancel-reason"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                La richiesta verrà inviata al gestore per l'approvazione, a meno che non sia attiva l'approvazione automatica.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCancelRequestDialog(null);
+                  setCancelReason("");
+                }}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRequestCancellation}
+                disabled={requestCancellationMutation.isPending}
+                data-testid="button-confirm-cancel"
+              >
+                {requestCancellationMutation.isPending ? "Invio..." : "Richiedi Cancellazione"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </PrPageContainer>

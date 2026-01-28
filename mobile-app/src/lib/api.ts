@@ -213,6 +213,7 @@ export interface PrEventTable {
   minSpend: number | null;
   isBooked: boolean;
   booking?: {
+    id: string;
     guestName: string;
     guestCount: number;
     status: string;
@@ -727,6 +728,32 @@ class ApiClient {
         url: l.url,
         type: l.type || 'other',
       }));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  // ==================== PR CANCELLATION REQUESTS ====================
+  
+  async requestGuestCancellation(listEntryId: string, requestReason?: string): Promise<{ success: boolean; message: string }> {
+    return await this.post('/api/pr/cancellation-requests', {
+      reservationType: 'list_entry',
+      listEntryId,
+      requestReason,
+    });
+  }
+
+  async requestTableCancellation(tableReservationId: string, requestReason?: string): Promise<{ success: boolean; message: string }> {
+    return await this.post('/api/pr/cancellation-requests', {
+      reservationType: 'table_reservation',
+      tableReservationId,
+      requestReason,
+    });
+  }
+
+  async getPrCancellationRequests(eventId: string): Promise<any[]> {
+    try {
+      return await this.get<any[]>(`/api/pr/cancellation-requests?eventId=${eventId}`);
     } catch (error) {
       return [];
     }
