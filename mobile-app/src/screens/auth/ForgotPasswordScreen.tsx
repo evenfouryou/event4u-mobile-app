@@ -9,18 +9,40 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api from '@/lib/api';
 
+type ResetMode = 'email' | 'phone';
+type PhoneStep = 'phone' | 'otp' | 'success';
+
 interface ForgotPasswordScreenProps {
   onBack: () => void;
   onSuccess: () => void;
 }
 
 export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreenProps) {
+  const [mode, setMode] = useState<ResetMode>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [phoneStep, setPhoneStep] = useState<PhoneStep>('phone');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleModeChange = (newMode: ResetMode) => {
+    setMode(newMode);
+    setError('');
+    setEmail('');
+    setPhone('');
+    setOtpCode('');
+    setNewPassword('');
+    setCustomerId(null);
+    setPhoneStep('phone');
+    setSent(false);
+  };
+
+  const handleEmailSubmit = async () => {
     if (!email || !email.includes('@')) {
       setError('Inserisci una email valida');
       triggerHaptic('error');
@@ -41,10 +63,92 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
     }
   };
 
-  if (sent) {
+  const handlePhoneSubmit = async () => {
+    if (!phone || phone.length < 8) {
+      setError('Inserisci un numero di telefono valido');
+      triggerHaptic('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const response = await api.post<{ customerId?: string; message: string }>('/api/public/customers/forgot-password-phone', { phone });
+      
+      // If customerId is returned, phone was found - proceed to OTP step
+      if (response.customerId) {
+        setCustomerId(response.customerId);
+        setPhoneStep('otp');
+        triggerHaptic('success');
+      } else {
+        // Phone not found but we show generic success for security
+        // User will see the success message but can't proceed
+        setError('Se il numero è registrato, riceverai un codice OTP. Verifica il tuo telefono.');
+        triggerHaptic('medium');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Errore durante la richiesta');
+      triggerHaptic('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async () => {
+    if (!otpCode || otpCode.length < 4) {
+      setError('Inserisci il codice OTP');
+      triggerHaptic('error');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setError('La password deve avere almeno 8 caratteri');
+      triggerHaptic('error');
+      return;
+    }
+    if (!customerId) {
+      setError('Errore: riprova dal primo passaggio');
+      triggerHaptic('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      await api.post('/api/public/customers/reset-password-phone', {
+        customerId,
+        otpCode,
+        password: newPassword,
+      });
+      setPhoneStep('success');
+      triggerHaptic('success');
+    } catch (err: any) {
+      setError(err.message || 'Errore durante il reset della password');
+      triggerHaptic('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!customerId) return;
+
+    try {
+      setResendLoading(true);
+      setError('');
+      await api.post('/api/public/customers/resend-password-reset-otp', { customerId });
+      triggerHaptic('success');
+    } catch (err: any) {
+      setError(err.message || 'Errore durante il reinvio del codice');
+      triggerHaptic('error');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  if (sent && mode === 'email') {
     return (
       <SafeArea style={styles.container}>
-        <Pressable onPress={onBack} style={styles.backButton}>
+        <Pressable onPress={onBack} style={styles.backButton} testID="button-back">
           <Ionicons name="chevron-back" size={28} color={staticColors.foreground} />
         </Pressable>
 
@@ -74,6 +178,36 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
     );
   }
 
+  if (phoneStep === 'success' && mode === 'phone') {
+    return (
+      <SafeArea style={styles.container}>
+        <Pressable onPress={onBack} style={styles.backButton} testID="button-back">
+          <Ionicons name="chevron-back" size={28} color={staticColors.foreground} />
+        </Pressable>
+
+        <View style={styles.successContainer}>
+          <View style={styles.successIcon}>
+            <Ionicons name="checkmark-circle-outline" size={64} color={staticColors.primary} />
+          </View>
+
+          <View>
+            <Text style={styles.successTitle}>Password Reimpostata!</Text>
+            <Text style={styles.successText}>
+              La tua password è stata cambiata con successo.{'\n'}
+              Ora puoi accedere con la nuova password.
+            </Text>
+          </View>
+
+          <View style={styles.successActions}>
+            <Button variant="golden" size="lg" onPress={onBack} testID="button-back-to-login">
+              Torna al Login
+            </Button>
+          </View>
+        </View>
+      </SafeArea>
+    );
+  }
+
   return (
     <SafeArea style={styles.container}>
       <KeyboardAvoidingView
@@ -86,7 +220,7 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.topHeader}>
-            <Pressable onPress={onBack} style={styles.backButton}>
+            <Pressable onPress={onBack} style={styles.backButton} testID="button-back">
               <Ionicons name="chevron-back" size={28} color={staticColors.foreground} />
             </Pressable>
             <Image
@@ -103,8 +237,29 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
             </View>
             <Text style={styles.title}>Password Dimenticata?</Text>
             <Text style={styles.subtitle}>
-              Inserisci la tua email e ti invieremo un link per reimpostare la password
+              {mode === 'email' 
+                ? 'Inserisci la tua email e ti invieremo un link per reimpostare la password'
+                : phoneStep === 'phone'
+                ? 'Inserisci il tuo numero di telefono per ricevere un codice OTP'
+                : 'Inserisci il codice OTP e la nuova password'}
             </Text>
+          </View>
+
+          <View style={styles.tabContainer}>
+            <Pressable
+              style={[styles.tab, mode === 'email' && styles.tabActive]}
+              onPress={() => handleModeChange('email')}
+              testID="tab-email"
+            >
+              <Text style={[styles.tabText, mode === 'email' && styles.tabTextActive]}>Email</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, mode === 'phone' && styles.tabActive]}
+              onPress={() => handleModeChange('phone')}
+              testID="tab-phone"
+            >
+              <Text style={[styles.tabText, mode === 'phone' && styles.tabTextActive]}>Telefono</Text>
+            </Pressable>
           </View>
 
           <View style={styles.form}>
@@ -114,33 +269,107 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
               </View>
             ) : null}
 
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="mario@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              leftIcon="mail-outline"
-              testID="input-email"
-            />
+            {mode === 'email' ? (
+              <>
+                <Input
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="mario@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  leftIcon="mail-outline"
+                  testID="input-email"
+                />
 
-            <Button
-              variant="golden"
-              size="lg"
-              onPress={handleSubmit}
-              loading={loading}
-              style={styles.submitButton}
-              testID="button-submit"
-            >
-              Invia Link
-            </Button>
+                <Button
+                  variant="golden"
+                  size="lg"
+                  onPress={handleEmailSubmit}
+                  loading={loading}
+                  style={styles.submitButton}
+                  testID="button-submit-email"
+                >
+                  Invia Link
+                </Button>
+              </>
+            ) : phoneStep === 'phone' ? (
+              <>
+                <Input
+                  label="Numero di Telefono"
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="+39 123 456 7890"
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  leftIcon="call-outline"
+                  testID="input-phone"
+                />
+
+                <Button
+                  variant="golden"
+                  size="lg"
+                  onPress={handlePhoneSubmit}
+                  loading={loading}
+                  style={styles.submitButton}
+                  testID="button-submit-phone"
+                >
+                  Invia Codice OTP
+                </Button>
+              </>
+            ) : (
+              <>
+                <Input
+                  label="Codice OTP"
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  placeholder="123456"
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                  leftIcon="key-outline"
+                  testID="input-otp"
+                />
+
+                <Input
+                  label="Nuova Password"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Minimo 8 caratteri"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  leftIcon="lock-closed-outline"
+                  testID="input-new-password"
+                />
+
+                <Button
+                  variant="golden"
+                  size="lg"
+                  onPress={handleOtpSubmit}
+                  loading={loading}
+                  style={styles.submitButton}
+                  testID="button-submit-otp"
+                >
+                  Reimposta Password
+                </Button>
+
+                <Pressable
+                  onPress={handleResendOtp}
+                  disabled={resendLoading}
+                  style={styles.resendButton}
+                  testID="button-resend-otp"
+                >
+                  <Text style={[styles.resendText, resendLoading && styles.resendTextDisabled]}>
+                    {resendLoading ? 'Invio in corso...' : 'Reinvia OTP'}
+                  </Text>
+                </Pressable>
+              </>
+            )}
           </View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Ricordi la password?</Text>
-            <Pressable onPress={onBack}>
+            <Pressable onPress={onBack} testID="link-login">
               <Text style={styles.loginLink}>Accedi</Text>
             </Pressable>
           </View>
@@ -185,8 +414,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: spacing.xxl,
-    marginBottom: spacing.xxl,
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
   },
   iconContainer: {
     width: 96,
@@ -211,6 +440,30 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: spacing.lg,
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: staticColors.secondary,
+    borderRadius: borderRadius.md,
+    padding: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: borderRadius.sm,
+  },
+  tabActive: {
+    backgroundColor: staticColors.primary,
+  },
+  tabText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: staticColors.mutedForeground,
+  },
+  tabTextActive: {
+    color: staticColors.primaryForeground,
+  },
   form: {
     marginBottom: spacing.xl,
   },
@@ -229,6 +482,19 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: spacing.md,
+  },
+  resendButton: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  resendText: {
+    color: staticColors.primary,
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+  },
+  resendTextDisabled: {
+    color: staticColors.mutedForeground,
   },
   footer: {
     flexDirection: 'row',

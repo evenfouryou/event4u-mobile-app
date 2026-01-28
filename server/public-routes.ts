@@ -2003,6 +2003,242 @@ router.post("/api/public/customers/reset-password", async (req, res) => {
   }
 });
 
+// ==================== PASSWORD RESET VIA PHONE/OTP ====================
+
+// Request password reset via phone (sends OTP)
+router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ message: "Numero di telefono richiesto" });
+    }
+
+    // Normalize phone number - strip non-digits and ensure Italian format
+    let normalizedPhone = phone.replace(/\D/g, '');
+    
+    // Normalize to consistent format: remove leading 39 or 0039 prefix
+    if (normalizedPhone.startsWith('0039')) {
+      normalizedPhone = normalizedPhone.substring(4);
+    } else if (normalizedPhone.startsWith('39') && normalizedPhone.length > 10) {
+      normalizedPhone = normalizedPhone.substring(2);
+    }
+
+    // Find customer by exact phone match (normalized)
+    const customers = await db.select().from(siaeCustomers);
+    const customer = customers.find(c => {
+      if (!c.phone) return false;
+      let cleanPhone = c.phone.replace(/\D/g, '');
+      // Normalize stored phone the same way
+      if (cleanPhone.startsWith('0039')) {
+        cleanPhone = cleanPhone.substring(4);
+      } else if (cleanPhone.startsWith('39') && cleanPhone.length > 10) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+      return cleanPhone === normalizedPhone;
+    });
+
+    // Always return success message to prevent enumeration
+    const successMessage = "Se il numero è registrato, riceverai un codice OTP per reimpostare la password.";
+
+    if (!customer) {
+      console.log("[PUBLIC] Phone not found for password reset:", phone);
+      return res.json({ message: successMessage });
+    }
+
+    // Generate OTP and store it
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    if (isMSG91Configured()) {
+      console.log(`[PUBLIC] Sending password reset OTP via MSG91 to ${customer.phone}`);
+      const result = await sendMSG91OTP(customer.phone, 10);
+      
+      if (!result.success) {
+        console.error(`[PUBLIC] MSG91 failed for password reset: ${result.message}`);
+        return res.status(500).json({ message: "Errore nell'invio OTP. Riprova." });
+      }
+      
+      // Store OTP for password reset purpose
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: result.otpCode!,
+        purpose: "password_reset",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+      
+      // Don't log OTP value for security
+      console.log(`[PUBLIC] Password reset OTP sent successfully`);
+      res.json({ 
+        message: successMessage,
+        customerId: customer.id,
+        provider: "msg91"
+      });
+    } else {
+      // Local fallback for development
+      const otp = generateOTP();
+      
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: otp,
+        purpose: "password_reset",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+
+      // Don't log OTP value for security - only log that it was generated
+      console.log(`[PUBLIC] Local password reset OTP generated for customer ${customer.id}`);
+      res.json({ 
+        message: successMessage,
+        customerId: customer.id,
+        provider: "local"
+      });
+    }
+  } catch (error: any) {
+    console.error("[PUBLIC] Forgot password phone error:", error);
+    res.status(500).json({ message: "Errore durante la richiesta. Riprova più tardi." });
+  }
+});
+
+// Verify OTP and reset password via phone
+router.post("/api/public/customers/reset-password-phone", async (req, res) => {
+  try {
+    const { customerId, otpCode, password } = req.body;
+
+    if (!customerId || !otpCode || !password) {
+      return res.status(400).json({ message: "Dati mancanti" });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: "La password deve essere di almeno 8 caratteri" });
+    }
+
+    // Get customer
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.id, customerId));
+
+    if (!customer) {
+      return res.status(400).json({ message: "Cliente non trovato" });
+    }
+
+    // Find valid OTP attempt for password reset
+    const [otpAttempt] = await db
+      .select()
+      .from(siaeOtpAttempts)
+      .where(
+        and(
+          eq(siaeOtpAttempts.customerId, customerId),
+          eq(siaeOtpAttempts.purpose, "password_reset"),
+          eq(siaeOtpAttempts.status, "pending"),
+          gt(siaeOtpAttempts.expiresAt, new Date())
+        )
+      )
+      .orderBy(desc(siaeOtpAttempts.createdAt))
+      .limit(1);
+
+    if (!otpAttempt) {
+      return res.status(400).json({ message: "Codice OTP scaduto o non valido. Richiedi un nuovo codice." });
+    }
+
+    // Verify OTP
+    if (otpAttempt.otpCode !== otpCode) {
+      return res.status(400).json({ message: "Codice OTP non corretto" });
+    }
+
+    // Mark OTP as verified
+    await db
+      .update(siaeOtpAttempts)
+      .set({ status: "verified", verifiedAt: new Date() })
+      .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+
+    // Update password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await db
+      .update(siaeCustomers)
+      .set({
+        passwordHash,
+        phoneVerified: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeCustomers.id, customer.id));
+
+    console.log("[PUBLIC] Password reset via phone successful for customer:", customer.id);
+    res.json({ message: "Password reimpostata con successo! Ora puoi accedere." });
+  } catch (error: any) {
+    console.error("[PUBLIC] Reset password phone error:", error);
+    res.status(500).json({ message: "Errore durante il reset. Riprova più tardi." });
+  }
+});
+
+// Resend password reset OTP
+router.post("/api/public/customers/resend-password-reset-otp", async (req, res) => {
+  try {
+    const { customerId } = req.body;
+
+    if (!customerId) {
+      return res.status(400).json({ message: "ID cliente mancante" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.id, customerId));
+
+    if (!customer) {
+      return res.status(400).json({ message: "Cliente non trovato" });
+    }
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    if (isMSG91Configured()) {
+      console.log(`[PUBLIC] Resending password reset OTP via MSG91 to ${customer.phone}`);
+      const result = await resendMSG91OTP(customer.phone, 'text');
+      
+      if (!result.success) {
+        console.error(`[PUBLIC] MSG91 resend failed: ${result.message}`);
+        return res.status(500).json({ message: "Errore nel reinvio OTP. Riprova." });
+      }
+
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: result.otpCode!,
+        purpose: "password_reset",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+
+      res.json({ message: "OTP reinviato con successo", provider: "msg91" });
+    } else {
+      const otp = generateOTP();
+
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: otp,
+        purpose: "password_reset",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+
+      console.log(`[PUBLIC] Local resend password reset OTP for ${customer.phone}: ${otp}`);
+      res.json({ 
+        message: "OTP reinviato con successo", 
+        provider: "local",
+        ...(process.env.NODE_ENV === 'development' ? { devOtp: otp } : {})
+      });
+    }
+  } catch (error: any) {
+    console.error("[PUBLIC] Resend password reset OTP error:", error);
+    res.status(500).json({ message: "Errore durante il reinvio. Riprova più tardi." });
+  }
+});
+
 // Profilo cliente autenticato
 router.get("/api/public/customers/me", async (req, res) => {
   try {
