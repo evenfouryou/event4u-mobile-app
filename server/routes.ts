@@ -3536,6 +3536,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all SIAE transmissions for admin
+  app.get('/api/admin/siae/transmissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      // Get all SIAE transmissions with company and event info
+      const allTransmissions = await db.select({
+        id: siaeTransmissions.id,
+        reportType: siaeTransmissions.reportType,
+        status: siaeTransmissions.status,
+        createdAt: siaeTransmissions.createdAt,
+        companyId: siaeTransmissions.companyId,
+        ticketedEventId: siaeTransmissions.ticketedEventId,
+        transmissionDate: siaeTransmissions.sentAt,
+        errorMessage: siaeTransmissions.errorMessage,
+        xmlContent: siaeTransmissions.xmlContent,
+      })
+      .from(siaeTransmissions)
+      .orderBy(desc(siaeTransmissions.createdAt))
+      .limit(200);
+
+      const transmissions = await Promise.all(allTransmissions.map(async (t) => {
+        const company = t.companyId ? await storage.getCompany(t.companyId) : null;
+        const event = t.ticketedEventId ? await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, t.ticketedEventId)).then(r => r[0]) : null;
+        
+        return {
+          id: t.id,
+          companyName: company?.name || 'Sconosciuto',
+          eventName: event?.name || null,
+          reportType: (t.reportType || 'RCA').toUpperCase(),
+          status: t.status || 'pending',
+          transmissionDate: t.transmissionDate || t.createdAt,
+          errorMessage: t.errorMessage || null,
+        };
+      }));
+
+      res.json(transmissions);
+    } catch (error) {
+      console.error("Error fetching admin SIAE transmissions:", error);
+      res.status(500).json({ message: "Failed to fetch SIAE transmissions" });
+    }
+  });
+
   // ===== SYSTEM SETTINGS (Super Admin only) =====
   app.get('/api/system-settings', isAuthenticated, async (req: any, res) => {
     try {

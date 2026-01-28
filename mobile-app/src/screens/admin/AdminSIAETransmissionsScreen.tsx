@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, ThemeColors } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { SIAETransmission } from '@/lib/api';
 
-type StatusFilter = 'all' | 'sent' | 'pending' | 'error' | 'confirmed';
+type StatusFilter = 'all' | 'sent' | 'pending' | 'error' | 'accepted';
 
 interface AdminSIAETransmissionsScreenProps {
   onBack: () => void;
@@ -39,6 +39,8 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const dynamicStyles = createDynamicStyles(colors);
 
   useEffect(() => {
     loadTransmissions();
@@ -74,9 +76,9 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
   const calculateStats = (data: SIAETransmission[]) => {
     const stats: TransmissionStats = {
       total: data.length,
-      pending: data.filter(t => t.status === 'pending').length,
-      completed: data.filter(t => t.status === 'sent' || t.status === 'confirmed').length,
-      failed: data.filter(t => t.status === 'error').length,
+      pending: data.filter(t => t.status === 'pending' || t.status === 'draft').length,
+      completed: data.filter(t => t.status === 'sent' || t.status === 'accepted').length,
+      failed: data.filter(t => t.status === 'error' || t.status === 'rejected').length,
     };
     setStats(stats);
   };
@@ -85,13 +87,18 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
     let filtered = [...transmissions];
 
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(transmission => transmission.status === activeFilter);
+      if (activeFilter === 'accepted') {
+        filtered = filtered.filter(t => t.status === 'accepted' || t.status === 'sent');
+      } else {
+        filtered = filtered.filter(t => t.status === activeFilter);
+      }
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(transmission =>
         transmission.eventName?.toLowerCase().includes(query) ||
+        transmission.companyName?.toLowerCase().includes(query) ||
         transmission.reportType.toLowerCase().includes(query)
       );
     }
@@ -119,12 +126,14 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Badge variant="success">Inviato</Badge>;
-      case 'confirmed':
-        return <Badge variant="success">Confermato</Badge>;
+        return <Badge variant="default">Inviato</Badge>;
+      case 'accepted':
+        return <Badge variant="success">Accettato</Badge>;
       case 'pending':
+      case 'draft':
         return <Badge variant="warning">In attesa</Badge>;
       case 'error':
+      case 'rejected':
         return <Badge variant="destructive">Errore</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
@@ -132,51 +141,51 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
   };
 
   const getReportTypeColor = (type: string) => {
-    switch (type) {
+    switch (type.toUpperCase()) {
       case 'RCA':
-        return `${staticColors.primary}20`;
+        return `${colors.primary}20`;
       case 'RMG':
-        return `${staticColors.warning}20`;
+        return `${colors.warning}20`;
       case 'RPM':
-        return `${staticColors.accent}20`;
+        return `${colors.accent}20`;
       default:
-        return `${staticColors.secondary}20`;
+        return `${colors.secondary}20`;
     }
   };
 
   const filters: { id: StatusFilter; label: string }[] = [
     { id: 'all', label: 'Tutti' },
     { id: 'pending', label: 'In attesa' },
-    { id: 'sent', label: 'Inviati' },
-    { id: 'confirmed', label: 'Confermati' },
+    { id: 'accepted', label: 'Accettati' },
     { id: 'error', label: 'Errori' },
   ];
 
   const renderTransmission = ({ item }: { item: SIAETransmission }) => (
-    <Card style={styles.transmissionCard} testID={`transmission-${item.id}`}>
-      <View style={styles.transmissionHeader}>
-        <View style={styles.reportTypeContainer}>
-          <View style={[styles.reportTypeIcon, { backgroundColor: getReportTypeColor(item.reportType) }]}>
-            <Text style={styles.reportTypeText}>{item.reportType}</Text>
+    <Card style={dynamicStyles.transmissionCard} testID={`transmission-${item.id}`}>
+      <View style={dynamicStyles.transmissionHeader}>
+        <View style={dynamicStyles.reportTypeContainer}>
+          <View style={[dynamicStyles.reportTypeIcon, { backgroundColor: getReportTypeColor(item.reportType) }]}>
+            <Text style={dynamicStyles.reportTypeText}>{item.reportType}</Text>
           </View>
-          <View style={styles.transmissionInfo}>
-            <Text style={styles.eventName} numberOfLines={1}>{item.eventName || 'Evento sconosciuto'}</Text>
-            <Text style={styles.date}>{formatDate(item.transmissionDate)}</Text>
+          <View style={dynamicStyles.transmissionInfo}>
+            <Text style={dynamicStyles.companyName} numberOfLines={1}>{item.companyName || 'Azienda sconosciuta'}</Text>
+            <Text style={dynamicStyles.eventName} numberOfLines={1}>{item.eventName || 'Nessun evento'}</Text>
+            <Text style={dynamicStyles.date}>{formatDate(item.transmissionDate)}</Text>
           </View>
         </View>
         {getStatusBadge(item.status)}
       </View>
       {item.errorMessage && (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={16} color={staticColors.destructive} />
-          <Text style={styles.errorMessage}>{item.errorMessage}</Text>
+        <View style={dynamicStyles.errorContainer}>
+          <Ionicons name="alert-circle" size={16} color={colors.destructive} />
+          <Text style={dynamicStyles.errorMessage}>{item.errorMessage}</Text>
         </View>
       )}
     </Card>
   );
 
   return (
-    <SafeArea edges={['bottom']} style={styles.container}>
+    <SafeArea edges={['bottom']} style={dynamicStyles.container}>
       <Header
         showLogo
         showBack
@@ -188,49 +197,49 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
         <Loading text="Caricamento trasmissioni SIAE..." />
       ) : (
         <>
-          <View style={styles.statsSection}>
-            <Text style={styles.title}>Trasmissioni SIAE</Text>
-            <View style={styles.statsGrid}>
-              <GlassCard style={styles.statCard} testID="stat-total-transmissions">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.primary}20` }]}>
-                  <Ionicons name="send" size={20} color={staticColors.primary} />
+          <View style={dynamicStyles.statsSection}>
+            <Text style={dynamicStyles.title}>Trasmissioni SIAE</Text>
+            <View style={dynamicStyles.statsGrid}>
+              <GlassCard style={dynamicStyles.statCard} testID="stat-total-transmissions">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
+                  <Ionicons name="send" size={20} color={colors.primary} />
                 </View>
-                <Text style={styles.statValue}>{stats.total}</Text>
-                <Text style={styles.statLabel}>Totali</Text>
+                <Text style={dynamicStyles.statValue}>{stats.total}</Text>
+                <Text style={dynamicStyles.statLabel}>Totali</Text>
               </GlassCard>
 
-              <GlassCard style={styles.statCard} testID="stat-pending-transmissions">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.warning}20` }]}>
-                  <Ionicons name="time" size={20} color={staticColors.warning} />
+              <GlassCard style={dynamicStyles.statCard} testID="stat-pending-transmissions">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
+                  <Ionicons name="time" size={20} color={colors.warning} />
                 </View>
-                <Text style={styles.statValue}>{stats.pending}</Text>
-                <Text style={styles.statLabel}>In attesa</Text>
+                <Text style={dynamicStyles.statValue}>{stats.pending}</Text>
+                <Text style={dynamicStyles.statLabel}>In attesa</Text>
               </GlassCard>
 
-              <GlassCard style={styles.statCard} testID="stat-completed-transmissions">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.success}20` }]}>
-                  <Ionicons name="checkmark-circle" size={20} color={staticColors.success} />
+              <GlassCard style={dynamicStyles.statCard} testID="stat-completed-transmissions">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.success}20` }]}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                 </View>
-                <Text style={styles.statValue}>{stats.completed}</Text>
-                <Text style={styles.statLabel}>Completate</Text>
+                <Text style={dynamicStyles.statValue}>{stats.completed}</Text>
+                <Text style={dynamicStyles.statLabel}>Completate</Text>
               </GlassCard>
 
-              <GlassCard style={styles.statCard} testID="stat-failed-transmissions">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.destructive}20` }]}>
-                  <Ionicons name="warning" size={20} color={staticColors.destructive} />
+              <GlassCard style={dynamicStyles.statCard} testID="stat-failed-transmissions">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.destructive}20` }]}>
+                  <Ionicons name="warning" size={20} color={colors.destructive} />
                 </View>
-                <Text style={styles.statValue}>{stats.failed}</Text>
-                <Text style={styles.statLabel}>Errori</Text>
+                <Text style={dynamicStyles.statValue}>{stats.failed}</Text>
+                <Text style={dynamicStyles.statLabel}>Errori</Text>
               </GlassCard>
             </View>
           </View>
 
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputWrapper}>
+          <View style={dynamicStyles.searchContainer}>
+            <View style={dynamicStyles.searchInputWrapper}>
               <Ionicons name="search" size={20} color={colors.mutedForeground} />
               <TextInput
-                style={styles.searchInput}
-                placeholder="Cerca evento o tipo report..."
+                style={dynamicStyles.searchInput}
+                placeholder="Cerca azienda, evento o tipo..."
                 placeholderTextColor={colors.mutedForeground}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -244,13 +253,13 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
             </View>
           </View>
 
-          <View style={styles.filtersContainer}>
+          <View style={dynamicStyles.filtersContainer}>
             <FlatList
               horizontal
               data={filters}
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filtersList}
+              contentContainerStyle={dynamicStyles.filtersList}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => {
@@ -258,15 +267,15 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
                     setActiveFilter(item.id);
                   }}
                   style={[
-                    styles.filterChip,
-                    activeFilter === item.id && styles.filterChipActive,
+                    dynamicStyles.filterChip,
+                    activeFilter === item.id && dynamicStyles.filterChipActive,
                   ]}
                   testID={`filter-${item.id}`}
                 >
                   <Text
                     style={[
-                      styles.filterChipText,
-                      activeFilter === item.id && styles.filterChipTextActive,
+                      dynamicStyles.filterChipText,
+                      activeFilter === item.id && dynamicStyles.filterChipTextActive,
                     ]}
                   >
                     {item.label}
@@ -281,7 +290,7 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
               data={filteredTransmissions}
               renderItem={renderTransmission}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={dynamicStyles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
@@ -292,10 +301,10 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
               }
             />
           ) : (
-            <View style={styles.emptyState}>
+            <View style={dynamicStyles.emptyState}>
               <Ionicons name="document-text-outline" size={64} color={colors.mutedForeground} />
-              <Text style={styles.emptyTitle}>Nessuna trasmissione</Text>
-              <Text style={styles.emptyText}>
+              <Text style={dynamicStyles.emptyTitle}>Nessuna trasmissione</Text>
+              <Text style={dynamicStyles.emptyText}>
                 {searchQuery ? 'Prova con una ricerca diversa' : 'Le trasmissioni SIAE appariranno qui'}
               </Text>
             </View>
@@ -306,10 +315,10 @@ export function AdminSIAETransmissionsScreen({ onBack }: AdminSIAETransmissionsS
   );
 }
 
-const styles = StyleSheet.create({
+const createDynamicStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: staticColors.background,
+    backgroundColor: colors.background,
   },
   statsSection: {
     paddingHorizontal: spacing.lg,
@@ -318,7 +327,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: staticColors.foreground,
+    color: colors.foreground,
     marginBottom: spacing.md,
   },
   statsGrid: {
@@ -343,11 +352,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: staticColors.foreground,
+    color: colors.foreground,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
@@ -358,41 +367,41 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: staticColors.secondary,
+    backgroundColor: colors.secondary,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    height: 48,
+    gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    marginHorizontal: spacing.sm,
-    fontSize: typography.fontSize.sm,
-    color: staticColors.foreground,
-    paddingVertical: spacing.sm,
+    fontSize: typography.fontSize.base,
+    color: colors.foreground,
   },
   filtersContainer: {
     paddingVertical: spacing.sm,
   },
   filtersList: {
     paddingHorizontal: spacing.lg,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: staticColors.secondary,
+    backgroundColor: colors.secondary,
   },
   filterChipActive: {
-    backgroundColor: staticColors.primary,
+    backgroundColor: colors.primary,
   },
   filterChipText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
   },
   filterChipTextActive: {
-    color: staticColors.primaryForeground,
+    color: colors.primaryForeground,
+    fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: spacing.lg,
@@ -406,7 +415,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
   },
   reportTypeContainer: {
     flex: 1,
@@ -425,20 +433,25 @@ const styles = StyleSheet.create({
   reportTypeText: {
     fontSize: typography.fontSize.xs,
     fontWeight: '700',
-    color: staticColors.foreground,
+    color: colors.foreground,
   },
   transmissionInfo: {
     flex: 1,
   },
-  eventName: {
+  companyName: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: staticColors.foreground,
-    marginBottom: spacing.xs,
+    color: colors.foreground,
+    marginBottom: 2,
+  },
+  eventName: {
+    fontSize: typography.fontSize.xs,
+    color: colors.mutedForeground,
+    marginBottom: 2,
   },
   date: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -446,13 +459,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: staticColors.border,
+    borderTopColor: colors.border,
     gap: spacing.xs,
   },
   errorMessage: {
     flex: 1,
     fontSize: typography.fontSize.xs,
-    color: staticColors.destructive,
+    color: colors.destructive,
   },
   emptyState: {
     flex: 1,
@@ -463,13 +476,15 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: staticColors.foreground,
+    color: colors.foreground,
     marginTop: spacing.md,
   },
   emptyText: {
     fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
     marginTop: spacing.sm,
     textAlign: 'center',
   },
 });
+
+export default AdminSIAETransmissionsScreen;

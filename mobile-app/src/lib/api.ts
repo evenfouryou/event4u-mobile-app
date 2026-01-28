@@ -1435,7 +1435,7 @@ class ApiClient {
   // SIAE Transmissions Methods
   async getSIAETransmissions(): Promise<SIAETransmission[]> {
     try {
-      return await this.get<SIAETransmission[]>('/api/gestore/siae/transmissions');
+      return await this.get<SIAETransmission[]>('/api/admin/siae/transmissions');
     } catch {
       return [];
     }
@@ -3437,10 +3437,11 @@ export interface FloorPlanEditorData {
 export interface SIAETransmission {
   id: string;
   transmissionDate: string;
-  reportType: 'RCA' | 'RMG' | 'RPM';
-  status: 'sent' | 'pending' | 'error' | 'confirmed';
+  reportType: 'RCA' | 'RMG' | 'RPM' | string;
+  status: 'sent' | 'pending' | 'error' | 'confirmed' | 'accepted' | 'rejected' | 'draft' | string;
   eventId?: string;
   eventName?: string;
+  companyName?: string;
   errorMessage?: string;
   xmlContent?: string;
 }
