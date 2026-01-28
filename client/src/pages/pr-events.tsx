@@ -133,7 +133,7 @@ export default function PrEvents() {
     <PrLayout>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 md:px-6 py-4">
+        <div className="px-4 md:px-6 lg:px-8 py-4 max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-foreground">I miei eventi</h1>
@@ -184,10 +184,10 @@ export default function PrEvents() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 py-6">
+      <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
         {/* Loading State */}
         {isLoadingEvents && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[1, 2, 3].map((i) => (
               <Card key={i}>
                 <Skeleton className="h-40 w-full" />
@@ -203,7 +203,7 @@ export default function PrEvents() {
         {/* Events Grid */}
         {!isLoadingEvents && (
           <motion.div 
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             layout
           >
             <AnimatePresence mode="popLayout">

@@ -230,19 +230,22 @@ export default function PrDashboard() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 py-6 space-y-6">
-        {/* Wallet Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card 
-            className="overflow-hidden cursor-pointer hover-elevate"
-            onClick={() => navigate("/pr/wallet")}
-            data-testid="card-wallet"
+      <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto">
+        {/* Top Section: Wallet + Stats Grid on Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Wallet Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-1"
           >
-            <div className="relative bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-5">
+            <Card 
+              className="overflow-hidden cursor-pointer hover-elevate h-full"
+              onClick={() => navigate("/pr/wallet")}
+              data-testid="card-wallet"
+            >
+              <div className="relative bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-5 h-full min-h-[140px]">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
               
@@ -266,13 +269,13 @@ export default function PrDashboard() {
           </Card>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3"
-        >
+          {/* Stats Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-2 grid grid-cols-2 gap-3"
+          >
           <Card className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 border-violet-500/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -336,7 +339,8 @@ export default function PrDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+          </motion.div>
+        </div>
 
         {/* Featured Event Card */}
         {featuredEvent && (
@@ -416,7 +420,7 @@ export default function PrDashboard() {
           transition={{ delay: 0.4 }}
         >
           <h2 className="text-lg font-semibold text-foreground mb-3">{t('pr.quickActions')}</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Card 
               className="cursor-pointer hover-elevate"
               onClick={() => navigate("/pr/events")}

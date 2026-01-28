@@ -2704,4 +2704,83 @@ router.get("/api/switch-role/current", requireAuth, async (req: Request, res: Re
   }
 });
 
+// Switch from Customer to PR mode - for customers with linked PR profiles
+router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) => {
+  try {
+    const customerSession = (req.session as any).customer;
+    
+    if (!customerSession?.id) {
+      return res.status(401).json({ error: "Non autenticato come cliente" });
+    }
+    
+    // Get customer data
+    const [customer] = await db.select().from(siaeCustomers)
+      .where(eq(siaeCustomers.id, customerSession.id));
+    
+    if (!customer) {
+      return res.status(404).json({ error: "Cliente non trovato" });
+    }
+    
+    // Find linked PR profile by phone or email
+    let prProfile = null;
+    
+    // Method 1: Check by phone
+    if (customer.phone) {
+      const [profileByPhone] = await db.select().from(prProfiles)
+        .where(and(
+          eq(prProfiles.isActive, true),
+          or(
+            eq(prProfiles.phone, customer.phone),
+            eq(prProfiles.phone, customer.phone.replace(/^\+39/, '')),
+            eq(prProfiles.phone, '+39' + customer.phone.replace(/^\+39/, ''))
+          )
+        ));
+      if (profileByPhone) prProfile = profileByPhone;
+    }
+    
+    // Method 2: Check by email
+    if (!prProfile && customer.email) {
+      const [profileByEmail] = await db.select().from(prProfiles)
+        .where(and(
+          eq(prProfiles.isActive, true),
+          eq(prProfiles.email, customer.email)
+        ));
+      if (profileByEmail) prProfile = profileByEmail;
+    }
+    
+    if (!prProfile) {
+      return res.status(404).json({ error: "Nessun profilo PR collegato trovato" });
+    }
+    
+    // Store original customer session for switching back
+    (req.session as any).originalCustomerSession = {
+      customerId: customerSession.id,
+    };
+    
+    // Set up PR session
+    (req.session as any).prProfile = {
+      id: prProfile.id,
+      companyId: prProfile.companyId,
+      prCode: prProfile.prCode,
+    };
+    
+    req.session.save((err) => {
+      if (err) {
+        console.error("[CUSTOMER-TO-PR] Error saving session:", err);
+        return res.status(500).json({ error: "Errore nel cambio ruolo" });
+      }
+      
+      console.log(`[CUSTOMER-TO-PR] Customer ${customerSession.id} switched to PR mode (PR: ${prProfile.id})`);
+      res.json({ 
+        success: true, 
+        message: "Passato a modalità PR",
+        redirectTo: '/pr/dashboard'
+      });
+    });
+  } catch (error: any) {
+    console.error("Error switching customer to PR mode:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

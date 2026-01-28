@@ -172,7 +172,7 @@ export default function PrWallet() {
     <PrLayout>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 md:px-6 py-4">
+        <div className="px-4 md:px-6 lg:px-8 py-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -190,7 +190,7 @@ export default function PrWallet() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 py-6 space-y-6">
+      <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-5xl mx-auto">
         {/* Balance Card - Credit Card Style */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

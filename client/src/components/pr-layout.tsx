@@ -219,7 +219,7 @@ export function PrLayout({ children, showBackButton, onBack, title, hideNav }: P
 
 export function PrPageContainer({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("px-4 py-4 max-w-6xl mx-auto", className)}>
+    <div className={cn("px-4 md:px-6 lg:px-8 py-4 md:py-6 max-w-7xl mx-auto", className)}>
       {children}
     </div>
   );

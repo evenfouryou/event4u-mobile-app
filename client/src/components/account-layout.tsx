@@ -158,8 +158,31 @@ export function AccountLayout({ children }: AccountLayoutProps) {
   const { prProfile } = usePrAuth();
   const hasPrProfile = !!prProfile;
 
-  const handleSwitchToPr = () => {
-    navigate("/pr/dashboard");
+  const handleSwitchToPr = async () => {
+    try {
+      const res = await fetch('/api/customer/switch-to-pr', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.success && data.redirectTo) {
+        queryClient.clear();
+        window.location.href = data.redirectTo;
+      } else if (data.error) {
+        toast({
+          title: "Errore",
+          description: data.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error switching to PR mode:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile passare alla modalità PR",
+        variant: "destructive",
+      });
+    }
   };
 
   // Check if profile needs completion
