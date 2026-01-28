@@ -212,7 +212,7 @@ export function AccountDashboard({
               testID="avatar-header"
             />
           </Pressable>
-          {hasPrAccount && onNavigatePrDashboard && (
+          {onNavigatePrDashboard && (
             <Pressable
               onPress={() => {
                 triggerHaptic('light');
