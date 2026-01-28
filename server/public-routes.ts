@@ -4281,6 +4281,115 @@ router.get("/api/public/account/table-reservations", async (req, res) => {
   }
 });
 
+// Ottieni entry liste ospiti per il cliente mobile (usa listEntries table)
+// Questo endpoint cerca per phone/email del cliente siaeCustomers
+router.get("/api/public/account/list-entries", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    console.log("[PUBLIC-LIST] Searching list entries for customer:", {
+      id: customer.id,
+      email: customer.email,
+      phone: customer.phone,
+      userId: customer.userId
+    });
+
+    // Normalize phone for matching
+    const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    
+    // Build conditions to find list entries
+    const conditions: any[] = [];
+    
+    // If customer has a linked userId, search by clientUserId
+    if (customer.userId) {
+      conditions.push(eq(listEntries.clientUserId, customer.userId));
+    }
+    
+    // Search by email
+    if (customer.email) {
+      conditions.push(eq(listEntries.email, customer.email));
+      conditions.push(eq(listEntries.email, customer.email.toLowerCase()));
+    }
+    
+    // Search by phone with multiple formats
+    if (customer.phone) {
+      const phoneDigits = normalizePhone(customer.phone);
+      conditions.push(eq(listEntries.phone, customer.phone));
+      conditions.push(eq(listEntries.phone, phoneDigits));
+      conditions.push(eq(listEntries.phone, '+39' + phoneDigits));
+      conditions.push(eq(listEntries.phone, '39' + phoneDigits));
+      // Handle case where entry has prefix but customer doesn't
+      if (phoneDigits.startsWith('39') && phoneDigits.length > 10) {
+        conditions.push(eq(listEntries.phone, phoneDigits.slice(2)));
+      }
+      // Handle case where customer has prefix starting with 39
+      if (!phoneDigits.startsWith('39') && phoneDigits.length >= 9) {
+        conditions.push(eq(listEntries.phone, '39' + phoneDigits));
+        conditions.push(eq(listEntries.phone, '+39' + phoneDigits));
+      }
+    }
+
+    if (conditions.length === 0) {
+      console.log("[PUBLIC-LIST] No search conditions available");
+      return res.json([]);
+    }
+
+    console.log("[PUBLIC-LIST] Searching with", conditions.length, "conditions");
+
+    // Find all matching entries with event and location data
+    const entries = await db
+      .select({
+        id: listEntries.id,
+        firstName: listEntries.firstName,
+        lastName: listEntries.lastName,
+        phone: listEntries.phone,
+        email: listEntries.email,
+        qrCode: listEntries.qrCode,
+        status: listEntries.status,
+        plusOnes: listEntries.plusOnes,
+        createdAt: listEntries.createdAt,
+        listId: listEntries.listId,
+        listName: eventLists.name,
+        eventId: events.id,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        eventEnd: events.endDatetime,
+        locationName: locations.name,
+        locationAddress: locations.address,
+      })
+      .from(listEntries)
+      .innerJoin(eventLists, eq(listEntries.listId, eventLists.id))
+      .innerJoin(events, eq(listEntries.eventId, events.id))
+      .leftJoin(locations, eq(events.locationId, locations.id))
+      .where(or(...conditions))
+      .orderBy(desc(events.startDatetime));
+
+    console.log("[PUBLIC-LIST] Found", entries.length, "entries");
+
+    // Map to format expected by mobile app
+    const result = entries.map(entry => ({
+      id: entry.id,
+      eventName: entry.eventName || 'Evento',
+      eventDate: entry.eventStart?.toISOString() || null,
+      listName: entry.listName || 'Lista',
+      venueName: entry.locationName || 'Location',
+      qrCode: entry.qrCode,
+      status: entry.status || 'pending',
+      firstName: entry.firstName,
+      lastName: entry.lastName,
+      plusOnes: entry.plusOnes || 0,
+    }));
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[PUBLIC-LIST] Error:", error);
+    res.status(500).json({ message: "Errore nel caricamento liste" });
+  }
+});
+
 // Ottieni dettaglio singolo biglietto
 router.get("/api/public/account/tickets/:id", async (req, res) => {
   try {

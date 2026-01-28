@@ -427,18 +427,19 @@ class ApiClient {
   }
 
   async getMyReservations(): Promise<MyReservation[]> {
-    // Use the existing production endpoint that searches by clientUserId, email, and phone
+    // Use the new public endpoint that authenticates via customer session/bearer token
     const entries = await this.get<Array<{
       id: string;
       eventName: string;
-      eventDate: string;
+      eventDate: string | null;
       listName: string;
       venueName: string;
       qrCode: string | null;
       status: string;
       firstName: string;
       lastName: string;
-    }>>('/api/my/guest-list-entries');
+      plusOnes: number;
+    }>>('/api/public/account/list-entries');
     
     // Map to MyReservation format
     return entries.map(entry => ({
@@ -452,7 +453,7 @@ class ApiClient {
       listName: entry.listName,
       firstName: entry.firstName,
       lastName: entry.lastName,
-      plusOnes: 0,
+      plusOnes: entry.plusOnes || 0,
       plusOnesNames: [],
       qrCode: entry.qrCode,
       status: entry.status,
