@@ -2903,6 +2903,8 @@ router.get("/api/pr/my-events", requireAuth, requirePr, async (req: Request, res
     const eventIds = assignments.map(a => a.eventId);
     
     // Get full event details with location
+    // FIX 2026-01-28: Only show active/upcoming events (not cancelled, not in the past)
+    const now = new Date();
     const eventsList = await db.select({
       id: events.id,
       name: events.name,
@@ -2917,7 +2919,20 @@ router.get("/api/pr/my-events", requireAuth, requirePr, async (req: Request, res
     })
       .from(events)
       .leftJoin(locations, eq(events.locationId, locations.id))
-      .where(inArray(events.id, eventIds))
+      .where(and(
+        inArray(events.id, eventIds),
+        or(
+          // Future events (end date is in the future)
+          gt(events.endDatetime, now),
+          // Or events ending today
+          and(
+            gte(events.endDatetime, new Date(now.getFullYear(), now.getMonth(), now.getDate())),
+            lte(events.endDatetime, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
+          )
+        ),
+        // Not cancelled
+        not(eq(events.status, 'cancelled'))
+      ))
       .orderBy(desc(events.startDatetime));
     
     // Combine with assignment permissions
