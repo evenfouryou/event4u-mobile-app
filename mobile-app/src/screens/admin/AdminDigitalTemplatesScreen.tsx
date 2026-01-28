@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -18,7 +17,6 @@ interface AdminDigitalTemplatesScreenProps {
 
 export function AdminDigitalTemplatesScreen({ onBack }: AdminDigitalTemplatesScreenProps) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -222,7 +220,7 @@ export function AdminDigitalTemplatesScreen({ onBack }: AdminDigitalTemplatesScr
 
   if (showLoader) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-digital-templates" />
         <Loading text="Caricamento template digitali..." />
       </View>
@@ -230,7 +228,7 @@ export function AdminDigitalTemplatesScreen({ onBack }: AdminDigitalTemplatesScr
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-digital-templates" />
 
       <View style={styles.statsSection}>

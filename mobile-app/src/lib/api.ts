@@ -2021,14 +2021,14 @@ class ApiClient {
 
   async getAdminDigitalTemplates(): Promise<DigitalTicketTemplate[]> {
     try {
-      return await this.get<DigitalTicketTemplate[]>('/api/admin/digital-ticket-templates');
+      return await this.get<DigitalTicketTemplate[]>('/api/digital-templates');
     } catch {
       return [];
     }
   }
 
   async updateAdminDigitalTemplate(id: string, data: Partial<DigitalTicketTemplate>): Promise<DigitalTicketTemplate> {
-    return this.put<DigitalTicketTemplate>(`/api/admin/digital-ticket-templates/${id}`, data);
+    return this.put<DigitalTicketTemplate>(`/api/digital-templates/${id}`, data);
   }
 
   // Gestore Marketing API - Loyalty
