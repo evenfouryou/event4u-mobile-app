@@ -42,11 +42,11 @@ export default function MyQrCodes() {
   const [qrTitle, setQrTitle] = useState("");
 
   const { data: tableReservations, isLoading: loadingTables } = useQuery<TableReservation[]>({
-    queryKey: ['/api/my/table-reservations'],
+    queryKey: ['/api/public/account/table-reservations'],
   });
 
   const { data: guestListEntries, isLoading: loadingLists } = useQuery<GuestListEntry[]>({
-    queryKey: ['/api/my/guest-list-entries'],
+    queryKey: ['/api/public/account/list-entries'],
   });
 
   const showQrCode = (qrCode: string, title: string) => {
@@ -146,7 +146,7 @@ export default function MyQrCodes() {
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            <span>{format(new Date(reservation.eventDate), "EEEE d MMMM yyyy", { locale: it })}</span>
+                            <span>{reservation.eventDate ? format(new Date(reservation.eventDate), "EEEE d MMMM yyyy", { locale: it }) : 'Data da confermare'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Table2 className="w-4 h-4" />
@@ -210,7 +210,7 @@ export default function MyQrCodes() {
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            <span>{format(new Date(entry.eventDate), "EEEE d MMMM yyyy", { locale: it })}</span>
+                            <span>{entry.eventDate ? format(new Date(entry.eventDate), "EEEE d MMMM yyyy", { locale: it }) : 'Data da confermare'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4" />

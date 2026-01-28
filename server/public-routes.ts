@@ -4227,56 +4227,94 @@ router.get("/api/public/account/guest-entries", async (req, res) => {
   }
 });
 
-// Ottieni prenotazioni tavoli per il cliente autenticato
+// Ottieni prenotazioni tavoli per il cliente autenticato (con QR code partecipante)
 router.get("/api/public/account/table-reservations", async (req, res) => {
   try {
     const customer = await getAuthenticatedCustomer(req);
-    if (!customer || !customer.id) {
+    if (!customer) {
       return res.status(401).json({ message: "Non autenticato" });
     }
 
-    const reservations = await db
+    console.log("[PUBLIC-TABLE] Searching for customer:", { id: customer.id, phone: customer.phone, email: customer.email });
+
+    const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    
+    // Build conditions to find participant entries
+    const conditions: any[] = [];
+    
+    if (customer.id) {
+      conditions.push(eq(tableBookingParticipants.linkedCustomerId, customer.id));
+    }
+    if (customer.userId) {
+      conditions.push(eq(tableBookingParticipants.linkedUserId, customer.userId));
+    }
+    if (customer.email) {
+      conditions.push(eq(tableBookingParticipants.email, customer.email));
+      conditions.push(eq(tableBookingParticipants.email, customer.email.toLowerCase()));
+    }
+    if (customer.phone) {
+      const phoneDigits = normalizePhone(customer.phone);
+      conditions.push(eq(tableBookingParticipants.phone, customer.phone));
+      conditions.push(eq(tableBookingParticipants.phone, phoneDigits));
+      conditions.push(eq(tableBookingParticipants.phone, '+39' + phoneDigits));
+      if (phoneDigits.startsWith('39') && phoneDigits.length > 10) {
+        conditions.push(eq(tableBookingParticipants.phone, phoneDigits.slice(2)));
+      }
+    }
+
+    if (conditions.length === 0) {
+      console.log("[PUBLIC-TABLE] No search conditions");
+      return res.json([]);
+    }
+
+    // Find all participants matching the customer
+    const participants = await db
       .select({
-        id: tableBookings.id,
-        customerName: tableBookings.customerName,
-        guestsCount: tableBookings.guestsCount,
-        qrCode: tableBookings.qrCode,
-        qrScannedAt: tableBookings.qrScannedAt,
-        status: tableBookings.status,
-        arrivedAt: tableBookings.arrivedAt,
-        confirmedAt: tableBookings.confirmedAt,
-        depositAmount: tableBookings.depositAmount,
-        depositPaid: tableBookings.depositPaid,
-        createdAt: tableBookings.createdAt,
+        participantId: tableBookingParticipants.id,
+        bookingId: tableBookingParticipants.bookingId,
+        firstName: tableBookingParticipants.firstName,
+        lastName: tableBookingParticipants.lastName,
+        qrCode: tableBookingParticipants.qrCode,
+        isBooker: tableBookingParticipants.isBooker,
+        approvalStatus: tableBookings.approvalStatus,
         tableName: eventTables.name,
-        tableType: eventTables.tableType,
-        tableCapacity: eventTables.capacity,
-        minSpend: eventTables.minSpend,
-        eventId: events.id,
         eventName: events.name,
         eventStart: events.startDatetime,
-        eventEnd: events.endDatetime,
         locationName: locations.name,
-        locationAddress: locations.address,
       })
-      .from(tableBookings)
+      .from(tableBookingParticipants)
+      .innerJoin(tableBookings, eq(tableBookingParticipants.bookingId, tableBookings.id))
       .innerJoin(eventTables, eq(tableBookings.tableId, eventTables.id))
       .innerJoin(events, eq(tableBookings.eventId, events.id))
-      .innerJoin(locations, eq(events.locationId, locations.id))
-      .where(eq(tableBookings.customerId, customer.id))
+      .leftJoin(locations, eq(events.locationId, locations.id))
+      .where(or(...conditions))
       .orderBy(desc(events.startDatetime));
 
-    const now = new Date();
-    const upcoming = reservations.filter(r => new Date(r.eventStart) >= now && r.status !== 'cancelled');
-    const past = reservations.filter(r => new Date(r.eventStart) < now || r.status === 'cancelled');
+    console.log("[PUBLIC-TABLE] Found", participants.length, "participant entries");
 
-    res.json({
-      upcoming,
-      past,
-      total: reservations.length,
-    });
+    // De-duplicate by participantId (user might match multiple conditions)
+    const uniqueParticipants = Array.from(
+      new Map(participants.map(p => [p.participantId, p])).values()
+    );
+
+    // Map to expected format
+    const result = uniqueParticipants.map(p => ({
+      id: p.bookingId,
+      eventName: p.eventName || 'Evento',
+      eventDate: p.eventStart?.toISOString() || null,
+      tableName: p.tableName || 'Tavolo',
+      venueName: p.locationName || 'Location',
+      approvalStatus: p.approvalStatus || 'pending_approval',
+      qrCode: p.qrCode,
+      participantId: p.participantId,
+      isBooker: p.isBooker || false,
+      firstName: p.firstName,
+      lastName: p.lastName,
+    }));
+
+    res.json(result);
   } catch (error: any) {
-    console.error("[PUBLIC] Get table reservations error:", error);
+    console.error("[PUBLIC-TABLE] Error:", error);
     res.status(500).json({ message: "Errore nel caricamento prenotazioni tavoli" });
   }
 });
@@ -4369,8 +4407,13 @@ router.get("/api/public/account/list-entries", async (req, res) => {
 
     console.log("[PUBLIC-LIST] Found", entries.length, "entries");
 
+    // De-duplicate by entry id (user might match multiple conditions)
+    const uniqueEntries = Array.from(
+      new Map(entries.map(e => [e.id, e])).values()
+    );
+
     // Map to format expected by mobile app
-    const result = entries.map(entry => ({
+    const result = uniqueEntries.map(entry => ({
       id: entry.id,
       eventName: entry.eventName || 'Evento',
       eventDate: entry.eventStart?.toISOString() || null,
