@@ -848,6 +848,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Forgot password via phone (OTP) for users (gestore/PR)
+  app.post('/api/forgot-password-phone', async (req, res) => {
+    try {
+      const { phone } = req.body;
+
+      if (!phone) {
+        return res.status(400).json({ message: "Numero di telefono richiesto" });
+      }
+
+      // Normalize phone number
+      let normalizedPhone = phone.replace(/\D/g, '');
+      if (normalizedPhone.startsWith('0039')) {
+        normalizedPhone = normalizedPhone.substring(4);
+      } else if (normalizedPhone.startsWith('39') && normalizedPhone.length > 10) {
+        normalizedPhone = normalizedPhone.substring(2);
+      }
+
+      const successMessage = "Se il numero è registrato, riceverai un codice OTP per reimpostare la password.";
+
+      // Find user by phone
+      const allUsers = await db.select().from(users);
+      const user = allUsers.find(u => {
+        if (!u.phone) return false;
+        let cleanPhone = u.phone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('0039')) {
+          cleanPhone = cleanPhone.substring(4);
+        } else if (cleanPhone.startsWith('39') && cleanPhone.length > 10) {
+          cleanPhone = cleanPhone.substring(2);
+        }
+        return cleanPhone === normalizedPhone;
+      });
+
+      if (!user) {
+        console.log("[AUTH] Phone not found for user password reset:", phone);
+        return res.json({ message: successMessage });
+      }
+
+      // Generate OTP
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Store OTP in reset token field (prefixed to identify as OTP)
+      await storage.updateUser(user.id, {
+        resetPasswordToken: `OTP:${otp}`,
+        resetPasswordExpires: expiresAt,
+      });
+
+      if (isMSG91Configured()) {
+        console.log(`[AUTH] Sending password reset OTP via MSG91 to ${user.phone}`);
+        const result = await sendMSG91OTP(user.phone!, 10);
+        
+        if (!result.success) {
+          console.error(`[AUTH] MSG91 failed for user password reset: ${result.message}`);
+          return res.status(500).json({ message: "Errore nell'invio OTP. Riprova." });
+        }
+        
+        // Update with the actual OTP from MSG91
+        await storage.updateUser(user.id, {
+          resetPasswordToken: `OTP:${result.otpCode}`,
+          resetPasswordExpires: expiresAt,
+        });
+        
+        console.log(`[AUTH] User password reset OTP sent successfully via MSG91`);
+        res.json({ 
+          message: successMessage,
+          userId: user.id,
+          provider: "msg91"
+        });
+      } else {
+        // Local fallback for development
+        console.log(`[AUTH] Local user password reset OTP generated for ${user.id}: ${otp}`);
+        res.json({ 
+          message: successMessage,
+          userId: user.id,
+          provider: "local"
+        });
+      }
+    } catch (error: any) {
+      console.error("[AUTH] Forgot password phone error:", error);
+      res.status(500).json({ message: "Errore durante la richiesta. Riprova più tardi." });
+    }
+  });
+
+  // Reset password with OTP for users (gestore/PR)
+  app.post('/api/reset-password-phone', async (req, res) => {
+    try {
+      const { userId, otpCode, password } = req.body;
+
+      if (!userId || !otpCode || !password) {
+        return res.status(400).json({ message: "ID utente, codice OTP e password richiesti" });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ message: "La password deve essere di almeno 8 caratteri" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+
+      // Verify OTP
+      if (!user.resetPasswordToken?.startsWith('OTP:')) {
+        return res.status(400).json({ message: "Nessun OTP attivo. Richiedi un nuovo codice." });
+      }
+
+      const storedOtp = user.resetPasswordToken.replace('OTP:', '');
+      if (storedOtp !== otpCode) {
+        return res.status(400).json({ message: "Codice OTP non valido" });
+      }
+
+      if (user.resetPasswordExpires && new Date() > new Date(user.resetPasswordExpires)) {
+        return res.status(400).json({ message: "Codice OTP scaduto. Richiedi un nuovo codice." });
+      }
+
+      // Hash new password and clear reset token
+      const passwordHash = await bcrypt.hash(password, 10);
+      await storage.updateUser(user.id, {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      });
+
+      console.log(`[AUTH] User ${user.id} password reset via OTP successfully`);
+      res.json({ message: "Password reimpostata con successo!" });
+    } catch (error: any) {
+      console.error("[AUTH] Reset password phone error:", error);
+      res.status(500).json({ message: "Errore durante la reimpostazione. Riprova più tardi." });
+    }
+  });
+
+  // Resend OTP for user password reset
+  app.post('/api/resend-password-reset-otp', async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: "ID utente richiesto" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.phone) {
+        return res.status(400).json({ message: "Utente non trovato o nessun telefono registrato" });
+      }
+
+      // Generate new OTP
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      if (isMSG91Configured()) {
+        const result = await sendMSG91OTP(user.phone, 10);
+        if (!result.success) {
+          return res.status(500).json({ message: "Errore nell'invio OTP. Riprova." });
+        }
+        
+        await storage.updateUser(user.id, {
+          resetPasswordToken: `OTP:${result.otpCode}`,
+          resetPasswordExpires: expiresAt,
+        });
+      } else {
+        await storage.updateUser(user.id, {
+          resetPasswordToken: `OTP:${otp}`,
+          resetPasswordExpires: expiresAt,
+        });
+        console.log(`[AUTH] Resent local OTP for user ${user.id}: ${otp}`);
+      }
+
+      res.json({ message: "Nuovo codice OTP inviato!" });
+    } catch (error: any) {
+      console.error("[AUTH] Resend OTP error:", error);
+      res.status(500).json({ message: "Errore durante l'invio. Riprova più tardi." });
+    }
+  });
+
   // Unified Reset password with token - supports both users and customers
   app.post('/api/reset-password', async (req, res) => {
     try {
