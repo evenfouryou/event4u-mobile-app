@@ -427,7 +427,38 @@ class ApiClient {
   }
 
   async getMyReservations(): Promise<MyReservation[]> {
-    return this.get<MyReservation[]>('/api/my-reservations');
+    // Use the existing production endpoint that searches by clientUserId, email, and phone
+    const entries = await this.get<Array<{
+      id: string;
+      eventName: string;
+      eventDate: string;
+      listName: string;
+      venueName: string;
+      qrCode: string | null;
+      status: string;
+      firstName: string;
+      lastName: string;
+    }>>('/api/my/guest-list-entries');
+    
+    // Map to MyReservation format
+    return entries.map(entry => ({
+      id: entry.id,
+      eventId: '',
+      eventName: entry.eventName,
+      eventDate: entry.eventDate,
+      eventEndDate: null,
+      locationName: entry.venueName,
+      locationAddress: null,
+      listName: entry.listName,
+      firstName: entry.firstName,
+      lastName: entry.lastName,
+      plusOnes: 0,
+      plusOnesNames: [],
+      qrCode: entry.qrCode,
+      status: entry.status,
+      checkedInAt: null,
+      createdAt: null
+    }));
   }
 
   async getTicketById(id: string): Promise<Ticket> {

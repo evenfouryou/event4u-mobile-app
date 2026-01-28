@@ -3329,14 +3329,29 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
 
     const { eventLists, listEntries: listEntriesTable } = await import("@shared/schema");
 
-    // Find all list entries linked to this user
+    // Build conditions to find list entries by clientUserId, email, or phone
+    const conditions = [eq(listEntriesTable.clientUserId, user.id)];
+    if (user.email) {
+      conditions.push(eq(listEntriesTable.email, user.email));
+    }
+    if (user.phone) {
+      conditions.push(eq(listEntriesTable.phone, user.phone));
+      // Also try normalized phone formats
+      if (user.phone.startsWith('+39')) {
+        conditions.push(eq(listEntriesTable.phone, user.phone.slice(3)));
+      } else if (!user.phone.startsWith('+')) {
+        conditions.push(eq(listEntriesTable.phone, '+39' + user.phone));
+      }
+    }
+
+    // Find all list entries linked to this user by clientUserId, email, or phone
     const userEntries = await db.select({
       entry: listEntriesTable,
       list: eventLists,
     })
       .from(listEntriesTable)
       .innerJoin(eventLists, eq(listEntriesTable.listId, eventLists.id))
-      .where(eq(listEntriesTable.clientUserId, user.id));
+      .where(or(...conditions));
 
     // Enrich with event data
     const entries = await Promise.all(userEntries.map(async ({ entry, list }) => {

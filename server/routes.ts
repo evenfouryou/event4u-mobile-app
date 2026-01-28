@@ -9371,17 +9371,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userEmail = req.user.email;
       const userPhone = req.user.phone;
       
+      console.log('[my-reservations] Searching for user:', { userId, userEmail, userPhone });
+      
       // Get all list entries for this user by clientUserId, email, OR phone match
       const conditions = [eq(listEntries.clientUserId, String(userId))];
       if (userEmail) {
         conditions.push(eq(listEntries.email, userEmail));
       }
       if (userPhone) {
+        // Also try normalized phone formats
         conditions.push(eq(listEntries.phone, userPhone));
+        // Try without country code prefix
+        if (userPhone.startsWith('+39')) {
+          conditions.push(eq(listEntries.phone, userPhone.slice(3)));
+        } else if (!userPhone.startsWith('+')) {
+          conditions.push(eq(listEntries.phone, '+39' + userPhone));
+        }
       }
       
       const userEntries = await db.select().from(listEntries)
         .where(or(...conditions));
+      
+      console.log('[my-reservations] Found entries:', userEntries.length);
       
       // Get related events and lists
       const eventIds = [...new Set(userEntries.map(e => e.eventId))];
