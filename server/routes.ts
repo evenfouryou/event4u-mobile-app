@@ -9369,15 +9369,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const userEmail = req.user.email;
+      const userPhone = req.user.phone;
       
-      // Get all list entries for this user by clientUserId OR email match
+      // Get all list entries for this user by clientUserId, email, OR phone match
+      const conditions = [eq(listEntries.clientUserId, String(userId))];
+      if (userEmail) {
+        conditions.push(eq(listEntries.email, userEmail));
+      }
+      if (userPhone) {
+        conditions.push(eq(listEntries.phone, userPhone));
+      }
+      
       const userEntries = await db.select().from(listEntries)
-        .where(
-          or(
-            eq(listEntries.clientUserId, String(userId)),
-            userEmail ? eq(listEntries.email, userEmail) : sql`false`
-          )
-        );
+        .where(or(...conditions));
       
       // Get related events and lists
       const eventIds = [...new Set(userEntries.map(e => e.eventId))];
