@@ -1629,6 +1629,26 @@ router.get("/api/siae/environment", requireAuth, async (req: Request, res: Respo
 
 // ==================== TAB.1-5 Reference Tables (Super Admin) ====================
 
+// Admin SIAE Tables endpoint (for mobile app)
+router.get("/api/admin/siae/tables", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const genres = await siaeStorage.getSiaeEventGenres();
+    // Format data for mobile app
+    const tables = genres.map((genre: any) => ({
+      id: genre.code,
+      code: genre.code,
+      tableName: genre.description || genre.code,
+      description: `Genere SIAE: ${genre.description || genre.code}`,
+      category: genre.category || 'generale',
+      isActive: genre.isActive !== false,
+      lastUpdated: new Date().toISOString(),
+    }));
+    res.json(tables);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Event Genres (TAB.1)
 router.get("/api/siae/event-genres", async (req: Request, res: Response) => {
   try {

@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
+import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { SIAETable as APISIAETable } from '@/lib/api';
+import api from '@/lib/api';
 
 interface AdminSIAETablesScreenProps {
   onBack: () => void;
@@ -32,7 +32,6 @@ type FilterType = 'all' | 'active' | 'inactive';
 
 export function AdminSIAETablesScreen({ onBack }: AdminSIAETablesScreenProps) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -185,15 +184,15 @@ export function AdminSIAETablesScreen({ onBack }: AdminSIAETablesScreenProps) {
 
   if (showLoader) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeArea edges={['bottom']} style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-siae-tables" />
         <Loading text="Caricamento tabelle SIAE..." />
-      </View>
+      </SafeArea>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeArea edges={['bottom']} style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-siae-tables" />
 
       <View style={styles.statsSection}>
@@ -300,7 +299,7 @@ export function AdminSIAETablesScreen({ onBack }: AdminSIAETablesScreenProps) {
           </Text>
         </View>
       )}
-    </View>
+    </SafeArea>
   );
 }
 
