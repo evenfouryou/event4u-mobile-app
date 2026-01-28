@@ -20,6 +20,7 @@ interface ForgotPasswordScreenProps {
 export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreenProps) {
   const [mode, setMode] = useState<ResetMode>('email');
   const [email, setEmail] = useState('');
+  const [phonePrefix, setPhonePrefix] = useState('+39');
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -73,7 +74,8 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
     try {
       setLoading(true);
       setError('');
-      const response = await api.post<{ customerId?: string; message: string }>('/api/public/customers/forgot-password-phone', { phone });
+      const fullPhone = phonePrefix + phone.replace(/^0+/, '');
+      const response = await api.post<{ customerId?: string; message: string }>('/api/public/customers/forgot-password-phone', { phone: fullPhone });
       
       // If customerId is returned, phone was found - proceed to OTP step
       if (response.customerId) {
@@ -296,16 +298,36 @@ export function ForgotPasswordScreen({ onBack, onSuccess }: ForgotPasswordScreen
               </>
             ) : phoneStep === 'phone' ? (
               <>
-                <Input
-                  label="Numero di Telefono"
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="+39 123 456 7890"
-                  keyboardType="phone-pad"
-                  autoCapitalize="none"
-                  leftIcon="call-outline"
-                  testID="input-phone"
-                />
+                <Text style={styles.inputLabel}>Numero di Telefono</Text>
+                <View style={styles.phoneRow}>
+                  <View style={styles.prefixContainer}>
+                    <Pressable
+                      style={styles.prefixSelector}
+                      onPress={() => {
+                        const prefixes = ['+39', '+41', '+33', '+49', '+44', '+1', '+34', '+43', '+32', '+31'];
+                        const currentIndex = prefixes.indexOf(phonePrefix);
+                        const nextIndex = (currentIndex + 1) % prefixes.length;
+                        setPhonePrefix(prefixes[nextIndex]);
+                        triggerHaptic('selection');
+                      }}
+                      testID="button-phone-prefix"
+                    >
+                      <Text style={styles.prefixText}>{phonePrefix}</Text>
+                      <Ionicons name="chevron-down" size={16} color={staticColors.mutedForeground} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.phoneInputContainer}>
+                    <Input
+                      value={phone}
+                      onChangeText={setPhone}
+                      placeholder="123 456 7890"
+                      keyboardType="phone-pad"
+                      autoCapitalize="none"
+                      leftIcon="call-outline"
+                      testID="input-phone"
+                    />
+                  </View>
+                </View>
 
                 <Button
                   variant="golden"
@@ -553,6 +575,37 @@ const styles = StyleSheet.create({
   successActions: {
     marginTop: spacing.xxl,
     width: '100%',
+  },
+  inputLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+    color: staticColors.foreground,
+    marginBottom: spacing.xs,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  prefixContainer: {
+    width: 80,
+  },
+  prefixSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    backgroundColor: staticColors.secondary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.xs,
+  },
+  prefixText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '600',
+    color: staticColors.foreground,
+  },
+  phoneInputContainer: {
+    flex: 1,
   },
 });
 

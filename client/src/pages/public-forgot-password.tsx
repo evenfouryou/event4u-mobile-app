@@ -28,6 +28,7 @@ export default function PublicForgotPassword() {
   
   const [mode, setMode] = useState<ResetMode>('email');
   const [email, setEmail] = useState("");
+  const [phonePrefix, setPhonePrefix] = useState("+39");
   const [phone, setPhone] = useState("");
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [otpCode, setOtpCode] = useState("");
@@ -85,7 +86,8 @@ export default function PublicForgotPassword() {
     triggerHaptic('medium');
 
     try {
-      const response: any = await apiRequest('POST', '/api/public/customers/forgot-password-phone', { phone });
+      const fullPhone = phonePrefix + phone.replace(/^0+/, '');
+      const response: any = await apiRequest('POST', '/api/public/customers/forgot-password-phone', { phone: fullPhone });
       
       // If customerId is returned, phone was found - proceed to OTP step
       if (response.customerId) {
@@ -330,21 +332,41 @@ export default function PublicForgotPassword() {
 
                           <div className="space-y-2">
                             <Label htmlFor="phone-desktop">Numero di telefono</Label>
-                            <div className="relative">
-                              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <Input
-                                id="phone-desktop"
-                                type="tel"
-                                placeholder="Inserisci il tuo numero"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                required
+                            <div className="flex gap-2">
+                              <select
+                                value={phonePrefix}
+                                onChange={(e) => setPhonePrefix(e.target.value)}
+                                className="w-24 h-10 px-2 text-sm border rounded-md bg-background border-input"
+                                data-testid="select-phone-prefix"
                                 disabled={isLoading}
-                                data-testid="input-phone"
-                                className="pl-10"
-                              />
+                              >
+                                <option value="+39">+39 IT</option>
+                                <option value="+41">+41 CH</option>
+                                <option value="+33">+33 FR</option>
+                                <option value="+49">+49 DE</option>
+                                <option value="+44">+44 UK</option>
+                                <option value="+1">+1 US</option>
+                                <option value="+34">+34 ES</option>
+                                <option value="+43">+43 AT</option>
+                                <option value="+32">+32 BE</option>
+                                <option value="+31">+31 NL</option>
+                              </select>
+                              <div className="relative flex-1">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                  <Phone className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <Input
+                                  id="phone-desktop"
+                                  type="tel"
+                                  placeholder="Inserisci il tuo numero"
+                                  value={phone}
+                                  onChange={(e) => setPhone(e.target.value)}
+                                  required
+                                  disabled={isLoading}
+                                  data-testid="input-phone"
+                                  className="pl-10"
+                                />
+                              </div>
                             </div>
                           </div>
 
@@ -658,21 +680,41 @@ export default function PublicForgotPassword() {
                       <Label htmlFor="phone" className="text-muted-foreground text-base font-medium">
                         Numero di telefono
                       </Label>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <Phone className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="Inserisci il tuo numero"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          required
+                      <div className="flex gap-2">
+                        <select
+                          value={phonePrefix}
+                          onChange={(e) => setPhonePrefix(e.target.value)}
+                          className="w-24 h-14 px-3 text-base border rounded-xl bg-muted/50 border-border text-foreground"
+                          data-testid="select-phone-prefix-mobile"
                           disabled={isLoading}
-                          data-testid="input-phone-mobile"
-                          className="h-14 pl-12 pr-4 text-base bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl"
-                        />
+                        >
+                          <option value="+39">+39 IT</option>
+                          <option value="+41">+41 CH</option>
+                          <option value="+33">+33 FR</option>
+                          <option value="+49">+49 DE</option>
+                          <option value="+44">+44 UK</option>
+                          <option value="+1">+1 US</option>
+                          <option value="+34">+34 ES</option>
+                          <option value="+43">+43 AT</option>
+                          <option value="+32">+32 BE</option>
+                          <option value="+31">+31 NL</option>
+                        </select>
+                        <div className="relative flex-1">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <Phone className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="Inserisci il tuo numero"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            required
+                            disabled={isLoading}
+                            data-testid="input-phone-mobile"
+                            className="h-14 pl-12 pr-4 text-base bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl"
+                          />
+                        </div>
                       </div>
                     </div>
 
