@@ -251,7 +251,6 @@ export function AdminDashboard({
           style={[styles.headerLogo, { tintColor: '#FFFFFF' }]}
           resizeMode="contain"
         />
-        <Badge variant="destructive">Admin</Badge>
         <View style={styles.headerRight}>
           {onSwitchToClient && (
             <Pressable

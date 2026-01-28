@@ -1858,20 +1858,34 @@ class ApiClient {
     return this.get<AdminEventDetail>(`/api/events/${eventId}`);
   }
 
-  async getNameChanges(): Promise<NameChangeRequest[]> {
+  async getNameChanges(params?: { companyId?: string; eventId?: string; status?: string; page?: number }): Promise<{ nameChanges: SIAENameChange[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
     try {
-      return await this.get<NameChangeRequest[]>('/api/admin/name-changes');
+      const queryParams = new URLSearchParams();
+      if (params?.companyId) queryParams.append('companyId', params.companyId);
+      if (params?.eventId) queryParams.append('eventId', params.eventId);
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', String(params.page));
+      const query = queryParams.toString();
+      return await this.get<{ nameChanges: SIAENameChange[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(`/api/siae/admin/name-changes${query ? `?${query}` : ''}`);
     } catch {
-      return [];
+      return { nameChanges: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } };
     }
   }
 
-  async approveNameChangeAdmin(id: string): Promise<{ success: boolean }> {
-    return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/approve`);
+  async getNameChangesFilters(): Promise<{ companies: { id: string; name: string }[]; events: { id: string; name: string; companyId: string }[]; statuses: string[] }> {
+    try {
+      return await this.get('/api/siae/admin/name-changes/filters');
+    } catch {
+      return { companies: [], events: [], statuses: [] };
+    }
   }
 
-  async rejectNameChangeAdmin(id: string): Promise<{ success: boolean }> {
-    return this.post<{ success: boolean }>(`/api/admin/name-changes/${id}/reject`);
+  async approveNameChange(id: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/siae/admin/name-changes/${id}/process`, { action: 'approve' });
+  }
+
+  async rejectNameChange(id: string, rejectionReason?: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/api/siae/admin/name-changes/${id}/process`, { action: 'reject', rejectionReason });
   }
 
   // Admin Billing API
@@ -2704,6 +2718,44 @@ export interface NameChangeRequest {
   createdAt?: string;
   processedAt?: string;
   processedBy?: string;
+}
+
+export interface SIAENameChange {
+  id: string;
+  originalTicketId: string;
+  newTicketId: string | null;
+  newFirstName: string;
+  newLastName: string;
+  newEmail: string | null;
+  fee: string | null;
+  paymentStatus: string;
+  status: 'pending' | 'completed' | 'rejected';
+  createdAt: string;
+  processedAt: string | null;
+  sigilloFiscaleOriginale: string | null;
+  ticket: {
+    id: string;
+    ticketCode: string;
+    participantFirstName: string | null;
+    participantLastName: string | null;
+    ticketedEventId: string;
+    sigilloFiscale: string | null;
+  };
+  ticketedEvent: {
+    id: string;
+    eventId: string;
+    companyId: string;
+    nameChangeFee: string | null;
+  };
+  event: {
+    id: string;
+    name: string;
+    startDatetime: string;
+  };
+  company: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface BillingStats {

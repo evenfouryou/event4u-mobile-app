@@ -1,34 +1,42 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
+import { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
-import { Card } from '@/components/Card';
+import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { NameChangeRequest } from '@/lib/api';
+import api, { SIAENameChange } from '@/lib/api';
 
-type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
+type FilterType = 'all' | 'pending' | 'completed' | 'rejected';
 
 interface AdminNameChangesScreenProps {
   onBack: () => void;
 }
 
+interface FiltersData {
+  companies: { id: string; name: string }[];
+  events: { id: string; name: string; companyId: string }[];
+  statuses: string[];
+}
+
 export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) {
   const { colors } = useTheme();
-  const [requests, setRequests] = useState<NameChangeRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<NameChangeRequest[]>([]);
+  const [requests, setRequests] = useState<SIAENameChange[]>([]);
+  const [filtersData, setFiltersData] = useState<FiltersData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ page: 1, total: 0 });
 
   useEffect(() => {
-    loadNameChanges();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -41,15 +49,16 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
     return () => clearTimeout(timeout);
   }, [isLoading]);
 
-  useEffect(() => {
-    filterRequests();
-  }, [requests, activeFilter]);
-
-  const loadNameChanges = async () => {
+  const loadData = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getNameChanges();
-      setRequests(data);
+      const [nameChangesRes, filtersRes] = await Promise.all([
+        api.getNameChanges({ status: activeFilter === 'all' ? undefined : activeFilter }),
+        api.getNameChangesFilters(),
+      ]);
+      setRequests(nameChangesRes.nameChanges);
+      setPagination({ page: nameChangesRes.pagination.page, total: nameChangesRes.pagination.total });
+      setFiltersData(filtersRes);
     } catch (error) {
       console.error('Error loading name changes:', error);
       setRequests([]);
@@ -58,17 +67,29 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
     }
   };
 
-  const filterRequests = () => {
-    if (activeFilter === 'all') {
-      setFilteredRequests(requests);
-    } else {
-      setFilteredRequests(requests.filter(r => r.status === activeFilter));
+  const reloadWithFilters = async () => {
+    try {
+      setIsLoading(true);
+      const params: { companyId?: string; status?: string } = {};
+      if (selectedCompanyId) params.companyId = selectedCompanyId;
+      if (activeFilter !== 'all') params.status = activeFilter;
+      const res = await api.getNameChanges(params);
+      setRequests(res.nameChanges);
+      setPagination({ page: res.pagination.page, total: res.pagination.total });
+    } catch (error) {
+      console.error('Error reloading:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    reloadWithFilters();
+  }, [activeFilter, selectedCompanyId]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadNameChanges();
+    await reloadWithFilters();
     setRefreshing(false);
   };
 
@@ -77,7 +98,7 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
       setProcessingId(id);
       triggerHaptic('light');
       await api.approveNameChange(id);
-      await loadNameChanges();
+      await reloadWithFilters();
       triggerHaptic('success');
     } catch (error) {
       console.error('Error approving name change:', error);
@@ -92,7 +113,7 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
       setProcessingId(id);
       triggerHaptic('light');
       await api.rejectNameChange(id);
-      await loadNameChanges();
+      await reloadWithFilters();
       triggerHaptic('success');
     } catch (error) {
       console.error('Error rejecting name change:', error);
@@ -108,8 +129,6 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
       day: 'numeric',
       month: 'short',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -117,8 +136,8 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
     switch (status) {
       case 'pending':
         return <Badge variant="warning">In attesa</Badge>;
-      case 'approved':
-        return <Badge variant="success">Approvato</Badge>;
+      case 'completed':
+        return <Badge variant="success">Completato</Badge>;
       case 'rejected':
         return <Badge variant="destructive">Rifiutato</Badge>;
       default:
@@ -126,15 +145,40 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
     }
   };
 
+  const getPaymentStatusBadge = (status: string) => {
+    switch (status) {
+      case 'not_required':
+        return <Badge variant="outline">Non richiesto</Badge>;
+      case 'pending':
+        return <Badge variant="warning">In attesa</Badge>;
+      case 'paid':
+        return <Badge variant="success">Pagato</Badge>;
+      case 'refunded':
+        return <Badge variant="destructive">Rimborsato</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
   const filters: { id: FilterType; label: string }[] = [
     { id: 'all', label: 'Tutti' },
     { id: 'pending', label: 'In attesa' },
-    { id: 'approved', label: 'Approvati' },
+    { id: 'completed', label: 'Completati' },
     { id: 'rejected', label: 'Rifiutati' },
   ];
 
-  const renderRequest = ({ item }: { item: NameChangeRequest }) => {
+  const stats = useMemo(() => {
+    return {
+      total: pagination.total,
+      pending: requests.filter(r => r.status === 'pending').length,
+      completed: requests.filter(r => r.status === 'completed').length,
+      rejected: requests.filter(r => r.status === 'rejected').length,
+    };
+  }, [requests, pagination]);
+
+  const renderRequest = ({ item }: { item: SIAENameChange }) => {
     const isProcessing = processingId === item.id;
+    const fee = parseFloat(item.fee || '0');
 
     return (
       <Card style={styles.requestCard} testID={`name-change-${item.id}`}>
@@ -144,23 +188,23 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
           </View>
           <View style={styles.requestInfo}>
             <View style={styles.nameChangeRow}>
-              <Text style={styles.originalName} numberOfLines={1}>{item.originalFirstName} {item.originalLastName}</Text>
+              <Text style={styles.originalName} numberOfLines={1}>
+                {item.ticket.participantFirstName} {item.ticket.participantLastName}
+              </Text>
               <Ionicons name="arrow-forward" size={16} color={colors.mutedForeground} />
-              <Text style={styles.newName} numberOfLines={1}>{item.newFirstName} {item.newLastName}</Text>
+              <Text style={styles.newName} numberOfLines={1}>
+                {item.newFirstName} {item.newLastName}
+              </Text>
             </View>
             <View style={styles.requestMeta}>
-              {item.eventName && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.metaText}>{item.eventName}</Text>
-                </View>
-              )}
-              {item.requesterName && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="person-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={styles.metaText}>{item.requesterName}</Text>
-                </View>
-              )}
+              <View style={styles.metaItem}>
+                <Ionicons name="business-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>{item.company.name}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.metaText}>{item.event.name}</Text>
+              </View>
             </View>
           </View>
           {getStatusBadge(item.status)}
@@ -171,18 +215,31 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
         <View style={styles.requestDetails}>
           <View style={styles.detailRow}>
             <Ionicons name="ticket-outline" size={16} color={colors.mutedForeground} />
-            <Text style={styles.detailText}>Biglietto: {item.ticketCode || '-'}</Text>
+            <Text style={styles.detailText}>Biglietto: {item.ticket.ticketCode}</Text>
           </View>
-          {item.createdAt && (
+          {item.sigilloFiscaleOriginale || item.ticket.sigilloFiscale ? (
             <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.detailText}>Richiesto: {formatDate(item.createdAt)}</Text>
+              <Ionicons name="shield-checkmark-outline" size={16} color={colors.mutedForeground} />
+              <Text style={styles.detailText}>Sigillo: {item.sigilloFiscaleOriginale || item.ticket.sigilloFiscale}</Text>
             </View>
-          )}
-          {item.reason && (
-            <View style={styles.detailRow}>
-              <Ionicons name="chatbubble-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.detailText} numberOfLines={2}>Motivo: {item.reason}</Text>
+          ) : null}
+          <View style={styles.detailRow}>
+            <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
+            <Text style={styles.detailText}>Richiesto: {formatDate(item.createdAt)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color={colors.mutedForeground} />
+            <Text style={styles.detailText}>Evento: {formatDate(item.event.startDatetime)}</Text>
+          </View>
+          {fee > 0 && (
+            <View style={styles.feeRow}>
+              <View style={styles.detailRow}>
+                <Ionicons name="card-outline" size={16} color={staticColors.success} />
+                <Text style={[styles.detailText, { color: staticColors.success, fontWeight: '600' }]}>
+                  Commissione: €{fee.toFixed(2)}
+                </Text>
+              </View>
+              {getPaymentStatusBadge(item.paymentStatus)}
             </View>
           )}
         </View>
@@ -225,13 +282,12 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
         {item.status !== 'pending' && item.processedAt && (
           <View style={styles.processedInfo}>
             <Ionicons 
-              name={item.status === 'approved' ? 'checkmark-circle' : 'close-circle'} 
+              name={item.status === 'completed' ? 'checkmark-circle' : 'close-circle'} 
               size={16} 
-              color={item.status === 'approved' ? staticColors.teal : staticColors.destructive} 
+              color={item.status === 'completed' ? staticColors.teal : staticColors.destructive} 
             />
             <Text style={styles.processedText}>
-              {item.status === 'approved' ? 'Approvato' : 'Rifiutato'} il {formatDate(item.processedAt)}
-              {item.processedBy && ` da ${item.processedBy}`}
+              {item.status === 'completed' ? 'Completato' : 'Rifiutato'} il {formatDate(item.processedAt)}
             </Text>
           </View>
         )}
@@ -250,7 +306,38 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
 
       <View style={styles.titleContainer}>
         <Ionicons name="swap-horizontal-outline" size={24} color={staticColors.primary} />
-        <Text style={styles.screenTitle}>Richieste Cambio Nome</Text>
+        <Text style={styles.screenTitle}>Cambi Nominativo</Text>
+      </View>
+
+      <View style={styles.statsGrid}>
+        <GlassCard style={styles.statCard} testID="stat-total">
+          <View style={[styles.statIcon, { backgroundColor: `${staticColors.primary}20` }]}>
+            <Ionicons name="people" size={18} color={staticColors.primary} />
+          </View>
+          <Text style={styles.statValue}>{stats.total}</Text>
+          <Text style={styles.statLabel}>Totale</Text>
+        </GlassCard>
+        <GlassCard style={styles.statCard} testID="stat-pending">
+          <View style={[styles.statIcon, { backgroundColor: `${staticColors.warning}20` }]}>
+            <Ionicons name="time" size={18} color={staticColors.warning} />
+          </View>
+          <Text style={[styles.statValue, { color: staticColors.warning }]}>{stats.pending}</Text>
+          <Text style={styles.statLabel}>In Attesa</Text>
+        </GlassCard>
+        <GlassCard style={styles.statCard} testID="stat-completed">
+          <View style={[styles.statIcon, { backgroundColor: `${staticColors.success}20` }]}>
+            <Ionicons name="checkmark-circle" size={18} color={staticColors.success} />
+          </View>
+          <Text style={[styles.statValue, { color: staticColors.success }]}>{stats.completed}</Text>
+          <Text style={styles.statLabel}>Completati</Text>
+        </GlassCard>
+        <GlassCard style={styles.statCard} testID="stat-rejected">
+          <View style={[styles.statIcon, { backgroundColor: `${staticColors.destructive}20` }]}>
+            <Ionicons name="close-circle" size={18} color={staticColors.destructive} />
+          </View>
+          <Text style={[styles.statValue, { color: staticColors.destructive }]}>{stats.rejected}</Text>
+          <Text style={styles.statLabel}>Rifiutati</Text>
+        </GlassCard>
       </View>
 
       <View style={styles.filtersContainer}>
@@ -287,9 +374,9 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
 
       {showLoader ? (
         <Loading text="Caricamento richieste..." />
-      ) : filteredRequests.length > 0 ? (
+      ) : requests.length > 0 ? (
         <FlatList
-          data={filteredRequests}
+          data={requests}
           renderItem={renderRequest}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -310,7 +397,7 @@ export function AdminNameChangesScreen({ onBack }: AdminNameChangesScreenProps) 
           <Text style={styles.emptyText}>
             {activeFilter === 'pending' 
               ? 'Non ci sono richieste in attesa'
-              : 'Le richieste di cambio nome appariranno qui'}
+              : 'Le richieste di cambio nominativo appariranno qui'}
           </Text>
         </View>
       )}
@@ -334,6 +421,35 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
     color: staticColors.foreground,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.sm,
+  },
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '700',
+    color: staticColors.foreground,
+  },
+  statLabel: {
+    fontSize: typography.fontSize.xs,
+    color: staticColors.mutedForeground,
+    marginTop: 2,
   },
   filtersContainer: {
     paddingBottom: spacing.sm,
@@ -432,6 +548,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   actionButtons: {
     flexDirection: 'row',
