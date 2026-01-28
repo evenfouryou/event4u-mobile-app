@@ -542,6 +542,24 @@
   .stock-critical {
     @apply bg-gradient-to-r from-red-500 to-rose-400;
   }
+  
+  /* Responsive container with consistent max-width and padding */
+  .container-responsive {
+    @apply mx-auto px-4;
+    max-width: 1280px;
+  }
+  
+  @media (min-width: 768px) {
+    .container-responsive {
+      @apply px-6;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .container-responsive {
+      @apply px-8;
+    }
+  }
 }
 
 /**
@@ -640,5 +658,39 @@
   /* Teal text utility */
   .text-teal {
     color: hsl(174, 100%, 41%);
+  }
+  
+  /* Safe area inset utilities for notch support */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  
+  .py-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .p-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 }

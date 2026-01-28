@@ -142,8 +142,9 @@ export function MobileBottomNav() {
   }
 
   return (
-    <nav className="mobile-nav md:hidden" data-testid="mobile-bottom-nav">
-      <div className="flex items-end justify-around h-20 px-2 pt-2">
+    <nav className="mobile-nav pb-safe md:hidden" data-testid="mobile-bottom-nav">
+      {/* Container with safe area awareness - ensures FAB doesn't overlap */}
+      <div className="relative flex items-center justify-around px-2 py-3 min-h-[80px]">
         {navItems.map((item, index) => {
           const isActive = location === item.href || 
             (item.href !== "/" && location.startsWith(item.href));
@@ -155,12 +156,17 @@ export function MobileBottomNav() {
                 key={item.href + index}
                 href={item.href}
                 data-testid={`nav-fab-${item.label.toLowerCase()}`}
-                className="relative -mt-6"
+                className="flex flex-col items-center flex-shrink-0 relative"
               >
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg glow-golden transition-transform active:scale-95">
+                {/* FAB Button - uses transform to pop above nav bar without affecting layout */}
+                <div 
+                  className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg glow-golden transition-transform active:scale-95 z-10" 
+                  style={{ transform: 'translateY(-8px)' }}
+                  aria-label={item.label}
+                >
                   <Icon className="h-6 w-6 text-black" />
                 </div>
-                <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-primary whitespace-nowrap">
+                <span className="text-[10px] font-medium text-primary text-center leading-tight mt-1">
                   {item.label}
                 </span>
               </Link>
@@ -175,7 +181,7 @@ export function MobileBottomNav() {
             >
               <div
                 className={cn(
-                  "flex flex-col items-center justify-center min-w-[56px] py-2 transition-all duration-200",
+                  "flex flex-col items-center justify-center min-h-[44px] min-w-[56px] py-2 transition-all duration-200",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground"
@@ -187,7 +193,7 @@ export function MobileBottomNav() {
                 )}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className="text-[10px] font-medium text-center leading-tight">{item.label}</span>
               </div>
             </Link>
           );

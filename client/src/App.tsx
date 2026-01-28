@@ -160,6 +160,7 @@ function Router() {
     );
   }
 
+  // Sidebar width configuration - Shadcn sidebar handles responsive collapse automatically
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -313,15 +314,15 @@ function Router() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b gap-2">
+          <header className="flex items-center justify-between flex-wrap gap-3 p-2 md:p-4 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <SmartCardStatus data-testid="smart-card-status" />
               <LanguageSelector />
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 overflow-auto pb-20 md:pb-0">
+          <main className="flex-1 overflow-auto px-3 md:px-6 pb-20 md:pb-0">
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/beverage" component={Beverage} />
