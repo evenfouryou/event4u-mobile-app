@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
+import { spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, ThemeColors } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { AdminSIAEMonitorStats, AdminSIAEActivity, SIAEReportStatus } from '@/lib/api';
 
@@ -34,6 +34,8 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const dynamicStyles = createDynamicStyles(colors);
 
   useEffect(() => {
     loadData();
@@ -140,27 +142,27 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
   ];
 
   const renderActivity = ({ item }: { item: AdminSIAEActivity }) => (
-    <Card style={styles.activityCard} testID={`activity-${item.id}`}>
-      <View style={styles.activityContent}>
-        <View style={styles.activityHeader}>
-          <Text style={styles.gestoreName}>{item.gestoreName}</Text>
+    <Card style={dynamicStyles.activityCard} testID={`activity-${item.id}`}>
+      <View style={dynamicStyles.activityContent}>
+        <View style={dynamicStyles.activityHeader}>
+          <Text style={dynamicStyles.gestoreName}>{item.gestoreName}</Text>
           {getStatusBadge(item.status)}
         </View>
-        <View style={styles.activityDetails}>
-          <Badge variant="outline" style={styles.typeBadge}>
+        <View style={dynamicStyles.activityDetails}>
+          <Badge variant="outline" style={dynamicStyles.typeBadge}>
             {getReportTypeLabel(item.reportType)}
           </Badge>
           {item.eventName && (
-            <Text style={styles.eventName} numberOfLines={1}>{item.eventName}</Text>
+            <Text style={dynamicStyles.eventName} numberOfLines={1}>{item.eventName}</Text>
           )}
         </View>
-        <Text style={styles.timestamp}>{formatDate(item.timestamp)}</Text>
+        <Text style={dynamicStyles.timestamp}>{formatDate(item.timestamp)}</Text>
       </View>
     </Card>
   );
 
   return (
-    <SafeArea edges={['bottom']} style={styles.container}>
+    <SafeArea edges={['bottom']} style={dynamicStyles.container}>
       <Header
         showLogo
         showBack
@@ -172,48 +174,48 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
         <Loading text="Caricamento monitoraggio SIAE..." />
       ) : (
         <>
-          <View style={styles.statsSection}>
-            <Text style={styles.title}>Monitoraggio SIAE</Text>
-            <View style={styles.statsGrid}>
-              <GlassCard style={styles.statCard} testID="stat-total-events">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.primary}20` }]}>
-                  <Ionicons name="calendar" size={20} color={staticColors.primary} />
+          <View style={dynamicStyles.statsSection}>
+            <Text style={dynamicStyles.title}>Monitoraggio SIAE</Text>
+            <View style={dynamicStyles.statsGrid}>
+              <GlassCard style={dynamicStyles.statCard} testID="stat-total-events">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.primary}20` }]}>
+                  <Ionicons name="calendar" size={20} color={colors.primary} />
                 </View>
-                <Text style={styles.statValue}>{stats.totalEvents}</Text>
-                <Text style={styles.statLabel}>Eventi Totali</Text>
+                <Text style={dynamicStyles.statValue}>{stats.totalEvents}</Text>
+                <Text style={dynamicStyles.statLabel}>Eventi Totali</Text>
               </GlassCard>
 
-              <GlassCard style={styles.statCard} testID="stat-pending-reports">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.warning}20` }]}>
-                  <Ionicons name="time" size={20} color={staticColors.warning} />
+              <GlassCard style={dynamicStyles.statCard} testID="stat-pending-reports">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.warning}20` }]}>
+                  <Ionicons name="time" size={20} color={colors.warning} />
                 </View>
-                <Text style={styles.statValue}>{stats.pendingReports}</Text>
-                <Text style={styles.statLabel}>Report Pendenti</Text>
+                <Text style={dynamicStyles.statValue}>{stats.pendingReports}</Text>
+                <Text style={dynamicStyles.statLabel}>Report Pendenti</Text>
               </GlassCard>
 
-              <GlassCard style={styles.statCard} testID="stat-errors">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.destructive}20` }]}>
-                  <Ionicons name="warning" size={20} color={staticColors.destructive} />
+              <GlassCard style={dynamicStyles.statCard} testID="stat-errors">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.destructive}20` }]}>
+                  <Ionicons name="warning" size={20} color={colors.destructive} />
                 </View>
-                <Text style={styles.statValue}>{stats.transmissionErrors}</Text>
-                <Text style={styles.statLabel}>Errori</Text>
+                <Text style={dynamicStyles.statValue}>{stats.transmissionErrors}</Text>
+                <Text style={dynamicStyles.statLabel}>Errori</Text>
               </GlassCard>
 
-              <GlassCard style={styles.statCard} testID="stat-success-rate">
-                <View style={[styles.statIcon, { backgroundColor: `${staticColors.success}20` }]}>
-                  <Ionicons name="checkmark-circle" size={20} color={staticColors.success} />
+              <GlassCard style={dynamicStyles.statCard} testID="stat-success-rate">
+                <View style={[dynamicStyles.statIcon, { backgroundColor: `${colors.success}20` }]}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                 </View>
-                <Text style={styles.statValue}>{stats.successRate}%</Text>
-                <Text style={styles.statLabel}>Tasso Successo</Text>
+                <Text style={dynamicStyles.statValue}>{stats.successRate}%</Text>
+                <Text style={dynamicStyles.statLabel}>Tasso Successo</Text>
               </GlassCard>
             </View>
           </View>
 
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputWrapper}>
+          <View style={dynamicStyles.searchContainer}>
+            <View style={dynamicStyles.searchInputWrapper}>
               <Ionicons name="search" size={20} color={colors.mutedForeground} />
               <TextInput
-                style={styles.searchInput}
+                style={dynamicStyles.searchInput}
                 placeholder="Cerca gestore o evento..."
                 placeholderTextColor={colors.mutedForeground}
                 value={searchQuery}
@@ -228,13 +230,13 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
             </View>
           </View>
 
-          <View style={styles.filtersContainer}>
+          <View style={dynamicStyles.filtersContainer}>
             <FlatList
               horizontal
               data={filters}
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filtersList}
+              contentContainerStyle={dynamicStyles.filtersList}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => {
@@ -242,15 +244,15 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
                     setActiveFilter(item.id);
                   }}
                   style={[
-                    styles.filterChip,
-                    activeFilter === item.id && styles.filterChipActive,
+                    dynamicStyles.filterChip,
+                    activeFilter === item.id && dynamicStyles.filterChipActive,
                   ]}
                   testID={`filter-${item.id}`}
                 >
                   <Text
                     style={[
-                      styles.filterChipText,
-                      activeFilter === item.id && styles.filterChipTextActive,
+                      dynamicStyles.filterChipText,
+                      activeFilter === item.id && dynamicStyles.filterChipTextActive,
                     ]}
                   >
                     {item.label}
@@ -260,14 +262,14 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
             />
           </View>
 
-          <Text style={styles.sectionTitle}>Attività Recenti</Text>
+          <Text style={dynamicStyles.sectionTitle}>Attività Recenti</Text>
 
           {filteredActivities.length > 0 ? (
             <FlatList
               data={filteredActivities}
               renderItem={renderActivity}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={dynamicStyles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
@@ -278,10 +280,10 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
               }
             />
           ) : (
-            <View style={styles.emptyState}>
+            <View style={dynamicStyles.emptyState}>
               <Ionicons name="document-text-outline" size={64} color={colors.mutedForeground} />
-              <Text style={styles.emptyTitle}>Nessuna attività</Text>
-              <Text style={styles.emptyText}>
+              <Text style={dynamicStyles.emptyTitle}>Nessuna attività</Text>
+              <Text style={dynamicStyles.emptyText}>
                 {searchQuery ? 'Prova con una ricerca diversa' : 'Le attività SIAE appariranno qui'}
               </Text>
             </View>
@@ -292,10 +294,10 @@ export function AdminSIAEMonitorScreen({ onBack }: AdminSIAEMonitorScreenProps) 
   );
 }
 
-const styles = StyleSheet.create({
+const createDynamicStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: staticColors.background,
+    backgroundColor: colors.background,
   },
   statsSection: {
     paddingHorizontal: spacing.lg,
@@ -304,7 +306,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: staticColors.foreground,
+    color: colors.foreground,
     marginBottom: spacing.md,
   },
   statsGrid: {
@@ -329,11 +331,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
-    color: staticColors.foreground,
+    color: colors.foreground,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
@@ -344,7 +346,7 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: staticColors.secondary,
+    backgroundColor: colors.secondary,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     height: 48,
@@ -353,7 +355,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: staticColors.foreground,
+    color: colors.foreground,
   },
   filtersContainer: {
     paddingBottom: spacing.sm,
@@ -366,24 +368,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: staticColors.secondary,
+    backgroundColor: colors.secondary,
   },
   filterChipActive: {
-    backgroundColor: staticColors.primary,
+    backgroundColor: colors.primary,
   },
   filterChipText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
   },
   filterChipTextActive: {
-    color: staticColors.primaryForeground,
+    color: colors.primaryForeground,
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: staticColors.foreground,
+    color: colors.foreground,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -406,7 +408,7 @@ const styles = StyleSheet.create({
   gestoreName: {
     fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: staticColors.foreground,
+    color: colors.foreground,
     flex: 1,
   },
   activityDetails: {
@@ -419,12 +421,12 @@ const styles = StyleSheet.create({
   },
   eventName: {
     fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
     flex: 1,
   },
   timestamp: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
   },
   emptyState: {
     flex: 1,
@@ -435,13 +437,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: staticColors.foreground,
+    color: colors.foreground,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: staticColors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.sm,
   },

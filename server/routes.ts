@@ -76,7 +76,7 @@ import { z } from "zod";
 import nodemailer from "nodemailer";
 import { db } from "./db";
 import { eq, and, or, inArray, desc, isNull, like, sql } from "drizzle-orm";
-import { events, siaeTickets } from "@shared/schema";
+import { events, siaeTickets, siaeTransmissions, siaeTicketedEvents } from "@shared/schema";
 import crypto from "crypto";
 import QRCode from "qrcode";
 import { 
@@ -3447,6 +3447,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching super admin analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // ===== SIAE MONITOR (Super Admin only) =====
+  app.get('/api/admin/siae/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      // Get all SIAE transmissions for stats
+      const allTransmissions = await db.select().from(siaeTransmissions);
+      const allTicketedEvents = await db.select().from(siaeTicketedEvents);
+      const gestori = await db.select().from(users).where(eq(users.role, 'gestore'));
+      
+      const pendingCount = allTransmissions.filter(t => t.status === 'pending' || t.status === 'draft').length;
+      const errorCount = allTransmissions.filter(t => t.status === 'error' || t.status === 'rejected').length;
+      const successCount = allTransmissions.filter(t => t.status === 'sent' || t.status === 'accepted').length;
+      const total = allTransmissions.length;
+      const successRate = total > 0 ? Math.round((successCount / total) * 100) : 0;
+      
+      const activeGestori = new Set(allTransmissions.map(t => t.companyId)).size;
+
+      res.json({
+        totalEvents: allTicketedEvents.length,
+        pendingReports: pendingCount,
+        transmissionErrors: errorCount,
+        successRate: successRate,
+        totalGestori: gestori.length,
+        activeGestori: activeGestori,
+      });
+    } catch (error) {
+      console.error("Error fetching SIAE monitor stats:", error);
+      res.status(500).json({ message: "Failed to fetch SIAE stats" });
+    }
+  });
+
+  app.get('/api/admin/siae/activities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      // Get recent SIAE transmissions with company and event info
+      const recentTransmissions = await db.select({
+        id: siaeTransmissions.id,
+        reportType: siaeTransmissions.reportType,
+        status: siaeTransmissions.status,
+        createdAt: siaeTransmissions.createdAt,
+        companyId: siaeTransmissions.companyId,
+        ticketedEventId: siaeTransmissions.ticketedEventId,
+      })
+      .from(siaeTransmissions)
+      .orderBy(desc(siaeTransmissions.createdAt))
+      .limit(50);
+
+      const activities = await Promise.all(recentTransmissions.map(async (t) => {
+        const company = t.companyId ? await storage.getCompany(t.companyId) : null;
+        const event = t.ticketedEventId ? await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, t.ticketedEventId)).then(r => r[0]) : null;
+        
+        return {
+          id: t.id,
+          gestoreName: company?.name || 'Sconosciuto',
+          eventName: event?.name || null,
+          reportType: t.reportType || 'unknown',
+          status: t.status === 'accepted' ? 'approved' : (t.status === 'rejected' ? 'error' : t.status),
+          timestamp: t.createdAt,
+        };
+      }));
+
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching SIAE activities:", error);
+      res.status(500).json({ message: "Failed to fetch SIAE activities" });
     }
   });
 
