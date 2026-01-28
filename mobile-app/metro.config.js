@@ -13,6 +13,15 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
+// Ensure proper source extension resolution
+config.resolver.sourceExts = ['js', 'jsx', 'json', 'ts', 'tsx', 'cjs', 'mjs'];
+
+// Use main field (commonjs) instead of module field (esm) for better compatibility
+config.resolver.resolverMainFields = ['react-native', 'main', 'browser'];
+
+// Disable package exports to use traditional resolution
+config.resolver.unstable_enablePackageExports = false;
+
 config.server = {
   port: 8081,
   enhanceMiddleware: (middleware) => {
