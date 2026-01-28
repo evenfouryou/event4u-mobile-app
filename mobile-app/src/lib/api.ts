@@ -1499,6 +1499,18 @@ class ApiClient {
     return this.post('/api/gestore/siae/config/test-connection', {});
   }
 
+  async getSIAESystemConfig(): Promise<any> {
+    try {
+      return await this.get('/api/siae/config');
+    } catch {
+      return null;
+    }
+  }
+
+  async updateSIAESystemConfig(config: any): Promise<any> {
+    return this.patch('/api/siae/config', config);
+  }
+
   async getSIAEC1Report(eventId: string, date: string): Promise<SIAEC1Report | null> {
     try {
       return await this.get<SIAEC1Report>(`/api/gestore/siae/reports/c1?eventId=${eventId}&date=${date}`);
@@ -1818,11 +1830,27 @@ class ApiClient {
     }
   }
 
+  async getAdminCompanyDetail(companyId: string): Promise<any> {
+    try {
+      return await this.get(`/api/admin/companies/${companyId}`);
+    } catch {
+      return null;
+    }
+  }
+
   async getAdminUsers(): Promise<AdminUser[]> {
     try {
       return await this.get<AdminUser[]>('/api/admin/users');
     } catch {
       return [];
+    }
+  }
+
+  async getAdminUserDetail(userId: string): Promise<any> {
+    try {
+      return await this.get(`/api/admin/users/${userId}`);
+    } catch {
+      return null;
     }
   }
 

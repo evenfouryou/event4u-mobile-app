@@ -3,6 +3,8 @@ export { AdminGestoriScreen } from './AdminGestoriScreen';
 export { AdminGestoreDetailScreen } from './AdminGestoreDetailScreen';
 export { AdminEventsScreen } from './AdminEventsScreen';
 export { AdminEventDetailScreen } from './AdminEventDetailScreen';
+export { AdminCompanyDetailScreen } from './AdminCompanyDetailScreen';
+export { AdminUserDetailScreen } from './AdminUserDetailScreen';
 export { AdminBillingScreen } from './AdminBillingScreen';
 export { AdminSettingsScreen } from './AdminSettingsScreen';
 export { AdminCompaniesScreen } from './AdminCompaniesScreen';

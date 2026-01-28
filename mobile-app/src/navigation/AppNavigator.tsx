@@ -117,6 +117,8 @@ import {
   AdminSIAEConfigScreen,
   AdminSIAEApprovalsScreen,
   AdminSIAECustomersScreen,
+  AdminCompanyDetailScreen,
+  AdminUserDetailScreen,
   AdminSIAEConsoleScreen,
   AdminSIAETransactionsScreen,
   AdminSIAEBoxOfficeScreen,
@@ -1065,6 +1067,23 @@ export function AppNavigator() {
         return (
           <AdminEventDetailScreen
             eventId={currentScreen.params.eventId}
+            onBack={goBack}
+          />
+        );
+
+      case 'adminCompanyDetail':
+        return (
+          <AdminCompanyDetailScreen
+            companyId={currentScreen.params.companyId}
+            onBack={goBack}
+            onNavigateEvent={(eventId: string) => navigate({ name: 'adminEventDetail', params: { eventId } })}
+          />
+        );
+
+      case 'adminUserDetail':
+        return (
+          <AdminUserDetailScreen
+            userId={currentScreen.params.userId}
             onBack={goBack}
           />
         );
