@@ -53,7 +53,14 @@ const navItems = [
   { href: "/account/profile", label: "Profilo", icon: User },
 ];
 
-function SidebarContent({ customer, onLogout, hasPrProfile, onSwitchToPr }: { customer: Customer | null; onLogout: () => void; hasPrProfile: boolean; onSwitchToPr: () => void }) {
+function SidebarContent({ customer, onLogout, hasPrProfile, onSwitchToPr, hasOriginalPrSession, onSwitchBackToPr }: { 
+  customer: Customer | null; 
+  onLogout: () => void; 
+  hasPrProfile: boolean; 
+  onSwitchToPr: () => void;
+  hasOriginalPrSession?: boolean;
+  onSwitchBackToPr?: () => void;
+}) {
   const [location] = useLocation();
 
   return (
@@ -105,7 +112,20 @@ function SidebarContent({ customer, onLogout, hasPrProfile, onSwitchToPr }: { cu
       </nav>
 
       <div className="p-4 border-t border-border space-y-2">
-        {hasPrProfile && (
+        {/* Show "Torna alla modalità PR" for users who switched from PR to Customer */}
+        {hasOriginalPrSession && onSwitchBackToPr && (
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3 border-primary/50 text-primary hover:bg-primary/10"
+            onClick={onSwitchBackToPr}
+            data-testid="button-switch-back-to-pr"
+          >
+            <ArrowRightLeft className="w-5 h-5" />
+            Torna alla Dashboard PR
+          </Button>
+        )}
+        {/* Show "Passa a Dashboard PR" for customers with linked PR profiles */}
+        {hasPrProfile && !hasOriginalPrSession && (
           <Button
             variant="outline"
             className="w-full justify-start gap-3"
@@ -158,6 +178,18 @@ export function AccountLayout({ children }: AccountLayoutProps) {
   const { prProfile } = usePrAuth();
   const hasPrProfile = !!prProfile;
 
+  // Check if user has an original PR session (switched from PR to customer)
+  const { data: sessionInfo } = useQuery<{ hasOriginalPrSession: boolean }>({
+    queryKey: ["/api/session/pr-switch-status"],
+    queryFn: async () => {
+      const res = await fetch('/api/session/pr-switch-status', { credentials: 'include' });
+      if (!res.ok) return { hasOriginalPrSession: false };
+      return res.json();
+    },
+    retry: false,
+  });
+  const hasOriginalPrSession = sessionInfo?.hasOriginalPrSession ?? false;
+
   const handleSwitchToPr = async () => {
     try {
       const res = await fetch('/api/customer/switch-to-pr', {
@@ -180,6 +212,33 @@ export function AccountLayout({ children }: AccountLayoutProps) {
       toast({
         title: "Errore",
         description: "Impossibile passare alla modalità PR",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSwitchBackToPr = async () => {
+    try {
+      const res = await fetch('/api/customer/switch-back-to-pr', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.success && data.redirectTo) {
+        queryClient.clear();
+        window.location.href = data.redirectTo;
+      } else if (data.error) {
+        toast({
+          title: "Errore",
+          description: data.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error switching back to PR mode:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile tornare alla modalità PR",
         variant: "destructive",
       });
     }
@@ -340,7 +399,7 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     <div className="min-h-screen bg-background flex">
       <ProfileCompleteDialog />
       <aside className="fixed left-0 top-0 h-full w-72 z-40">
-        <SidebarContent customer={customer || null} onLogout={handleLogout} hasPrProfile={hasPrProfile} onSwitchToPr={handleSwitchToPr} />
+        <SidebarContent customer={customer || null} onLogout={handleLogout} hasPrProfile={hasPrProfile} onSwitchToPr={handleSwitchToPr} hasOriginalPrSession={hasOriginalPrSession} onSwitchBackToPr={handleSwitchBackToPr} />
       </aside>
       <main className="flex-1 ml-72 p-8">{children}</main>
     </div>

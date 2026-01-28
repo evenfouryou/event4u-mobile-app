@@ -789,14 +789,15 @@ export function AppSidebar() {
             className="w-full justify-start mb-2 text-muted-foreground hover:text-foreground"
             onClick={async () => {
               try {
-                const res = await fetch('/api/switch-role/customer', {
+                // Use /api/pr/switch-to-customer which works with prProfile session (not just passport users)
+                const res = await fetch('/api/pr/switch-to-customer', {
                   method: 'POST',
                   credentials: 'include',
                 });
                 const data = await res.json();
-                if (data.success && data.redirectTo) {
+                if (data.success) {
                   queryClient.clear();
-                  window.location.href = data.redirectTo;
+                  window.location.href = data.redirect || '/account';
                 } else if (data.error) {
                   toast({
                     title: "Errore cambio modalità",

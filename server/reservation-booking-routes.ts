@@ -1058,12 +1058,23 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       console.log(`[PR-SWITCH] Created new customer ${customer.id} for PR ${prProfile.id}`);
     }
     
-    // Remove PR profile from session if present
+    // Store original PR session for switching back later
     if ((req.session as any).prProfile) {
+      (req.session as any).originalPrSession = {
+        prProfileId: (req.session as any).prProfile.id,
+        companyId: (req.session as any).prProfile.companyId,
+        prCode: (req.session as any).prProfile.prCode,
+      };
+      // Remove active PR profile from session
       delete (req.session as any).prProfile;
     }
     
-    // Seamlessly authenticate as customer
+    // Set up customer session
+    (req.session as any).customer = {
+      id: customer.id,
+    };
+    
+    // Also set customerMode for compatibility
     (req.session as any).customerMode = {
       customerId: customer.id,
       firstName: customer.firstName,
@@ -1072,7 +1083,7 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       phone: customer.phone,
     };
     
-    console.log(`[PR-SWITCH] PR ${prProfile.id} switched to customer ${customer.id}`);
+    console.log(`[PR-SWITCH] PR ${prProfile!.id} switched to customer ${customer.id}, stored original PR session`);
     
     // Save the session with customer mode activated
     req.session.save((err) => {
@@ -2781,6 +2792,66 @@ router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) =>
     console.error("Error switching customer to PR mode:", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Switch back from Customer to PR mode (for users who switched from PR to Customer earlier)
+router.post("/api/customer/switch-back-to-pr", async (req: Request, res: Response) => {
+  try {
+    const originalPrSession = (req.session as any).originalPrSession;
+    
+    if (!originalPrSession?.prProfileId) {
+      return res.status(400).json({ error: "Nessuna sessione PR originale trovata" });
+    }
+    
+    // Verify the PR profile still exists and is active
+    const [prProfile] = await db.select().from(prProfiles)
+      .where(and(
+        eq(prProfiles.id, originalPrSession.prProfileId),
+        eq(prProfiles.isActive, true)
+      ));
+    
+    if (!prProfile) {
+      delete (req.session as any).originalPrSession;
+      return res.status(404).json({ error: "Il profilo PR non è più attivo" });
+    }
+    
+    // Clear customer session data
+    delete (req.session as any).customer;
+    delete (req.session as any).customerMode;
+    delete (req.session as any).originalPrSession;
+    
+    // Restore PR session
+    (req.session as any).prProfile = {
+      id: prProfile.id,
+      companyId: prProfile.companyId,
+      prCode: prProfile.prCode,
+    };
+    
+    req.session.save((err) => {
+      if (err) {
+        console.error("[SWITCH-BACK-PR] Error saving session:", err);
+        return res.status(500).json({ error: "Errore nel ripristino della sessione PR" });
+      }
+      
+      console.log(`[SWITCH-BACK-PR] Customer switched back to PR mode (PR: ${prProfile.id})`);
+      res.json({ 
+        success: true, 
+        message: "Tornato alla modalità PR",
+        redirectTo: '/pr/dashboard'
+      });
+    });
+  } catch (error: any) {
+    console.error("Error switching back to PR mode:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check if the current session has an original PR session (for switching back)
+router.get("/api/session/pr-switch-status", (req: Request, res: Response) => {
+  const originalPrSession = (req.session as any).originalPrSession;
+  res.json({
+    hasOriginalPrSession: !!originalPrSession?.prProfileId,
+  });
 });
 
 export default router;
