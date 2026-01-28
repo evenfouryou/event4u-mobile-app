@@ -17,9 +17,12 @@ type TabType = 'overview' | 'companies' | 'events' | 'users';
 interface AdminGestoreDetailScreenProps {
   gestoreId: string;
   onBack: () => void;
+  onNavigateCompany?: (companyId: string) => void;
+  onNavigateEvent?: (eventId: string) => void;
+  onNavigateUser?: (userId: string) => void;
 }
 
-export function AdminGestoreDetailScreen({ gestoreId, onBack }: AdminGestoreDetailScreenProps) {
+export function AdminGestoreDetailScreen({ gestoreId, onBack, onNavigateCompany, onNavigateEvent, onNavigateUser }: AdminGestoreDetailScreenProps) {
   const { colors } = useTheme();
   const [gestore, setGestore] = useState<AdminGestoreDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -217,8 +220,16 @@ export function AdminGestoreDetailScreen({ gestoreId, onBack }: AdminGestoreDeta
       <Text style={styles.sectionTitle}>Lista Aziende</Text>
       {gestore?.companies && gestore.companies.length > 0 ? (
         gestore.companies.map((company) => (
-          <Card key={company.id} style={styles.companyCard} testID={`company-${company.id}`}>
-            <View style={styles.companyHeader}>
+          <Pressable 
+            key={company.id} 
+            onPress={() => {
+              triggerHaptic('light');
+              onNavigateCompany?.(company.id);
+            }}
+            testID={`company-${company.id}`}
+          >
+            <Card style={styles.companyCard}>
+              <View style={styles.companyHeader}>
               <View style={styles.companyInfo}>
                 <Text style={styles.companyName}>{company.name}</Text>
                 <Text style={styles.companyVat}>{company.vatNumber || '-'}</Text>
@@ -240,7 +251,8 @@ export function AdminGestoreDetailScreen({ gestoreId, onBack }: AdminGestoreDeta
                 <Badge variant="default" style={styles.siaeBadge}>SIAE</Badge>
               )}
             </View>
-          </Card>
+            </Card>
+          </Pressable>
         ))
       ) : (
         <Card style={styles.emptyCard}>
@@ -278,30 +290,39 @@ export function AdminGestoreDetailScreen({ gestoreId, onBack }: AdminGestoreDeta
       <Text style={styles.sectionTitle}>Eventi Recenti</Text>
       {gestore?.events && gestore.events.length > 0 ? (
         gestore.events.map((event) => (
-          <Card key={event.id} style={styles.eventCard} testID={`event-${event.id}`}>
-            <View style={styles.eventHeader}>
-              <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
-              {getStatusBadge(event.status)}
-            </View>
-            <View style={styles.eventMeta}>
-              <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.eventMetaText}>
-                {event.startDate ? formatDate(event.startDate) : '-'}
-              </Text>
-              <Ionicons name="location-outline" size={14} color={colors.mutedForeground} style={{ marginLeft: spacing.md }} />
-              <Text style={styles.eventMetaText}>{event.locationName || '-'}</Text>
-            </View>
-            <View style={styles.eventStats}>
-              <View style={styles.eventStat}>
-                <Ionicons name="ticket-outline" size={14} color={staticColors.primary} />
-                <Text style={styles.eventStatText}>{event.ticketsSold || 0} venduti</Text>
+          <Pressable
+            key={event.id}
+            onPress={() => {
+              triggerHaptic('light');
+              onNavigateEvent?.(event.id);
+            }}
+            testID={`event-${event.id}`}
+          >
+            <Card style={styles.eventCard}>
+              <View style={styles.eventHeader}>
+                <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
+                {getStatusBadge(event.status)}
               </View>
-              <View style={styles.eventStat}>
-                <Ionicons name="cash-outline" size={14} color={staticColors.golden} />
-                <Text style={styles.eventStatText}>{formatCurrency(event.revenue || 0)}</Text>
+              <View style={styles.eventMeta}>
+                <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.eventMetaText}>
+                  {event.startDate ? formatDate(event.startDate) : '-'}
+                </Text>
+                <Ionicons name="location-outline" size={14} color={colors.mutedForeground} style={{ marginLeft: spacing.md }} />
+                <Text style={styles.eventMetaText}>{event.locationName || '-'}</Text>
               </View>
-            </View>
-          </Card>
+              <View style={styles.eventStats}>
+                <View style={styles.eventStat}>
+                  <Ionicons name="ticket-outline" size={14} color={staticColors.primary} />
+                  <Text style={styles.eventStatText}>{event.ticketsSold || 0} venduti</Text>
+                </View>
+                <View style={styles.eventStat}>
+                  <Ionicons name="cash-outline" size={14} color={staticColors.golden} />
+                  <Text style={styles.eventStatText}>{formatCurrency(event.revenue || 0)}</Text>
+                </View>
+              </View>
+            </Card>
+          </Pressable>
         ))
       ) : (
         <Card style={styles.emptyCard}>
@@ -341,21 +362,30 @@ export function AdminGestoreDetailScreen({ gestoreId, onBack }: AdminGestoreDeta
       <Text style={styles.sectionTitle}>Utenti Associati</Text>
       {gestore?.users && gestore.users.length > 0 ? (
         gestore.users.map((user) => (
-          <Card key={user.id} style={styles.userCard} testID={`user-${user.id}`}>
-            <View style={styles.userContent}>
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="md" testID={`avatar-user-${user.id}`} />
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
-                <Text style={styles.userEmail}>{user.email}</Text>
+          <Pressable
+            key={user.id}
+            onPress={() => {
+              triggerHaptic('light');
+              onNavigateUser?.(user.id);
+            }}
+            testID={`user-${user.id}`}
+          >
+            <Card style={styles.userCard}>
+              <View style={styles.userContent}>
+                <Avatar name={`${user.firstName} ${user.lastName}`} size="md" testID={`avatar-user-${user.id}`} />
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
+                  <Text style={styles.userEmail}>{user.email}</Text>
+                </View>
+                <View style={styles.userActions}>
+                  <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                    {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : user.role}
+                  </Badge>
+                  {getStatusBadge(user.status)}
+                </View>
               </View>
-              <View style={styles.userActions}>
-                <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                  {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : user.role}
-                </Badge>
-                {getStatusBadge(user.status)}
-              </View>
-            </View>
-          </Card>
+            </Card>
+          </Pressable>
         ))
       ) : (
         <Card style={styles.emptyCard}>

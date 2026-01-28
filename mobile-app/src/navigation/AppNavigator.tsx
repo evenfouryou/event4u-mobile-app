@@ -236,6 +236,8 @@ type Screen =
   | { name: 'adminCompanies' }
   | { name: 'adminUsers' }
   | { name: 'adminEventDetail'; params: { eventId: string } }
+  | { name: 'adminCompanyDetail'; params: { companyId: string } }
+  | { name: 'adminUserDetail'; params: { userId: string } }
   | { name: 'adminNameChanges' }
   | { name: 'adminSIAEMonitor' }
   | { name: 'adminSiteSettings' }
@@ -1014,6 +1016,9 @@ export function AppNavigator() {
           <AdminGestoreDetailScreen
             gestoreId={currentScreen.params.gestoreId}
             onBack={goBack}
+            onNavigateCompany={(companyId: string) => navigate({ name: 'adminCompanyDetail', params: { companyId } })}
+            onNavigateEvent={(eventId: string) => navigate({ name: 'adminEventDetail', params: { eventId } })}
+            onNavigateUser={(userId: string) => navigate({ name: 'adminUserDetail', params: { userId } })}
           />
         );
 
