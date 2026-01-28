@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { format, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
 import { colors as staticColors, spacing, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -74,8 +72,8 @@ export function AdminSIAESubscriptionsScreen({ onBack }: AdminSIAESubscriptionsS
 
   const formatDate = (dateString: string): string => {
     try {
-      const date = parseISO(dateString);
-      return format(date, 'dd MMM yyyy', { locale: it });
+      const date = new Date(dateString);
+      return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch {
       return dateString;
     }
