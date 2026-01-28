@@ -1051,7 +1051,7 @@ export function AppNavigator() {
         return (
           <AdminCompaniesScreen
             onBack={goBack}
-            onItemPress={(companyId: string) => navigate({ name: 'adminCompanies' })}
+            onItemPress={(companyId: string) => navigate({ name: 'adminCompanyDetail', params: { companyId } })}
           />
         );
 
@@ -1059,7 +1059,7 @@ export function AppNavigator() {
         return (
           <AdminUsersScreen
             onBack={goBack}
-            onItemPress={(userId: string) => navigate({ name: 'adminUsers' })}
+            onItemPress={(userId: string) => navigate({ name: 'adminUserDetail', params: { userId } })}
           />
         );
 
