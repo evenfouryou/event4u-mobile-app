@@ -1440,6 +1440,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/companies/:id - Get company detail by ID (super_admin only)
+  app.get('/api/companies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getCurrentUserId(req);
+      const currentUser = await storage.getUser(userId);
+      
+      if (!currentUser || currentUser.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden: Super admin access required" });
+      }
+
+      const companyIdParam = req.params.id;
+      if (!companyIdParam) {
+        return res.status(400).json({ message: "Invalid company ID" });
+      }
+
+      const company = await storage.getCompany(companyIdParam);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Get related events count
+      const companyEvents = await db.select({ id: events.id })
+        .from(events)
+        .where(eq(events.companyId, companyIdParam));
+
+      // Get related locations count
+      const { locations: locationsTable } = await import("@shared/schema");
+      const companyLocations = await db.select({ id: locationsTable.id })
+        .from(locationsTable)
+        .where(eq(locationsTable.companyId, companyIdParam));
+
+      // Get related users count
+      const companyUsers = await db.select({ id: userCompanies.userId })
+        .from(userCompanies)
+        .where(eq(userCompanies.companyId, companyIdParam));
+
+      // Get ticket sales count - simplified without join
+      const ticketsSold = 0; // Would need ticket tracking per company
+      const revenue = 0; // Would need revenue tracking per company
+
+      // Get recent events with details
+      const recentEvents = await db.select({
+        id: events.id,
+        name: events.name,
+        status: events.status,
+        startDatetime: events.startDatetime,
+      })
+        .from(events)
+        .where(eq(events.companyId, companyIdParam))
+        .orderBy(desc(events.startDatetime))
+        .limit(10);
+
+      // Get locations with details
+      const locationsList = await db.select({
+        id: locationsTable.id,
+        name: locationsTable.name,
+        address: locationsTable.address,
+        city: locationsTable.city,
+      })
+        .from(locationsTable)
+        .where(eq(locationsTable.companyId, companyIdParam));
+
+      res.json({
+        id: company.id,
+        name: company.name,
+        vatNumber: company.taxId,
+        fiscalCode: company.fiscalCode,
+        address: company.address,
+        city: company.city,
+        province: company.province,
+        postalCode: company.postalCode,
+        status: company.active ? 'active' : 'inactive',
+        createdAt: company.createdAt?.toISOString() || new Date().toISOString(),
+        eventsCount: companyEvents.length,
+        locationsCount: companyLocations.length,
+        usersCount: companyUsers.length,
+        ticketsSold,
+        revenue,
+        events: recentEvents.map(e => ({
+          id: e.id,
+          name: e.name,
+          status: e.status || 'draft',
+          startDate: e.startDatetime?.toISOString(),
+          ticketsSold: 0,
+        })),
+        locations: locationsList.map(l => ({
+          id: l.id,
+          name: l.name,
+          address: l.address,
+          city: l.city,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching company detail:", error);
+      res.status(500).json({ message: "Failed to fetch company detail" });
+    }
+  });
+
   app.get('/api/companies/current', isAuthenticated, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
@@ -4945,6 +5043,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching scanners:", error);
       res.status(500).json({ message: "Failed to fetch scanners" });
+    }
+  });
+
+  // GET /api/users/:id - Get user detail by ID (super_admin only)
+  app.get('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub || req.user?.id;
+      const currentUser = await storage.getUser(currentUserId);
+      
+      if (!currentUser || currentUser.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden: Super admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+      if (!targetUserId) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(targetUserId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get company name if user has a company
+      let companyName = null;
+      if (user.companyId) {
+        const company = await storage.getCompany(user.companyId);
+        companyName = company?.name || null;
+      }
+
+      // Get events count for this user (events they created or are associated with)
+      const userEvents = await db.select({ id: events.id })
+        .from(events)
+        .where(eq(events.companyId, user.companyId || ''));
+
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        status: user.emailVerified ? 'active' : 'pending',
+        phone: user.phone,
+        createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+        lastLoginAt: null,
+        emailVerified: user.emailVerified || false,
+        companyId: user.companyId,
+        companyName,
+        eventsCount: userEvents.length,
+        ticketsPurchased: 0,
+      });
+    } catch (error) {
+      console.error("Error fetching user detail:", error);
+      res.status(500).json({ message: "Failed to fetch user detail" });
     }
   });
 
