@@ -200,37 +200,39 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
       <View style={styles.approvalHeader}>
         <View style={styles.approvalInfo}>
           <View style={styles.approvalTitleRow}>
-            <Text style={styles.eventName}>{item.eventName}</Text>
+            <Text style={[styles.eventName, { color: colors.foreground }]}>{item.eventName}</Text>
             {getStatusBadge(item.status)}
           </View>
-          <Text style={styles.gestoreInfo}>{item.gestoreName} • {item.companyName}</Text>
+          <Text style={[styles.gestoreInfo, { color: colors.mutedForeground }]}>
+            {item.gestoreName} • {item.companyName}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.approvalDetails}>
+      <View style={[styles.approvalDetails, { backgroundColor: colors.background }]}>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Data Evento</Text>
-            <Text style={styles.detailValue}>{formatDate(item.eventDate)}</Text>
+            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Data Evento</Text>
+            <Text style={[styles.detailValue, { color: colors.foreground }]}>{formatDate(item.eventDate)}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Tipo Report</Text>
+            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Tipo Report</Text>
             {getReportTypeBadge(item.reportType)}
           </View>
         </View>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Biglietti</Text>
-            <Text style={styles.detailValue}>{item.ticketsSold}</Text>
+            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Biglietti</Text>
+            <Text style={[styles.detailValue, { color: colors.foreground }]}>{item.ticketsSold}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Incasso</Text>
-            <Text style={styles.detailValue}>{formatCurrency(item.totalRevenue)}</Text>
+            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Incasso</Text>
+            <Text style={[styles.detailValue, { color: colors.foreground }]}>{formatCurrency(item.totalRevenue)}</Text>
           </View>
         </View>
       </View>
 
-      <Text style={styles.submittedAt}>
+      <Text style={[styles.submittedAt, { color: colors.mutedForeground }]}>
         Inviato: {formatDateTime(item.submittedAt)}
       </Text>
 
@@ -241,7 +243,7 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
         </View>
       )}
 
-      <View style={styles.approvalActions}>
+      <View style={[styles.approvalActions, { borderTopColor: colors.border }]}>
         {item.status === 'pending' && (
           <>
             <Button
@@ -250,8 +252,8 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
               onPress={() => handleApprove(item)}
               testID={`button-approve-${item.id}`}
             >
-              <Ionicons name="checkmark-circle" size={16} color={staticColors.primaryForeground} />
-              <Text style={[styles.actionButtonText, { color: staticColors.primaryForeground }]}>Approva</Text>
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Text style={[styles.actionButtonText, { color: '#fff' }]}>Approva</Text>
             </Button>
             <Button
               variant="destructive"
@@ -259,8 +261,8 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
               onPress={() => handleReject(item)}
               testID={`button-reject-${item.id}`}
             >
-              <Ionicons name="close-circle" size={16} color={staticColors.destructiveForeground} />
-              <Text style={[styles.actionButtonText, { color: staticColors.destructiveForeground }]}>Rifiuta</Text>
+              <Ionicons name="close-circle" size={16} color="#fff" />
+              <Text style={[styles.actionButtonText, { color: '#fff' }]}>Rifiuta</Text>
             </Button>
           </>
         )}
@@ -270,8 +272,8 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
           onPress={() => handleViewDetails(item)}
           testID={`button-details-${item.id}`}
         >
-          <Ionicons name="eye-outline" size={16} color={staticColors.foreground} />
-          <Text style={styles.actionButtonText}>Dettagli</Text>
+          <Ionicons name="eye-outline" size={16} color={colors.foreground} />
+          <Text style={[styles.actionButtonText, { color: colors.foreground }]}>Dettagli</Text>
         </Button>
       </View>
     </Card>
@@ -279,51 +281,68 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
 
   if (showLoader) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header showLogo showBack onBack={onBack} testID="header-siae-approvals" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Header 
+          title="Approvazioni SIAE" 
+          subtitle="Gestione Report" 
+          showBack 
+          onBack={onBack} 
+          testID="header-siae-approvals" 
+        />
         <Loading text="Caricamento approvazioni SIAE..." />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header showLogo showBack onBack={onBack} testID="header-siae-approvals" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header 
+        title="Approvazioni SIAE" 
+        subtitle="Gestione Report" 
+        showBack 
+        onBack={onBack} 
+        testID="header-siae-approvals" 
+      />
 
       <View style={styles.statsSection}>
-        <Text style={styles.title}>Approvazioni SIAE</Text>
         <View style={styles.statsGrid}>
           <GlassCard style={styles.statCard} testID="stat-pending">
             <View style={[styles.statIcon, { backgroundColor: `${staticColors.warning}20` }]}>
               <Ionicons name="time" size={20} color={staticColors.warning} />
             </View>
-            <Text style={styles.statValue}>{approvals.filter(a => a.status === 'pending').length}</Text>
-            <Text style={styles.statLabel}>In Attesa</Text>
+            <Text style={[styles.statValue, { color: colors.foreground }]}>
+              {approvals.filter(a => a.status === 'pending').length}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>In Attesa</Text>
           </GlassCard>
 
           <GlassCard style={styles.statCard} testID="stat-approved">
             <View style={[styles.statIcon, { backgroundColor: `${staticColors.success}20` }]}>
               <Ionicons name="checkmark-circle" size={20} color={staticColors.success} />
             </View>
-            <Text style={styles.statValue}>{approvals.filter(a => a.status === 'approved').length}</Text>
-            <Text style={styles.statLabel}>Approvati</Text>
+            <Text style={[styles.statValue, { color: colors.foreground }]}>
+              {approvals.filter(a => a.status === 'approved').length}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Approvati</Text>
           </GlassCard>
 
           <GlassCard style={styles.statCard} testID="stat-rejected">
             <View style={[styles.statIcon, { backgroundColor: `${staticColors.destructive}20` }]}>
               <Ionicons name="close-circle" size={20} color={staticColors.destructive} />
             </View>
-            <Text style={styles.statValue}>{approvals.filter(a => a.status === 'rejected').length}</Text>
-            <Text style={styles.statLabel}>Rifiutati</Text>
+            <Text style={[styles.statValue, { color: colors.foreground }]}>
+              {approvals.filter(a => a.status === 'rejected').length}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Rifiutati</Text>
           </GlassCard>
         </View>
       </View>
 
       <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
+        <View style={[styles.searchInputWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="search" size={20} color={colors.mutedForeground} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="Cerca evento, gestore..."
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
@@ -353,6 +372,7 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
               }}
               style={[
                 styles.filterChip,
+                { backgroundColor: colors.card, borderColor: colors.border },
                 activeFilter === item.id && styles.filterChipActive,
               ]}
               testID={`filter-${item.id}`}
@@ -360,6 +380,7 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
               <Text
                 style={[
                   styles.filterChipText,
+                  { color: colors.foreground },
                   activeFilter === item.id && styles.filterChipTextActive,
                 ]}
               >
@@ -394,15 +415,15 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.primary}
+              tintColor={staticColors.primary}
             />
           }
         />
       ) : (
         <View style={styles.emptyState}>
           <Ionicons name="document-text-outline" size={64} color={colors.mutedForeground} />
-          <Text style={styles.emptyTitle}>Nessuna approvazione trovata</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Nessuna approvazione trovata</Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             {activeFilter === 'pending' 
               ? 'Non ci sono report in attesa di approvazione'
               : 'Prova a modificare i filtri o la ricerca'}
@@ -416,17 +437,10 @@ export function AdminSIAEApprovalsScreen({ onBack }: AdminSIAEApprovalsScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: staticColors.background,
   },
   statsSection: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-  },
-  title: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: '700',
-    color: staticColors.foreground,
-    marginBottom: spacing.md,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -438,48 +452,43 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   statValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: staticColors.foreground,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
-    marginTop: 2,
+    marginTop: 4,
   },
   searchContainer: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: staticColors.card,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: staticColors.border,
     height: 48,
     gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    color: staticColors.foreground,
   },
   filtersContainer: {
     marginTop: spacing.md,
   },
   filtersList: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     gap: spacing.sm,
   },
   filterChip: {
@@ -488,9 +497,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: staticColors.card,
     borderWidth: 1,
-    borderColor: staticColors.border,
     gap: spacing.xs,
   },
   filterChipActive: {
@@ -500,7 +507,6 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.foreground,
   },
   filterChipTextActive: {
     color: staticColors.primaryForeground,
@@ -517,15 +523,15 @@ const styles = StyleSheet.create({
     backgroundColor: staticColors.primaryForeground,
   },
   filterBadgeText: {
-    fontSize: typography.fontSize.xs - 2,
+    fontSize: 10,
     fontWeight: '600',
-    color: staticColors.warningForeground,
+    color: '#000',
   },
   filterBadgeTextActive: {
     color: staticColors.primary,
   },
   listContent: {
-    padding: spacing.lg,
+    padding: spacing.md,
     paddingTop: spacing.md,
   },
   approvalCard: {
@@ -543,20 +549,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
+    gap: spacing.sm,
   },
   eventName: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.base,
     fontWeight: '600',
-    color: staticColors.foreground,
     flex: 1,
-    marginRight: spacing.sm,
   },
   gestoreInfo: {
     fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
   },
   approvalDetails: {
-    backgroundColor: staticColors.background,
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     marginBottom: spacing.sm,
@@ -570,23 +573,20 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
   },
   detailValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.foreground,
     marginTop: 2,
   },
   submittedAt: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
     marginBottom: spacing.sm,
   },
   rejectionBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: `${staticColors.destructive}10`,
+    backgroundColor: `${staticColors.destructive}15`,
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     marginBottom: spacing.sm,
@@ -601,11 +601,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     flexWrap: 'wrap',
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    marginTop: spacing.sm,
   },
   actionButtonText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.foreground,
     marginLeft: spacing.xs,
   },
   emptyState: {
@@ -617,12 +619,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: staticColors.foreground,
     marginTop: spacing.md,
   },
   emptyText: {
     fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
