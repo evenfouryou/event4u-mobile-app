@@ -1521,52 +1521,98 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     // Create entry
     // FIX 2026-01-28: Use addedByPrProfileId to track which PR added the entry
     // FIX 2026-01-28: Auto-link entry to existing client by phone or email
+    // Search in BOTH users table AND siaeCustomers table (which has userId link)
     let clientUserId: string | null = null;
     
     const guestPhone = req.body.phone;
     const guestEmail = req.body.email;
     
     if (guestPhone || guestEmail) {
-      // Try to find an existing user by phone or email
-      const { users: usersTable } = await import("@shared/schema");
+      const { users: usersTable, siaeCustomers } = await import("@shared/schema");
       const normalizePhone = (p: string) => p.replace(/\D/g, '');
       
       let existingUser = null;
       
       if (guestPhone) {
         const phoneDigits = normalizePhone(guestPhone);
-        // Search by phone in various formats
-        const phoneConditions = [
-          eq(usersTable.phone, guestPhone),
-          eq(usersTable.phone, phoneDigits),
-          eq(usersTable.phone, '+39' + phoneDigits),
-          eq(usersTable.phone, '39' + phoneDigits),
+        // Build phone conditions for multiple formats
+        const phoneFormats = [
+          guestPhone,
+          phoneDigits,
+          '+39' + phoneDigits,
+          '39' + phoneDigits,
+          '+39' + phoneDigits.replace(/^39/, ''),
         ];
         if (phoneDigits.startsWith('39') && phoneDigits.length > 10) {
-          phoneConditions.push(eq(usersTable.phone, phoneDigits.slice(2)));
+          phoneFormats.push(phoneDigits.slice(2));
         }
+        // Remove duplicates
+        const uniqueFormats = Array.from(new Set(phoneFormats));
         
-        const [foundByPhone] = await db.select({ id: usersTable.id })
+        // 1. First search in users table
+        const userPhoneConditions = uniqueFormats.map(f => eq(usersTable.phone, f));
+        const [foundInUsers] = await db.select({ id: usersTable.id })
           .from(usersTable)
-          .where(or(...phoneConditions))
+          .where(or(...userPhoneConditions))
           .limit(1);
-        existingUser = foundByPhone;
+        
+        if (foundInUsers) {
+          existingUser = foundInUsers;
+          console.log("[PR AddGuest] Found user by phone in users table:", foundInUsers.id);
+        } else {
+          // 2. Search in siaeCustomers table (mobile app customers)
+          const customerPhoneConditions = uniqueFormats.map(f => eq(siaeCustomers.phone, f));
+          const [foundInCustomers] = await db.select({ 
+            id: siaeCustomers.id,
+            userId: siaeCustomers.userId 
+          })
+            .from(siaeCustomers)
+            .where(or(...customerPhoneConditions))
+            .limit(1);
+          
+          if (foundInCustomers && foundInCustomers.userId) {
+            existingUser = { id: foundInCustomers.userId };
+            console.log("[PR AddGuest] Found customer by phone in siaeCustomers, linked userId:", foundInCustomers.userId);
+          }
+        }
       }
       
       if (!existingUser && guestEmail) {
-        const [foundByEmail] = await db.select({ id: usersTable.id })
+        // 1. First search in users table
+        const [foundInUsers] = await db.select({ id: usersTable.id })
           .from(usersTable)
           .where(or(
             eq(usersTable.email, guestEmail),
             eq(usersTable.email, guestEmail.toLowerCase())
           ))
           .limit(1);
-        existingUser = foundByEmail;
+        
+        if (foundInUsers) {
+          existingUser = foundInUsers;
+          console.log("[PR AddGuest] Found user by email in users table:", foundInUsers.id);
+        } else {
+          // 2. Search in siaeCustomers table
+          const [foundInCustomers] = await db.select({ 
+            id: siaeCustomers.id,
+            userId: siaeCustomers.userId 
+          })
+            .from(siaeCustomers)
+            .where(or(
+              eq(siaeCustomers.email, guestEmail),
+              eq(siaeCustomers.email, guestEmail.toLowerCase())
+            ))
+            .limit(1);
+          
+          if (foundInCustomers && foundInCustomers.userId) {
+            existingUser = { id: foundInCustomers.userId };
+            console.log("[PR AddGuest] Found customer by email in siaeCustomers, linked userId:", foundInCustomers.userId);
+          }
+        }
       }
       
       if (existingUser) {
         clientUserId = existingUser.id;
-        console.log("[PR AddGuest] Found existing client user:", clientUserId);
+        console.log("[PR AddGuest] Setting clientUserId:", clientUserId);
       }
     }
     
@@ -3404,30 +3450,67 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       return res.status(401).json({ error: "Non autenticato" });
     }
 
-    const { eventLists, listEntries: listEntriesTable } = await import("@shared/schema");
+    const { eventLists, listEntries: listEntriesTable, siaeCustomers } = await import("@shared/schema");
 
     console.log("[my/guest-list-entries] Searching for user:", { id: user.id, email: user.email, phone: user.phone });
 
     // Normalize phone number - strip all non-digits
     const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
     
+    // FIX 2026-01-28: Also get phone/email from siaeCustomers if user is linked
+    let customerPhone: string | null = null;
+    let customerEmail: string | null = null;
+    
+    const [linkedCustomer] = await db.select({
+      phone: siaeCustomers.phone,
+      email: siaeCustomers.email
+    })
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.userId, user.id))
+      .limit(1);
+    
+    if (linkedCustomer) {
+      customerPhone = linkedCustomer.phone;
+      customerEmail = linkedCustomer.email;
+      console.log("[my/guest-list-entries] Found linked siaeCustomer:", { phone: customerPhone, email: customerEmail });
+    }
+    
     // Build conditions to find list entries by clientUserId, email, or phone
     const conditions = [eq(listEntriesTable.clientUserId, user.id)];
+    
+    // Add user email conditions
     if (user.email) {
       conditions.push(eq(listEntriesTable.email, user.email));
-      // Also try lowercase match
       conditions.push(eq(listEntriesTable.email, user.email.toLowerCase()));
     }
+    
+    // Add customer email conditions (from siaeCustomers)
+    if (customerEmail && customerEmail !== user.email) {
+      conditions.push(eq(listEntriesTable.email, customerEmail));
+      conditions.push(eq(listEntriesTable.email, customerEmail.toLowerCase()));
+    }
+    
+    // Add user phone conditions
     if (user.phone) {
       const userPhoneDigits = normalizePhone(user.phone);
-      // Try multiple phone formats
       conditions.push(eq(listEntriesTable.phone, user.phone));
       conditions.push(eq(listEntriesTable.phone, userPhoneDigits));
       conditions.push(eq(listEntriesTable.phone, '+39' + userPhoneDigits));
       conditions.push(eq(listEntriesTable.phone, '39' + userPhoneDigits));
-      // If has country code, try without
       if (userPhoneDigits.startsWith('39') && userPhoneDigits.length > 10) {
         conditions.push(eq(listEntriesTable.phone, userPhoneDigits.slice(2)));
+      }
+    }
+    
+    // Add customer phone conditions (from siaeCustomers)
+    if (customerPhone) {
+      const custPhoneDigits = normalizePhone(customerPhone);
+      conditions.push(eq(listEntriesTable.phone, customerPhone));
+      conditions.push(eq(listEntriesTable.phone, custPhoneDigits));
+      conditions.push(eq(listEntriesTable.phone, '+39' + custPhoneDigits));
+      conditions.push(eq(listEntriesTable.phone, '39' + custPhoneDigits));
+      if (custPhoneDigits.startsWith('39') && custPhoneDigits.length > 10) {
+        conditions.push(eq(listEntriesTable.phone, custPhoneDigits.slice(2)));
       }
     }
 
@@ -3440,7 +3523,7 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       .innerJoin(eventLists, eq(listEntriesTable.listId, eventLists.id))
       .where(or(...conditions));
     
-    console.log("[my/guest-list-entries] Found", userEntries.length, "entries");
+    console.log("[my/guest-list-entries] Found", userEntries.length, "entries with", conditions.length, "conditions");
 
     // Enrich with event data
     const entries = await Promise.all(userEntries.map(async ({ entry, list }) => {
