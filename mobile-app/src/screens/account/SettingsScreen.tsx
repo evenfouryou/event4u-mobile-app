@@ -1,13 +1,14 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
-// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { triggerHaptic } from '@/lib/haptics';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme, ThemeMode } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useState } from 'react';
 
 interface SettingsScreenProps {
@@ -70,6 +71,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const { user, logout } = useAuth();
   const { colors, mode, setMode, isDark } = useTheme();
+  const { t } = useLanguage();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
 
@@ -189,6 +191,21 @@ export function SettingsScreen({
               testID="setting-theme"
               colors={colors}
             />
+          </Card>
+        </View>
+
+        <View>
+          <Text style={[styles.sectionTitle, { color: staticColors.mutedForeground }]}>{t('settings.language')}</Text>
+          <Card style={styles.settingsCard}>
+            <View style={styles.languageRow}>
+              <View style={styles.languageLeft}>
+                <View style={[styles.settingIcon, { backgroundColor: `${staticColors.primary}15` }]}>
+                  <Ionicons name="globe-outline" size={22} color={staticColors.primary} />
+                </View>
+                <Text style={[styles.settingLabel, { color: staticColors.foreground }]}>{t('languages.selectLanguage')}</Text>
+              </View>
+              <LanguageSelector compact />
+            </View>
           </Card>
         </View>
 
@@ -331,6 +348,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
+    gap: spacing.md,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  languageLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
   },
   settingIcon: {

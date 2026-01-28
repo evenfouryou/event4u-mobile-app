@@ -8,10 +8,10 @@ import fr from './locales/fr.json';
 import de from './locales/de.json';
 
 export const LANGUAGES = [
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', name: 'Italiano', isoCode: 'IT' },
+  { code: 'en', name: 'English', isoCode: 'EN' },
+  { code: 'fr', name: 'Français', isoCode: 'FR' },
+  { code: 'de', name: 'Deutsch', isoCode: 'DE' },
 ] as const;
 
 export type LanguageCode = typeof LANGUAGES[number]['code'];

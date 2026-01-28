@@ -6,8 +6,10 @@ import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface AdminSettingsScreenProps {
@@ -18,6 +20,7 @@ interface AdminSettingsScreenProps {
 export function AdminSettingsScreen({ onBack, onLogout }: AdminSettingsScreenProps) {
   const { user, logout } = useAuth();
   const { colors, isDark, setMode } = useTheme();
+  const { t } = useLanguage();
   const toggleTheme = () => setMode(isDark ? 'light' : 'dark');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
@@ -153,6 +156,21 @@ export function AdminSettingsScreen({ onBack, onLogout }: AdminSettingsScreenPro
             </View>
           </View>
           <Badge variant="destructive">Super Admin</Badge>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+          <Card style={styles.sectionCard}>
+            <View style={styles.languageRow}>
+              <View style={styles.settingLeft}>
+                <View style={[styles.settingIcon, { backgroundColor: `${staticColors.primary}15` }]}>
+                  <Ionicons name="globe-outline" size={20} color={staticColors.primary} />
+                </View>
+                <Text style={styles.settingLabel}>{t('languages.selectLanguage')}</Text>
+              </View>
+              <LanguageSelector compact />
+            </View>
+          </Card>
         </View>
 
         {settingsSections.map((section) => (
@@ -306,6 +324,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  languageRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

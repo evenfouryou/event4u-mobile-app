@@ -39,8 +39,16 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
     },
-    flag: {
-      fontSize: compact ? 18 : 24,
+    isoCodeBadge: {
+      backgroundColor: `${colors.primary}20`,
+      paddingHorizontal: compact ? 6 : 8,
+      paddingVertical: compact ? 2 : 4,
+      borderRadius: borderRadius.sm,
+    },
+    isoCodeText: {
+      fontSize: compact ? typography.fontSize.xs : typography.fontSize.sm,
+      fontWeight: '700',
+      color: colors.primary,
     },
     langName: {
       fontSize: compact ? typography.fontSize.sm : typography.fontSize.base,
@@ -78,8 +86,18 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
     languageOptionSelected: {
       backgroundColor: `${colors.primary}20`,
     },
-    languageFlag: {
-      fontSize: 28,
+    languageIsoBadge: {
+      backgroundColor: `${colors.primary}20`,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: borderRadius.sm,
+      minWidth: 44,
+      alignItems: 'center',
+    },
+    languageIsoText: {
+      fontSize: typography.fontSize.base,
+      fontWeight: '700',
+      color: colors.primary,
     },
     languageName: {
       fontSize: typography.fontSize.base,
@@ -111,7 +129,9 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
         }}
         testID="button-language-selector"
       >
-        <Text style={styles.flag}>{currentLang?.flag}</Text>
+        <View style={styles.isoCodeBadge}>
+          <Text style={styles.isoCodeText}>{currentLang?.isoCode}</Text>
+        </View>
         {!compact && <Text style={styles.langName}>{currentLang?.name}</Text>}
         <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
       </Pressable>
@@ -136,7 +156,9 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
                 onPress={() => handleSelectLanguage(lang.code)}
                 testID={`button-language-${lang.code}`}
               >
-                <Text style={styles.languageFlag}>{lang.flag}</Text>
+                <View style={styles.languageIsoBadge}>
+                  <Text style={styles.languageIsoText}>{lang.isoCode}</Text>
+                </View>
                 <Text style={styles.languageName}>{lang.name}</Text>
                 {currentLanguage === lang.code && (
                   <Ionicons
