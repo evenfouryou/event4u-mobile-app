@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -33,7 +32,6 @@ interface SiteSettings {
 
 export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,7 +120,7 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
 
   if (showLoader) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-site-settings" />
         <Loading text="Caricamento impostazioni..." />
       </View>
@@ -130,7 +128,7 @@ export function AdminSiteSettingsScreen({ onBack }: AdminSiteSettingsScreenProps
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <Header showLogo showBack onBack={onBack} testID="header-site-settings" />
 
       <ScrollView

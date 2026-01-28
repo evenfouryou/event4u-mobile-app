@@ -10,7 +10,6 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
@@ -74,7 +73,6 @@ interface PrinterAgent {
 
 export function AdminPrinterSettingsScreen({ onBack }: AdminPrinterSettingsScreenProps) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>('models');
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
@@ -352,7 +350,7 @@ export function AdminPrinterSettingsScreen({ onBack }: AdminPrinterSettingsScree
 
   if (showLoader) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <Header showLogo showBack onBack={onBack} testID="header-printer-settings" />
         <Loading text="Caricamento impostazioni stampanti..." />
       </View>
@@ -360,7 +358,7 @@ export function AdminPrinterSettingsScreen({ onBack }: AdminPrinterSettingsScree
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <Header
         showLogo
         showBack
