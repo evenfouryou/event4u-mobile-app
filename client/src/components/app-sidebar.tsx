@@ -63,12 +63,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import type { UserFeatures } from "@shared/schema";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'gestore';
@@ -779,8 +781,8 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Role Switch Button - PR users with linked customer account */}
-        {isPr && (user as any).siaeCustomerId && (
+        {/* Role Switch Button - PR users can always switch to customer mode */}
+        {isPr && (
           <Button
             variant="outline"
             size="sm"
@@ -795,9 +797,20 @@ export function AppSidebar() {
                 if (data.success && data.redirectTo) {
                   queryClient.clear();
                   window.location.href = data.redirectTo;
+                } else if (data.error) {
+                  toast({
+                    title: "Errore cambio modalità",
+                    description: data.error,
+                    variant: "destructive",
+                  });
                 }
               } catch (error) {
                 console.error("Error switching to customer mode:", error);
+                toast({
+                  title: "Errore",
+                  description: "Impossibile passare alla modalità cliente",
+                  variant: "destructive",
+                });
               }
             }}
             data-testid="button-switch-to-customer"

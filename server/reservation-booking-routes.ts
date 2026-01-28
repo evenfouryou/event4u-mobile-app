@@ -2556,8 +2556,62 @@ router.post("/api/switch-role/customer", requireAuth, async (req: Request, res: 
       if (phoneCustomer) customer = phoneCustomer;
     }
     
+    // Method 3: Find customer by email match
+    if (!customer && profile.email) {
+      const [emailCustomer] = await db.select().from(siaeCustomers)
+        .where(eq(siaeCustomers.email, profile.email));
+      if (emailCustomer) customer = emailCustomer;
+    }
+    
+    // Method 4: Auto-create customer account from PR profile if none exists
     if (!customer) {
-      return res.status(400).json({ error: "Nessun account cliente collegato a questo profilo PR" });
+      const fullPhone = `${profile.phonePrefix || '+39'}${profile.phone}`;
+      const uniqueCode = `PR-${crypto.randomUUID().slice(0, 12)}`;
+      const customerEmail = profile.email || `pr_${crypto.randomUUID().slice(0, 8)}@event4u.app`;
+      
+      try {
+        const [newCustomer] = await db.insert(siaeCustomers)
+          .values({
+            uniqueCode: uniqueCode,
+            firstName: profile.firstName || 'PR',
+            lastName: profile.lastName || 'User',
+            phone: fullPhone,
+            email: customerEmail,
+            userId: profile.userId || null,
+            registrationCompleted: true,
+            authenticationType: 'BO',
+            phoneVerified: true,
+            emailVerified: !!profile.email,
+          })
+          .returning();
+        customer = newCustomer;
+        console.log(`[ROLE-SWITCH] Created customer account ${customer.id} for PR ${profile.id}`);
+      } catch (insertError: any) {
+        // Handle unique constraint violations - try to find existing customer by phone/email again
+        console.error(`[ROLE-SWITCH] Insert failed for PR ${profile.id}:`, insertError.message);
+        
+        // Try one more time with phone only (might have been race condition)
+        const [existingByPhone] = await db.select().from(siaeCustomers)
+          .where(eq(siaeCustomers.phone, fullPhone));
+        if (existingByPhone) {
+          customer = existingByPhone;
+          console.log(`[ROLE-SWITCH] Found existing customer ${customer.id} by phone after insert failure`);
+        } else if (profile.email) {
+          const [existingByEmail] = await db.select().from(siaeCustomers)
+            .where(eq(siaeCustomers.email, profile.email));
+          if (existingByEmail) {
+            customer = existingByEmail;
+            console.log(`[ROLE-SWITCH] Found existing customer ${customer.id} by email after insert failure`);
+          }
+        }
+        
+        if (!customer) {
+          return res.status(400).json({ 
+            error: "Impossibile creare account cliente. Contatta l'assistenza.",
+            details: insertError.message 
+          });
+        }
+      }
     }
     
     // Store original PR data in session for switching back
