@@ -180,7 +180,7 @@ export function PRDashboard({
             style={styles.switchButton}
             testID="button-switch-to-client"
           >
-            <Ionicons name="swap-horizontal" size={20} color={staticColors.primary} />
+            <Ionicons name="swap-horizontal" size={22} color={staticColors.teal} />
           </Pressable>
         </View>
       </View>
@@ -524,14 +524,14 @@ const styles = StyleSheet.create({
     borderColor: staticColors.primary,
   },
   switchButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: staticColors.glass,
+    backgroundColor: 'rgba(0, 206, 209, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: staticColors.primary,
+    borderWidth: 2,
+    borderColor: staticColors.teal,
   },
   actionsScrollContent: {
     paddingVertical: spacing.xs,

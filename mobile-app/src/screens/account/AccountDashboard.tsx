@@ -447,13 +447,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   switchButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: staticColors.glass,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: staticColors.primary,
   },
   walletBadge: {
