@@ -1189,19 +1189,16 @@ router.get("/api/pr/events/:eventId/guest-entries", requireAuth, async (req: Req
     // PR/Capo Staff vedono solo gli ospiti che hanno aggiunto loro
     let userEntries: typeof allEntries = [];
     
-    if (userId) {
-      // PR with linked userId - filter by addedByUserId
+    if (prProfileId) {
+      // FIX 2026-01-28: Filter by addedByPrProfileId (primary method for PRs)
+      userEntries = allEntries.filter(entry => 
+        (entry as any).addedByPrProfileId === prProfileId
+      );
+      console.log("[PR GetGuests] Filtered by prProfileId, found:", userEntries.length);
+    } else if (userId) {
+      // Fallback: PR with linked userId but no prProfileId - filter by addedByUserId
       userEntries = allEntries.filter(entry => entry.addedByUserId === userId);
       console.log("[PR GetGuests] Filtered by userId, found:", userEntries.length);
-    } else if (prProfileId) {
-      // FIX 2026-01-27: PR without userId - check if we stored prProfileId or show entries with null addedByUserId
-      // For entries added by PR without userId, addedByUserId will be null
-      // We need to also check createdBy field if it stores prProfileId
-      userEntries = allEntries.filter(entry => 
-        entry.addedByUserId === null || 
-        (entry.createdBy && entry.createdBy === prProfileId)
-      );
-      console.log("[PR GetGuests] Filtered by prProfileId/null, found:", userEntries.length);
     }
     
     res.json(userEntries);
@@ -1517,7 +1514,7 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
     }
     
     // Create entry
-    // FIX 2026-01-28: createdBy must be a valid users.id (not prProfileId which is from pr_profiles table)
+    // FIX 2026-01-28: Use addedByPrProfileId to track which PR added the entry
     const entryData = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
@@ -1531,7 +1528,8 @@ router.post("/api/pr/events/:eventId/guests", requireAuth, requirePr, async (req
       status: 'pending', // Explicit default
       plusOnes: req.body.plusOnes || 0, // Explicit default
       addedByUserId: userId || null, // Can be null for PR without linked user account
-      createdBy: userId || null, // Must be valid users.id, not prProfileId
+      addedByPrProfileId: prProfileId || null, // PR profile ID for filtering
+      createdBy: userId || null, // Must be valid users.id
       createdByRole: 'pr',
     };
     console.log("[PR AddGuest] Entry data before validation:", JSON.stringify(entryData));

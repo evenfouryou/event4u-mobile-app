@@ -4523,7 +4523,8 @@ export const listEntries = pgTable("list_entries", {
   email: varchar("email", { length: 255 }),
   clientUserId: varchar("client_user_id").references(() => users.id),
   // Campi PR aggiuntivi
-  addedByUserId: varchar("added_by_user_id").references(() => users.id), // PR che ha inserito
+  addedByUserId: varchar("added_by_user_id").references(() => users.id), // PR che ha inserito (users.id)
+  addedByPrProfileId: varchar("added_by_pr_profile_id").references(() => prProfiles.id), // PR profile ID per PR senza userId
   customerId: varchar("customer_id").references(() => siaeCustomers.id), // Cliente SIAE se registrato
   plusOnes: integer("plus_ones").notNull().default(0), // Numero accompagnatori
   plusOnesNames: text("plus_ones_names").array().default(sql`ARRAY[]::text[]`), // Nomi accompagnatori
