@@ -2583,14 +2583,21 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       const isTable = qrCode.startsWith('TB_');
       
       if (isTable) {
-        // Find table booking by QR code
-        const [booking] = await db.select()
+        // Find table booking by QR code with table name
+        const [bookingWithTable] = await db.select({
+          booking: tableBookings,
+          tableName: eventTables.name,
+        })
           .from(tableBookings)
+          .leftJoin(eventTables, eq(tableBookings.tableId, eventTables.id))
           .where(eq(tableBookings.qrCode, qrCode));
         
-        if (!booking) {
+        if (!bookingWithTable) {
           return res.status(404).json({ message: "Prenotazione tavolo non trovata" });
         }
+        
+        const booking = bookingWithTable.booking;
+        const tableName = bookingWithTable.tableName;
         
         if (eventId && booking.eventId !== eventId) {
           return res.status(400).json({ message: "QR code non valido per questo evento" });
@@ -2613,6 +2620,11 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
             message: "Già entrato",
             alreadyCheckedIn: true,
             checkedInAt: booking.qrScannedAt,
+            person: {
+              firstName: booking.guestName?.split(' ')[0] || '',
+              lastName: booking.guestName?.split(' ').slice(1).join(' ') || '',
+              tableTypeName: tableName,
+            },
           });
         }
         
@@ -2629,22 +2641,32 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         return res.json({
           success: true,
           type: 'table',
+          tableName,
           message: "Check-in tavolo completato",
           person: {
             firstName: updated.guestName?.split(' ')[0] || '',
             lastName: updated.guestName?.split(' ').slice(1).join(' ') || '',
             type: 'tavolo',
+            tableTypeName: tableName,
+            guestCount: updated.guestCount || 1,
           },
         });
       } else {
-        // Find list entry by QR code
-        const [entry] = await db.select()
+        // Find list entry by QR code with list name
+        const [entryWithList] = await db.select({
+          entry: listEntries,
+          listName: eventLists.name,
+        })
           .from(listEntries)
+          .leftJoin(eventLists, eq(listEntries.listId, eventLists.id))
           .where(eq(listEntries.qrCode, qrCode));
         
-        if (!entry) {
+        if (!entryWithList) {
           return res.status(404).json({ message: "Ospite non trovato nella lista" });
         }
+        
+        const entry = entryWithList.entry;
+        const listName = entryWithList.listName;
         
         if (eventId && entry.eventId !== eventId) {
           return res.status(400).json({ message: "QR code non valido per questo evento" });
@@ -2667,6 +2689,11 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
             message: "Già entrato",
             alreadyCheckedIn: true,
             checkedInAt: entry.checkedInAt,
+            person: {
+              firstName: entry.firstName || '',
+              lastName: entry.lastName || '',
+              listName,
+            },
           });
         }
         
@@ -2685,11 +2712,13 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         return res.json({
           success: true,
           type: 'list',
+          listName,
           message: "Check-in completato",
           person: {
             firstName: updated.firstName || '',
             lastName: updated.lastName || '',
             type: 'lista',
+            listName,
             plusOnes: updated.plusOnes || 0,
           },
         });
