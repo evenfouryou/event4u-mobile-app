@@ -3452,7 +3452,27 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
 
     const { eventLists, listEntries: listEntriesTable, siaeCustomers } = await import("@shared/schema");
 
-    console.log("[my/guest-list-entries] Searching for user:", { id: user.id, email: user.email, phone: user.phone });
+    console.log("[DEBUG-QR] ========================================");
+    console.log("[DEBUG-QR] Endpoint /api/my/guest-list-entries called");
+    console.log("[DEBUG-QR] User data:", JSON.stringify({ id: user.id, email: user.email, phone: user.phone, role: user.role }));
+    
+    // DEBUG: Count total entries in database
+    const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(listEntriesTable);
+    console.log("[DEBUG-QR] Total list_entries in database:", totalCount?.count);
+    
+    // DEBUG: Get sample entries to see what's in DB
+    const sampleEntries = await db.select({
+      id: listEntriesTable.id,
+      email: listEntriesTable.email,
+      phone: listEntriesTable.phone,
+      clientUserId: listEntriesTable.clientUserId,
+      qrCode: listEntriesTable.qrCode,
+      firstName: listEntriesTable.firstName,
+      lastName: listEntriesTable.lastName
+    }).from(listEntriesTable).limit(5);
+    console.log("[DEBUG-QR] Sample entries:", JSON.stringify(sampleEntries));
+    
+    console.log("[DEBUG-QR] Searching for user:", { id: user.id, email: user.email, phone: user.phone });
 
     // Normalize phone number - strip all non-digits
     const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
@@ -3514,6 +3534,10 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       }
     }
 
+    console.log("[DEBUG-QR] Search conditions count:", conditions.length);
+    console.log("[DEBUG-QR] Searching with phone variants for user.phone:", user.phone);
+    console.log("[DEBUG-QR] Searching with phone variants for customer.phone:", customerPhone);
+    
     // Find all list entries linked to this user by clientUserId, email, or phone
     const userEntries = await db.select({
       entry: listEntriesTable,
@@ -3523,7 +3547,37 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       .innerJoin(eventLists, eq(listEntriesTable.listId, eventLists.id))
       .where(or(...conditions));
     
-    console.log("[my/guest-list-entries] Found", userEntries.length, "entries with", conditions.length, "conditions");
+    console.log("[DEBUG-QR] Query completed. Found", userEntries.length, "entries");
+    if (userEntries.length > 0) {
+      console.log("[DEBUG-QR] First entry:", JSON.stringify({
+        id: userEntries[0].entry.id,
+        firstName: userEntries[0].entry.firstName,
+        lastName: userEntries[0].entry.lastName,
+        qrCode: userEntries[0].entry.qrCode,
+        email: userEntries[0].entry.email,
+        phone: userEntries[0].entry.phone,
+        clientUserId: userEntries[0].entry.clientUserId
+      }));
+    } else {
+      console.log("[DEBUG-QR] NO ENTRIES FOUND - checking possible reasons...");
+      // Check if there are ANY entries with matching email/phone (ignoring clientUserId)
+      if (user.email) {
+        const byEmail = await db.select({ id: listEntriesTable.id, email: listEntriesTable.email })
+          .from(listEntriesTable)
+          .where(sql`LOWER(${listEntriesTable.email}) = LOWER(${user.email})`)
+          .limit(3);
+        console.log("[DEBUG-QR] Entries with matching email (case-insensitive):", JSON.stringify(byEmail));
+      }
+      if (user.phone) {
+        const phoneDigits = user.phone.replace(/\D/g, '');
+        const byPhone = await db.select({ id: listEntriesTable.id, phone: listEntriesTable.phone })
+          .from(listEntriesTable)
+          .where(sql`REPLACE(REPLACE(REPLACE(${listEntriesTable.phone}, '+', ''), ' ', ''), '-', '') LIKE ${'%' + phoneDigits.slice(-9)}`)
+          .limit(3);
+        console.log("[DEBUG-QR] Entries with matching phone (last 9 digits):", JSON.stringify(byPhone));
+      }
+    }
+    console.log("[DEBUG-QR] ========================================");
 
     // Enrich with event data
     const entries = await Promise.all(userEntries.map(async ({ entry, list }) => {
