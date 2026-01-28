@@ -230,362 +230,354 @@ export default function PrDashboard() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto">
-        {/* Top Section: Wallet + Stats Grid on Desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Wallet Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-1"
-          >
-            <Card 
-              className="overflow-hidden cursor-pointer hover-elevate h-full"
-              onClick={() => navigate("/pr/wallet")}
-              data-testid="card-wallet"
+      <div className="px-4 md:px-6 lg:px-8 py-6 space-y-8 max-w-7xl mx-auto">
+        {/* Desktop: Two-column layout with main content + sidebar */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Main Content - 3 columns on XL */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Stats Row - 4 columns on desktop */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-4"
             >
-              <div className="relative bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-5 h-full min-h-[140px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-              
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-white/80 text-sm font-medium">{t('pr.yourBalance')}</span>
-                  <Wallet className="h-5 w-5 text-white/60" />
-                </div>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-bold text-white">
-                    €{isLoadingWallet ? "---" : (parseFloat(wallet?.balance || "0")).toFixed(2)}
-                  </span>
-                </div>
-                {wallet?.pendingPayout && parseFloat(wallet.pendingPayout) > 0 && (
-                  <p className="text-white/70 text-sm">
-                    €{parseFloat(wallet.pendingPayout).toFixed(2)} {t('pr.pendingPayment')}
-                  </p>
-                )}
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-          {/* Stats Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-2 grid grid-cols-2 gap-3"
-          >
-          <Card className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 border-violet-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-violet-500/20">
-                  <Users className="h-5 w-5 text-violet-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {isLoadingStats ? <Skeleton className="h-7 w-12" /> : animatedStats.totalGuests}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('pr.guestsLabel')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/20">
-                  <Ticket className="h-5 w-5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {isLoadingStats ? <Skeleton className="h-7 w-12" /> : animatedStats.ticketsSold}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('pr.ticketsLabel')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/20">
-                  <TrendingUp className="h-5 w-5 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {isLoadingStats ? <Skeleton className="h-7 w-16" /> : `€${animatedStats.commissionEarned}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('pr.earnedLabel')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/20">
-                  <Calendar className="h-5 w-5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {isLoadingStats ? <Skeleton className="h-7 w-8" /> : animatedStats.activeEvents}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('pr.eventsLabel')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          </motion.div>
-        </div>
-
-        {/* Featured Event Card */}
-        {featuredEvent && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card 
-              className="overflow-hidden cursor-pointer hover-elevate group"
-              onClick={() => navigate(`/pr/events/${featuredEvent.eventId}`)}
-              data-testid={`card-event-${featuredEvent.eventId}`}
-            >
-              <div className="relative h-48 md:h-56">
-                {featuredEvent.eventImageUrl ? (
-                  <img
-                    src={featuredEvent.eventImageUrl}
-                    alt={featuredEvent.eventName}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-700" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                
-                {/* Badge */}
-                <div className="absolute top-4 left-4">
-                  {todayEvent ? (
-                    <Badge className="bg-primary text-primary-foreground shadow-lg animate-pulse">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      {t('pr.todayLabel')}
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {getCountdown(featuredEvent.eventStart)}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
-                    {featuredEvent.eventName}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-3 text-white/80 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{formatDate(featuredEvent.eventStart)}</span>
+              <Card className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 border-violet-500/20">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-violet-500/20">
+                      <Users className="h-6 w-6 text-violet-400" />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{formatTime(featuredEvent.eventStart)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span className="truncate max-w-[150px]">{featuredEvent.locationName}</span>
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">
+                        {isLoadingStats ? <Skeleton className="h-8 w-14" /> : animatedStats.totalGuests}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{t('pr.guestsLabel')}</p>
                     </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Action indicator */}
-                <div className="absolute bottom-4 right-4">
-                  <div className="p-2 rounded-full bg-primary text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
-                    <ArrowUpRight className="h-5 w-5" />
+              <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-blue-500/20">
+                      <Ticket className="h-6 w-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">
+                        {isLoadingStats ? <Skeleton className="h-8 w-14" /> : animatedStats.ticketsSold}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{t('pr.ticketsLabel')}</p>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        )}
+                </CardContent>
+              </Card>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <h2 className="text-lg font-semibold text-foreground mb-3">{t('pr.quickActions')}</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card 
-              className="cursor-pointer hover-elevate"
-              onClick={() => navigate("/pr/events")}
-              data-testid="action-events"
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-violet-500/10">
-                  <Calendar className="h-6 w-6 text-violet-500" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{t('pr.myEventsAction')}</p>
-                  <p className="text-xs text-muted-foreground">{t('pr.manageListsAndTables')}</p>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-amber-500/20">
+                      <TrendingUp className="h-6 w-6 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">
+                        {isLoadingStats ? <Skeleton className="h-8 w-20" /> : `€${animatedStats.commissionEarned}`}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{t('pr.earnedLabel')}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card 
-              className="cursor-pointer hover-elevate"
-              onClick={() => navigate("/pr/wallet")}
-              data-testid="action-wallet"
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-emerald-500/10">
-                  <Wallet className="h-6 w-6 text-emerald-500" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{t('pr.wallet')}</p>
-                  <p className="text-xs text-muted-foreground">{t('pr.balanceAndTransactions')}</p>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-emerald-500/20">
+                      <Calendar className="h-6 w-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">
+                        {isLoadingStats ? <Skeleton className="h-8 w-10" /> : animatedStats.activeEvents}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{t('pr.eventsLabel')}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card 
-              className="cursor-pointer hover-elevate"
-              onClick={() => navigate("/pr/profile")}
-              data-testid="action-profile"
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-blue-500/10">
-                  <Users className="h-6 w-6 text-blue-500" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{t('pr.profile')}</p>
-                  <p className="text-xs text-muted-foreground">{t('pr.accountSettings')}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover-elevate"
-              onClick={() => navigate("/pr/rewards")}
-              data-testid="action-rewards"
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-amber-500/10">
-                  <Trophy className="h-6 w-6 text-amber-500" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{t('pr.rewards')}</p>
-                  <p className="text-xs text-muted-foreground">{t('pr.goalsAndBonuses')}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </motion.div>
-
-        {/* Recent Events Preview */}
-        {events.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">{t('pr.yourEvents')}</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/pr/events")}
-                data-testid="button-see-all-events"
+            {/* Featured Event Card */}
+            {featuredEvent && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
               >
-                {t('pr.viewAllEvents')}
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-            
-            <div className="space-y-3">
-              {events.slice(0, 3).map((event, index) => {
-                const isToday = new Date(event.eventStart).toDateString() === now.toDateString();
-                const isPast = new Date(event.eventStart) < now;
-                
-                return (
-                  <motion.div
-                    key={event.eventId}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                  >
-                    <Card 
-                      className="cursor-pointer hover-elevate"
-                      onClick={() => navigate(`/pr/events/${event.eventId}`)}
-                      data-testid={`event-row-${event.eventId}`}
-                    >
-                      <CardContent className="p-3 flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
-                          {event.eventImageUrl ? (
-                            <img
-                              src={event.eventImageUrl}
-                              alt={event.eventName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-violet-600" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-foreground truncate">
-                              {event.eventName}
-                            </h4>
-                            {isToday && (
-                              <Badge className="bg-primary/10 text-primary text-xs">
-                                {t('pr.todayBadge')}
-                              </Badge>
-                            )}
-                            {isPast && !isToday && (
-                              <Badge variant="secondary" className="text-xs">
-                                {t('pr.pastBadge')}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(event.eventStart)} • {formatTime(event.eventStart)}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
+                <Card 
+                  className="overflow-hidden cursor-pointer hover-elevate group"
+                  onClick={() => navigate(`/pr/events/${featuredEvent.eventId}`)}
+                  data-testid={`card-event-${featuredEvent.eventId}`}
+                >
+                  <div className="relative h-56 lg:h-64 xl:h-72">
+                    {featuredEvent.eventImageUrl ? (
+                      <img
+                        src={featuredEvent.eventImageUrl}
+                        alt={featuredEvent.eventName}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-700" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                    
+                    {/* Badge */}
+                    <div className="absolute top-4 left-4">
+                      {todayEvent ? (
+                        <Badge className="bg-primary text-primary-foreground shadow-lg animate-pulse">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          {t('pr.todayLabel')}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {getCountdown(featuredEvent.eventStart)}
+                        </Badge>
+                      )}
+                    </div>
 
-        {/* Empty State */}
-        {!isLoadingEvents && events.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  {t('pr.noEventsAssignedPR')}
-                </h3>
-                <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                  Al momento non hai eventi assegnati. Contatta il tuo organizzatore per essere aggiunto agli eventi.
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+                    {/* Content */}
+                    <div className="absolute bottom-0 left-0 right-0 p-5 lg:p-6">
+                      <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-3">
+                        {featuredEvent.eventName}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm lg:text-base">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 lg:h-5 lg:w-5" />
+                          <span>{formatDate(featuredEvent.eventStart)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 lg:h-5 lg:w-5" />
+                          <span>{formatTime(featuredEvent.eventStart)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-4 w-4 lg:h-5 lg:w-5" />
+                          <span className="truncate max-w-[200px] lg:max-w-[300px]">{featuredEvent.locationName}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action indicator */}
+                    <div className="absolute bottom-5 right-5 lg:bottom-6 lg:right-6">
+                      <div className="p-2.5 lg:p-3 rounded-full bg-primary text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
+                        <ArrowUpRight className="h-5 w-5 lg:h-6 lg:w-6" />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Recent Events List */}
+            {events.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-foreground">{t('pr.yourEvents')}</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/pr/events")}
+                    data-testid="button-see-all-events"
+                  >
+                    {t('pr.viewAllEvents')}
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+                
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {events.slice(0, 4).map((event, index) => {
+                    const isToday = new Date(event.eventStart).toDateString() === now.toDateString();
+                    const isPast = new Date(event.eventStart) < now;
+                    
+                    return (
+                      <motion.div
+                        key={event.eventId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + index * 0.1 }}
+                      >
+                        <Card 
+                          className="cursor-pointer hover-elevate"
+                          onClick={() => navigate(`/pr/events/${event.eventId}`)}
+                          data-testid={`event-row-${event.eventId}`}
+                        >
+                          <CardContent className="p-4 flex items-center gap-4">
+                            <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden flex-shrink-0">
+                              {event.eventImageUrl ? (
+                                <img
+                                  src={event.eventImageUrl}
+                                  alt={event.eventName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-violet-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <h4 className="font-semibold text-foreground text-base lg:text-lg truncate">
+                                  {event.eventName}
+                                </h4>
+                                {isToday && (
+                                  <Badge className="bg-primary/10 text-primary text-xs">
+                                    {t('pr.todayBadge')}
+                                  </Badge>
+                                )}
+                                {isPast && !isToday && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {t('pr.pastBadge')}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDate(event.eventStart)} • {formatTime(event.eventStart)}
+                              </p>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Empty State */}
+            {!isLoadingEvents && events.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card>
+                  <CardContent className="py-16 text-center">
+                    <Calendar className="h-14 w-14 text-muted-foreground mx-auto mb-5" />
+                    <h3 className="text-xl font-medium text-foreground mb-3">
+                      {t('pr.noEventsAssignedPR')}
+                    </h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      Al momento non hai eventi assegnati. Contatta il tuo organizzatore per essere aggiunto agli eventi.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Right Sidebar - Wallet & Quick Actions (visible on XL) */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* Wallet Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card 
+                className="overflow-hidden cursor-pointer hover-elevate"
+                onClick={() => navigate("/pr/wallet")}
+                data-testid="card-wallet"
+              >
+                <div className="relative bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-white/80 text-sm font-medium">{t('pr.yourBalance')}</span>
+                      <Wallet className="h-5 w-5 text-white/60" />
+                    </div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-4xl font-bold text-white">
+                        €{isLoadingWallet ? "---" : (parseFloat(wallet?.balance || "0")).toFixed(2)}
+                      </span>
+                    </div>
+                    {wallet?.pendingPayout && parseFloat(wallet.pendingPayout) > 0 && (
+                      <p className="text-white/70 text-sm">
+                        €{parseFloat(wallet.pendingPayout).toFixed(2)} {t('pr.pendingPayment')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Quick Actions - Vertical on sidebar */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="space-y-3"
+            >
+              <h3 className="text-lg font-semibold text-foreground">{t('pr.quickActions')}</h3>
+              
+              <Card 
+                className="cursor-pointer hover-elevate"
+                onClick={() => navigate("/pr/events")}
+                data-testid="action-events"
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-violet-500/10">
+                    <Calendar className="h-5 w-5 text-violet-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{t('pr.myEventsAction')}</p>
+                    <p className="text-xs text-muted-foreground">{t('pr.manageListsAndTables')}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover-elevate"
+                onClick={() => navigate("/pr/rewards")}
+                data-testid="action-rewards"
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-amber-500/10">
+                    <Trophy className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{t('pr.rewards')}</p>
+                    <p className="text-xs text-muted-foreground">{t('pr.goalsAndBonuses')}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover-elevate"
+                onClick={() => navigate("/pr/profile")}
+                data-testid="action-profile"
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-500/10">
+                    <Users className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{t('pr.profile')}</p>
+                    <p className="text-xs text-muted-foreground">{t('pr.accountSettings')}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </PrLayout>
   );
