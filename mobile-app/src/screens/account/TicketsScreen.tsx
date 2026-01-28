@@ -12,7 +12,7 @@ import api, { Ticket as ApiTicket, TicketsResponse, MyReservation } from '@/lib/
 
 type MainTabType = 'tickets' | 'lists';
 type TicketTabType = 'upcoming' | 'past' | 'cancelled';
-type ListTabType = 'upcoming' | 'past';
+type ListTabType = 'upcoming' | 'past' | 'cancelled';
 
 interface TicketsScreenProps {
   onBack: () => void;
@@ -81,13 +81,19 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
 
   const getFilteredReservations = (): MyReservation[] => {
     const now = new Date();
-    if (listTab === 'upcoming') {
+    const cancelledStatuses = ['cancelled', 'annullato', 'rejected', 'no_show'];
+    
+    if (listTab === 'cancelled') {
+      return reservations.filter(r => cancelledStatuses.includes(r.status));
+    } else if (listTab === 'upcoming') {
       return reservations.filter(r => {
+        if (cancelledStatuses.includes(r.status)) return false;
         if (!r.eventDate) return true;
         return new Date(r.eventDate) >= now;
       });
     } else {
       return reservations.filter(r => {
+        if (cancelledStatuses.includes(r.status)) return false;
         if (!r.eventDate) return false;
         return new Date(r.eventDate) < now;
       });
@@ -415,18 +421,18 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
       ) : (
         <>
           <View style={styles.tabs}>
-            {(['upcoming', 'past'] as ListTabType[]).map((tab) => (
+            {(['upcoming', 'past', 'cancelled'] as ListTabType[]).map((tab) => (
               <Pressable
                 key={tab}
                 onPress={() => {
                   triggerHaptic('selection');
                   setListTab(tab);
                 }}
-                style={[styles.tab, listTab === tab && styles.tabActiveList]}
+                style={[styles.tab, listTab === tab && (tab === 'cancelled' ? styles.tabActiveCancelled : styles.tabActiveList)]}
                 testID={`tab-list-${tab}`}
               >
-                <Text style={[styles.tabText, listTab === tab && styles.tabTextActiveList]}>
-                  {tab === 'upcoming' ? 'Prossime' : 'Passate'}
+                <Text style={[styles.tabText, listTab === tab && (tab === 'cancelled' ? styles.tabTextActiveCancelled : styles.tabTextActiveList)]}>
+                  {tab === 'upcoming' ? 'Prossime' : tab === 'past' ? 'Passate' : 'Annullate'}
                 </Text>
               </Pressable>
             ))}
@@ -459,10 +465,14 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
               <Text style={styles.emptyTitle}>
                 {listTab === 'upcoming'
                   ? 'Nessuna prenotazione attiva'
-                  : 'Nessuna prenotazione passata'}
+                  : listTab === 'past'
+                  ? 'Nessuna prenotazione passata'
+                  : 'Nessuna prenotazione annullata'}
               </Text>
               <Text style={styles.emptyText}>
-                Le tue prenotazioni in lista appariranno qui
+                {listTab === 'cancelled' 
+                  ? 'Le prenotazioni cancellate appariranno qui'
+                  : 'Le tue prenotazioni in lista appariranno qui'}
               </Text>
             </View>
           )}
@@ -530,6 +540,9 @@ const styles = StyleSheet.create({
   tabActiveList: {
     backgroundColor: staticColors.teal,
   },
+  tabActiveCancelled: {
+    backgroundColor: staticColors.destructive,
+  },
   tabText: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
@@ -540,6 +553,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabTextActiveList: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  tabTextActiveCancelled: {
     color: '#ffffff',
     fontWeight: '600',
   },
