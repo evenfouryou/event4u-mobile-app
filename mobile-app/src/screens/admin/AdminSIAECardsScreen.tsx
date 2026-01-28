@@ -1,47 +1,46 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card, GlassCard } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Header } from '@/components/Header';
-import { Loading } from '@/components/Loading';
+import { SkeletonList } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { SIAECard as APISIAECard } from '@/lib/api';
+import api from '@/lib/api';
 
 interface AdminSIAECardsScreenProps {
   onBack: () => void;
 }
 
-interface SIAECard {
+interface SiaeActivationCard {
   id: string;
-  serialNumber: string;
-  gestoreName: string;
-  companyName: string;
-  status: 'active' | 'inactive' | 'expired' | 'revoked';
-  activationDate: string;
-  expirationDate: string;
-  lastUsed: string | null;
-  transactionCount: number;
+  companyId: string;
+  cardNumber: string;
+  fiscalCode: string;
+  activationDate?: string;
+  expirationDate?: string;
+  status: string;
+  createdAt: string;
 }
 
-type FilterType = 'all' | 'active' | 'inactive' | 'expired' | 'revoked';
+interface Company {
+  id: string;
+  name: string;
+}
 
 export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [cards, setCards] = useState<SIAECard[]>([]);
+  const [cards, setCards] = useState<SiaeActivationCard[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
   useEffect(() => {
-    loadCards();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -54,27 +53,15 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
     return () => clearTimeout(timeout);
   }, [isLoading]);
 
-  const loadCards = async () => {
+  const loadData = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getAdminSIAECards();
-      setCards(data.map(c => {
-        let mappedStatus: 'active' | 'inactive' | 'expired' | 'revoked' = 'inactive';
-        if (c.status === 'active') mappedStatus = 'active';
-        else if (c.status === 'expired') mappedStatus = 'expired';
-        else if ((c as any).status === 'revoked') mappedStatus = 'revoked';
-        return {
-          id: c.id,
-          serialNumber: c.serialNumber,
-          gestoreName: c.companyName,
-          companyName: c.companyName,
-          status: mappedStatus,
-          activationDate: c.issueDate,
-          expirationDate: c.expiryDate || '',
-          lastUsed: null,
-          transactionCount: 0,
-        };
-      }));
+      const [cardsData, companiesData] = await Promise.all([
+        api.get<SiaeActivationCard[]>('/api/siae/activation-cards'),
+        api.get<Company[]>('/api/companies'),
+      ]);
+      setCards(cardsData);
+      setCompanies(companiesData);
     } catch (error) {
       console.error('Error loading SIAE cards:', error);
     } finally {
@@ -84,11 +71,16 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadCards();
+    await loadData();
     setRefreshing(false);
   };
 
-  const getStatusBadge = (status: SIAECard['status']) => {
+  const getCompanyName = (companyId: string) => {
+    const company = companies.find(c => c.id === companyId);
+    return company?.name || 'N/A';
+  };
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
         return <Badge variant="success">Attiva</Badge>;
@@ -96,82 +88,13 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
         return <Badge variant="secondary">Inattiva</Badge>;
       case 'expired':
         return <Badge variant="warning">Scaduta</Badge>;
-      case 'revoked':
-        return <Badge variant="destructive">Revocata</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const filteredCards = cards.filter(card => {
-    const matchesSearch = card.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.gestoreName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.companyName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesFilter = activeFilter === 'all' || card.status === activeFilter;
-    
-    return matchesSearch && matchesFilter;
-  });
-
-  const handleActivateCard = (card: SIAECard) => {
-    triggerHaptic('medium');
-    Alert.alert(
-      'Attiva Carta',
-      `Vuoi attivare la carta ${card.serialNumber}?`,
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Attiva',
-          onPress: () => {
-            setCards(prev => prev.map(c =>
-              c.id === card.id ? { ...c, status: 'active' as const } : c
-            ));
-          },
-        },
-      ]
-    );
-  };
-
-  const handleRevokeCard = (card: SIAECard) => {
-    triggerHaptic('medium');
-    Alert.alert(
-      'Revoca Carta',
-      `Sei sicuro di voler revocare la carta ${card.serialNumber}? Questa azione non può essere annullata.`,
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Revoca',
-          style: 'destructive',
-          onPress: () => {
-            setCards(prev => prev.map(c =>
-              c.id === card.id ? { ...c, status: 'revoked' as const } : c
-            ));
-          },
-        },
-      ]
-    );
-  };
-
-  const handleRenewCard = (card: SIAECard) => {
-    triggerHaptic('medium');
-    Alert.alert(
-      'Rinnova Carta',
-      `Vuoi rinnovare la carta ${card.serialNumber} per un altro anno?`,
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Rinnova',
-          onPress: () => {
-            const newExpDate = new Date();
-            newExpDate.setFullYear(newExpDate.getFullYear() + 1);
-            setCards(prev => prev.map(c =>
-              c.id === card.id ? { ...c, status: 'active' as const, expirationDate: newExpDate.toISOString().split('T')[0] } : c
-            ));
-          },
-        },
-      ]
-    );
-  };
-
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
       day: 'numeric',
@@ -180,202 +103,35 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
     });
   };
 
-  const filters: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'Tutte' },
-    { id: 'active', label: 'Attive' },
-    { id: 'inactive', label: 'Inattive' },
-    { id: 'expired', label: 'Scadute' },
-    { id: 'revoked', label: 'Revocate' },
-  ];
+  const activeCards = cards.filter(c => c.status === 'active').length;
+  const uniqueCompanies = new Set(cards.map(c => c.companyId)).size;
 
-  const renderCard = ({ item }: { item: SIAECard }) => (
-    <Card style={styles.cardItem} testID={`card-${item.id}`}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardIcon}>
-          <Ionicons name="card" size={24} color={staticColors.primary} />
-        </View>
-        <View style={styles.cardInfo}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.serialNumber}>{item.serialNumber}</Text>
-            {getStatusBadge(item.status)}
-          </View>
-          <Text style={styles.gestoreName}>{item.gestoreName}</Text>
-          <Text style={styles.companyName}>{item.companyName}</Text>
-        </View>
-      </View>
-
-      <View style={styles.cardDetails}>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Attivazione</Text>
-            <Text style={styles.detailValue}>{formatDate(item.activationDate)}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Scadenza</Text>
-            <Text style={styles.detailValue}>{formatDate(item.expirationDate)}</Text>
-          </View>
-        </View>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Ultimo Utilizzo</Text>
-            <Text style={styles.detailValue}>{item.lastUsed ? formatDate(item.lastUsed) : 'Mai'}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Transazioni</Text>
-            <Text style={styles.detailValue}>{item.transactionCount}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.cardActions}>
-        {item.status === 'inactive' && (
-          <Button
-            variant="default"
-            size="sm"
-            onPress={() => handleActivateCard(item)}
-            testID={`button-activate-${item.id}`}
-          >
-            <Ionicons name="checkmark-circle" size={16} color={staticColors.primaryForeground} />
-            <Text style={[styles.actionButtonText, { color: staticColors.primaryForeground }]}>Attiva</Text>
-          </Button>
-        )}
-        {item.status === 'expired' && (
-          <Button
-            variant="default"
-            size="sm"
-            onPress={() => handleRenewCard(item)}
-            testID={`button-renew-${item.id}`}
-          >
-            <Ionicons name="refresh" size={16} color={staticColors.primaryForeground} />
-            <Text style={[styles.actionButtonText, { color: staticColors.primaryForeground }]}>Rinnova</Text>
-          </Button>
-        )}
-        {(item.status === 'active' || item.status === 'inactive') && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onPress={() => handleRevokeCard(item)}
-            testID={`button-revoke-${item.id}`}
-          >
-            <Ionicons name="ban" size={16} color={staticColors.destructiveForeground} />
-            <Text style={[styles.actionButtonText, { color: staticColors.destructiveForeground }]}>Revoca</Text>
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onPress={() => {
-            triggerHaptic('light');
-            Alert.alert('Dettagli', `Dettagli carta ${item.serialNumber} - funzionalità in sviluppo`);
-          }}
-          testID={`button-details-${item.id}`}
-        >
-          <Ionicons name="eye-outline" size={16} color={staticColors.foreground} />
-          <Text style={styles.actionButtonText}>Dettagli</Text>
-        </Button>
-      </View>
-    </Card>
-  );
-
-  if (showLoader) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header showLogo showBack onBack={onBack} testID="header-siae-cards" />
-        <Loading text="Caricamento carte SIAE..." />
-      </View>
+  const handleCardDetails = (card: SiaeActivationCard) => {
+    triggerHaptic('light');
+    Alert.alert(
+      'Dettagli Carta',
+      `Numero: ${card.cardNumber}\nCodice Fiscale: ${card.fiscalCode}\nAzienda: ${getCompanyName(card.companyId)}\nStato: ${card.status}\nAttivazione: ${formatDate(card.activationDate)}\nScadenza: ${formatDate(card.expirationDate)}`,
+      [{ text: 'Chiudi' }]
     );
-  }
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header showLogo showBack onBack={onBack} testID="header-siae-cards" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header
+        title="Carte Attivazione SIAE"
+        showBack
+        onBack={onBack}
+        testID="header-siae-cards"
+      />
 
-      <View style={styles.statsSection}>
-        <Text style={styles.title}>Carte Attivazione SIAE</Text>
-        <View style={styles.statsGrid}>
-          <GlassCard style={styles.statCard} testID="stat-total">
-            <View style={[styles.statIcon, { backgroundColor: `${staticColors.primary}20` }]}>
-              <Ionicons name="card" size={20} color={staticColors.primary} />
-            </View>
-            <Text style={styles.statValue}>{cards.length}</Text>
-            <Text style={styles.statLabel}>Totali</Text>
-          </GlassCard>
-
-          <GlassCard style={styles.statCard} testID="stat-active">
-            <View style={[styles.statIcon, { backgroundColor: `${staticColors.success}20` }]}>
-              <Ionicons name="checkmark-circle" size={20} color={staticColors.success} />
-            </View>
-            <Text style={styles.statValue}>{cards.filter(c => c.status === 'active').length}</Text>
-            <Text style={styles.statLabel}>Attive</Text>
-          </GlassCard>
-
-          <GlassCard style={styles.statCard} testID="stat-expired">
-            <View style={[styles.statIcon, { backgroundColor: `${staticColors.warning}20` }]}>
-              <Ionicons name="time" size={20} color={staticColors.warning} />
-            </View>
-            <Text style={styles.statValue}>{cards.filter(c => c.status === 'expired').length}</Text>
-            <Text style={styles.statLabel}>Scadute</Text>
-          </GlassCard>
+      {showLoader ? (
+        <View style={styles.loaderContainer}>
+          <SkeletonList count={4} />
         </View>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <Ionicons name="search" size={20} color={colors.mutedForeground} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cerca carta, gestore, azienda..."
-            placeholderTextColor={colors.mutedForeground}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            testID="input-search"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')} testID="button-clear-search">
-              <Ionicons name="close-circle" size={20} color={colors.mutedForeground} />
-            </Pressable>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.filtersContainer}>
-        <FlatList
-          horizontal
-          data={filters}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersList}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => {
-                triggerHaptic('selection');
-                setActiveFilter(item.id);
-              }}
-              style={[
-                styles.filterChip,
-                activeFilter === item.id && styles.filterChipActive,
-              ]}
-              testID={`filter-${item.id}`}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  activeFilter === item.id && styles.filterChipTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          )}
-        />
-      </View>
-
-      {filteredCards.length > 0 ? (
-        <FlatList
-          data={filteredCards}
-          renderItem={renderCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: spacing.md }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -384,15 +140,105 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
               tintColor={colors.primary}
             />
           }
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <Ionicons name="card-outline" size={64} color={colors.mutedForeground} />
-          <Text style={styles.emptyTitle}>Nessuna carta trovata</Text>
-          <Text style={styles.emptyText}>
-            Prova a modificare i filtri o la ricerca
-          </Text>
-        </View>
+        >
+          <View style={styles.statsRow}>
+            <GlassCard style={styles.statCard} testID="stat-total">
+              <View style={[styles.statIcon, { backgroundColor: `${staticColors.primary}20` }]}>
+                <Ionicons name="card" size={20} color={staticColors.primary} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.foreground }]}>{cards.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Carte Totali</Text>
+            </GlassCard>
+
+            <GlassCard style={styles.statCard} testID="stat-active">
+              <View style={[styles.statIcon, { backgroundColor: `${staticColors.success}20` }]}>
+                <Ionicons name="shield-checkmark" size={20} color={staticColors.success} />
+              </View>
+              <Text style={[styles.statValue, { color: staticColors.success }]}>{activeCards}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Carte Attive</Text>
+            </GlassCard>
+
+            <GlassCard style={styles.statCard} testID="stat-companies">
+              <View style={[styles.statIcon, { backgroundColor: `${staticColors.info}20` }]}>
+                <Ionicons name="business" size={20} color={staticColors.info} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.foreground }]}>{uniqueCompanies}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Aziende</Text>
+            </GlassCard>
+          </View>
+
+          <Card style={styles.infoCard} testID="card-desktop-info">
+            <View style={styles.infoHeader}>
+              <Ionicons name="information-circle" size={20} color={staticColors.info} />
+              <Text style={[styles.infoTitle, { color: colors.foreground }]}>Lettore Smart Card</Text>
+            </View>
+            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
+              La lettura delle smart card SIAE richiede l'applicazione desktop Event4U con il lettore MiniLector EVO collegato.
+            </Text>
+            <View style={[styles.infoNote, { backgroundColor: `${staticColors.info}15` }]}>
+              <Ionicons name="desktop-outline" size={16} color={staticColors.info} />
+              <Text style={[styles.infoNoteText, { color: staticColors.info }]}>
+                Usa la versione web su desktop per accedere alle funzionalita del lettore
+              </Text>
+            </View>
+          </Card>
+
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Carte Registrate</Text>
+            <Badge variant="outline">{cards.length}</Badge>
+          </View>
+
+          {cards.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Ionicons name="card-outline" size={48} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                Nessuna carta registrata
+              </Text>
+            </Card>
+          ) : (
+            cards.map((card) => (
+              <Card key={card.id} style={styles.cardItem} testID={`card-${card.id}`}>
+                <Pressable onPress={() => handleCardDetails(card)}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardIconContainer}>
+                      <Ionicons name="card" size={24} color={staticColors.primary} />
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <View style={styles.cardTitleRow}>
+                        <Text style={[styles.cardNumber, { color: colors.foreground }]}>{card.cardNumber}</Text>
+                        {getStatusBadge(card.status)}
+                      </View>
+                      <Text style={[styles.companyName, { color: colors.mutedForeground }]}>
+                        {getCompanyName(card.companyId)}
+                      </Text>
+                      <Text style={[styles.fiscalCode, { color: colors.mutedForeground }]}>
+                        CF: {card.fiscalCode}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                  </View>
+
+                  <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
+                    <View style={styles.detailItem}>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Attivazione</Text>
+                      <Text style={[styles.detailValue, { color: colors.foreground }]}>
+                        {formatDate(card.activationDate)}
+                      </Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Scadenza</Text>
+                      <Text style={[styles.detailValue, { color: colors.foreground }]}>
+                        {formatDate(card.expirationDate)}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </Card>
+            ))
+          )}
+
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
       )}
     </View>
   );
@@ -401,21 +247,22 @@ export function AdminSIAECardsScreen({ onBack }: AdminSIAECardsScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: staticColors.background,
   },
-  statsSection: {
+  loaderContainer: {
+    flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
   },
-  title: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: '700',
-    color: staticColors.foreground,
-    marginBottom: spacing.md,
+  scrollView: {
+    flex: 1,
   },
-  statsGrid: {
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   statCard: {
     flex: 1,
@@ -425,7 +272,7 @@ const styles = StyleSheet.create({
   statIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
@@ -433,80 +280,77 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: staticColors.foreground,
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
-    marginTop: 2,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
-  searchContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+  infoCard: {
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
-  searchInputWrapper: {
+  infoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: staticColors.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: staticColors.border,
-    height: 48,
     gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  searchInput: {
-    flex: 1,
+  infoTitle: {
     fontSize: typography.fontSize.base,
-    color: staticColors.foreground,
+    fontWeight: '600',
   },
-  filtersContainer: {
-    marginTop: spacing.md,
-  },
-  filtersList: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: staticColors.card,
-    borderWidth: 1,
-    borderColor: staticColors.border,
-  },
-  filterChipActive: {
-    backgroundColor: staticColors.primary,
-    borderColor: staticColors.primary,
-  },
-  filterChipText: {
+  infoText: {
     fontSize: typography.fontSize.sm,
-    fontWeight: '500',
-    color: staticColors.foreground,
+    lineHeight: 20,
+    marginBottom: spacing.md,
   },
-  filterChipTextActive: {
-    color: staticColors.primaryForeground,
+  infoNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
   },
-  listContent: {
-    padding: spacing.lg,
-    paddingTop: spacing.md,
+  infoNoteText: {
+    fontSize: typography.fontSize.sm,
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+  },
+  emptyCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.base,
+    textAlign: 'center',
   },
   cardItem: {
     marginBottom: spacing.md,
-    padding: spacing.md,
   },
   cardHeader: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.md,
   },
-  cardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: `${staticColors.primary}15`,
+  cardIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    backgroundColor: `${staticColors.primary}20`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
   },
   cardInfo: {
     flex: 1,
@@ -514,73 +358,43 @@ const styles = StyleSheet.create({
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginBottom: spacing.xs,
   },
-  serialNumber: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '600',
-    color: staticColors.primary,
-  },
-  gestoreName: {
+  cardNumber: {
     fontSize: typography.fontSize.base,
-    fontWeight: '600',
-    color: staticColors.foreground,
+    fontWeight: '700',
+    fontFamily: 'monospace',
   },
   companyName: {
     fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
+    marginBottom: spacing.xs,
+  },
+  fiscalCode: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: 'monospace',
   },
   cardDetails: {
-    backgroundColor: staticColors.background,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  detailRow: {
     flexDirection: 'row',
-    marginBottom: spacing.xs,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   detailItem: {
     flex: 1,
   },
   detailLabel: {
     fontSize: typography.fontSize.xs,
-    color: staticColors.mutedForeground,
+    marginBottom: spacing.xs,
   },
   detailValue: {
     fontSize: typography.fontSize.sm,
     fontWeight: '500',
-    color: staticColors.foreground,
-    marginTop: 2,
   },
-  cardActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  actionButtonText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '500',
-    color: staticColors.foreground,
-    marginLeft: spacing.xs,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: '600',
-    color: staticColors.foreground,
-    marginTop: spacing.md,
-  },
-  emptyText: {
-    fontSize: typography.fontSize.sm,
-    color: staticColors.mutedForeground,
-    textAlign: 'center',
-    marginTop: spacing.xs,
+  bottomSpacing: {
+    height: spacing.xl,
   },
 });
+
+export default AdminSIAECardsScreen;
