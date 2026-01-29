@@ -486,7 +486,7 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     let userId: string | null = null;
     let isExistingUser = false;
     
-    // PRIORITY 1: Check if existingUserId is provided (promotion from customer search)
+    // PRIORITY 1: Check if existingUserId is provided (promotion from user search)
     if (req.body.existingUserId) {
       const [existingUser] = await db.select()
         .from(users)
@@ -509,6 +509,42 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
           await db.update(users)
             .set({ companyId: user.companyId, role: 'pr', identityId: identityId })
             .where(eq(users.id, userId));
+        }
+      }
+    }
+    
+    // PRIORITY 1.5: Check if existingCustomerId is provided (promotion from SIAE customer search)
+    if (!userId && req.body.existingCustomerId) {
+      console.log(`[PR] existingCustomerId provided: ${req.body.existingCustomerId}`);
+      const [existingCustomer] = await db.select()
+        .from(siaeCustomers)
+        .where(eq(siaeCustomers.id, req.body.existingCustomerId));
+      
+      if (existingCustomer) {
+        console.log(`[PR] Found customer ${existingCustomer.id}, checking for linked user`);
+        // Check if customer has a linked user
+        if (existingCustomer.userId) {
+          const [linkedUser] = await db.select()
+            .from(users)
+            .where(eq(users.id, existingCustomer.userId));
+          
+          if (linkedUser && (!linkedUser.companyId || linkedUser.companyId === user.companyId)) {
+            userId = linkedUser.id;
+            isExistingUser = true;
+            console.log(`[PR] Promoting linked user ${userId} from customer ${existingCustomer.id}`);
+            
+            await db.update(users)
+              .set({ companyId: user.companyId, role: 'pr', identityId: identityId })
+              .where(eq(users.id, userId));
+          }
+        }
+        
+        // Link customer to identity if not already linked
+        if (!existingCustomer.identityId && identityId) {
+          await db.update(siaeCustomers)
+            .set({ identityId: identityId })
+            .where(eq(siaeCustomers.id, existingCustomer.id));
+          console.log(`[PR] Linked customer ${existingCustomer.id} to identity ${identityId}`);
         }
       }
     }

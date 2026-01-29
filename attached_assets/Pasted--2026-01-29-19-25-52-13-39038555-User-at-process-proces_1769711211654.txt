@@ -1,0 +1,117 @@
+
+2026-01-29 19:25:52.13
+39038555
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-01-29 19:25:52.13
+39038555
+User
+validateStatus: [Function (anonymous)],
+2026-01-29 19:25:52.13
+39038555
+User
+at async checkForSiaeResponses (file:///home/runner/workspace/dist/index.js:14040:12)
+2026-01-29 19:25:52.13
+39038555
+User
+userAgentDirectives: [Array],
+2026-01-29 19:25:52.13
+39038555
+User
+httpMethodsToRetry: [Array],
+2026-01-29 19:25:52.13
+39038555
+User
+at async Timeout.checkSiaeEmailResponses [as _onTimeout] (file:///home/runner/workspace/dist/index.js:59983:27) {
+2026-01-29 19:25:52.13
+39038555
+User
+},
+2026-01-29 19:25:52.13
+39038555
+User
+maxResults: 50
+2026-01-29 19:25:52.13
+39038555
+User
+method: 'GET',
+2026-01-29 19:25:52.13
+39038555
+User
+userAgentDirectives: [ [Object] ],
+2026-01-29 19:25:52.13
+39038555
+User
+apiVersion: '',
+2026-01-29 19:25:52.13
+39038555
+User
+retry: true,
+2026-01-29 19:25:52.13
+39038555
+User
+'content-type': 'application/json; charset=UTF-8',
+2026-01-29 19:25:52.13
+39038555
+User
+retryConfig: {
+2026-01-29 19:25:52.13
+39038555
+User
+response: {
+2026-01-29 19:25:52.13
+39038555
+User
+config: {
+2026-01-29 19:25:52.13
+39038555
+User
+},
+2026-01-29 19:25:52.13
+39038555
+User
+paramsSerializer: [Function (anonymous)],
+2026-01-29 19:25:52.13
+39038555
+User
+retry: true,
+2026-01-29 19:25:52.13
+39038555
+User
+}
+2026-01-29 19:25:52.13
+39038555
+User
+params: {
+2026-01-29 19:25:52.13
+39038555
+User
+errorRedactor: [Function: defaultErrorRedactor],
+2026-01-29 19:25:52.13
+39038555
+User
+config: {
+2026-01-29 19:25:52.13
+39038555
+User
+Authorization: '< - See `errorRedactor` option in `gaxios` for configuration>.'
+2026-01-29 19:25:52.13
+39038555
+User
+retryDelayMultiplier: 2,
+2026-01-29 19:25:52.13
+39038555
+User
+headers: [Object],
+2026-01-29 19:25:52.13
+39038555
+User
+'User-Agent': 'google-api-nodejs-client/7.2.0 (gzip)',
+2026-01-29 19:25:52.13
+39038555
+User
+q: 'from:siae.it OR from:batest.siae.it after:2026/01/22',
+2026-01-29 19:25:52.13
+39038555
+User
+date: 'Thu, 29 Jan 2026 18:25:52 GMT',

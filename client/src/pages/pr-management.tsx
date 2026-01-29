@@ -94,6 +94,9 @@ interface SearchedUser {
   phoneWithoutPrefix: string | null;
   role: string | null;
   isAlreadyPr: boolean;
+  source?: 'user' | 'customer';
+  customerId?: string;
+  identityId?: string;
 }
 
 interface PrProfile {
@@ -256,15 +259,17 @@ export default function PrManagement() {
 
   // Mutation for promoting multiple users to PR
   const promoteMultipleMutation = useMutation({
-    mutationFn: async (users: SearchedUser[]) => {
+    mutationFn: async (usersToPromote: SearchedUser[]) => {
       const results = await Promise.allSettled(
-        users.map(async (u) => {
+        usersToPromote.map(async (u) => {
           const response = await apiRequest("POST", "/api/reservations/pr-profiles", {
             firstName: u.firstName || '',
             lastName: u.lastName || '',
             phonePrefix: u.phonePrefix || '+39',
             phone: u.phoneWithoutPrefix || u.phone?.replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || '',
-            existingUserId: u.id,
+            existingUserId: u.source === 'user' ? u.id : undefined,
+            existingCustomerId: u.source === 'customer' ? u.customerId || u.id : undefined,
+            identityId: u.identityId,
           });
           return response.json();
         })
