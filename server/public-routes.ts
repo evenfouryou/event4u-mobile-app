@@ -2016,99 +2016,154 @@ router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
       return res.status(400).json({ message: "Numero di telefono richiesto" });
     }
 
-    // Normalize phone number - strip non-digits and ensure Italian format
-    let normalizedPhone = phone.replace(/\D/g, '');
+    // Normalize phone number - strip non-digits
+    const normalizePhone = (p: string) => {
+      let normalized = p.replace(/\D/g, '');
+      if (normalized.startsWith('0039')) {
+        normalized = normalized.substring(4);
+      } else if (normalized.startsWith('39') && normalized.length > 10) {
+        normalized = normalized.substring(2);
+      }
+      return normalized;
+    };
     
-    // Normalize to consistent format: remove leading 39 or 0039 prefix
-    if (normalizedPhone.startsWith('0039')) {
-      normalizedPhone = normalizedPhone.substring(4);
-    } else if (normalizedPhone.startsWith('39') && normalizedPhone.length > 10) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    
+    const normalizedPhone = normalizePhone(phone);
     console.log("[PUBLIC] Forgot password phone - normalized:", normalizedPhone);
 
-    // Find customer by exact phone match (normalized)
-    const customers = await db.select().from(siaeCustomers);
-    console.log("[PUBLIC] Forgot password phone - total customers:", customers.length);
+    // UNIFIED SEARCH: Search in all user tables
+    // 1. siaeCustomers (clients/customers)
+    // 2. users (internal users: gestore, organizer, warehouse, bartender, super_admin)
+    // 3. prProfiles (PR/promoters)
     
-    const customer = customers.find(c => {
-      if (!c.phone) return false;
-      let cleanPhone = c.phone.replace(/\D/g, '');
-      // Normalize stored phone the same way
-      if (cleanPhone.startsWith('0039')) {
-        cleanPhone = cleanPhone.substring(4);
-      } else if (cleanPhone.startsWith('39') && cleanPhone.length > 10) {
-        cleanPhone = cleanPhone.substring(2);
+    type FoundUser = {
+      id: string;
+      phone: string;
+      type: 'customer' | 'user' | 'pr';
+      email?: string | null;
+    };
+    
+    let foundUser: FoundUser | null = null;
+    
+    // Search in siaeCustomers
+    const customers = await db.select().from(siaeCustomers);
+    for (const c of customers) {
+      if (!c.phone) continue;
+      if (normalizePhone(c.phone) === normalizedPhone) {
+        foundUser = { id: c.id, phone: c.phone, type: 'customer', email: c.email };
+        console.log("[PUBLIC] Found in siaeCustomers:", c.id);
+        break;
       }
-      const isMatch = cleanPhone === normalizedPhone;
-      if (isMatch) {
-        console.log("[PUBLIC] Forgot password phone - MATCH found:", c.id, c.phone, "->", cleanPhone);
+    }
+    
+    // If not found, search in users table
+    if (!foundUser) {
+      const allUsers = await db.select().from(users);
+      for (const u of allUsers) {
+        if (!u.phone) continue;
+        if (normalizePhone(u.phone) === normalizedPhone) {
+          foundUser = { id: u.id, phone: u.phone, type: 'user', email: u.email };
+          console.log("[PUBLIC] Found in users:", u.id, u.role);
+          break;
+        }
       }
-      return isMatch;
-    });
+    }
+    
+    // If not found, search in prProfiles table
+    if (!foundUser) {
+      const allPrProfiles = await db.select().from(prProfiles);
+      for (const pr of allPrProfiles) {
+        if (!pr.phone) continue;
+        if (normalizePhone(pr.phone) === normalizedPhone) {
+          foundUser = { id: pr.id, phone: pr.phone, type: 'pr', email: pr.email };
+          console.log("[PUBLIC] Found in prProfiles:", pr.id);
+          break;
+        }
+      }
+    }
 
     // Always return success message to prevent enumeration
     const successMessage = "Se il numero è registrato, riceverai un codice OTP per reimpostare la password.";
 
-    if (!customer) {
-      console.log("[PUBLIC] Phone NOT found for password reset:", phone, "normalized:", normalizedPhone);
-      // Log some sample phones from DB for debugging (first 5 digits only)
-      const samplePhones = customers.slice(0, 5).map(c => c.phone ? c.phone.substring(0, 8) + '...' : 'null');
-      console.log("[PUBLIC] Sample phones in DB:", samplePhones);
+    if (!foundUser) {
+      console.log("[PUBLIC] Phone NOT found in any table:", phone, "normalized:", normalizedPhone);
       return res.json({ message: successMessage });
     }
     
-    console.log("[PUBLIC] Customer found for password reset:", customer.id, "phone:", customer.phone);
+    console.log("[PUBLIC] User found for password reset:", foundUser.id, "type:", foundUser.type, "phone:", foundUser.phone);
 
     // Generate OTP and store it
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     if (isMSG91Configured()) {
-      console.log(`[PUBLIC] Sending password reset OTP via MSG91 to ${customer.phone}`);
-      const result = await sendMSG91OTP(customer.phone, 10);
+      console.log(`[PUBLIC] Sending password reset OTP via MSG91 to ${foundUser.phone}`);
+      const result = await sendMSG91OTP(foundUser.phone, 10);
       
       if (!result.success) {
         console.error(`[PUBLIC] MSG91 failed for password reset: ${result.message}`);
         return res.status(500).json({ message: "Errore nell'invio OTP. Riprova." });
       }
       
-      // Store OTP for password reset purpose
-      await db.insert(siaeOtpAttempts).values({
-        customerId: customer.id,
-        phone: customer.phone,
-        otpCode: result.otpCode!,
-        purpose: "password_reset",
-        expiresAt,
-        ipAddress: req.ip,
-      });
+      // Store OTP - use siaeOtpAttempts for customers, prOtpAttempts for PR/users
+      if (foundUser.type === 'customer') {
+        await db.insert(siaeOtpAttempts).values({
+          customerId: foundUser.id,
+          phone: foundUser.phone,
+          otpCode: result.otpCode!,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      } else {
+        // For users and PR, use prOtpAttempts with userId
+        await db.insert(prOtpAttempts).values({
+          userId: foundUser.type === 'user' ? foundUser.id : null,
+          phone: foundUser.phone,
+          otpCode: result.otpCode!,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      }
       
-      // Don't log OTP value for security
       console.log(`[PUBLIC] Password reset OTP sent successfully`);
       res.json({ 
         message: successMessage,
-        customerId: customer.id,
+        customerId: foundUser.id,
+        userType: foundUser.type,
         provider: "msg91"
       });
     } else {
       // Local fallback for development
       const otp = generateOTP();
       
-      await db.insert(siaeOtpAttempts).values({
-        customerId: customer.id,
-        phone: customer.phone,
-        otpCode: otp,
-        purpose: "password_reset",
-        expiresAt,
-        ipAddress: req.ip,
-      });
+      if (foundUser.type === 'customer') {
+        await db.insert(siaeOtpAttempts).values({
+          customerId: foundUser.id,
+          phone: foundUser.phone,
+          otpCode: otp,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      } else {
+        await db.insert(prOtpAttempts).values({
+          userId: foundUser.type === 'user' ? foundUser.id : null,
+          phone: foundUser.phone,
+          otpCode: otp,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      }
 
-      // Don't log OTP value for security - only log that it was generated
-      console.log(`[PUBLIC] Local password reset OTP generated for customer ${customer.id}`);
+      console.log(`[PUBLIC] Local password reset OTP generated for ${foundUser.type} ${foundUser.id}, OTP: ${otp}`);
       res.json({ 
         message: successMessage,
-        customerId: customer.id,
-        provider: "local"
+        customerId: foundUser.id,
+        userType: foundUser.type,
+        provider: "local",
+        // In development, show OTP for testing
+        ...(process.env.NODE_ENV === 'development' ? { devOtp: otp } : {})
       });
     }
   } catch (error: any) {
@@ -2117,12 +2172,12 @@ router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
   }
 });
 
-// Verify OTP and reset password via phone
+// Verify OTP and reset password via phone - UNIFIED for all user types
 router.post("/api/public/customers/reset-password-phone", async (req, res) => {
   try {
-    const { customerId, otpCode, password } = req.body;
+    const { customerId, userType, otpCode, password } = req.body;
     
-    console.log("[PUBLIC] Reset password phone request:", { customerId, otpCode: otpCode?.substring(0, 2) + '***', passwordLength: password?.length });
+    console.log("[PUBLIC] Reset password phone request:", { customerId, userType, otpCode: otpCode?.substring(0, 2) + '***', passwordLength: password?.length });
 
     if (!customerId || !otpCode || !password) {
       console.log("[PUBLIC] Reset password: missing data");
@@ -2134,36 +2189,101 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
       return res.status(400).json({ message: "La password deve essere di almeno 8 caratteri" });
     }
 
-    // Get customer
-    const [customer] = await db
-      .select()
-      .from(siaeCustomers)
-      .where(eq(siaeCustomers.id, customerId));
-
-    if (!customer) {
-      console.log("[PUBLIC] Reset password: customer not found:", customerId);
-      return res.status(400).json({ message: "Cliente non trovato" });
-    }
+    // Determine user type (default to 'customer' for backwards compatibility)
+    const effectiveUserType = userType || 'customer';
+    console.log("[PUBLIC] Reset password: effective user type:", effectiveUserType);
     
-    console.log("[PUBLIC] Reset password: found customer:", customer.id, customer.phone, "current passwordHash exists:", !!customer.passwordHash);
+    let foundPhone: string | null = null;
+    let otpAttempt: any = null;
 
-    // Find valid OTP attempt for password reset
-    const [otpAttempt] = await db
-      .select()
-      .from(siaeOtpAttempts)
-      .where(
-        and(
-          eq(siaeOtpAttempts.customerId, customerId),
-          eq(siaeOtpAttempts.purpose, "password_reset"),
-          eq(siaeOtpAttempts.status, "pending"),
-          gt(siaeOtpAttempts.expiresAt, new Date())
+    // Find user and OTP based on type
+    if (effectiveUserType === 'customer') {
+      const [customer] = await db
+        .select()
+        .from(siaeCustomers)
+        .where(eq(siaeCustomers.id, customerId));
+
+      if (!customer) {
+        console.log("[PUBLIC] Reset password: customer not found:", customerId);
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+      foundPhone = customer.phone;
+      console.log("[PUBLIC] Reset password: found customer:", customer.id, customer.phone);
+
+      // Find OTP in siaeOtpAttempts
+      [otpAttempt] = await db
+        .select()
+        .from(siaeOtpAttempts)
+        .where(
+          and(
+            eq(siaeOtpAttempts.customerId, customerId),
+            eq(siaeOtpAttempts.purpose, "password_reset"),
+            eq(siaeOtpAttempts.status, "pending"),
+            gt(siaeOtpAttempts.expiresAt, new Date())
+          )
         )
-      )
-      .orderBy(desc(siaeOtpAttempts.createdAt))
-      .limit(1);
+        .orderBy(desc(siaeOtpAttempts.createdAt))
+        .limit(1);
+        
+    } else if (effectiveUserType === 'user') {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, customerId));
+
+      if (!user) {
+        console.log("[PUBLIC] Reset password: user not found:", customerId);
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+      foundPhone = user.phone;
+      console.log("[PUBLIC] Reset password: found user:", user.id, user.phone, user.role);
+
+      // Find OTP in prOtpAttempts (used for non-customer users)
+      [otpAttempt] = await db
+        .select()
+        .from(prOtpAttempts)
+        .where(
+          and(
+            eq(prOtpAttempts.userId, customerId),
+            eq(prOtpAttempts.purpose, "password_reset"),
+            eq(prOtpAttempts.status, "pending"),
+            gt(prOtpAttempts.expiresAt, new Date())
+          )
+        )
+        .orderBy(desc(prOtpAttempts.createdAt))
+        .limit(1);
+        
+    } else if (effectiveUserType === 'pr') {
+      const [prProfile] = await db
+        .select()
+        .from(prProfiles)
+        .where(eq(prProfiles.id, customerId));
+
+      if (!prProfile) {
+        console.log("[PUBLIC] Reset password: PR not found:", customerId);
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+      foundPhone = prProfile.phone;
+      console.log("[PUBLIC] Reset password: found PR:", prProfile.id, prProfile.phone);
+
+      // Find OTP in prOtpAttempts by phone (PR doesn't have userId in prOtpAttempts)
+      [otpAttempt] = await db
+        .select()
+        .from(prOtpAttempts)
+        .where(
+          and(
+            eq(prOtpAttempts.phone, prProfile.phone),
+            eq(prOtpAttempts.purpose, "password_reset"),
+            eq(prOtpAttempts.status, "pending"),
+            gt(prOtpAttempts.expiresAt, new Date())
+          )
+        )
+        .orderBy(desc(prOtpAttempts.createdAt))
+        .limit(1);
+    }
 
     if (!otpAttempt) {
-      console.log("[PUBLIC] Reset password: no valid OTP found for customer:", customerId);
+      console.log("[PUBLIC] Reset password: no valid OTP found for:", customerId, effectiveUserType);
       return res.status(400).json({ message: "Codice OTP scaduto o non valido. Richiedi un nuovo codice." });
     }
     
@@ -2176,39 +2296,52 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
     }
 
     // Mark OTP as verified
-    await db
-      .update(siaeOtpAttempts)
-      .set({ status: "verified", verifiedAt: new Date() })
-      .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+    if (effectiveUserType === 'customer') {
+      await db
+        .update(siaeOtpAttempts)
+        .set({ status: "verified", verifiedAt: new Date() })
+        .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+    } else {
+      await db
+        .update(prOtpAttempts)
+        .set({ status: "verified", verifiedAt: new Date() })
+        .where(eq(prOtpAttempts.id, otpAttempt.id));
+    }
     
     console.log("[PUBLIC] Reset password: OTP verified, updating password...");
 
-    // Update password
+    // Update password based on user type
     const passwordHash = await bcrypt.hash(password, 10);
-    
     console.log("[PUBLIC] Reset password: new hash generated, length:", passwordHash.length);
 
-    const updateResult = await db
-      .update(siaeCustomers)
-      .set({
-        passwordHash,
-        phoneVerified: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(siaeCustomers.id, customer.id))
-      .returning();
-    
-    console.log("[PUBLIC] Reset password: update result rows:", updateResult.length);
-    
-    // Verify the update worked
-    const [verifyCustomer] = await db
-      .select({ id: siaeCustomers.id, passwordHash: siaeCustomers.passwordHash })
-      .from(siaeCustomers)
-      .where(eq(siaeCustomers.id, customer.id));
-    
-    console.log("[PUBLIC] Reset password: verification - new passwordHash exists:", !!verifyCustomer?.passwordHash, "hash starts with:", verifyCustomer?.passwordHash?.substring(0, 10));
+    if (effectiveUserType === 'customer') {
+      await db
+        .update(siaeCustomers)
+        .set({
+          passwordHash,
+          phoneVerified: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(siaeCustomers.id, customerId));
+    } else if (effectiveUserType === 'user') {
+      await db
+        .update(users)
+        .set({
+          password: passwordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, customerId));
+    } else if (effectiveUserType === 'pr') {
+      await db
+        .update(prProfiles)
+        .set({
+          password: passwordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(prProfiles.id, customerId));
+    }
 
-    console.log("[PUBLIC] Password reset via phone successful for customer:", customer.id);
+    console.log("[PUBLIC] Password reset via phone successful for", effectiveUserType, ":", customerId);
     res.json({ message: "Password reimpostata con successo! Ora puoi accedere." });
   } catch (error: any) {
     console.error("[PUBLIC] Reset password phone error:", error);
@@ -2216,58 +2349,113 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
   }
 });
 
-// Resend password reset OTP
+// Resend password reset OTP - UNIFIED for all user types
 router.post("/api/public/customers/resend-password-reset-otp", async (req, res) => {
   try {
-    const { customerId } = req.body;
+    const { customerId, userType } = req.body;
 
     if (!customerId) {
-      return res.status(400).json({ message: "ID cliente mancante" });
+      return res.status(400).json({ message: "ID utente mancante" });
     }
 
-    const [customer] = await db
-      .select()
-      .from(siaeCustomers)
-      .where(eq(siaeCustomers.id, customerId));
+    const effectiveUserType = userType || 'customer';
+    let foundPhone: string | null = null;
+    let foundId: string = customerId;
 
-    if (!customer) {
-      return res.status(400).json({ message: "Cliente non trovato" });
+    // Find user based on type
+    if (effectiveUserType === 'customer') {
+      const [customer] = await db
+        .select()
+        .from(siaeCustomers)
+        .where(eq(siaeCustomers.id, customerId));
+
+      if (!customer) {
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+      foundPhone = customer.phone;
+    } else if (effectiveUserType === 'user') {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, customerId));
+
+      if (!user) {
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+      foundPhone = user.phone;
+    } else if (effectiveUserType === 'pr') {
+      const [prProfile] = await db
+        .select()
+        .from(prProfiles)
+        .where(eq(prProfiles.id, customerId));
+
+      if (!prProfile) {
+        return res.status(400).json({ message: "Utente non trovato" });
+      }
+      foundPhone = prProfile.phone;
+    }
+
+    if (!foundPhone) {
+      return res.status(400).json({ message: "Numero di telefono non trovato" });
     }
 
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     if (isMSG91Configured()) {
-      console.log(`[PUBLIC] Resending password reset OTP via MSG91 to ${customer.phone}`);
-      const result = await resendMSG91OTP(customer.phone, 'text');
+      console.log(`[PUBLIC] Resending password reset OTP via MSG91 to ${foundPhone}`);
+      const result = await resendMSG91OTP(foundPhone, 'text');
       
       if (!result.success) {
         console.error(`[PUBLIC] MSG91 resend failed: ${result.message}`);
         return res.status(500).json({ message: "Errore nel reinvio OTP. Riprova." });
       }
 
-      await db.insert(siaeOtpAttempts).values({
-        customerId: customer.id,
-        phone: customer.phone,
-        otpCode: result.otpCode!,
-        purpose: "password_reset",
-        expiresAt,
-        ipAddress: req.ip,
-      });
+      // Store in appropriate table
+      if (effectiveUserType === 'customer') {
+        await db.insert(siaeOtpAttempts).values({
+          customerId: foundId,
+          phone: foundPhone,
+          otpCode: result.otpCode!,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      } else {
+        await db.insert(prOtpAttempts).values({
+          userId: effectiveUserType === 'user' ? foundId : null,
+          phone: foundPhone,
+          otpCode: result.otpCode!,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      }
 
       res.json({ message: "OTP reinviato con successo", provider: "msg91" });
     } else {
       const otp = generateOTP();
 
-      await db.insert(siaeOtpAttempts).values({
-        customerId: customer.id,
-        phone: customer.phone,
-        otpCode: otp,
-        purpose: "password_reset",
-        expiresAt,
-        ipAddress: req.ip,
-      });
+      if (effectiveUserType === 'customer') {
+        await db.insert(siaeOtpAttempts).values({
+          customerId: foundId,
+          phone: foundPhone,
+          otpCode: otp,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      } else {
+        await db.insert(prOtpAttempts).values({
+          userId: effectiveUserType === 'user' ? foundId : null,
+          phone: foundPhone,
+          otpCode: otp,
+          purpose: "password_reset",
+          expiresAt,
+          ipAddress: req.ip,
+        });
+      }
 
-      console.log(`[PUBLIC] Local resend password reset OTP for ${customer.phone}: ${otp}`);
+      console.log(`[PUBLIC] Local resend password reset OTP for ${foundPhone}: ${otp}`);
       res.json({ 
         message: "OTP reinviato con successo", 
         provider: "local",

@@ -31,6 +31,7 @@ export default function PublicForgotPassword() {
   const [phonePrefix, setPhonePrefix] = useState("+39");
   const [phone, setPhone] = useState("");
   const [customerId, setCustomerId] = useState<number | null>(null);
+  const [userType, setUserType] = useState<string>('customer');
   const [otpCode, setOtpCode] = useState("");
   const [password, setPassword] = useState("");
   const [phoneStep, setPhoneStep] = useState<PhoneStep>('phone');
@@ -44,6 +45,7 @@ export default function PublicForgotPassword() {
     setEmail("");
     setPhone("");
     setCustomerId(null);
+    setUserType('customer');
     setOtpCode("");
     setPassword("");
     setPhoneStep('phone');
@@ -92,6 +94,7 @@ export default function PublicForgotPassword() {
       // If customerId is returned, phone was found - proceed to OTP step
       if (response.customerId) {
         setCustomerId(response.customerId);
+        setUserType(response.userType || 'customer');
         setPhoneStep('otp');
         triggerHaptic('success');
       } else {
@@ -123,6 +126,7 @@ export default function PublicForgotPassword() {
     try {
       await apiRequest('POST', '/api/public/customers/reset-password-phone', {
         customerId,
+        userType,
         otpCode,
         password
       });
