@@ -656,8 +656,8 @@ export async function runIdentityUnificationMigration(): Promise<void> {
       await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pr_company_company ON pr_company_assignments(company_id)`);
     }
     
-    // Update is_customer flag for all identities linked to siae_customers
-    const customerFlagUpdate = await db.execute(sql`
+    // Update is_customer flag for ALL identities linked to siae_customers (always update)
+    await db.execute(sql`
       UPDATE identities SET 
         is_customer = true,
         unique_code = COALESCE(identities.unique_code, sc.unique_code),
@@ -666,12 +666,11 @@ export async function runIdentityUnificationMigration(): Promise<void> {
         authentication_type = COALESCE(identities.authentication_type, sc.authentication_type)
       FROM siae_customers sc
       WHERE identities.id = sc.identity_id
-      AND (identities.is_customer = false OR identities.is_customer IS NULL)
     `);
     console.log(`[IDENTITY-MIGRATION] Updated is_customer flag for identities`);
     
-    // Update is_pr flag and copy PR-specific data
-    const prFlagUpdate = await db.execute(sql`
+    // Update is_pr flag for ALL identities linked to pr_profiles (always update)
+    await db.execute(sql`
       UPDATE identities SET 
         is_pr = true,
         pr_code = COALESCE(identities.pr_code, pr.pr_code),
@@ -684,7 +683,6 @@ export async function runIdentityUnificationMigration(): Promise<void> {
         last_login_at = COALESCE(identities.last_login_at, pr.last_login_at)
       FROM pr_profiles pr
       WHERE identities.id = pr.identity_id
-      AND (identities.is_pr = false OR identities.is_pr IS NULL)
     `);
     console.log(`[IDENTITY-MIGRATION] Updated is_pr flag for identities`);
     
