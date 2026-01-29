@@ -138,6 +138,7 @@ function calculateCommission(
 // ==================== PR Profile APIs ====================
 
 // Search users by phone for customer-to-PR promotion
+// Searches in BOTH users table AND siae_customers table
 router.get("/api/reservations/search-users", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
@@ -149,9 +150,14 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
     
     // Clean phone number (remove spaces, dashes)
     const cleanPhone = phone.replace(/[\s\-]/g, '');
+    // Create phone variants for better matching (with and without prefix)
+    const phoneDigits = cleanPhone.replace(/\D/g, '');
+    let basePhone = phoneDigits;
+    if (basePhone.startsWith('0039')) basePhone = basePhone.slice(4);
+    else if (basePhone.startsWith('39') && basePhone.length > 10) basePhone = basePhone.slice(2);
     
     // Search for users by phone (partial match)
-    const results = await db.select({
+    const userResults = await db.select({
       id: users.id,
       firstName: users.firstName,
       lastName: users.lastName,
@@ -172,25 +178,84 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
       )
       .limit(10);
     
-    // Check which users already have a PR profile for this company
-    const userIds = results.map(u => u.id);
-    const existingPrProfiles = userIds.length > 0 
+    // Also search in siae_customers table (registered customers without user account)
+    const customerResults = await db.select({
+      id: siaeCustomers.id,
+      firstName: siaeCustomers.firstName,
+      lastName: siaeCustomers.lastName,
+      email: siaeCustomers.email,
+      phone: siaeCustomers.phone,
+      userId: siaeCustomers.userId,
+      identityId: siaeCustomers.identityId,
+    })
+      .from(siaeCustomers)
+      .where(
+        or(
+          sql`${siaeCustomers.phone} LIKE ${'%' + cleanPhone + '%'}`,
+          sql`${siaeCustomers.phone} LIKE ${'%' + basePhone + '%'}`,
+          sql`${siaeCustomers.phone} LIKE ${'+39' + basePhone}`,
+          sql`${siaeCustomers.phone} LIKE ${'%' + basePhone.slice(-9) + '%'}`
+        )
+      )
+      .limit(10);
+    
+    // Combine results, prioritizing users over customers
+    const seenPhones = new Set<string>();
+    const combinedResults: any[] = [];
+    
+    // Add user results first
+    for (const u of userResults) {
+      if (u.phone) seenPhones.add(u.phone.replace(/\D/g, '').slice(-9));
+      combinedResults.push({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        phone: u.phone,
+        role: u.role,
+        source: 'user',
+      });
+    }
+    
+    // Add customer results that aren't duplicates
+    for (const c of customerResults) {
+      const phoneKey = c.phone?.replace(/\D/g, '').slice(-9) || '';
+      if (phoneKey && !seenPhones.has(phoneKey)) {
+        seenPhones.add(phoneKey);
+        combinedResults.push({
+          id: c.userId || c.id, // Use userId if available, otherwise customer id
+          customerId: c.id,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          email: c.email,
+          phone: c.phone,
+          role: null,
+          source: 'customer',
+          identityId: c.identityId,
+        });
+      }
+    }
+    
+    // Check which already have a PR profile for this company
+    const allIds = combinedResults.map(u => u.id).filter(Boolean);
+    const existingPrProfiles = allIds.length > 0 
       ? await db.select({ userId: prProfiles.userId })
           .from(prProfiles)
           .where(and(
-            sql`${prProfiles.userId} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`,
+            sql`${prProfiles.userId} IN (${sql.join(allIds.map(id => sql`${id}`), sql`, `)})`,
             eq(prProfiles.companyId, user.companyId)
           ))
       : [];
     
     const existingPrUserIds = new Set(existingPrProfiles.map(p => p.userId));
     
-    // Return users with flag indicating if they're already PR
-    const enrichedResults = results.map(u => ({
+    // Return with flag indicating if they're already PR
+    const enrichedResults = combinedResults.map(u => ({
       ...u,
       isAlreadyPr: existingPrUserIds.has(u.id),
     }));
     
+    console.log(`[SEARCH-USERS] Query: ${phone}, Found: ${userResults.length} users, ${customerResults.length} customers, Combined: ${enrichedResults.length}`);
     res.json(enrichedResults);
   } catch (error: any) {
     console.error("Error searching users:", error);
