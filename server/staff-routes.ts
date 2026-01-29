@@ -6,7 +6,8 @@ import {
   eventPrAssignments,
   listEntries,
   eventLists,
-  tableReservations,
+  tableBookings,
+  tableBookingParticipants,
   prPayouts,
   events,
   companies,
@@ -750,11 +751,11 @@ router.get("/api/staff/stats", requireStaff, async (req: Request, res: Response)
       // Get table reservations by subordinates (UNIFICATO: usa tableReservations)
       const [tableCount] = await db.select({
         total: sql<number>`count(*)::int`,
-        pending: sql<number>`count(*) filter (where ${tableReservations.status} = 'pending')::int`,
-        confirmed: sql<number>`count(*) filter (where ${tableReservations.status} in ('approved'))::int`,
+        pending: sql<number>`count(*) filter (where ${tableBookings.status} = 'pending')::int`,
+        confirmed: sql<number>`count(*) filter (where ${tableBookings.status} in ('confirmed', 'approved'))::int`,
       })
-        .from(tableReservations)
-        .where(inArray(tableReservations.createdBy, subordinateUserIds));
+        .from(tableBookings)
+        .where(inArray(tableBookings.bookedByUserId, subordinateUserIds));
       
       tableStats = tableCount || { total: 0, pending: 0, confirmed: 0 };
     }

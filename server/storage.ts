@@ -87,8 +87,8 @@ import {
   type InsertNightFile,
   eventLists,
   listEntries,
-  tableReservations,
-  tableGuests,
+  tableBookings,
+  tableBookingParticipants,
   eventTables,
   eventFloorplans,
   eventStaffAssignments,
@@ -2002,9 +2002,9 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
     // 2. Delete event lists (UNIFICATO)
     await db.delete(eventLists).where(eq(eventLists.eventId, eventId));
 
-    // 3. Delete table guests and reservations (UNIFICATO)
-    await db.delete(tableGuests).where(eq(tableGuests.eventId, eventId));
-    await db.delete(tableReservations).where(eq(tableReservations.eventId, eventId));
+    // 3. Delete table booking participants and bookings (UNIFICATO)
+    await db.delete(tableBookingParticipants).where(eq(tableBookingParticipants.eventId, eventId));
+    await db.delete(tableBookings).where(eq(tableBookings.eventId, eventId));
 
     // 4. Delete event tables
     await db.delete(eventTables).where(eq(eventTables.eventId, eventId));
