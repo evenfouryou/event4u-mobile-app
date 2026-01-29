@@ -580,6 +580,7 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
           emailVerified: false, // Placeholder email not verified
           registrationCompleted: true,
           authenticationType: 'BO', // Back-office created
+          identityId: identityId, // Link to unified identity
         }).returning();
         
         linkedCustomerId = newCustomer.id;
@@ -952,8 +953,9 @@ router.post("/api/pr/login", async (req: Request, res: Response) => {
             phoneVerified: profile.phoneVerified || false,
             emailVerified: false,
             authenticationType: 'BO',
+            identityId: profile.identityId || null, // Link to unified identity
           });
-          console.log(`[PR-LOGIN] Auto-created customer profile for PR ${profile.id}`);
+          console.log(`[PR-LOGIN] Auto-created customer profile for PR ${profile.id} with identity ${profile.identityId}`);
         }
       } catch (err) {
         console.log(`[PR-LOGIN] Could not auto-create customer (may already exist): ${err}`);
