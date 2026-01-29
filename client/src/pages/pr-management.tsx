@@ -99,6 +99,7 @@ interface PrProfile {
   companyId: string;
   prCode: string;
   phone: string;
+  phonePrefix?: string;
   firstName?: string;
   lastName?: string;
   commissionPercentage: string | number; // Decimal comes as string from DB
@@ -195,10 +196,12 @@ export default function PrManagement() {
 
   const filteredProfiles = useMemo(() => {
     if (!searchQuery) return prProfiles;
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().replace(/\s/g, '');
     return prProfiles.filter((pr) => {
       const fullName = `${pr.user?.firstName || pr.firstName || ''} ${pr.user?.lastName || pr.lastName || ''}`.toLowerCase();
+      const fullPhone = `${pr.phonePrefix || '+39'}${pr.phone}`.replace(/\s/g, '');
       return fullName.includes(query) ||
+        fullPhone.includes(query) ||
         pr.phone.includes(query) ||
         pr.prCode.toLowerCase().includes(query);
     });
@@ -562,7 +565,7 @@ export default function PrManagement() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="flex items-center gap-1.5 text-muted-foreground">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{pr.phone}</span>
+                            <span className="truncate">{pr.phonePrefix || '+39'}{pr.phone}</span>
                           </div>
                           <Badge variant="outline" className="font-mono text-xs w-fit">
                             <Hash className="h-3 w-3 mr-1" />
@@ -673,7 +676,7 @@ export default function PrManagement() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          {pr.phone}
+                          {pr.phonePrefix || '+39'}{pr.phone}
                         </div>
                       </TableCell>
                       <TableCell>
