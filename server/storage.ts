@@ -85,9 +85,10 @@ import {
   nightFiles,
   type NightFile,
   type InsertNightFile,
-  guestLists,
-  guestListEntries,
-  tableBookings,
+  eventLists,
+  listEntries,
+  tableReservations,
+  tableGuests,
   eventTables,
   eventFloorplans,
   eventStaffAssignments,
@@ -1995,14 +1996,15 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
     // Delete in order to respect foreign key constraints
     // Child tables first, then parent
 
-    // 1. Delete guest list entries
-    await db.delete(guestListEntries).where(eq(guestListEntries.eventId, eventId));
+    // 1. Delete list entries (UNIFICATO)
+    await db.delete(listEntries).where(eq(listEntries.eventId, eventId));
 
-    // 2. Delete guest lists
-    await db.delete(guestLists).where(eq(guestLists.eventId, eventId));
+    // 2. Delete event lists (UNIFICATO)
+    await db.delete(eventLists).where(eq(eventLists.eventId, eventId));
 
-    // 3. Delete table bookings
-    await db.delete(tableBookings).where(eq(tableBookings.eventId, eventId));
+    // 3. Delete table guests and reservations (UNIFICATO)
+    await db.delete(tableGuests).where(eq(tableGuests.eventId, eventId));
+    await db.delete(tableReservations).where(eq(tableReservations.eventId, eventId));
 
     // 4. Delete event tables
     await db.delete(eventTables).where(eq(eventTables.eventId, eventId));

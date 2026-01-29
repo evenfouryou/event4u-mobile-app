@@ -5,7 +5,7 @@ import { createSiaeTransmissionWithXml, type CreateSiaeTransmissionParams } from
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
-import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones, siaeAuditLogs, siaeCustomers, venueFloorPlans, siaeNumberedSeats } from "@shared/schema";
+import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, listEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones, siaeAuditLogs, siaeCustomers, venueFloorPlans, siaeNumberedSeats } from "@shared/schema";
 import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -2508,15 +2508,10 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
       await db.delete(publicCustomerSessions)
         .where(eq(publicCustomerSessions.customerId, req.params.id));
       
-      // Anonimizza table bookings
-      await db.update(tableBookings)
+      // Anonimizza list entries (UNIFICATO)
+      await db.update(listEntries)
         .set({ customerId: null })
-        .where(eq(tableBookings.customerId, req.params.id));
-      
-      // Anonimizza guest list entries
-      await db.update(guestListEntries)
-        .set({ customerId: null })
-        .where(eq(guestListEntries.customerId, req.params.id));
+        .where(eq(listEntries.customerId, req.params.id));
       
       console.log("[SIAE] Force delete: all associated records cleaned up");
     }

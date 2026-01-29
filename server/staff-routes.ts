@@ -4,9 +4,9 @@ import { db } from "./db";
 import {
   prProfiles,
   eventPrAssignments,
-  tableBookings,
-  guestListEntries,
-  guestLists,
+  listEntries,
+  eventLists,
+  tableReservations,
   prPayouts,
   events,
   companies,
@@ -737,24 +737,24 @@ router.get("/api/staff/stats", requireStaff, async (req: Request, res: Response)
     let tableStats = { total: 0, pending: 0, confirmed: 0 };
     
     if (subordinateUserIds.length > 0) {
-      // Get guests added by subordinates
+      // Get guests added by subordinates (UNIFICATO: usa listEntries)
       const [guestCount] = await db.select({
         total: sql<number>`count(*)::int`,
-        checkedIn: sql<number>`count(*) filter (where ${guestListEntries.qrScannedAt} is not null)::int`,
+        checkedIn: sql<number>`count(*) filter (where ${listEntries.qrScannedAt} is not null)::int`,
       })
-        .from(guestListEntries)
-        .where(inArray(guestListEntries.addedByUserId, subordinateUserIds));
+        .from(listEntries)
+        .where(inArray(listEntries.addedByUserId, subordinateUserIds));
       
       guestStats = guestCount || { total: 0, checkedIn: 0 };
       
-      // Get table bookings by subordinates
+      // Get table reservations by subordinates (UNIFICATO: usa tableReservations)
       const [tableCount] = await db.select({
         total: sql<number>`count(*)::int`,
-        pending: sql<number>`count(*) filter (where ${tableBookings.status} = 'pending')::int`,
-        confirmed: sql<number>`count(*) filter (where ${tableBookings.status} in ('confirmed', 'staff_approved'))::int`,
+        pending: sql<number>`count(*) filter (where ${tableReservations.status} = 'pending')::int`,
+        confirmed: sql<number>`count(*) filter (where ${tableReservations.status} in ('approved'))::int`,
       })
-        .from(tableBookings)
-        .where(inArray(tableBookings.bookedByUserId, subordinateUserIds));
+        .from(tableReservations)
+        .where(inArray(tableReservations.createdBy, subordinateUserIds));
       
       tableStats = tableCount || { total: 0, pending: 0, confirmed: 0 };
     }

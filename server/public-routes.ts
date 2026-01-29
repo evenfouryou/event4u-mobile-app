@@ -37,9 +37,8 @@ import {
   locations,
   companies,
   insertPublicCartItemSchema,
-  guestListEntries,
-  guestLists,
-  tableBookings,
+  listEntries,
+  eventLists,
   eventTables,
   venueFloorPlans,
   floorPlanZones,
@@ -4642,7 +4641,7 @@ router.get("/api/public/account/subscriptions", async (req, res) => {
   }
 });
 
-// Ottieni liste ospiti per il cliente autenticato
+// Ottieni liste ospiti per il cliente autenticato (UNIFICATO: usa listEntries)
 router.get("/api/public/account/guest-entries", async (req, res) => {
   try {
     const customer = await getAuthenticatedCustomer(req);
@@ -4652,17 +4651,17 @@ router.get("/api/public/account/guest-entries", async (req, res) => {
 
     const entries = await db
       .select({
-        id: guestListEntries.id,
-        firstName: guestListEntries.firstName,
-        lastName: guestListEntries.lastName,
-        plusOnes: guestListEntries.plusOnes,
-        qrCode: guestListEntries.qrCode,
-        qrScannedAt: guestListEntries.qrScannedAt,
-        status: guestListEntries.status,
-        arrivedAt: guestListEntries.arrivedAt,
-        createdAt: guestListEntries.createdAt,
-        listName: guestLists.name,
-        listType: guestLists.listType,
+        id: listEntries.id,
+        firstName: listEntries.firstName,
+        lastName: listEntries.lastName,
+        plusOnes: listEntries.plusOnes,
+        qrCode: listEntries.qrCode,
+        qrScannedAt: listEntries.qrScannedAt,
+        status: listEntries.status,
+        arrivedAt: listEntries.checkedInAt,
+        createdAt: listEntries.createdAt,
+        listName: eventLists.name,
+        listType: eventLists.listType,
         eventId: events.id,
         eventName: events.name,
         eventStart: events.startDatetime,
@@ -4670,11 +4669,11 @@ router.get("/api/public/account/guest-entries", async (req, res) => {
         locationName: locations.name,
         locationAddress: locations.address,
       })
-      .from(guestListEntries)
-      .innerJoin(guestLists, eq(guestListEntries.guestListId, guestLists.id))
-      .innerJoin(events, eq(guestListEntries.eventId, events.id))
+      .from(listEntries)
+      .innerJoin(eventLists, eq(listEntries.listId, eventLists.id))
+      .innerJoin(events, eq(listEntries.eventId, events.id))
       .innerJoin(locations, eq(events.locationId, locations.id))
-      .where(eq(guestListEntries.customerId, customer.id))
+      .where(eq(listEntries.customerId, customer.id))
       .orderBy(desc(events.startDatetime));
 
     const now = new Date();
