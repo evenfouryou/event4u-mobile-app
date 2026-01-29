@@ -3232,6 +3232,16 @@ router.post("/api/pr/phone/request-change", requireAuth, requirePr, async (req: 
       return res.status(400).json({ error: "Numero di telefono non valido (minimo 9 cifre)" });
     }
     
+    // Get current PR profile to check if phone is the same
+    const [currentPr] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId));
+    
+    // If phone is the same as current, accept immediately without OTP
+    if (currentPr && currentPr.phonePrefix === newPhonePrefix && currentPr.phone === newPhone) {
+      return res.json({ success: true, samePhone: true, message: "Numero di telefono già corretto" });
+    }
+    
     // Check if MSG91 is configured
     if (!isMSG91Configured()) {
       return res.status(503).json({ error: "Servizio OTP non configurato" });

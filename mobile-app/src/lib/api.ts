@@ -479,6 +479,14 @@ class ApiClient {
     return this.get<Customer>('/api/public/account/me');
   }
 
+  async requestPhoneChange(newPhone: string, newPhonePrefix: string = '+39'): Promise<{ success: boolean; samePhone?: boolean; message: string }> {
+    return this.post('/api/public/customers/phone/request-change', { newPhone, newPhonePrefix });
+  }
+
+  async verifyPhoneChange(otp: string): Promise<{ success: boolean; message: string }> {
+    return this.post('/api/public/customers/phone/verify-change', { otp });
+  }
+
   async getStripePublishableKey(): Promise<StripeConfigResponse> {
     return this.get<StripeConfigResponse>('/api/public/stripe/config');
   }
@@ -573,6 +581,14 @@ class ApiClient {
 
   async updatePrProfile(data: { displayName?: string; email?: string }): Promise<PrProfile> {
     return this.patch<PrProfile>('/api/pr/profile', data);
+  }
+
+  async requestPrPhoneChange(newPhone: string, newPhonePrefix: string = '+39'): Promise<{ success: boolean; samePhone?: boolean; message: string }> {
+    return this.post('/api/pr/phone/request-change', { newPhone, newPhonePrefix });
+  }
+
+  async verifyPrPhoneChange(otp: string): Promise<{ success: boolean; message: string }> {
+    return this.post('/api/pr/phone/verify-change', { otp });
   }
 
   async getPrWallet(): Promise<PrWallet> {

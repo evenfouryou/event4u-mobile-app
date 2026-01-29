@@ -149,6 +149,14 @@ export default function AccountProfile() {
         throw new Error(data.error || "Errore nell'invio OTP");
       }
       
+      // If phone is the same, show success and close dialog
+      if (data.samePhone) {
+        toast({ title: "Confermato", description: "Il numero di telefono è già corretto" });
+        setShowPhoneDialog(false);
+        setPhoneStep('input');
+        return;
+      }
+      
       toast({ title: "OTP Inviato", description: "Controlla il tuo nuovo numero per il codice" });
       setPhoneStep('otp');
     } catch (error: any) {

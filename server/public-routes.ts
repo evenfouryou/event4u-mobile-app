@@ -2689,16 +2689,23 @@ router.post("/api/public/customers/phone/request-change", async (req, res) => {
       return res.status(400).json({ message: "Numero di telefono non valido (minimo 9 cifre)" });
     }
     
-    // Check if MSG91 is configured
-    if (!isMSG91Configured()) {
-      return res.status(503).json({ message: "Servizio OTP non configurato" });
-    }
-    
     // Clean phone number (remove non-digits)
     const cleanPhone = newPhone.replace(/\D/g, '');
     // Ensure prefix has + sign
     const prefix = newPhonePrefix.startsWith('+') ? newPhonePrefix : '+' + newPhonePrefix;
     const fullPhone = prefix + cleanPhone;
+    
+    // If phone is the same as current, accept immediately without OTP
+    const currentPrefix = customer.phonePrefix || '+39';
+    const currentPhone = customer.phone || '';
+    if (prefix === currentPrefix && cleanPhone === currentPhone) {
+      return res.json({ success: true, samePhone: true, message: "Numero di telefono già corretto" });
+    }
+    
+    // Check if MSG91 is configured
+    if (!isMSG91Configured()) {
+      return res.status(503).json({ message: "Servizio OTP non configurato" });
+    }
     
     // Check if this phone is already used by another customer
     const existingCustomers = await db.select()
