@@ -11,6 +11,8 @@ import {
   tableReservations,
   tableGuests,
   tableBookings,
+  tableBookingParticipants,
+  eventTables,
   e4uStaffAssignments,
   eventPrAssignments,
   prListAssignments,
@@ -21,6 +23,7 @@ import {
   siaeTickets,
   siaeTicketedEvents,
   siaeEventSectors,
+  siaeCustomers,
   siaeSubscriptions,
   siaeSubscriptionTypes,
   siaeTransactions,
@@ -2493,10 +2496,10 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
     
     // Check if it's a paid reservation QR code (format: RES-{eventId}-{random})
     if (parts[0] === 'RES' && parts.length >= 2) {
-      // Find reservation by QR code
+      // Find reservation by QR token
       const [reservation] = await db.select()
         .from(reservationPayments)
-        .where(eq(reservationPayments.qrCode, qrCode));
+        .where(eq(reservationPayments.prCode, qrCode));
       
       if (!reservation) {
         return res.status(404).json({ message: "Prenotazione non trovata" });
@@ -2521,12 +2524,12 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       }
       
       // Check payment status
-      if (reservation.paymentStatus !== 'completed') {
+      if (reservation.paymentStatus !== 'paid') {
         return res.status(400).json({ 
           message: `Pagamento non completato. Stato: ${reservation.paymentStatus === 'pending' ? 'In attesa' : 'Fallito'}`,
           reservation: {
             id: reservation.id,
-            customerName: reservation.customerName,
+            customerName: `${reservation.customerFirstName} ${reservation.customerLastName}`,
             paymentStatus: reservation.paymentStatus,
           },
         });
@@ -2538,12 +2541,10 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
           message: "Prenotazione già verificata",
           success: false,
           person: {
-            firstName: reservation.customerName.split(' ')[0] || '',
-            lastName: reservation.customerName.split(' ').slice(1).join(' ') || '',
+            firstName: reservation.customerFirstName,
+            lastName: reservation.customerLastName,
             type: reservation.reservationType === 'list' ? 'prenotazione_lista' : 'prenotazione_tavolo',
             reservationType: reservation.reservationType,
-            listName: reservation.listName || undefined,
-            tableTypeName: reservation.tableTypeName || undefined,
           },
           alreadyCheckedIn: true,
           checkedInAt: reservation.checkedInAt,
@@ -2565,14 +2566,11 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         type: 'reservation',
         message: "Prenotazione verificata con successo",
         person: {
-          firstName: updated.customerName.split(' ')[0] || '',
-          lastName: updated.customerName.split(' ').slice(1).join(' ') || '',
+          firstName: updated.customerFirstName,
+          lastName: updated.customerLastName,
           type: updated.reservationType === 'list' ? 'prenotazione_lista' : 'prenotazione_tavolo',
           phone: updated.customerPhone || undefined,
           reservationType: updated.reservationType,
-          listName: updated.listName || undefined,
-          tableTypeName: updated.tableTypeName || undefined,
-          guestCount: updated.guestCount || undefined,
           amount: updated.amount,
         },
       });
@@ -2621,8 +2619,8 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
             alreadyCheckedIn: true,
             checkedInAt: booking.qrScannedAt,
             person: {
-              firstName: booking.guestName?.split(' ')[0] || '',
-              lastName: booking.guestName?.split(' ').slice(1).join(' ') || '',
+              firstName: booking.customerName?.split(' ')[0] || '',
+              lastName: booking.customerName?.split(' ').slice(1).join(' ') || '',
               tableTypeName: tableName,
             },
           });
@@ -2644,11 +2642,11 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
           tableName,
           message: "Check-in tavolo completato",
           person: {
-            firstName: updated.guestName?.split(' ')[0] || '',
-            lastName: updated.guestName?.split(' ').slice(1).join(' ') || '',
+            firstName: updated.customerName?.split(' ')[0] || '',
+            lastName: updated.customerName?.split(' ').slice(1).join(' ') || '',
             type: 'tavolo',
             tableTypeName: tableName,
-            guestCount: updated.guestCount || 1,
+            guestCount: updated.guestsCount || 1,
           },
         });
       } else {
