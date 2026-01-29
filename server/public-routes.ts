@@ -567,7 +567,6 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
       });
       
       // 2. Crea evento ticketed
-      const ticketedEventId = randomUUID();
       // Determina se è genere intrattenimento (60-69)
       const genreNum = parseInt(genre.code);
       const isIntrattenimento = genreNum >= 60 && genreNum <= 69;
