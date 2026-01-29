@@ -23,6 +23,7 @@ import { z } from "zod";
 import { eq, and, desc, sql, isNull, gte, lte, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { findOrCreateIdentity, findPrProfileByIdentity, normalizePhone as normalizePhoneUtil } from "./identity-utils";
 
 const router = Router();
 
@@ -196,47 +197,26 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     // Create user account and link identity for the PR
     const fullPhone = `${validated.phonePrefix || '+39'}${validated.phone}`;
     const prEmail = validated.email || `pr-${validated.phone}@pr.event4u.local`;
-    const phoneNormalized = normalizePhone(fullPhone);
+    
+    // Use identity-utils to find or create identity
+    const { identity, created: identityCreated } = await findOrCreateIdentity({
+      phone: validated.phone,
+      phonePrefix: validated.phonePrefix || '+39',
+      firstName: validated.firstName,
+      lastName: validated.lastName,
+      email: prEmail?.toLowerCase(),
+    });
+    const identityId = identity.id;
+    console.log(`[Staff-PR] ${identityCreated ? 'Created new' : 'Found existing'} identity: ${identityId}`);
+    
+    // Check if this identity already has a PR profile for this company
+    const existingPrForIdentity = await findPrProfileByIdentity(identityId, prSession.companyId);
+    if (existingPrForIdentity) {
+      console.log(`[Staff-PR] PR profile already exists for identity ${identityId} in company ${prSession.companyId}`);
+      return res.status(200).json(existingPrForIdentity);
+    }
     
     let userId: string | null = null;
-    let identityId: string | null = null;
-    
-    // Search for existing identity by phone or email
-    if (phoneNormalized) {
-      const [existingIdentity] = await db.select()
-        .from(identities)
-        .where(eq(identities.phoneNormalized, phoneNormalized))
-        .limit(1);
-      if (existingIdentity) {
-        identityId = existingIdentity.id;
-        console.log(`[Staff-PR] Found existing identity by phone: ${identityId}`);
-      }
-    }
-    
-    // If not found, search by email
-    if (!identityId && prEmail) {
-      const [existingIdentity] = await db.select()
-        .from(identities)
-        .where(eq(identities.email, prEmail.toLowerCase()))
-        .limit(1);
-      if (existingIdentity) {
-        identityId = existingIdentity.id;
-        console.log(`[Staff-PR] Found existing identity by email: ${identityId}`);
-      }
-    }
-    
-    // If still not found, create new identity
-    if (!identityId) {
-      const [newIdentity] = await db.insert(identities).values({
-        firstName: validated.firstName,
-        lastName: validated.lastName,
-        email: prEmail?.toLowerCase(),
-        phone: fullPhone,
-        phoneNormalized,
-      }).returning();
-      identityId = newIdentity.id;
-      console.log(`[Staff-PR] Created new identity: ${identityId}`);
-    }
     
     // PRIORITY 1: Check if phone exists as a registered customer/user in the SAME company
     const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId })

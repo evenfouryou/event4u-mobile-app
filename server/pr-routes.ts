@@ -31,6 +31,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { like, or, eq, and, desc, isNull, inArray, sql, gt, gte, lte, not } from "drizzle-orm";
+import { findOrCreateIdentity, findCustomerByIdentity } from "./identity-utils";
 
 const router = Router();
 
@@ -2085,125 +2086,51 @@ router.post("/api/pr/customers/quick-create", requireAuth, requirePr, async (req
       return res.status(400).json({ error: "Telefono, nome e cognome richiesti" });
     }
     
-    // Helper function to normalize phone numbers
-    const normalizePhone = (p: string): string | null => {
-      if (!p) return null;
-      let n = p.replace(/[^0-9+]/g, '');
-      n = n.replace(/^00/, '+');
-      if (n.startsWith('39') && !n.startsWith('+')) n = '+' + n;
-      if (!n.startsWith('+') && n.length >= 9 && n.length <= 10) n = '+39' + n;
-      return n.length >= 10 ? n : null;
-    };
+    // Use centralized identity helper to find or create identity
+    const { identity, created: identityCreated } = await findOrCreateIdentity({
+      phone,
+      firstName,
+      lastName,
+      gender: gender || undefined,
+      birthDate: birthDate ? new Date(birthDate) : undefined,
+    });
     
-    const normalizedPhone = normalizePhone(phone);
+    console.log(`[PR-CUSTOMER] Identity ${identityCreated ? 'created' : 'found'}: ${identity.id} (phone: ${identity.phoneNormalized})`);
     
-    // Step 1: Check for existing identity by normalized phone
-    if (normalizedPhone) {
-      const [existingIdentity] = await db.select()
-        .from(identities)
-        .where(eq(identities.phoneNormalized, normalizedPhone))
-        .limit(1);
-      
-      if (existingIdentity) {
-        // Step 2: Check for existing customer with this identity_id
-        const [existingCustomer] = await db.select()
-          .from(siaeCustomers)
-          .where(eq(siaeCustomers.identityId, existingIdentity.id))
-          .limit(1);
-        
-        if (existingCustomer) {
-          console.log(`[PR-CUSTOMER] Reusing existing customer ${existingCustomer.id} linked to identity ${existingIdentity.id} (phone: ${normalizedPhone})`);
-          return res.status(200).json({
-            id: existingCustomer.id,
-            firstName: existingCustomer.firstName,
-            lastName: existingCustomer.lastName,
-            gender: existingCustomer.gender,
-            phone: existingCustomer.phone,
-            birthDate: existingCustomer.birthDate,
-            reused: true,
-          });
-        }
-        
-        // Step 3: Identity exists but no customer - create customer linked to identity
-        console.log(`[PR-CUSTOMER] Creating new customer linked to existing identity ${existingIdentity.id} (phone: ${normalizedPhone})`);
-        const uniqueCode = `PR_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        const [customer] = await db.insert(siaeCustomers).values({
-          phone,
-          firstName,
-          lastName,
-          gender: gender || null,
-          birthDate: birthDate ? new Date(birthDate) : null,
-          email: `${uniqueCode.toLowerCase()}@placeholder.temp`,
-          uniqueCode,
-          authenticationType: 'BO',
-          registrationCompleted: false,
-          phoneVerified: false,
-          emailVerified: false,
-          identityId: existingIdentity.id,
-        }).returning();
-        
-        return res.status(201).json({
-          id: customer.id,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          gender: customer.gender,
-          phone: customer.phone,
-          birthDate: customer.birthDate,
-        });
-      }
+    // Check if customer already exists for this identity
+    const existingCustomer = await findCustomerByIdentity(identity.id);
+    
+    if (existingCustomer) {
+      console.log(`[PR-CUSTOMER] Reusing existing customer ${existingCustomer.id} linked to identity ${identity.id}`);
+      return res.status(200).json({
+        id: existingCustomer.id,
+        firstName: existingCustomer.firstName,
+        lastName: existingCustomer.lastName,
+        gender: existingCustomer.gender,
+        phone: existingCustomer.phone,
+        birthDate: existingCustomer.birthDate,
+        reused: true,
+      });
     }
     
-    // Check if phone already exists (fallback check)
-    const existing = await db.select({ id: siaeCustomers.id })
-      .from(siaeCustomers)
-      .where(eq(siaeCustomers.phone, phone))
-      .limit(1);
-    
-    if (existing.length > 0) {
-      return res.status(400).json({ error: "Telefono già registrato", customerId: existing[0].id });
-    }
-    
-    // Step 4: No identity exists - create both identity and customer
-    let identityId: string | undefined;
-    if (normalizedPhone) {
-      try {
-        const [newIdentity] = await db.insert(identities).values({
-          firstName,
-          lastName,
-          phone,
-          phoneNormalized: normalizedPhone,
-          phoneVerified: false,
-          emailVerified: false,
-          gender: gender || null,
-          birthDate: birthDate ? new Date(birthDate) : null,
-        }).returning();
-        identityId = newIdentity.id;
-        console.log(`[PR-CUSTOMER] Created new identity ${identityId} for phone ${normalizedPhone}`);
-      } catch (err) {
-        console.log(`[PR-CUSTOMER] Could not create identity (may already exist): ${err}`);
-      }
-    }
-    
-    // Generate unique code
+    // No customer exists - create new customer linked to identity
     const uniqueCode = `PR_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    
-    // Create customer with minimal data
     const [customer] = await db.insert(siaeCustomers).values({
       phone,
       firstName,
       lastName,
       gender: gender || null,
       birthDate: birthDate ? new Date(birthDate) : null,
-      email: `${uniqueCode.toLowerCase()}@placeholder.temp`, // Placeholder email
+      email: `${uniqueCode.toLowerCase()}@placeholder.temp`,
       uniqueCode,
-      authenticationType: 'BO', // Back-office registration
+      authenticationType: 'BO',
       registrationCompleted: false,
       phoneVerified: false,
       emailVerified: false,
-      ...(identityId && { identityId }),
+      identityId: identity.id,
     }).returning();
     
-    console.log(`[PR-CUSTOMER] Created new customer ${customer.id}${identityId ? ` linked to identity ${identityId}` : ''}`);
+    console.log(`[PR-CUSTOMER] Created new customer ${customer.id} linked to identity ${identity.id}`);
     
     res.status(201).json({
       id: customer.id,

@@ -50,6 +50,22 @@ import {
   eventSeatStatus,
   eventCategories,
   identities,
+  users,
+  prOtpAttempts,
+  siaeNameChanges,
+  siaeResales,
+  siaeWalletTransactions,
+  eventReservationSettings,
+  tableTypes,
+  tableReservations,
+  reservationPayments,
+  prProfiles,
+  siaeSubscriptionTypes,
+  siaeSubscriptions,
+  organizerCommissionProfiles,
+  siaeEventGenres,
+  ticketTemplates,
+  ticketTemplateElements,
 } from "@shared/schema";
 import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull, not } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -57,13 +73,12 @@ import { generateTicketHtml } from "./template-routes";
 import { generateTicketPdf, generateWalletImage, generateDigitalTicketPdf } from "./pdf-service";
 import { isCancelledStatus, resolveSystemCodeSafe, SIAE_SYSTEM_CODE_DEFAULT } from "./siae-utils";
 import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
-import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
-import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles, siaeCustomers, siaeEventGenres } from "@shared/schema";
 import svgCaptcha from "svg-captcha";
 import QRCode from "qrcode";
+import { findOrCreateIdentity, findCustomerByIdentity } from "./identity-utils";
 
 const router = Router();
 
@@ -486,12 +501,10 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
     // Trova o crea una location
     let [location] = await db.select().from(locations).where(eq(locations.companyId, companyId)).limit(1);
     if (!location) {
-      const locId = randomUUID();
-      await db.insert(locations).values({
-        id: locId, companyId, name: 'Locale Test SIAE', address: 'Via Test 1', city: 'Roma', province: 'RM', postalCode: '00100', country: 'IT',
+      [location] = await db.insert(locations).values({
+        companyId, name: 'Locale Test SIAE', address: 'Via Test 1', city: 'Roma', province: 'RM', postalCode: '00100', country: 'IT',
         siaeLocationCode: '0000000000001'
-      });
-      [location] = await db.select().from(locations).where(eq(locations.id, locId));
+      }).returning();
     }
     
     // Recupera TUTTI i generi SIAE dal database
@@ -562,8 +575,8 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
       // Il codice locale SIAE deve essere esattamente 13 cifre
       const siaeLocationCode = (location.siaeLocationCode || '0000000000001').padStart(13, '0').substring(0, 13);
       
-      await db.insert(siaeTicketedEvents).values({
-        id: ticketedEventId, eventId, companyId,
+      const [insertedTicketedEvent] = await db.insert(siaeTicketedEvents).values({
+        eventId, companyId,
         siaeLocationCode: siaeLocationCode,
         genreCode: genre.code,
         author, performer,
@@ -573,18 +586,19 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
         requiresNominative: true,
         ticketingStatus: 'closed',
         approvalStatus: 'approved',
-      });
+      }).returning();
+      const ticketedEventId = insertedTicketedEvent.id;
       
       // 3. Crea settore
-      const sectorId = randomUUID();
-      await db.insert(siaeEventSectors).values({
-        id: sectorId, ticketedEventId,
+      const [insertedSector] = await db.insert(siaeEventSectors).values({
+        ticketedEventId,
         sectorCode: 'A0', name: 'Ingresso Generale',
         capacity: 500, availableSeats: 495,
         priceIntero: price.toFixed(2),
         priceRidotto: (price * 0.7).toFixed(2),
         ivaRate: vatRate.toString(),
-      });
+      }).returning();
+      const sectorId = insertedSector.id;
       
       // 4. Crea 3 BIGLIETTI per evento (intero, ridotto, omaggio)
       const ticketTypes = [
@@ -622,16 +636,29 @@ router.post("/api/public/test-siae-create-events", async (req, res) => {
         { name: 'Tessera Stagionale', events: 12, priceMult: 6, firstName: 'Cliente', lastName: 'Stagionale' },
       ];
       for (const st of subTypes) {
-        const customerId = randomUUID();
-        await db.insert(siaeCustomers).values({
-          id: customerId,
-          uniqueCode: `CUST-${timestamp}-${genre.code}-${subCounter}`,
-          email: `sub${genre.code}${subCounter}@test.it`,
-          phone: `+39330${genre.code.padStart(3,'0')}${subCounter}`,
+        const testPhone = `+39330${genre.code.padStart(3,'0')}${subCounter}`;
+        const { identity } = await findOrCreateIdentity({
+          phone: testPhone,
           firstName: st.firstName,
           lastName: `${st.lastName} G${genre.code}`,
-          fiscalCode: `TSTCLN80A01H50${genre.code.charAt(0)}${String.fromCharCode(65 + (subCounter % 26))}`,
         });
+        
+        const existingCustomer = await findCustomerByIdentity(identity.id);
+        let customerId: string;
+        
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+        } else {
+          const [insertedCustomer] = await db.insert(siaeCustomers).values({
+            uniqueCode: `CUST-${timestamp}-${genre.code}-${subCounter}`,
+            email: `sub${genre.code}${subCounter}@test.it`,
+            phone: testPhone,
+            firstName: st.firstName,
+            lastName: `${st.lastName} G${genre.code}`,
+            identityId: identity.id,
+          }).returning();
+          customerId = insertedCustomer.id;
+        }
         
         const subPrice = price * st.priceMult;
         const subNum = String(subCounter).padStart(7, '0');
@@ -690,12 +717,10 @@ router.post("/api/public/test-siae-create-events-legacy", async (req, res) => {
     // Trova o crea una location
     let [location] = await db.select().from(locations).where(eq(locations.companyId, companyId)).limit(1);
     if (!location) {
-      const locId = randomUUID();
-      await db.insert(locations).values({
-        id: locId, companyId, name: 'Locale Test SIAE', address: 'Via Test 1', city: 'Roma', province: 'RM', postalCode: '00100', country: 'IT',
+      [location] = await db.insert(locations).values({
+        companyId, name: 'Locale Test SIAE', address: 'Via Test 1', city: 'Roma', province: 'RM', postalCode: '00100', country: 'IT',
         siaeLocationCode: '0000000000001'
-      });
-      [location] = await db.select().from(locations).where(eq(locations.id, locId));
+      }).returning();
     }
     
     const testDateStr = req.body.testDate || new Date().toISOString().split('T')[0];
@@ -741,9 +766,8 @@ router.post("/api/public/test-siae-create-events-legacy", async (req, res) => {
       });
       
       // 2. Crea evento ticketed (MAI INVIATO - senza transmissionStatus)
-      const ticketedEventId = randomUUID();
-      await db.insert(siaeTicketedEvents).values({
-        id: ticketedEventId, eventId, companyId,
+      const [insertedTicketedEvent2] = await db.insert(siaeTicketedEvents).values({
+        eventId, companyId,
         siaeLocationCode: location.siaeLocationCode || '0000000000001',
         genreCode: gd.genre,
         author: gd.author,
@@ -753,19 +777,20 @@ router.post("/api/public/test-siae-create-events-legacy", async (req, res) => {
         requiresNominative: true,
         ticketingStatus: 'closed',
         approvalStatus: 'approved',
-      });
+      }).returning();
+      const ticketedEventId = insertedTicketedEvent2.id;
       
       // 3. Crea settore
-      const sectorId = randomUUID();
       const netPrice = gd.price / (1 + vatRate / 100);
-      await db.insert(siaeEventSectors).values({
-        id: sectorId, ticketedEventId,
+      const [insertedSector2] = await db.insert(siaeEventSectors).values({
+        ticketedEventId,
         sectorCode: 'A0', name: 'Ingresso Generale',
         capacity: 500, availableSeats: 495,
         priceIntero: gd.price.toFixed(2),
         priceRidotto: (gd.price * 0.7).toFixed(2),
         ivaRate: vatRate.toString(),
-      });
+      }).returning();
+      const sectorId = insertedSector2.id;
       
       // 4. Crea BIGLIETTI VALIDI (2 per evento: intero + ridotto)
       for (let i = 0; i < 2; i++) {
@@ -818,16 +843,29 @@ router.post("/api/public/test-siae-create-events-legacy", async (req, res) => {
       createdCancelledTickets.push({ ticketId: cancelledTicketId, genre: gd.genre, status: 'cancelled' });
       
       // 6. Crea ABBONAMENTO VALIDO per questo evento
-      const customerId = randomUUID();
-      await db.insert(siaeCustomers).values({
-        id: customerId,
-        uniqueCode: `TEST-${timestamp}-${gd.genre}-VALID`,
-        email: `testsub${gd.genre}valid@test.it`,
-        phone: `+393300000${gd.genre.padStart(3, '0')}`,
+      const validSubPhone = `+393300000${gd.genre.padStart(3, '0')}`;
+      const { identity: validIdentity } = await findOrCreateIdentity({
+        phone: validSubPhone,
         firstName: 'Cliente',
         lastName: `Genere${gd.genre}`,
-        fiscalCode: `GNRCLN80A01H501${gd.genre.charAt(0)}`,
       });
+      
+      const existingValidCustomer = await findCustomerByIdentity(validIdentity.id);
+      let customerId: string;
+      
+      if (existingValidCustomer) {
+        customerId = existingValidCustomer.id;
+      } else {
+        const [insertedValidCustomer] = await db.insert(siaeCustomers).values({
+          uniqueCode: `TEST-${timestamp}-${gd.genre}-VALID`,
+          email: `testsub${gd.genre}valid@test.it`,
+          phone: validSubPhone,
+          firstName: 'Cliente',
+          lastName: `Genere${gd.genre}`,
+          identityId: validIdentity.id,
+        }).returning();
+        customerId = insertedValidCustomer.id;
+      }
       
       const subNum = String(subCounter).padStart(7, '0');
       await db.insert(siaeSubscriptions).values({
@@ -846,16 +884,29 @@ router.post("/api/public/test-siae-create-events-legacy", async (req, res) => {
       createdSubscriptions.push({ genre: gd.genre, status: 'active' });
       
       // 7. Crea ABBONAMENTO ANNULLATO per questo evento
-      const cancelledCustomerId = randomUUID();
-      await db.insert(siaeCustomers).values({
-        id: cancelledCustomerId,
-        uniqueCode: `TEST-${timestamp}-${gd.genre}-CANCELLED`,
-        email: `testsub${gd.genre}cancelled@test.it`,
-        phone: `+393311111${gd.genre.padStart(3, '0')}`,
+      const cancelledSubPhone = `+393311111${gd.genre.padStart(3, '0')}`;
+      const { identity: cancelledIdentity } = await findOrCreateIdentity({
+        phone: cancelledSubPhone,
         firstName: 'Annullato',
         lastName: `Genere${gd.genre}`,
-        fiscalCode: `NNLGN80A01H501${gd.genre.charAt(0)}`,
       });
+      
+      const existingCancelledCustomer = await findCustomerByIdentity(cancelledIdentity.id);
+      let cancelledCustomerId: string;
+      
+      if (existingCancelledCustomer) {
+        cancelledCustomerId = existingCancelledCustomer.id;
+      } else {
+        const [insertedCancelledCustomer] = await db.insert(siaeCustomers).values({
+          uniqueCode: `TEST-${timestamp}-${gd.genre}-CANCELLED`,
+          email: `testsub${gd.genre}cancelled@test.it`,
+          phone: cancelledSubPhone,
+          firstName: 'Annullato',
+          lastName: `Genere${gd.genre}`,
+          identityId: cancelledIdentity.id,
+        }).returning();
+        cancelledCustomerId = insertedCancelledCustomer.id;
+      }
       
       const cancelledSubNum = String(subCounter).padStart(7, '0');
       await db.insert(siaeSubscriptions).values({
@@ -1704,6 +1755,7 @@ router.post("/api/public/customers/register", async (req, res) => {
     const [customer] = await db
       .insert(siaeCustomers)
       .values({
+        identityId: identity.id,
         uniqueCode: generateCustomerCode(),
         email: normalizedEmail,
         phone: phoneNormalized,
@@ -2411,7 +2463,7 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
       await db
         .update(users)
         .set({
-          password: passwordHash,
+          passwordHash: passwordHash,
           updatedAt: new Date(),
         })
         .where(eq(users.id, customerId));
@@ -2419,7 +2471,7 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
       await db
         .update(prProfiles)
         .set({
-          password: passwordHash,
+          passwordHash: passwordHash,
           updatedAt: new Date(),
         })
         .where(eq(prProfiles.id, customerId));
@@ -3090,16 +3142,25 @@ router.post("/api/public/checkout/create-payment-intent", async (req, res) => {
 
     // Se l'utente non ha un profilo SIAE, crealo automaticamente
     if (customer._isUserWithoutSiaeProfile && customer.userId) {
+      // Create identity first
+      const { identity } = await findOrCreateIdentity({
+        phone: customer.phone || '0000000000', // placeholder if no phone
+        firstName: customer.firstName || 'Unknown',
+        lastName: customer.lastName || 'User',
+        email: customer.email,
+      });
+      
       const uniqueCode = `CL${Date.now().toString(36).toUpperCase()}`;
       const [newCustomer] = await db
         .insert(siaeCustomers)
         .values({
+          identityId: identity.id,
           uniqueCode,
           userId: customer.userId,
           email: customer.email,
           firstName: customer.firstName || '',
           lastName: customer.lastName || '',
-          phone: customer.phone || null,
+          phone: customer.phone || '0000000000',
           phoneVerified: !!customer.phone, // Se ha telefono, consideralo verificato
           emailVerified: true, // Email già verificata durante registrazione
           registrationCompleted: true,

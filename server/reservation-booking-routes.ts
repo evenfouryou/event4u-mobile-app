@@ -8,6 +8,7 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import bcrypt from "bcryptjs";
 import { sendPrCredentialsSMS, generatePrPassword } from "./msg91-service";
+import { findOrCreateIdentity, findPrProfileByIdentity } from "./identity-utils";
 import {
   prProfiles,
   reservationPayments,
@@ -390,31 +391,25 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     if (!userId) {
       const prEmail = (req.body.email as string) || `pr-${validated.phone}@pr.event4u.local`;
       
-      // Normalize phone for identity matching
-      const phoneNormalized = normalizePhone(fullPhone);
+      // Use identity-utils to find or create identity
+      const { identity, created: identityCreated } = await findOrCreateIdentity({
+        phone: validated.phone,
+        phonePrefix: validated.phonePrefix || '+39',
+        firstName: validated.firstName,
+        lastName: validated.lastName,
+        email: prEmail?.toLowerCase(),
+      });
+      identityId = identity.id;
+      console.log(`[PR] ${identityCreated ? 'Created new' : 'Found existing'} identity: ${identityId}`);
       
-      // Search by phone
-      if (phoneNormalized) {
-        const [existingIdentity] = await db.select().from(identities).where(eq(identities.phoneNormalized, phoneNormalized)).limit(1);
-        if (existingIdentity) identityId = existingIdentity.id;
-      }
-      
-      // If not found, search by email
-      if (!identityId && prEmail) {
-        const [existingIdentity] = await db.select().from(identities).where(eq(identities.email, prEmail.toLowerCase())).limit(1);
-        if (existingIdentity) identityId = existingIdentity.id;
-      }
-      
-      // If still not found, create new identity
-      if (!identityId) {
-        const [newIdentity] = await db.insert(identities).values({
-          firstName: validated.firstName,
-          lastName: validated.lastName,
-          email: prEmail?.toLowerCase(),
-          phone: fullPhone,
-          phoneNormalized,
-        }).returning();
-        identityId = newIdentity.id;
+      // Check if this identity already has a PR profile for this company
+      const existingPrForIdentity = await findPrProfileByIdentity(identityId, user.companyId);
+      if (existingPrForIdentity) {
+        console.log(`[PR] PR profile already exists for identity ${identityId} in company ${user.companyId}`);
+        return res.status(200).json({
+          ...existingPrForIdentity,
+          message: "PR already exists for this identity"
+        });
       }
       
       // Check if email already exists in the SAME company
