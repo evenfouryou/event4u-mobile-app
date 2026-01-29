@@ -4648,8 +4648,23 @@ router.get("/api/public/account/list-entries", async (req, res) => {
       new Map(entries.map(e => [e.id, e])).values()
     );
 
+    // Auto-generate missing QR codes
+    const { prStorage } = await import("./pr-storage");
+    const entriesWithQr = await Promise.all(
+      uniqueEntries.map(async (entry) => {
+        if (!entry.qrCode) {
+          console.log("[PUBLIC-LIST] Generating missing QR for entry:", entry.id);
+          const updated = await prStorage.generateMissingQrCode(entry.id);
+          if (updated?.qrCode) {
+            return { ...entry, qrCode: updated.qrCode };
+          }
+        }
+        return entry;
+      })
+    );
+
     // Map to format expected by mobile app
-    const result = uniqueEntries.map(entry => ({
+    const result = entriesWithQr.map(entry => ({
       id: entry.id,
       eventName: entry.eventName || 'Evento',
       eventDate: entry.eventStart?.toISOString() || null,
@@ -4666,6 +4681,63 @@ router.get("/api/public/account/list-entries", async (req, res) => {
   } catch (error: any) {
     console.error("[PUBLIC-LIST] Error:", error);
     res.status(500).json({ message: "Errore nel caricamento liste" });
+  }
+});
+
+// Generate missing QR code for a list entry
+router.post("/api/public/account/list-entries/:id/generate-qr", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { id } = req.params;
+    const { prStorage } = await import("./pr-storage");
+
+    // Verify the entry belongs to this customer
+    const [entry] = await db
+      .select()
+      .from(listEntries)
+      .where(eq(listEntries.id, id))
+      .limit(1);
+
+    if (!entry) {
+      return res.status(404).json({ message: "Entry non trovata" });
+    }
+
+    // Check ownership - must match customer by userId, email, or phone
+    const isOwner = 
+      (entry.clientUserId && entry.clientUserId === customer.userId) ||
+      (entry.email && customer.email && entry.email.toLowerCase() === customer.email.toLowerCase()) ||
+      (entry.phone && customer.phone && entry.phone.replace(/\s/g, '') === customer.phone.replace(/\s/g, ''));
+
+    if (!isOwner) {
+      return res.status(403).json({ message: "Non autorizzato" });
+    }
+
+    if (entry.qrCode) {
+      return res.json({ 
+        success: true, 
+        qrCode: entry.qrCode,
+        message: "QR code già presente" 
+      });
+    }
+
+    const updated = await prStorage.generateMissingQrCode(id);
+    if (!updated) {
+      return res.status(500).json({ message: "Errore generazione QR" });
+    }
+
+    console.log("[PUBLIC-LIST] Generated missing QR for entry:", id, updated.qrCode);
+    res.json({ 
+      success: true, 
+      qrCode: updated.qrCode,
+      message: "QR code generato" 
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC-LIST] Error generating QR:", error);
+    res.status(500).json({ message: "Errore generazione QR" });
   }
 });
 

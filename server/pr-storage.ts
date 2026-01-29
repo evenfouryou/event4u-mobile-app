@@ -135,6 +135,7 @@ export interface IPrStorage {
   deleteGuestListEntry(id: string): Promise<boolean>;
   markGuestListEntryScanned(id: string, scannedByUserId: string): Promise<GuestListEntry | undefined>;
   findUserByPhone(phone: string): Promise<{ id: string } | undefined>;
+  generateMissingQrCode(entryId: string): Promise<GuestListEntry | undefined>;
   
   // ==================== PR OTP Attempts ====================
   
@@ -508,13 +509,6 @@ export class PrStorage implements IPrStorage {
     return updated;
   }
 
-  // Helper: Find user by phone
-  async findUserByPhone(phone: string): Promise<{ id: string } | undefined> {
-    const [user] = await db.select({ id: users.id }).from(users)
-      .where(eq(users.phone, phone));
-    return user;
-  }
-
   // ==================== Guest Lists ====================
 
   async getGuestListsByEvent(eventId: string): Promise<GuestList[]> {
@@ -694,6 +688,23 @@ export class PrStorage implements IPrStorage {
       .where(eq(users.phone, phone))
       .limit(1);
     return user;
+  }
+
+  async generateMissingQrCode(entryId: string): Promise<GuestListEntry | undefined> {
+    const [entry] = await db.select().from(listEntries)
+      .where(eq(listEntries.id, entryId))
+      .limit(1);
+    
+    if (!entry) return undefined;
+    if (entry.qrCode) return entry; // Already has QR code
+    
+    const qrCode = generateQrCode('LST');
+    const [updated] = await db.update(listEntries)
+      .set({ qrCode })
+      .where(eq(listEntries.id, entryId))
+      .returning();
+    
+    return updated;
   }
 
   // ==================== PR OTP Attempts ====================
