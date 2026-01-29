@@ -83,6 +83,7 @@ import QRCode from "qrcode";
 import { 
   companies,
   products,
+  identities,
   siaeEventGenres,
   siaeSectorCodes,
   siaeTicketTypes,
@@ -122,6 +123,16 @@ import {
 import { setupBridgeRelay, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
 import { setupPrintRelay } from "./print-relay";
 import { siaeStorage } from "./siae-storage";
+
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let normalized = phone.replace(/[^\d+]/g, '');
+  if (normalized.startsWith('0039')) normalized = '+39' + normalized.slice(4);
+  if (normalized.startsWith('39') && !normalized.startsWith('+')) normalized = '+' + normalized;
+  if (!normalized.startsWith('+')) normalized = '+39' + normalized;
+  if (normalized.startsWith('+390')) normalized = '+39' + normalized.slice(4);
+  return normalized.length >= 10 ? normalized : null;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup passport for authentication
@@ -396,6 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     password: z.string().min(8, "Password must be at least 8 characters"),
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
+    phone: z.string().optional(),
     role: z.enum(['gestore', 'warehouse', 'bartender']).default('gestore'),
     companyId: z.string().optional(),
   });
@@ -427,6 +439,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const crypto = await import('crypto');
       const verificationToken = crypto.randomBytes(32).toString('hex');
 
+      // Create or find identity
+      const phoneNormalized = validated.phone ? normalizePhone(validated.phone) : null;
+      let identityId: string | null = null;
+
+      // Search by phone first
+      if (phoneNormalized) {
+        const [existingIdentity] = await db.select().from(identities).where(eq(identities.phoneNormalized, phoneNormalized)).limit(1);
+        if (existingIdentity) identityId = existingIdentity.id;
+      }
+
+      // Search by email
+      if (!identityId && normalizedEmail) {
+        const [existingIdentity] = await db.select().from(identities).where(eq(identities.email, normalizedEmail)).limit(1);
+        if (existingIdentity) identityId = existingIdentity.id;
+      }
+
+      // Create new identity if not found
+      if (!identityId) {
+        const [newIdentity] = await db.insert(identities).values({
+          firstName: validated.firstName,
+          lastName: validated.lastName,
+          email: normalizedEmail,
+          phone: validated.phone || null,
+          phoneNormalized,
+        }).returning();
+        identityId = newIdentity.id;
+      }
+
       // Create user with normalized email
       const user = await storage.createUser({
         email: normalizedEmail,
@@ -437,6 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyId: validated.companyId,
         emailVerified: false,
         verificationToken,
+        identityId,
       });
 
       // Create company for new user if role is gestore and no companyId provided
@@ -5374,6 +5415,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Normalize email for identity lookup
+      const normalizedEmailAdmin = email.toLowerCase().trim();
+
+      // Create or find identity
+      const phoneNormalizedAdmin = phone ? normalizePhone(phone) : null;
+      let identityIdAdmin: string | null = null;
+
+      // Search by phone first
+      if (phoneNormalizedAdmin) {
+        const [existingIdentity] = await db.select().from(identities).where(eq(identities.phoneNormalized, phoneNormalizedAdmin)).limit(1);
+        if (existingIdentity) identityIdAdmin = existingIdentity.id;
+      }
+
+      // Search by email
+      if (!identityIdAdmin && normalizedEmailAdmin) {
+        const [existingIdentity] = await db.select().from(identities).where(eq(identities.email, normalizedEmailAdmin)).limit(1);
+        if (existingIdentity) identityIdAdmin = existingIdentity.id;
+      }
+
+      // Create new identity if not found
+      if (!identityIdAdmin) {
+        const [newIdentity] = await db.insert(identities).values({
+          firstName,
+          lastName,
+          email: normalizedEmailAdmin,
+          phone: phone || null,
+          phoneNormalized: phoneNormalizedAdmin,
+        }).returning();
+        identityIdAdmin = newIdentity.id;
+      }
+
       // Create user
       const newUser = await storage.createUser({
         email,
@@ -5384,6 +5456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyId: targetCompanyId,
         phone: phone || null,
         emailVerified: true, // Admin-created users are auto-verified
+        identityId: identityIdAdmin,
       });
 
       // Create user_companies association if user has a company

@@ -13,6 +13,7 @@ import {
   companies,
   users,
   userCompanyRoles,
+  identities,
   insertPrProfileSchema,
   updatePrProfileSchema,
   insertEventPrAssignmentSchema,
@@ -28,6 +29,17 @@ const router = Router();
 // Helper to generate unique PR code
 function generatePrCode(): string {
   return `PR${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+// Helper to normalize phone numbers to E.164 format
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let normalized = phone.replace(/[^\d+]/g, '');
+  if (normalized.startsWith('0039')) normalized = '+39' + normalized.slice(4);
+  if (normalized.startsWith('39') && !normalized.startsWith('+')) normalized = '+' + normalized;
+  if (!normalized.startsWith('+')) normalized = '+39' + normalized;
+  if (normalized.startsWith('+390')) normalized = '+39' + normalized.slice(4);
+  return normalized.length >= 10 ? normalized : null;
 }
 
 // Middleware to require PR session (staff or regular PR)
@@ -181,11 +193,50 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     const password = crypto.randomBytes(4).toString('hex').toUpperCase();
     const passwordHash = await bcrypt.hash(password, 10);
     
-    // Create user account for the PR
+    // Create user account and link identity for the PR
     const fullPhone = `${validated.phonePrefix || '+39'}${validated.phone}`;
     const prEmail = validated.email || `pr-${validated.phone}@pr.event4u.local`;
+    const phoneNormalized = normalizePhone(fullPhone);
     
     let userId: string | null = null;
+    let identityId: string | null = null;
+    
+    // Search for existing identity by phone or email
+    if (phoneNormalized) {
+      const [existingIdentity] = await db.select()
+        .from(identities)
+        .where(eq(identities.phoneNormalized, phoneNormalized))
+        .limit(1);
+      if (existingIdentity) {
+        identityId = existingIdentity.id;
+        console.log(`[Staff-PR] Found existing identity by phone: ${identityId}`);
+      }
+    }
+    
+    // If not found, search by email
+    if (!identityId && prEmail) {
+      const [existingIdentity] = await db.select()
+        .from(identities)
+        .where(eq(identities.email, prEmail.toLowerCase()))
+        .limit(1);
+      if (existingIdentity) {
+        identityId = existingIdentity.id;
+        console.log(`[Staff-PR] Found existing identity by email: ${identityId}`);
+      }
+    }
+    
+    // If still not found, create new identity
+    if (!identityId) {
+      const [newIdentity] = await db.insert(identities).values({
+        firstName: validated.firstName,
+        lastName: validated.lastName,
+        email: prEmail?.toLowerCase(),
+        phone: fullPhone,
+        phoneNormalized,
+      }).returning();
+      identityId = newIdentity.id;
+      console.log(`[Staff-PR] Created new identity: ${identityId}`);
+    }
     
     // PRIORITY 1: Check if phone exists as a registered customer/user in the SAME company
     const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId })
@@ -198,7 +249,7 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
       
       // Update user's role and companyId if needed
       await db.update(users)
-        .set({ companyId: prSession.companyId, role: 'pr' })
+        .set({ companyId: prSession.companyId, role: 'pr', identityId })
         .where(eq(users.id, userId));
     }
     
@@ -211,6 +262,11 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
       if (existingEmailUser && existingEmailUser.companyId === prSession.companyId) {
         userId = existingEmailUser.id;
         console.log(`[Staff-PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
+        
+        // Update user's identityId if not already linked
+        await db.update(users)
+          .set({ identityId })
+          .where(eq(users.id, userId));
       } else {
         // Generate unique email to avoid conflicts with other companies
         const uniqueEmail = existingEmailUser 
@@ -227,6 +283,7 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
           role: 'pr',
           companyId: prSession.companyId,
           emailVerified: false,
+          identityId,
         }).returning();
         
         userId = newUser.id;
@@ -245,6 +302,7 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
       .values({
         ...validated,
         userId: userId,
+        identityId: identityId,
         companyId: prSession.companyId,
         supervisorId: prSession.id,
         isStaff: false,

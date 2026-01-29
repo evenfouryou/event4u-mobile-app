@@ -24,8 +24,18 @@ function normalizePhone(phone: string | null | undefined): string | null {
 
 export async function runIdentityUnificationMigration(): Promise<void> {
   console.log('[IDENTITY-MIGRATION] Starting identity unification migration...');
+  console.log('[IDENTITY-MIGRATION] Environment:', process.env.NODE_ENV || 'unknown');
+  console.log('[IDENTITY-MIGRATION] Database URL prefix:', process.env.DATABASE_URL?.substring(0, 30) + '...');
   
   try {
+    // Log current record counts
+    const userCount = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
+    const customerCount = await db.execute(sql`SELECT COUNT(*) as count FROM siae_customers`);
+    const prCount = await db.execute(sql`SELECT COUNT(*) as count FROM pr_profiles`);
+    console.log('[IDENTITY-MIGRATION] Current counts - Users:', userCount.rows[0]?.count, 
+                'Customers:', customerCount.rows[0]?.count, 
+                'PR Profiles:', prCount.rows[0]?.count);
+    
     const tableExists = await db.execute(sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 

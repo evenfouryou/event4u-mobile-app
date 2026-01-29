@@ -21,6 +21,7 @@ import {
   tableTypes,
   userCompanyRoles,
   siaeCustomers,
+  identities,
   insertPrProfileSchema,
   updatePrProfileSchema,
   createPrByGestoreSchema,
@@ -85,6 +86,16 @@ function requireScanner(req: Request, res: Response, next: NextFunction) {
 }
 
 // ==================== Helper Functions ====================
+
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let normalized = phone.replace(/[^\d+]/g, '');
+  if (normalized.startsWith('0039')) normalized = '+39' + normalized.slice(4);
+  if (normalized.startsWith('39') && !normalized.startsWith('+')) normalized = '+' + normalized;
+  if (!normalized.startsWith('+')) normalized = '+39' + normalized;
+  if (normalized.startsWith('+390')) normalized = '+39' + normalized.slice(4);
+  return normalized.length >= 10 ? normalized : null;
+}
 
 function generateQrToken(eventId: string): string {
   const random = crypto.randomBytes(8).toString('hex').toUpperCase();
@@ -323,6 +334,7 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     const passwordHash = await bcrypt.hash(password, 10);
     
     let userId: string | null = null;
+    let identityId: string | null = null;
     let isExistingUser = false;
     
     // PRIORITY 1: Check if existingUserId is provided (promotion from customer search)
@@ -378,6 +390,33 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     if (!userId) {
       const prEmail = (req.body.email as string) || `pr-${validated.phone}@pr.event4u.local`;
       
+      // Normalize phone for identity matching
+      const phoneNormalized = normalizePhone(fullPhone);
+      
+      // Search by phone
+      if (phoneNormalized) {
+        const [existingIdentity] = await db.select().from(identities).where(eq(identities.phoneNormalized, phoneNormalized)).limit(1);
+        if (existingIdentity) identityId = existingIdentity.id;
+      }
+      
+      // If not found, search by email
+      if (!identityId && prEmail) {
+        const [existingIdentity] = await db.select().from(identities).where(eq(identities.email, prEmail.toLowerCase())).limit(1);
+        if (existingIdentity) identityId = existingIdentity.id;
+      }
+      
+      // If still not found, create new identity
+      if (!identityId) {
+        const [newIdentity] = await db.insert(identities).values({
+          firstName: validated.firstName,
+          lastName: validated.lastName,
+          email: prEmail?.toLowerCase(),
+          phone: fullPhone,
+          phoneNormalized,
+        }).returning();
+        identityId = newIdentity.id;
+      }
+      
       // Check if email already exists in the SAME company
       const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
         .from(users)
@@ -404,6 +443,7 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
           role: 'pr',
           companyId: user.companyId,
           emailVerified: false,
+          identityId: identityId,
         }).returning();
         
         userId = newUser.id;
@@ -414,6 +454,7 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     // Create PR profile for this company
     const [profile] = await db.insert(prProfiles).values({
       userId: userId,
+      identityId: identityId,
       companyId: user.companyId,
       firstName: validated.firstName,
       lastName: validated.lastName,
