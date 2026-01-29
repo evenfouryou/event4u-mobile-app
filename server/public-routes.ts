@@ -2611,6 +2611,62 @@ router.get("/api/public/customers/me", async (req, res) => {
       return res.status(401).json({ message: "Non autenticato" });
     }
 
+    // Check if customer has a linked PR profile
+    let hasPrProfile = false;
+    let prCode: string | null = null;
+    
+    if (customer.id) {
+      // Method 1: Check by identity_id (highest priority)
+      if (customer.identityId) {
+        const [prByIdentity] = await db.select().from(prProfiles)
+          .where(and(
+            eq(prProfiles.isActive, true),
+            eq(prProfiles.identityId, customer.identityId)
+          ));
+        if (prByIdentity) {
+          hasPrProfile = true;
+          prCode = prByIdentity.prCode;
+          console.log(`[CUSTOMERS/ME] Found PR by identity_id: ${customer.identityId}`);
+        }
+      }
+      
+      // Method 2: Check by phone (normalized)
+      if (!hasPrProfile && customer.phone) {
+        const phoneDigits = customer.phone.replace(/\D/g, '');
+        const phoneBase = phoneDigits.startsWith('39') && phoneDigits.length > 10 
+          ? phoneDigits.slice(2) : phoneDigits;
+        
+        const [prByPhone] = await db.select().from(prProfiles)
+          .where(and(
+            eq(prProfiles.isActive, true),
+            or(
+              eq(prProfiles.phone, customer.phone),
+              eq(prProfiles.phone, phoneBase),
+              sql`REPLACE(REPLACE(REPLACE(${prProfiles.phone}, '+', ''), ' ', ''), '-', '') LIKE ${'%' + phoneBase.slice(-9)}`
+            )
+          ));
+        if (prByPhone) {
+          hasPrProfile = true;
+          prCode = prByPhone.prCode;
+          console.log(`[CUSTOMERS/ME] Found PR by phone: ${customer.phone}`);
+        }
+      }
+      
+      // Method 3: Check by email (case-insensitive)
+      if (!hasPrProfile && customer.email) {
+        const [prByEmail] = await db.select().from(prProfiles)
+          .where(and(
+            eq(prProfiles.isActive, true),
+            sql`LOWER(${prProfiles.email}) = LOWER(${customer.email})`
+          ));
+        if (prByEmail) {
+          hasPrProfile = true;
+          prCode = prByEmail.prCode;
+          console.log(`[CUSTOMERS/ME] Found PR by email: ${customer.email}`);
+        }
+      }
+    }
+
     res.json({
       id: customer.id,
       userId: customer.userId || null,
@@ -2623,6 +2679,8 @@ router.get("/api/public/customers/me", async (req, res) => {
       city: customer.city || null,
       province: customer.province || null,
       _isUserWithoutSiaeProfile: customer._isUserWithoutSiaeProfile || false,
+      hasPrProfile,
+      prCode,
     });
   } catch (error: any) {
     console.error("[PUBLIC] Profile error:", error);

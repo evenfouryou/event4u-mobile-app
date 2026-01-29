@@ -32,6 +32,8 @@ interface Customer {
   birthDate: string | null;
   city: string | null;
   province: string | null;
+  hasPrProfile?: boolean;
+  prCode?: string | null;
 }
 
 // Italian provinces list
@@ -173,13 +175,8 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     retry: false,
   });
 
-  // Check if customer has a linked PR profile (doesn't require PR session)
-  const { data: prProfileCheck } = useQuery<{ hasPrProfile: boolean; prCode: string | null }>({
-    queryKey: ["/api/customer/has-pr-profile"],
-    retry: false,
-    enabled: !!customer,
-  });
-  const hasPrProfile = prProfileCheck?.hasPrProfile ?? false;
+  // hasPrProfile is now included directly in the customer response
+  const hasPrProfile = customer?.hasPrProfile ?? false;
 
   // Check if user has an original PR session (switched from PR to customer)
   const { data: sessionInfo } = useQuery<{ hasOriginalPrSession: boolean }>({
@@ -195,9 +192,16 @@ export function AccountLayout({ children }: AccountLayoutProps) {
 
   const handleSwitchToPr = async () => {
     try {
+      const token = localStorage.getItem("customerToken");
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const res = await fetch('/api/customer/switch-to-pr', {
         method: 'POST',
         credentials: 'include',
+        headers,
       });
       const data = await res.json();
       if (data.success && data.redirectTo) {
@@ -222,9 +226,16 @@ export function AccountLayout({ children }: AccountLayoutProps) {
 
   const handleSwitchBackToPr = async () => {
     try {
+      const token = localStorage.getItem("customerToken");
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const res = await fetch('/api/customer/switch-back-to-pr', {
         method: 'POST',
         credentials: 'include',
+        headers,
       });
       const data = await res.json();
       if (data.success && data.redirectTo) {
