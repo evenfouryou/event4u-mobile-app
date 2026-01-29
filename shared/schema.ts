@@ -205,7 +205,7 @@ export const identities = pgTable("identities", {
   lastLoginAt: timestamp("last_login_at"),
   
   // Customer-specific fields (when isCustomer = true)
-  uniqueCode: varchar("unique_code", { length: 20 }),
+  uniqueCode: varchar("unique_code", { length: 50 }),
   registrationCompleted: boolean("registration_completed").default(false),
   registrationDate: timestamp("registration_date"),
   authenticationType: varchar("authentication_type", { length: 20 }).default('OTP'),

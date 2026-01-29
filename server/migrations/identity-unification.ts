@@ -594,6 +594,145 @@ export async function runIdentityUnificationMigration(): Promise<void> {
     console.log(`[IDENTITY-MIGRATION] Merged ${usersMerged} duplicate user records`);
     
     // ============================================
+    // Phase 3: Populate role flags and PR company assignments
+    // ============================================
+    console.log('[IDENTITY-MIGRATION] Phase 3: Populating role flags and PR company assignments...');
+    
+    // Add new columns if they don't exist
+    const hasIsPr = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'identities' AND column_name = 'is_pr'
+      ) as exists
+    `);
+    
+    if (!hasIsPr.rows[0]?.exists) {
+      console.log('[IDENTITY-MIGRATION] Adding role flags to identities table...');
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS is_pr BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS is_customer BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS pr_code VARCHAR(20)`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS display_name VARCHAR(100)`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS bio TEXT`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS profile_image_url TEXT`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS phone_prefix VARCHAR(5) DEFAULT '+39'`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS is_staff BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS supervisor_id VARCHAR`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS unique_code VARCHAR(50)`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS registration_completed BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS registration_date TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE identities ADD COLUMN IF NOT EXISTS authentication_type VARCHAR(20) DEFAULT 'OTP'`);
+    }
+    
+    // Create pr_company_assignments table if not exists
+    const hasPrCompanyTable = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'pr_company_assignments'
+      ) as exists
+    `);
+    
+    if (!hasPrCompanyTable.rows[0]?.exists) {
+      console.log('[IDENTITY-MIGRATION] Creating pr_company_assignments table...');
+      await db.execute(sql`
+        CREATE TABLE pr_company_assignments (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+          identity_id VARCHAR NOT NULL REFERENCES identities(id),
+          company_id VARCHAR NOT NULL,
+          default_list_commission DECIMAL(10,2) DEFAULT 0.00,
+          default_table_commission DECIMAL(10,2) DEFAULT 0.00,
+          commission_percentage DECIMAL(5,2) DEFAULT 0.00,
+          commission_fixed_per_person DECIMAL(10,2) DEFAULT 0.00,
+          staff_commission_percentage DECIMAL(5,2),
+          total_earnings DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+          pending_earnings DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+          paid_earnings DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+          is_active BOOLEAN NOT NULL DEFAULT true,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pr_company_identity ON pr_company_assignments(identity_id)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pr_company_company ON pr_company_assignments(company_id)`);
+    }
+    
+    // Update is_customer flag for all identities linked to siae_customers
+    const customerFlagUpdate = await db.execute(sql`
+      UPDATE identities SET 
+        is_customer = true,
+        unique_code = COALESCE(identities.unique_code, sc.unique_code),
+        registration_completed = COALESCE(sc.registration_completed, false),
+        registration_date = COALESCE(identities.registration_date, sc.registration_date),
+        authentication_type = COALESCE(identities.authentication_type, sc.authentication_type)
+      FROM siae_customers sc
+      WHERE identities.id = sc.identity_id
+      AND (identities.is_customer = false OR identities.is_customer IS NULL)
+    `);
+    console.log(`[IDENTITY-MIGRATION] Updated is_customer flag for identities`);
+    
+    // Update is_pr flag and copy PR-specific data
+    const prFlagUpdate = await db.execute(sql`
+      UPDATE identities SET 
+        is_pr = true,
+        pr_code = COALESCE(identities.pr_code, pr.pr_code),
+        display_name = COALESCE(identities.display_name, pr.display_name),
+        bio = COALESCE(identities.bio, pr.bio),
+        profile_image_url = COALESCE(identities.profile_image_url, pr.profile_image_url),
+        phone_prefix = COALESCE(identities.phone_prefix, pr.phone_prefix, '+39'),
+        is_staff = COALESCE(pr.is_staff, false),
+        supervisor_id = pr.supervisor_id,
+        last_login_at = COALESCE(identities.last_login_at, pr.last_login_at)
+      FROM pr_profiles pr
+      WHERE identities.id = pr.identity_id
+      AND (identities.is_pr = false OR identities.is_pr IS NULL)
+    `);
+    console.log(`[IDENTITY-MIGRATION] Updated is_pr flag for identities`);
+    
+    // Create pr_company_assignments from existing pr_profiles
+    const existingAssignments = await db.execute(sql`
+      SELECT COUNT(*) as count FROM pr_company_assignments
+    `);
+    
+    if (parseInt(existingAssignments.rows[0]?.count as string || '0') === 0) {
+      const prAssignments = await db.execute(sql`
+        INSERT INTO pr_company_assignments (
+          identity_id, company_id, default_list_commission, default_table_commission,
+          commission_percentage, commission_fixed_per_person, staff_commission_percentage,
+          total_earnings, pending_earnings, paid_earnings, is_active
+        )
+        SELECT 
+          pr.identity_id,
+          pr.company_id,
+          pr.default_list_commission,
+          pr.default_table_commission,
+          pr.commission_percentage,
+          pr.commission_fixed_per_person,
+          pr.staff_commission_percentage,
+          pr.total_earnings,
+          pr.pending_earnings,
+          pr.paid_earnings,
+          pr.is_active
+        FROM pr_profiles pr
+        WHERE pr.identity_id IS NOT NULL
+        ON CONFLICT DO NOTHING
+      `);
+      console.log(`[IDENTITY-MIGRATION] Created PR company assignments from pr_profiles`);
+    } else {
+      console.log(`[IDENTITY-MIGRATION] PR company assignments already exist, skipping`);
+    }
+    
+    // Log role statistics
+    const roleStats = await db.execute(sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE is_pr = true) as pr_count,
+        COUNT(*) FILTER (WHERE is_customer = true) as customer_count,
+        COUNT(*) FILTER (WHERE is_pr = true AND is_customer = true) as both_count
+      FROM identities
+    `);
+    const rs = roleStats.rows[0];
+    console.log(`[IDENTITY-MIGRATION] Role stats: PRs=${rs?.pr_count}, Customers=${rs?.customer_count}, Both=${rs?.both_count}`);
+    
+    // ============================================
     // Final statistics
     // ============================================
     const finalStats = await db.execute(sql`
