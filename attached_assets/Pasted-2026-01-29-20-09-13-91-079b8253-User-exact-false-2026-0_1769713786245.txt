@@ -1,0 +1,136 @@
+2026-01-29 20:09:13.91
+079b8253
+User
+"exact": false,
+2026-01-29 20:09:13.91
+079b8253
+User
+"inclusive": true,
+2026-01-29 20:09:13.91
+079b8253
+User
+code: 'too_small',
+2026-01-29 20:09:13.91
+079b8253
+User
+at get error [as error] (file:///home/runner/workspace/node_modules/zod/v3/types.js:39:31)
+2026-01-29 20:09:13.91
+079b8253
+User
+addIssues: [Function (anonymous)],
+2026-01-29 20:09:13.91
+079b8253
+User
+]
+2026-01-29 20:09:13.91
+079b8253
+User
+"minimum": 9,
+2026-01-29 20:09:13.91
+079b8253
+User
+"message": "Numero troppo corto (min 9 cifre)",
+2026-01-29 20:09:13.91
+079b8253
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+2026-01-29 20:09:13.91
+079b8253
+User
+"phone"
+2026-01-29 20:09:13.91
+079b8253
+User
+Error creating PR profile: ZodError: [
+2026-01-29 20:09:13.91
+079b8253
+User
+minimum: 9,
+2026-01-29 20:09:13.91
+079b8253
+User
+}
+2026-01-29 20:09:13.91
+079b8253
+User
+]
+2026-01-29 20:09:13.91
+079b8253
+User
+}
+2026-01-29 20:09:13.91
+079b8253
+User
+code: 'too_small',
+2026-01-29 20:09:13.91
+079b8253
+User
+}
+2026-01-29 20:09:13.91
+079b8253
+User
+path: [Array]
+2026-01-29 20:09:13.91
+079b8253
+User
+{
+2026-01-29 20:09:13.91
+079b8253
+User
+],
+2026-01-29 20:09:13.91
+079b8253
+User
+issues: [
+2026-01-29 20:09:13.91
+079b8253
+User
+"code": "too_small",
+2026-01-29 20:09:13.91
+079b8253
+User
+at requireGestore6 (file:///home/runner/workspace/dist/index.js:45623:3)
+2026-01-29 20:09:13.91
+079b8253
+User
+}
+2026-01-29 20:09:13.91
+079b8253
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+2026-01-29 20:09:13.91
+079b8253
+User
+exact: false,
+2026-01-29 20:09:13.91
+079b8253
+User
+at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+2026-01-29 20:09:13.91
+079b8253
+User
+at requireAuth7 (file:///home/runner/workspace/dist/index.js:45615:3)
+2026-01-29 20:09:13.91
+079b8253
+User
+addIssue: [Function (anonymous)],
+2026-01-29 20:09:13.91
+079b8253
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5) {
+2026-01-29 20:09:13.91
+079b8253
+User
+at file:///home/runner/workspace/dist/index.js:45858:47
+2026-01-29 20:09:13.91
+079b8253
+User
+exact: false,
+2026-01-29 20:09:13.93
+079b8253
+User
+7:09:13 PM [express] POST /api/reservations/pr-profiles 400 in 51ms :: {"error":"Dati non validi","d…
+2026-01-29 20:09:14.18
+079b8253
+User
+[PR-PROFILES] Found 0 profiles: []

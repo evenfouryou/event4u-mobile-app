@@ -262,11 +262,21 @@ export default function PrManagement() {
     mutationFn: async (usersToPromote: SearchedUser[]) => {
       const results = await Promise.allSettled(
         usersToPromote.map(async (u) => {
+          // Extract phone number properly
+          let phoneNumber = u.phoneWithoutPrefix;
+          if (!phoneNumber && u.phone) {
+            // Remove prefix patterns: +39, +1, 0039, etc
+            phoneNumber = u.phone
+              .replace(/^(\+|00)?39\s*/, '')  // Italian prefix
+              .replace(/^\+\d{1,4}\s*/, '')    // Other international prefixes
+              .replace(/\D/g, '');              // Remove non-digits
+          }
+          
           const response = await apiRequest("POST", "/api/reservations/pr-profiles", {
             firstName: u.firstName || '',
             lastName: u.lastName || '',
             phonePrefix: u.phonePrefix || '+39',
-            phone: u.phoneWithoutPrefix || u.phone?.replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || '',
+            phone: phoneNumber || '',
             existingUserId: u.source === 'user' ? u.id : undefined,
             existingCustomerId: u.source === 'customer' ? u.customerId || u.id : undefined,
             identityId: u.identityId,
