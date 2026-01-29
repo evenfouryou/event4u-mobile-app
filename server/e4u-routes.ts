@@ -3452,7 +3452,22 @@ router.get("/api/e4u/wallet/my", requireAuth, async (req: Request, res: Response
   try {
     const user = req.user as any;
     
-    // Get all list entries for the user (by clientUserId or by phone)
+    // Phone normalization functions
+    const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    const getPhoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone);
+      let basePhone = digits;
+      if (basePhone.startsWith('0039')) basePhone = basePhone.slice(4);
+      else if (basePhone.startsWith('39') && basePhone.length > 10) basePhone = basePhone.slice(2);
+      return [phone, digits, basePhone, '+39' + basePhone, '39' + basePhone, '0039' + basePhone];
+    };
+    
+    // Build phone conditions for list entries
+    const listPhoneConditions = user.phone 
+      ? getPhoneVariants(user.phone).map(v => eq(listEntries.phone, v))
+      : [];
+    
+    // Get all list entries for the user (by clientUserId or by phone with normalization)
     const userListEntries = await db.select({
       entry: listEntries,
       list: eventLists,
@@ -3462,13 +3477,17 @@ router.get("/api/e4u/wallet/my", requireAuth, async (req: Request, res: Response
       .innerJoin(eventLists, eq(listEntries.listId, eventLists.id))
       .innerJoin(events, eq(listEntries.eventId, events.id))
       .where(
-        user.phone
-          ? sql`(${listEntries.clientUserId} = ${getUserId(user)} OR ${listEntries.phone} = ${user.phone})`
+        listPhoneConditions.length > 0
+          ? or(eq(listEntries.clientUserId, getUserId(user)), ...listPhoneConditions)
           : eq(listEntries.clientUserId, getUserId(user))
       )
       .orderBy(desc(events.startDatetime));
     
-    // Get all table guests for the user (by clientUserId or by phone)
+    // Build phone conditions for table guests
+    const tablePhoneConditions = user.phone 
+      ? getPhoneVariants(user.phone).map(v => eq(tableGuests.phone, v))
+      : [];
+    
     const userTableGuests = await db.select({
       guest: tableGuests,
       reservation: tableReservations,
@@ -3480,8 +3499,8 @@ router.get("/api/e4u/wallet/my", requireAuth, async (req: Request, res: Response
       .innerJoin(tableTypes, eq(tableReservations.tableTypeId, tableTypes.id))
       .innerJoin(events, eq(tableGuests.eventId, events.id))
       .where(
-        user.phone
-          ? sql`(${tableGuests.clientUserId} = ${getUserId(user)} OR ${tableGuests.phone} = ${user.phone})`
+        tablePhoneConditions.length > 0
+          ? or(eq(tableGuests.clientUserId, getUserId(user)), ...tablePhoneConditions)
           : eq(tableGuests.clientUserId, getUserId(user))
       )
       .orderBy(desc(events.startDatetime));

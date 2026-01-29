@@ -1813,9 +1813,20 @@ router.post("/api/pr/request-otp", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Numero di telefono richiesto" });
     }
     
-    // Find user by phone
+    // Phone normalization for matching
+    const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    const getPhoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone);
+      let basePhone = digits;
+      if (basePhone.startsWith('0039')) basePhone = basePhone.slice(4);
+      else if (basePhone.startsWith('39') && basePhone.length > 10) basePhone = basePhone.slice(2);
+      return [phone, digits, basePhone, '+39' + basePhone, '39' + basePhone, '0039' + basePhone];
+    };
+    const phoneVariants = getPhoneVariants(phone);
+    
+    // Find user by phone with normalization
     const users = await storage.getAllUsers();
-    const prUser = users.find(u => u.phone === phone && u.role === 'pr');
+    const prUser = users.find(u => u.phone && u.role === 'pr' && phoneVariants.some(v => v === u.phone || normalizePhone(u.phone) === normalizePhone(v)));
     
     if (!prUser) {
       return res.status(404).json({ error: "Nessun PR trovato con questo numero" });
@@ -2027,8 +2038,19 @@ router.get("/api/pr/customers/search", requireAuth, requirePr, async (req: Reque
       return res.json({ found: false, customer: null });
     }
     
-    // If exact match exists, prioritize it
-    const exactMatch = customers.find(c => c.phone === phone);
+    // Phone normalization for better matching
+    const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    const getPhoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone);
+      let basePhone = digits;
+      if (basePhone.startsWith('0039')) basePhone = basePhone.slice(4);
+      else if (basePhone.startsWith('39') && basePhone.length > 10) basePhone = basePhone.slice(2);
+      return [phone, digits, basePhone, '+39' + basePhone, '39' + basePhone, '0039' + basePhone];
+    };
+    const phoneVariants = getPhoneVariants(phone);
+    
+    // If exact match exists (with normalization), prioritize it
+    const exactMatch = customers.find(c => c.phone && phoneVariants.some(v => v === c.phone || normalizePhone(c.phone) === normalizePhone(v)));
     const customer = exactMatch || customers[0];
     
     res.json({
