@@ -147,7 +147,7 @@ export default function PublicForgotPassword() {
     triggerHaptic('medium');
 
     try {
-      await apiRequest('POST', '/api/public/customers/resend-password-reset-otp', { customerId });
+      await apiRequest('POST', '/api/public/customers/resend-password-reset-otp', { customerId, userType });
       setSuccess("Codice OTP reinviato con successo!");
       triggerHaptic('success');
       setTimeout(() => setSuccess(""), 3000);
