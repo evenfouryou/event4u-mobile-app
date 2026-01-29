@@ -14,6 +14,7 @@ import {
   users,
   userCompanyRoles,
   identities,
+  siaeCustomers,
   insertPrProfileSchema,
   updatePrProfileSchema,
   insertEventPrAssignmentSchema,
@@ -198,7 +199,17 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     const fullPhone = `${validated.phonePrefix || '+39'}${validated.phone}`;
     const prEmail = validated.email || `pr-${validated.phone}@pr.event4u.local`;
     
-    // Use identity-utils to find or create identity
+    // Use normalized phone for customer lookup to ensure consistent matching
+    const phoneNormalized = normalizePhoneUtil(validated.phone, validated.phonePrefix || '+39');
+    
+    // Check if this phone is a registered customer (using normalized phone for consistent matching)
+    const [existingCustomerResult] = await db.select()
+      .from(siaeCustomers)
+      .innerJoin(identities, eq(siaeCustomers.identityId, identities.id))
+      .where(eq(identities.phoneNormalized, phoneNormalized));
+    const existingCustomer = existingCustomerResult?.siae_customers;
+    
+    // IDENTITY UNIFICATION: Use identity-utils to find or create identity
     const { identity, created: identityCreated } = await findOrCreateIdentity({
       phone: validated.phone,
       phonePrefix: validated.phonePrefix || '+39',
@@ -208,6 +219,20 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     });
     const identityId = identity.id;
     console.log(`[Staff-PR] ${identityCreated ? 'Created new' : 'Found existing'} identity: ${identityId}`);
+    
+    // If customer exists but doesn't have identity_id, link it now
+    if (existingCustomer && !existingCustomer.identityId) {
+      await db.update(siaeCustomers)
+        .set({ identityId: identityId })
+        .where(eq(siaeCustomers.id, existingCustomer.id));
+      console.log(`[Staff-PR] Linked existing customer ${existingCustomer.id} to identity ${identityId}`);
+    }
+    
+    // Update identity to mark as PR
+    await db.update(identities)
+      .set({ isPr: true, updatedAt: new Date() })
+      .where(eq(identities.id, identityId));
+    console.log(`[Staff-PR] Updated identity ${identityId} with is_pr=true`);
     
     // Check if this identity already has a PR profile for this company
     const existingPrForIdentity = await findPrProfileByIdentity(identityId, prSession.companyId);
@@ -219,7 +244,7 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     let userId: string | null = null;
     
     // PRIORITY 1: Check if phone exists as a registered customer/user in the SAME company
-    const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId })
+    const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId, identityId: users.identityId })
       .from(users)
       .where(eq(users.phone, fullPhone));
     
@@ -227,7 +252,12 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
       userId = existingPhoneUser.id;
       console.log(`[Staff-PR] Phone ${fullPhone} found as existing user, promoting to PR`);
       
-      // Update user's role and companyId if needed
+      // IDENTITY VALIDATION: Ensure user's identityId matches resolved identity
+      if (existingPhoneUser.identityId !== identityId) {
+        console.log(`[Staff-PR] Updating user ${userId} identityId from ${existingPhoneUser.identityId} to ${identityId}`);
+      }
+      
+      // Update user's role, companyId, and ensure identityId matches
       await db.update(users)
         .set({ companyId: prSession.companyId, role: 'pr', identityId })
         .where(eq(users.id, userId));
@@ -235,7 +265,7 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     
     // PRIORITY 2: Check if email already exists in the SAME company
     if (!userId) {
-      const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
+      const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId, identityId: users.identityId })
         .from(users)
         .where(eq(users.email, prEmail));
       
@@ -243,7 +273,12 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
         userId = existingEmailUser.id;
         console.log(`[Staff-PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
         
-        // Update user's identityId if not already linked
+        // IDENTITY VALIDATION: Ensure user's identityId matches resolved identity
+        if (existingEmailUser.identityId !== identityId) {
+          console.log(`[Staff-PR] Updating user ${userId} identityId from ${existingEmailUser.identityId} to ${identityId}`);
+        }
+        
+        // Update user's identityId to match the resolved identity
         await db.update(users)
           .set({ identityId })
           .where(eq(users.id, userId));
@@ -277,6 +312,29 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
       companyId: prSession.companyId,
       role: 'pr',
     }).onConflictDoNothing();
+    
+    // IDENTITY CONSISTENCY GUARD: Before creating PR profile, verify data integrity
+    // This ensures users.identityId and prProfiles.identityId will point to the same identity
+    if (userId) {
+      const [userCheck] = await db.select({ identityId: users.identityId, siaeCustomerId: users.siaeCustomerId })
+        .from(users)
+        .where(eq(users.id, userId));
+      
+      if (userCheck && userCheck.identityId !== identityId) {
+        console.error(`[Staff-PR] IDENTITY MISMATCH: User ${userId} has identityId ${userCheck.identityId} but PR profile will use ${identityId}. Fixing...`);
+        await db.update(users)
+          .set({ identityId: identityId })
+          .where(eq(users.id, userId));
+      }
+      
+      // If siaeCustomer exists for this identity but user isn't linked, link it now
+      if (!userCheck?.siaeCustomerId && existingCustomer) {
+        await db.update(users)
+          .set({ siaeCustomerId: existingCustomer.id })
+          .where(eq(users.id, userId));
+        console.log(`[Staff-PR] Linked user ${userId} to siaeCustomer ${existingCustomer.id}`);
+      }
+    }
     
     const [newPr] = await db.insert(prProfiles)
       .values({

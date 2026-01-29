@@ -8,7 +8,7 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import bcrypt from "bcryptjs";
 import { sendPrCredentialsSMS, generatePrPassword } from "./msg91-service";
-import { findOrCreateIdentity, findPrProfileByIdentity } from "./identity-utils";
+import { findOrCreateIdentity, findPrProfileByIdentity, normalizePhone as normalizePhoneIdentity } from "./identity-utils";
 import {
   prProfiles,
   reservationPayments,
@@ -315,10 +315,52 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
         eq(prProfiles.phonePrefix, validated.phonePrefix || '+39')
       ));
     
-    // Check if this phone is a registered customer
+    // Use normalized phone for customer lookup to ensure consistent matching
+    const phoneNormalized = normalizePhoneIdentity(validated.phone, validated.phonePrefix || '+39');
+    
+    // Check if this phone is a registered customer (using normalized phone for consistent matching)
     const [existingCustomer] = await db.select()
       .from(siaeCustomers)
-      .where(eq(siaeCustomers.phone, fullPhone));
+      .innerJoin(identities, eq(siaeCustomers.identityId, identities.id))
+      .where(eq(identities.phoneNormalized, phoneNormalized));
+    
+    // IDENTITY UNIFICATION: First, find or create the identity based on phone
+    // This ensures we ALWAYS use the same identity for a phone number
+    const { identity, created: identityCreated } = await findOrCreateIdentity({
+      phone: validated.phone,
+      phonePrefix: validated.phonePrefix || '+39',
+      firstName: validated.firstName,
+      lastName: validated.lastName,
+      email: (req.body.email as string)?.toLowerCase(),
+    });
+    let identityId: string = identity.id;
+    console.log(`[PR] ${identityCreated ? 'Created new' : 'Found existing'} identity: ${identityId}`);
+    
+    // If customer exists but doesn't have identity_id, link it now
+    // Note: existingCustomer is a join result with siae_customers and identities fields
+    const customerRecord = existingCustomer?.siae_customers;
+    if (customerRecord && !customerRecord.identityId) {
+      await db.update(siaeCustomers)
+        .set({ identityId: identityId })
+        .where(eq(siaeCustomers.id, customerRecord.id));
+      console.log(`[PR] Linked existing customer ${customerRecord.id} to identity ${identityId}`);
+    }
+    
+    // Update identity to mark as PR
+    await db.update(identities)
+      .set({ isPr: true, updatedAt: new Date() })
+      .where(eq(identities.id, identityId));
+    console.log(`[PR] Updated identity ${identityId} with is_pr=true`);
+    
+    // Check if this identity already has a PR profile for this company
+    const existingPrForIdentity = await findPrProfileByIdentity(identityId, user.companyId);
+    if (existingPrForIdentity) {
+      console.log(`[PR] PR profile already exists for identity ${identityId} in company ${user.companyId}`);
+      return res.status(200).json({
+        ...existingPrForIdentity,
+        message: "PR already exists for this identity"
+      });
+    }
     
     // Generate unique PR code
     let prCode = generatePrCode();
@@ -335,7 +377,6 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     const passwordHash = await bcrypt.hash(password, 10);
     
     let userId: string | null = null;
-    let identityId: string | null = null;
     let isExistingUser = false;
     
     // PRIORITY 1: Check if existingUserId is provided (promotion from customer search)
@@ -351,9 +392,15 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
           isExistingUser = true;
           console.log(`[PR] Promoting existing user ${userId} to PR (customer -> PR)`);
           
-          // Always update user's role to 'pr' and set companyId if needed
+          // IDENTITY VALIDATION: Ensure user's identityId matches resolved identity
+          // If user has no identityId or has a different one, update it
+          if (existingUser.identityId !== identityId) {
+            console.log(`[PR] Updating user ${userId} identityId from ${existingUser.identityId} to ${identityId}`);
+          }
+          
+          // Always update user's role to 'pr', set companyId, and ensure identityId matches
           await db.update(users)
-            .set({ companyId: user.companyId, role: 'pr' })
+            .set({ companyId: user.companyId, role: 'pr', identityId: identityId })
             .where(eq(users.id, userId));
         }
       }
@@ -364,11 +411,23 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
       userId = existingInOtherCompany.userId;
       isExistingUser = true;
       console.log(`[PR] Phone ${fullPhone} already PR in another company, linking to existing user ${userId}`);
+      
+      // IDENTITY VALIDATION: Ensure the linked user has the correct identityId
+      const [linkedUser] = await db.select({ identityId: users.identityId })
+        .from(users)
+        .where(eq(users.id, userId));
+      
+      if (linkedUser && linkedUser.identityId !== identityId) {
+        console.log(`[PR] Updating multi-company user ${userId} identityId from ${linkedUser.identityId} to ${identityId}`);
+        await db.update(users)
+          .set({ identityId: identityId })
+          .where(eq(users.id, userId));
+      }
     }
     
     // PRIORITY 3: Check if phone exists as a registered customer/user in the SAME company
     if (!userId) {
-      const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId, role: users.role })
+      const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId, role: users.role, identityId: users.identityId })
         .from(users)
         .where(eq(users.phone, fullPhone));
       
@@ -377,11 +436,17 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
         isExistingUser = true;
         console.log(`[PR] Phone ${fullPhone} found as existing user, promoting to PR`);
         
-        // Update user's role and companyId if needed
+        // IDENTITY VALIDATION: Ensure user's identityId matches resolved identity
+        if (existingPhoneUser.identityId !== identityId) {
+          console.log(`[PR] Updating user ${userId} identityId from ${existingPhoneUser.identityId} to ${identityId}`);
+        }
+        
+        // Update user's role, companyId, and ensure identityId matches
         await db.update(users)
           .set({ 
             companyId: user.companyId, 
-            role: 'pr' 
+            role: 'pr',
+            identityId: identityId
           })
           .where(eq(users.id, userId));
       }
@@ -391,26 +456,8 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     if (!userId) {
       const prEmail = (req.body.email as string) || `pr-${validated.phone}@pr.event4u.local`;
       
-      // Use identity-utils to find or create identity
-      const { identity, created: identityCreated } = await findOrCreateIdentity({
-        phone: validated.phone,
-        phonePrefix: validated.phonePrefix || '+39',
-        firstName: validated.firstName,
-        lastName: validated.lastName,
-        email: prEmail?.toLowerCase(),
-      });
-      identityId = identity.id;
-      console.log(`[PR] ${identityCreated ? 'Created new' : 'Found existing'} identity: ${identityId}`);
-      
-      // Check if this identity already has a PR profile for this company
-      const existingPrForIdentity = await findPrProfileByIdentity(identityId, user.companyId);
-      if (existingPrForIdentity) {
-        console.log(`[PR] PR profile already exists for identity ${identityId} in company ${user.companyId}`);
-        return res.status(200).json({
-          ...existingPrForIdentity,
-          message: "PR already exists for this identity"
-        });
-      }
+      // Identity was already found/created at the start of this function
+      // No need to call findOrCreateIdentity again
       
       // Check if email already exists in the SAME company
       const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
@@ -422,6 +469,11 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
         userId = existingEmailUser.id;
         isExistingUser = true;
         console.log(`[PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
+        
+        // IDENTITY VALIDATION: Ensure user's identityId matches resolved identity
+        await db.update(users)
+          .set({ identityId: identityId })
+          .where(eq(users.id, userId));
       } else {
         // Generate unique email to avoid conflicts with other companies
         const uniqueEmail = existingEmailUser 
@@ -443,6 +495,29 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
         
         userId = newUser.id;
         console.log(`[PR] Created new user account ${userId} for PR ${validated.firstName} ${validated.lastName}`);
+      }
+    }
+    
+    // IDENTITY CONSISTENCY GUARD: Before creating PR profile, verify data integrity
+    // This ensures users.identityId and prProfiles.identityId will point to the same identity
+    if (userId) {
+      const [userCheck] = await db.select({ identityId: users.identityId, siaeCustomerId: users.siaeCustomerId })
+        .from(users)
+        .where(eq(users.id, userId));
+      
+      if (userCheck && userCheck.identityId !== identityId) {
+        console.error(`[PR] IDENTITY MISMATCH: User ${userId} has identityId ${userCheck.identityId} but PR profile will use ${identityId}. Fixing...`);
+        await db.update(users)
+          .set({ identityId: identityId })
+          .where(eq(users.id, userId));
+      }
+      
+      // If siaeCustomer exists for this identity but user isn't linked, link it now
+      if (!userCheck?.siaeCustomerId && customerRecord) {
+        await db.update(users)
+          .set({ siaeCustomerId: customerRecord.id })
+          .where(eq(users.id, userId));
+        console.log(`[PR] Linked user ${userId} to siaeCustomer ${customerRecord.id}`);
       }
     }
     
@@ -478,15 +553,15 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     // Otherwise, create a new customer automatically for seamless switch
     let linkedCustomerId: string | null = null;
     
-    if (existingCustomer && profile.id) {
+    if (customerRecord && profile.id) {
       // Link to existing customer
-      linkedCustomerId = existingCustomer.id;
+      linkedCustomerId = customerRecord.id;
       if (userId) {
         await db.update(users)
-          .set({ siaeCustomerId: existingCustomer.id })
+          .set({ siaeCustomerId: customerRecord.id })
           .where(eq(users.id, userId));
       }
-      console.log(`[PR] Linked PR ${profile.id} to existing customer ${existingCustomer.id}`);
+      console.log(`[PR] Linked PR ${profile.id} to existing customer ${customerRecord.id}`);
     } else {
       // Auto-create a customer for this PR to enable seamless switching
       try {
@@ -2620,8 +2695,18 @@ router.post("/api/switch-role/customer", requireAuth, async (req: Request, res: 
     // Find linked customer account by multiple methods
     let customer = null;
     
+    // Method 0 (PRIORITY): Find customer by identity_id - this is the unified identity
+    if (profile.identityId) {
+      const [identityCustomer] = await db.select().from(siaeCustomers)
+        .where(eq(siaeCustomers.identityId, profile.identityId));
+      if (identityCustomer) {
+        customer = identityCustomer;
+        console.log(`[ROLE-SWITCH] Found customer ${customer.id} by identity_id ${profile.identityId}`);
+      }
+    }
+    
     // Method 1: Check if PR profile has userId with siaeCustomerId
-    if (profile.userId) {
+    if (!customer && profile.userId) {
       const [linkedUser] = await db.select().from(users)
         .where(eq(users.id, profile.userId));
       if (linkedUser?.siaeCustomerId) {
@@ -2655,12 +2740,12 @@ router.post("/api/switch-role/customer", requireAuth, async (req: Request, res: 
       try {
         const [newCustomer] = await db.insert(siaeCustomers)
           .values({
-            uniqueCode: uniqueCode,
             firstName: profile.firstName || 'PR',
             lastName: profile.lastName || 'User',
             phone: fullPhone,
             email: customerEmail,
             userId: profile.userId || null,
+            identityId: profile.identityId || null,
             registrationCompleted: true,
             authenticationType: 'BO',
             phoneVerified: true,
@@ -2668,7 +2753,7 @@ router.post("/api/switch-role/customer", requireAuth, async (req: Request, res: 
           })
           .returning();
         customer = newCustomer;
-        console.log(`[ROLE-SWITCH] Created customer account ${customer.id} for PR ${profile.id}`);
+        console.log(`[ROLE-SWITCH] Created customer account ${customer.id} for PR ${profile.id} with identity ${profile.identityId}`);
       } catch (insertError: any) {
         // Handle unique constraint violations - try to find existing customer by phone/email again
         console.error(`[ROLE-SWITCH] Insert failed for PR ${profile.id}:`, insertError.message);
@@ -2804,11 +2889,24 @@ router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) =>
       return res.status(404).json({ error: "Cliente non trovato" });
     }
     
-    // Find linked PR profile by phone or email
+    // Find linked PR profile by identity_id, phone or email
     let prProfile = null;
     
+    // Method 0 (PRIORITY): Check by identity_id - unified identity
+    if (customer.identityId) {
+      const [profileByIdentity] = await db.select().from(prProfiles)
+        .where(and(
+          eq(prProfiles.isActive, true),
+          eq(prProfiles.identityId, customer.identityId)
+        ));
+      if (profileByIdentity) {
+        prProfile = profileByIdentity;
+        console.log(`[CUSTOMER-TO-PR] Found PR profile ${prProfile.id} by identity_id ${customer.identityId}`);
+      }
+    }
+    
     // Method 1: Check by phone
-    if (customer.phone) {
+    if (!prProfile && customer.phone) {
       const [profileByPhone] = await db.select().from(prProfiles)
         .where(and(
           eq(prProfiles.isActive, true),
