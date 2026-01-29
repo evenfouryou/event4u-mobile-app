@@ -39,6 +39,8 @@ import {
   insertPublicCartItemSchema,
   listEntries,
   eventLists,
+  tableBookings,
+  tableBookingParticipants,
   eventTables,
   venueFloorPlans,
   floorPlanZones,
