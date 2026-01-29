@@ -2673,7 +2673,7 @@ router.patch("/api/public/customers/me", async (req, res) => {
 });
 
 // Store pending customer phone changes (in-memory)
-const pendingCustomerPhoneChanges = new Map<string, { newPhone: string; expiresAt: Date }>();
+const pendingCustomerPhoneChanges = new Map<string, { newPhonePrefix: string; newPhone: string; expiresAt: Date }>();
 
 // Request phone number change - sends OTP to new number
 router.post("/api/public/customers/phone/request-change", async (req, res) => {
@@ -2683,9 +2683,9 @@ router.post("/api/public/customers/phone/request-change", async (req, res) => {
       return res.status(401).json({ message: "Non autenticato" });
     }
     
-    const { newPhone } = req.body;
+    const { newPhonePrefix = '+39', newPhone } = req.body;
     
-    if (!newPhone || newPhone.length < 9) {
+    if (!newPhone || newPhone.replace(/\D/g, '').length < 9) {
       return res.status(400).json({ message: "Numero di telefono non valido (minimo 9 cifre)" });
     }
     
@@ -2694,16 +2694,16 @@ router.post("/api/public/customers/phone/request-change", async (req, res) => {
       return res.status(503).json({ message: "Servizio OTP non configurato" });
     }
     
-    // Format phone - add +39 if not present
-    let fullPhone = newPhone.replace(/\s/g, '');
-    if (!fullPhone.startsWith('+')) {
-      fullPhone = '+39' + fullPhone;
-    }
+    // Clean phone number (remove non-digits)
+    const cleanPhone = newPhone.replace(/\D/g, '');
+    // Ensure prefix has + sign
+    const prefix = newPhonePrefix.startsWith('+') ? newPhonePrefix : '+' + newPhonePrefix;
+    const fullPhone = prefix + cleanPhone;
     
     // Check if this phone is already used by another customer
     const existingCustomers = await db.select()
       .from(siaeCustomers)
-      .where(sql`${siaeCustomers.phone} LIKE ${'%' + newPhone.slice(-9)}`);
+      .where(sql`${siaeCustomers.phone} LIKE ${'%' + cleanPhone.slice(-9)}`);
     
     const otherCustomer = existingCustomers.find(c => c.id !== customer.id);
     if (otherCustomer) {
@@ -2718,9 +2718,10 @@ router.post("/api/public/customers/phone/request-change", async (req, res) => {
       return res.status(500).json({ message: "Errore nell'invio del codice OTP" });
     }
     
-    // Store pending change
+    // Store pending change with separate prefix and phone
     pendingCustomerPhoneChanges.set(customer.id, {
-      newPhone: fullPhone,
+      newPhonePrefix: prefix,
+      newPhone: cleanPhone,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
     
@@ -2757,16 +2758,18 @@ router.post("/api/public/customers/phone/verify-change", async (req, res) => {
       return res.status(400).json({ message: "Codice OTP scaduto. Richiedi un nuovo codice." });
     }
     
-    // Verify OTP
-    const verifyResult = await verifyMSG91OTP(pendingChange.newPhone, otp);
+    // Verify OTP with full phone number
+    const fullPhone = pendingChange.newPhonePrefix + pendingChange.newPhone;
+    const verifyResult = await verifyMSG91OTP(fullPhone, otp);
     
     if (!verifyResult.success) {
       return res.status(400).json({ message: "Codice OTP non valido" });
     }
     
-    // Update phone number
+    // Update phone number with separate prefix and phone
     const [updated] = await db.update(siaeCustomers)
       .set({
+        phonePrefix: pendingChange.newPhonePrefix,
         phone: pendingChange.newPhone,
         phoneVerified: true,
         updatedAt: new Date()
@@ -2774,13 +2777,28 @@ router.post("/api/public/customers/phone/verify-change", async (req, res) => {
       .where(eq(siaeCustomers.id, customer.id))
       .returning();
     
+    // Also update identity if linked
+    if (customer.identityId) {
+      const { identities } = await import("@shared/schema");
+      await db.update(identities)
+        .set({
+          phone: pendingChange.newPhone,
+          phoneNormalized: fullPhone,
+          phoneVerified: true,
+          updatedAt: new Date()
+        })
+        .where(eq(identities.id, customer.identityId));
+      console.log(`[CUSTOMER-PHONE] Identity ${customer.identityId} updated with new phone`);
+    }
+    
     // Clean up
     pendingCustomerPhoneChanges.delete(customer.id);
     
-    console.log(`[CUSTOMER-PHONE] Phone updated for customer ${customer.id} to ${pendingChange.newPhone}`);
+    console.log(`[CUSTOMER-PHONE] Phone updated for customer ${customer.id} to ${fullPhone}`);
     res.json({ 
       success: true, 
       message: "Numero di telefono aggiornato con successo",
+      phonePrefix: updated.phonePrefix,
       phone: updated.phone
     });
   } catch (error: any) {

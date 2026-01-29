@@ -134,7 +134,7 @@ export default function AccountProfile() {
     
     setIsRequestingOtp(true);
     try {
-      const res = await fetch("/api/public/customer/phone/request-change", {
+      const res = await fetch("/api/public/customers/phone/request-change", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -166,7 +166,7 @@ export default function AccountProfile() {
     
     setIsVerifyingOtp(true);
     try {
-      const res = await fetch("/api/public/customer/phone/verify-change", {
+      const res = await fetch("/api/public/customers/phone/verify-change", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
