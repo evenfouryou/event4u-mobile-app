@@ -190,6 +190,26 @@ export const identities = pgTable("identities", {
   passwordHash: varchar("password_hash", { length: 255 }),
   registrationIp: varchar("registration_ip", { length: 45 }),
   
+  // Role flags - unified identity can have multiple roles
+  isPr: boolean("is_pr").default(false),
+  isCustomer: boolean("is_customer").default(false),
+  
+  // PR-specific fields (when isPr = true)
+  prCode: varchar("pr_code", { length: 20 }),
+  displayName: varchar("display_name", { length: 100 }),
+  bio: text("bio"),
+  profileImageUrl: text("profile_image_url"),
+  phonePrefix: varchar("phone_prefix", { length: 5 }).default('+39'),
+  isStaff: boolean("is_staff").default(false),
+  supervisorId: varchar("supervisor_id"),
+  lastLoginAt: timestamp("last_login_at"),
+  
+  // Customer-specific fields (when isCustomer = true)
+  uniqueCode: varchar("unique_code", { length: 20 }),
+  registrationCompleted: boolean("registration_completed").default(false),
+  registrationDate: timestamp("registration_date"),
+  authenticationType: varchar("authentication_type", { length: 20 }).default('OTP'),
+  
   // Account status
   isActive: boolean("is_active").default(true),
   blockedUntil: timestamp("blocked_until"),
@@ -218,6 +238,41 @@ export const insertIdentitySchema = createInsertSchema(identities).omit({
 
 export type InsertIdentity = z.infer<typeof insertIdentitySchema>;
 export type Identity = typeof identities.$inferSelect;
+
+// PR Company Assignments - links identities (as PR) to companies with commission settings
+export const prCompanyAssignments = pgTable("pr_company_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  identityId: varchar("identity_id").notNull().references(() => identities.id),
+  companyId: varchar("company_id").notNull(),
+  
+  // Commission settings for this company
+  defaultListCommission: decimal("default_list_commission", { precision: 10, scale: 2 }).default("0.00"),
+  defaultTableCommission: decimal("default_table_commission", { precision: 10, scale: 2 }).default("0.00"),
+  commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }).default("0.00"),
+  commissionFixedPerPerson: decimal("commission_fixed_per_person", { precision: 10, scale: 2 }).default("0.00"),
+  staffCommissionPercentage: decimal("staff_commission_percentage", { precision: 5, scale: 2 }),
+  
+  // Earnings tracking per company
+  totalEarnings: decimal("total_earnings", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  pendingEarnings: decimal("pending_earnings", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  paidEarnings: decimal("paid_earnings", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_pr_company_identity").on(table.identityId),
+  index("idx_pr_company_company").on(table.companyId),
+]);
+
+export const insertPrCompanyAssignmentSchema = createInsertSchema(prCompanyAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPrCompanyAssignment = z.infer<typeof insertPrCompanyAssignmentSchema>;
+export type PrCompanyAssignment = typeof prCompanyAssignments.$inferSelect;
 
 // Users table - Required for Replit Auth + Extended for Event4U roles
 // Roles: super_admin, gestore, gestore_covisione, capo_staff, pr, warehouse, bartender, cassiere, cliente
