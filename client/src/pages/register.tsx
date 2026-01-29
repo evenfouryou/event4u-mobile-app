@@ -80,6 +80,8 @@ const createClienteRegisterSchema = (t: TFunction) => z.object({
   city: z.string().optional(),
   province: z.string().max(2).optional(),
   postalCode: z.string().optional(),
+  addressLatitude: z.string().optional(),
+  addressLongitude: z.string().optional(),
   acceptTerms: z.boolean().refine(val => val === true, {
     message: t('auth.validation.acceptTermsRequired')
   }),
@@ -146,6 +148,8 @@ export default function Register() {
       city: "",
       province: "",
       postalCode: "",
+      addressLatitude: "",
+      addressLongitude: "",
       acceptTerms: false,
       acceptPrivacy: false,
     },
@@ -168,6 +172,8 @@ export default function Register() {
     if (address.city) clienteForm.setValue('city', address.city);
     if (address.postalCode) clienteForm.setValue('postalCode', address.postalCode);
     if (address.province) clienteForm.setValue('province', address.province.toUpperCase().slice(0, 2));
+    if (address.latitude) clienteForm.setValue('addressLatitude', address.latitude.toString());
+    if (address.longitude) clienteForm.setValue('addressLongitude', address.longitude.toString());
   }, [clienteForm]);
 
   const gestoreMutation = useMutation({
@@ -209,6 +215,8 @@ export default function Register() {
         city: data.city || undefined,
         province: data.province || undefined,
         postalCode: data.postalCode || undefined,
+        addressLatitude: data.addressLatitude || undefined,
+        addressLongitude: data.addressLongitude || undefined,
       });
       const result = await res.json();
       setCustomerId(result.customerId);
