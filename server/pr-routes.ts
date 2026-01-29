@@ -1826,7 +1826,11 @@ router.post("/api/pr/request-otp", async (req: Request, res: Response) => {
     
     // Find user by phone with normalization
     const users = await storage.getAllUsers();
-    const prUser = users.find(u => u.phone && u.role === 'pr' && phoneVariants.some(v => v === u.phone || normalizePhone(u.phone) === normalizePhone(v)));
+    const prUser = users.find(u => {
+      if (!u.phone || u.role !== 'pr') return false;
+      const userPhone = u.phone;
+      return phoneVariants.some(v => v === userPhone || normalizePhone(userPhone) === normalizePhone(v));
+    });
     
     if (!prUser) {
       return res.status(404).json({ error: "Nessun PR trovato con questo numero" });
