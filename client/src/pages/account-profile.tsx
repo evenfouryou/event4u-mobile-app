@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -18,11 +18,40 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
-import { User, Mail, Phone, Save, Loader2, LogOut } from "lucide-react";
+import { User, Mail, Phone, Save, Loader2, LogOut, Edit2 } from "lucide-react";
+
+const PHONE_PREFIXES = [
+  { value: "+39", label: "+39 IT" },
+  { value: "+41", label: "+41 CH" },
+  { value: "+33", label: "+33 FR" },
+  { value: "+49", label: "+49 DE" },
+  { value: "+44", label: "+44 UK" },
+  { value: "+1", label: "+1 US" },
+];
+
+const phoneChangeSchema = z.object({
+  newPhone: z.string().min(9, "Min 9 cifre"),
+  newPhonePrefix: z.string().default('+39'),
+  otp: z.string().optional(),
+});
 
 const createProfileSchema = (t: (key: string) => string) => z.object({
   firstName: z.string().min(1, t("account.profilePage.validation.firstNameRequired")),
@@ -88,6 +117,79 @@ export default function AccountProfile() {
       phone: "",
     },
   });
+
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<'input' | 'otp'>('input');
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [newPhonePrefix, setNewPhonePrefix] = useState('+39');
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+
+  const requestPhoneOtp = async () => {
+    if (!newPhoneNumber || newPhoneNumber.length < 9) {
+      toast({ title: "Errore", description: "Inserisci un numero valido (min 9 cifre)", variant: "destructive" });
+      return;
+    }
+    
+    setIsRequestingOtp(true);
+    try {
+      const res = await fetch("/api/public/customer/phone/request-change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          newPhone: newPhoneNumber,
+          newPhonePrefix: newPhonePrefix,
+        }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Errore nell'invio OTP");
+      }
+      
+      toast({ title: "OTP Inviato", description: "Controlla il tuo nuovo numero per il codice" });
+      setPhoneStep('otp');
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    } finally {
+      setIsRequestingOtp(false);
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!otpCode || otpCode.length < 4) {
+      toast({ title: "Errore", description: "Inserisci il codice OTP", variant: "destructive" });
+      return;
+    }
+    
+    setIsVerifyingOtp(true);
+    try {
+      const res = await fetch("/api/public/customer/phone/verify-change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ otp: otpCode }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Codice OTP non valido");
+      }
+      
+      toast({ title: "Numero aggiornato!", description: "Il tuo numero di telefono è stato verificato" });
+      setShowPhoneDialog(false);
+      setPhoneStep('input');
+      setNewPhoneNumber('');
+      setOtpCode('');
+      queryClient.invalidateQueries({ queryKey: ["/api/public/customers/me"] });
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   useEffect(() => {
     if (customer) {
@@ -261,29 +363,28 @@ export default function AccountProfile() {
                     </div>
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("account.profilePage.phone")}</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                              <Phone className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                            <Input
-                              {...field}
-                              className="pl-16"
-                              placeholder={t("account.profilePage.phonePlaceholder")}
-                              data-testid="input-phone"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <Phone className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-muted-foreground">{t("account.profilePage.phone")}</p>
+                          <p className="text-foreground truncate" data-testid="text-phone">{customer?.phone || "Non impostato"}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPhoneDialog(true)}
+                        data-testid="button-edit-phone"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -424,29 +525,28 @@ export default function AccountProfile() {
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-muted-foreground text-base">{t("account.profilePage.phone")}</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                          <Phone className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                        <Input
-                          {...field}
-                          className="h-14 text-lg pl-20 bg-muted border-border text-foreground rounded-xl"
-                          placeholder={t("account.profilePage.phonePlaceholder")}
-                          data-testid="input-phone"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <p className="text-muted-foreground text-base">{t("account.profilePage.phone")}</p>
+                <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
+                      <Phone className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-lg text-foreground" data-testid="text-phone-mobile">
+                      {customer?.phone || "Non impostato"}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPhoneDialog(true)}
+                    data-testid="button-edit-phone-mobile"
+                  >
+                    <Edit2 className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
             </motion.div>
 
             <motion.div 
@@ -501,6 +601,93 @@ export default function AccountProfile() {
           )}
         </HapticButton>
       </motion.div>
+
+      {/* Change Phone Dialog */}
+      <Dialog open={showPhoneDialog} onOpenChange={(open) => {
+        setShowPhoneDialog(open);
+        if (!open) {
+          setPhoneStep('input');
+          setNewPhoneNumber('');
+          setOtpCode('');
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambia Numero di Telefono</DialogTitle>
+            <DialogDescription>
+              {phoneStep === 'input' 
+                ? "Inserisci il nuovo numero. Ti invieremo un codice OTP per verificarlo."
+                : "Inserisci il codice OTP ricevuto sul nuovo numero"
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          {phoneStep === 'input' ? (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Select
+                  value={newPhonePrefix}
+                  onValueChange={setNewPhonePrefix}
+                >
+                  <SelectTrigger className="w-32" data-testid="select-phone-prefix">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PHONE_PREFIXES.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Numero (es. 3381234567)"
+                  value={newPhoneNumber}
+                  onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                  data-testid="input-new-phone"
+                />
+              </div>
+              <div className="flex gap-3 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowPhoneDialog(false)}>
+                  Annulla
+                </Button>
+                <Button 
+                  onClick={requestPhoneOtp} 
+                  disabled={isRequestingOtp}
+                  data-testid="button-request-otp"
+                >
+                  {isRequestingOtp ? "Invio..." : "Invia Codice OTP"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">Codice inviato a:</p>
+                <p className="font-medium">{newPhonePrefix}{newPhoneNumber}</p>
+              </div>
+              <Input
+                placeholder="Inserisci codice OTP"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                maxLength={6}
+                className="text-center text-2xl tracking-widest"
+                data-testid="input-otp"
+              />
+              <div className="flex gap-3 justify-end">
+                <Button type="button" variant="outline" onClick={() => setPhoneStep('input')}>
+                  Indietro
+                </Button>
+                <Button 
+                  onClick={verifyPhoneOtp} 
+                  disabled={isVerifyingOtp}
+                  data-testid="button-verify-otp"
+                >
+                  {isVerifyingOtp ? "Verifica..." : "Verifica e Salva"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
