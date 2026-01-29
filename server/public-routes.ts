@@ -4703,6 +4703,16 @@ router.get("/api/public/account/table-reservations", async (req, res) => {
     console.log("[PUBLIC-TABLE] Searching for customer:", { id: customer.id, phone: customer.phone, email: customer.email });
 
     const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    const getPhoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone);
+      let basePhone = digits;
+      if (basePhone.startsWith('0039')) {
+        basePhone = basePhone.slice(4);
+      } else if (basePhone.startsWith('39') && basePhone.length > 10) {
+        basePhone = basePhone.slice(2);
+      }
+      return [phone, digits, basePhone, '+39' + basePhone, '39' + basePhone, '0039' + basePhone];
+    };
     
     // Build conditions to find participant entries
     const conditions: any[] = [];
@@ -4718,12 +4728,9 @@ router.get("/api/public/account/table-reservations", async (req, res) => {
       conditions.push(eq(tableBookingParticipants.email, customer.email.toLowerCase()));
     }
     if (customer.phone) {
-      const phoneDigits = normalizePhone(customer.phone);
-      conditions.push(eq(tableBookingParticipants.phone, customer.phone));
-      conditions.push(eq(tableBookingParticipants.phone, phoneDigits));
-      conditions.push(eq(tableBookingParticipants.phone, '+39' + phoneDigits));
-      if (phoneDigits.startsWith('39') && phoneDigits.length > 10) {
-        conditions.push(eq(tableBookingParticipants.phone, phoneDigits.slice(2)));
+      const variants = getPhoneVariants(customer.phone);
+      for (const variant of variants) {
+        conditions.push(eq(tableBookingParticipants.phone, variant));
       }
     }
 
