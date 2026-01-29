@@ -919,16 +919,49 @@ export default function PrManagement() {
             
           </div>
           
-          {/* Show form fields only in manual mode OR when a customer is selected */}
-          {(createMode === 'manual' || selectedExistingUser) && (
+          {/* When customer selected from search - just show confirm button */}
+          {createMode === 'search' && selectedExistingUser && (
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                Annulla
+              </Button>
+              <Button 
+                onClick={() => createPrMutation.mutate({
+                  firstName: selectedExistingUser.firstName || '',
+                  lastName: selectedExistingUser.lastName || '',
+                  phonePrefix: selectedExistingUser.phonePrefix || '+39',
+                  phone: selectedExistingUser.phoneWithoutPrefix || selectedExistingUser.phone?.replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || '',
+                  existingUserId: selectedExistingUser.id,
+                })}
+                disabled={createPrMutation.isPending} 
+                data-testid="button-submit-create-pr"
+              >
+                {createPrMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    Promuovendo...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Promuovi a PR
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
+          
+          {/* Show form fields only in manual mode */}
+          {createMode === 'manual' && (
             <>
               <Separator />
               <Form {...createForm}>
                 <form onSubmit={createForm.handleSubmit((data) => 
-                  createPrMutation.mutate({
-                    ...data,
-                    existingUserId: selectedExistingUser?.id,
-                  })
+                  createPrMutation.mutate(data)
                 )} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
@@ -998,10 +1031,7 @@ export default function PrManagement() {
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {selectedExistingUser 
-                      ? "Il cliente verrà promosso a PR con le credenziali esistenti."
-                      : "Le credenziali saranno inviate automaticamente via SMS."
-                    }
+                    Le credenziali saranno inviate automaticamente via SMS.
                   </p>
                   <DialogFooter>
                     <Button
@@ -1015,12 +1045,12 @@ export default function PrManagement() {
                       {createPrMutation.isPending ? (
                         <>
                           <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                          {selectedExistingUser ? "Promuovendo..." : "Creando..."}
+                          Creando...
                         </>
                       ) : (
                         <>
                           <Plus className="h-4 w-4 mr-2" />
-                          {selectedExistingUser ? "Promuovi a PR" : "Crea PR"}
+                          Crea PR
                         </>
                       )}
                     </Button>
