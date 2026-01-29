@@ -107,7 +107,35 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phonePrefix, setPhonePrefix] = useState('+39');
   const { toast } = useToast();
+
+  const COUNTRY_CODES = [
+    { code: '+39', country: 'Italia', flag: '🇮🇹' },
+    { code: '+41', country: 'Svizzera', flag: '🇨🇭' },
+    { code: '+33', country: 'Francia', flag: '🇫🇷' },
+    { code: '+49', country: 'Germania', flag: '🇩🇪' },
+    { code: '+43', country: 'Austria', flag: '🇦🇹' },
+    { code: '+34', country: 'Spagna', flag: '🇪🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+1', country: 'USA', flag: '🇺🇸' },
+  ];
+
+  const formatBirthDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  };
+
+  const parseBirthDateToISO = (dateStr: string): string | null => {
+    const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+    const [, day, month, year] = match;
+    const d = parseInt(day), m = parseInt(month), y = parseInt(year);
+    if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > new Date().getFullYear()) return null;
+    return `${year}-${month}-${day}`;
+  };
 
   const { data: gestoreRegEnabled, isLoading: checkingGestore } = useQuery<{ enabled: boolean }>({
     queryKey: ['/api/public/registration-enabled'],
@@ -203,13 +231,17 @@ export default function Register() {
     triggerHaptic('medium');
     setIsLoading(true);
     try {
+      const cleanPhone = data.phone.replace(/\D/g, '');
+      const fullPhone = `${phonePrefix}${cleanPhone}`;
+      const birthDateISO = data.birthDate ? parseBirthDateToISO(data.birthDate) : undefined;
+      
       const res = await apiRequest("POST", "/api/public/customers/register", {
         email: data.email,
-        phone: data.phone,
+        phone: fullPhone,
         firstName: data.firstName,
         lastName: data.lastName,
         password: data.password,
-        birthDate: data.birthDate || undefined,
+        birthDate: birthDateISO || undefined,
         gender: data.gender || undefined,
         street: data.street || undefined,
         city: data.city || undefined,
@@ -1487,9 +1519,30 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>{t('auth.phone')}</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input {...field} type="tel" placeholder={t('auth.placeholders.phone')} className="pl-10" data-testid="input-phone" />
+                        <div className="flex gap-2">
+                          <Select value={phonePrefix} onValueChange={setPhonePrefix}>
+                            <SelectTrigger className="w-[100px]" data-testid="select-phone-prefix">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COUNTRY_CODES.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.flag} {c.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="relative flex-1">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input 
+                              {...field} 
+                              type="tel" 
+                              placeholder="123 456 7890" 
+                              className="pl-10" 
+                              data-testid="input-phone"
+                              onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
+                            />
+                          </div>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -1533,7 +1586,18 @@ export default function Register() {
                       <FormItem>
                         <FormLabel>{t('auth.birthDate')}</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} data-testid="input-birth-date" />
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input 
+                              {...field}
+                              type="text"
+                              placeholder="GG/MM/AAAA"
+                              className="pl-10"
+                              maxLength={10}
+                              onChange={(e) => field.onChange(formatBirthDateInput(e.target.value))}
+                              data-testid="input-birth-date" 
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1854,15 +1918,30 @@ export default function Register() {
                     <FormItem>
                       <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.phone')}</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            {...field}
-                            type="tel"
-                            placeholder={t('auth.placeholders.phone')}
-                            className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
-                            data-testid="input-phone"
-                          />
+                        <div className="flex gap-2">
+                          <Select value={phonePrefix} onValueChange={setPhonePrefix}>
+                            <SelectTrigger className="w-[100px] h-14 bg-muted/30 border-border rounded-xl" data-testid="select-phone-prefix-mobile">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COUNTRY_CODES.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.flag} {c.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="relative flex-1">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                            <Input
+                              {...field}
+                              type="tel"
+                              placeholder="123 456 7890"
+                              className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
+                              data-testid="input-phone"
+                              onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
+                            />
+                          </div>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -1924,12 +2003,18 @@ export default function Register() {
                     <FormItem>
                       <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.birthDate')}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
-                          data-testid="input-birth-date"
-                        />
+                        <div className="relative">
+                          <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                          <Input
+                            {...field}
+                            type="text"
+                            placeholder="GG/MM/AAAA"
+                            maxLength={10}
+                            onChange={(e) => field.onChange(formatBirthDateInput(e.target.value))}
+                            className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
+                            data-testid="input-birth-date"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

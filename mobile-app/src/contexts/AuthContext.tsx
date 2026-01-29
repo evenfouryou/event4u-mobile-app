@@ -28,7 +28,7 @@ interface RegisterData {
   firstName: string;
   lastName: string;
   phone: string;
-  birthDate: string;
+  birthDate?: string;
   gender: 'M' | 'F';
   street?: string;
   city?: string;

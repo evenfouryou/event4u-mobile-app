@@ -18,6 +18,17 @@ interface RegisterScreenProps {
 
 type Step = 1 | 2 | 3 | 4;
 
+const COUNTRY_CODES = [
+  { code: '+39', country: '🇮🇹 Italia', flag: '🇮🇹' },
+  { code: '+41', country: '🇨🇭 Svizzera', flag: '🇨🇭' },
+  { code: '+33', country: '🇫🇷 Francia', flag: '🇫🇷' },
+  { code: '+49', country: '🇩🇪 Germania', flag: '🇩🇪' },
+  { code: '+43', country: '🇦🇹 Austria', flag: '🇦🇹' },
+  { code: '+34', country: '🇪🇸 Spagna', flag: '🇪🇸' },
+  { code: '+44', country: '🇬🇧 UK', flag: '🇬🇧' },
+  { code: '+1', country: '🇺🇸 USA', flag: '🇺🇸' },
+];
+
 export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }: RegisterScreenProps) {
   const { register, verifyOtp } = useAuth();
   const { colors, gradients } = useTheme();
@@ -25,6 +36,8 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const otpInputs = useRef<(TextInput | null)[]>([]);
+  const [phonePrefix, setPhonePrefix] = useState('+39');
+  const [showPrefixPicker, setShowPrefixPicker] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -61,12 +74,34 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
     return null;
   };
 
+  const formatBirthDateInput = (text: string) => {
+    const digits = text.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  };
+
+  const parseBirthDateToISO = (dateStr: string): string | null => {
+    const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+    const [, day, month, year] = match;
+    const d = parseInt(day), m = parseInt(month), y = parseInt(year);
+    if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > new Date().getFullYear()) return null;
+    return `${year}-${month}-${day}`;
+  };
+
+  const getFullPhoneNumber = () => {
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    return `${phonePrefix}${cleanPhone}`;
+  };
+
   const validateStep2 = () => {
-    if (!formData.phone || formData.phone.length < 10) {
-      return 'Inserisci un numero di telefono valido (min 10 cifre)';
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 6) {
+      return 'Inserisci un numero di telefono valido';
     }
-    if (!formData.birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(formData.birthDate)) {
-      return 'Inserisci la data di nascita (formato: AAAA-MM-GG)';
+    if (!formData.birthDate || !parseBirthDateToISO(formData.birthDate)) {
+      return 'Inserisci la data di nascita (formato: GG/MM/AAAA)';
     }
     if (!formData.gender) {
       return 'Seleziona il sesso';
@@ -131,13 +166,14 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
     try {
       setLoading(true);
       setError('');
+      const birthDateISO = parseBirthDateToISO(formData.birthDate);
       const result = await register({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        phone: formData.phone,
-        birthDate: formData.birthDate,
+        phone: getFullPhoneNumber(),
+        birthDate: birthDateISO || undefined,
         gender: formData.gender as 'M' | 'F',
         street: formData.street || undefined,
         city: formData.city || undefined,
@@ -340,23 +376,62 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
 
             {step === 2 && (
               <>
-                <Input
-                  label="Telefono"
-                  value={formData.phone}
-                  onChangeText={(v) => updateField('phone', v)}
-                  placeholder="+39 123 456 7890"
-                  keyboardType="phone-pad"
-                  leftIcon="call-outline"
-                  testID="input-phone"
-                />
+                <View style={styles.phoneContainer}>
+                  <Text style={styles.inputLabel}>Telefono</Text>
+                  <View style={styles.phoneRow}>
+                    <Pressable
+                      style={styles.prefixButton}
+                      onPress={() => setShowPrefixPicker(!showPrefixPicker)}
+                      testID="button-phone-prefix"
+                    >
+                      <Text style={styles.prefixText}>
+                        {COUNTRY_CODES.find(c => c.code === phonePrefix)?.flag} {phonePrefix}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color={staticColors.mutedForeground} />
+                    </Pressable>
+                    <View style={styles.phoneInputWrapper}>
+                      <TextInput
+                        style={styles.phoneInput}
+                        value={formData.phone}
+                        onChangeText={(v) => updateField('phone', v.replace(/\D/g, ''))}
+                        placeholder="123 456 7890"
+                        placeholderTextColor={staticColors.mutedForeground}
+                        keyboardType="phone-pad"
+                        testID="input-phone"
+                      />
+                    </View>
+                  </View>
+                  {showPrefixPicker && (
+                    <View style={styles.prefixPicker}>
+                      {COUNTRY_CODES.map((item) => (
+                        <Pressable
+                          key={item.code}
+                          style={[
+                            styles.prefixOption,
+                            phonePrefix === item.code && styles.prefixOptionActive,
+                          ]}
+                          onPress={() => {
+                            setPhonePrefix(item.code);
+                            setShowPrefixPicker(false);
+                            triggerHaptic('light');
+                          }}
+                        >
+                          <Text style={styles.prefixOptionText}>{item.country}</Text>
+                          <Text style={styles.prefixOptionCode}>{item.code}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
                 <Input
                   label="Data di Nascita"
                   value={formData.birthDate}
-                  onChangeText={(v) => updateField('birthDate', v)}
-                  placeholder="AAAA-MM-GG (es. 1990-05-15)"
-                  keyboardType="numbers-and-punctuation"
+                  onChangeText={(v) => updateField('birthDate', formatBirthDateInput(v))}
+                  placeholder="GG/MM/AAAA"
+                  keyboardType="number-pad"
                   leftIcon="calendar-outline"
                   testID="input-birthDate"
+                  maxLength={10}
                 />
                 <View style={styles.genderSection}>
                   <Text style={styles.genderLabel}>Sesso</Text>
@@ -515,7 +590,7 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
                 </View>
                 <Text style={styles.otpTitle}>Verifica il tuo numero</Text>
                 <Text style={styles.otpDescription}>
-                  Abbiamo inviato un codice a 6 cifre al numero {formData.phone}
+                  Abbiamo inviato un codice a 6 cifre al numero {getFullPhoneNumber()}
                 </Text>
                 <View style={styles.otpInputContainer}>
                   {otpCode.map((digit, index) => (
@@ -727,6 +802,76 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing.lg,
+  },
+  phoneContainer: {
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: staticColors.foreground,
+    marginBottom: spacing.sm,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  prefixButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: staticColors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    minWidth: 100,
+  },
+  prefixText: {
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+  },
+  phoneInputWrapper: {
+    flex: 1,
+  },
+  phoneInput: {
+    height: 52,
+    paddingHorizontal: spacing.md,
+    backgroundColor: staticColors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+  },
+  prefixPicker: {
+    marginTop: spacing.sm,
+    backgroundColor: staticColors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    overflow: 'hidden',
+  },
+  prefixOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  prefixOptionActive: {
+    backgroundColor: `${staticColors.primary}15`,
+  },
+  prefixOptionText: {
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+  },
+  prefixOptionCode: {
+    fontSize: typography.fontSize.sm,
+    color: staticColors.mutedForeground,
   },
   genderSection: {
     marginTop: spacing.sm,
