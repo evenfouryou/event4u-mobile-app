@@ -2106,12 +2106,16 @@ router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
 router.post("/api/public/customers/reset-password-phone", async (req, res) => {
   try {
     const { customerId, otpCode, password } = req.body;
+    
+    console.log("[PUBLIC] Reset password phone request:", { customerId, otpCode: otpCode?.substring(0, 2) + '***', passwordLength: password?.length });
 
     if (!customerId || !otpCode || !password) {
+      console.log("[PUBLIC] Reset password: missing data");
       return res.status(400).json({ message: "Dati mancanti" });
     }
 
     if (password.length < 8) {
+      console.log("[PUBLIC] Reset password: password too short");
       return res.status(400).json({ message: "La password deve essere di almeno 8 caratteri" });
     }
 
@@ -2122,8 +2126,11 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
       .where(eq(siaeCustomers.id, customerId));
 
     if (!customer) {
+      console.log("[PUBLIC] Reset password: customer not found:", customerId);
       return res.status(400).json({ message: "Cliente non trovato" });
     }
+    
+    console.log("[PUBLIC] Reset password: found customer:", customer.id, customer.phone, "current passwordHash exists:", !!customer.passwordHash);
 
     // Find valid OTP attempt for password reset
     const [otpAttempt] = await db
@@ -2141,11 +2148,15 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
       .limit(1);
 
     if (!otpAttempt) {
+      console.log("[PUBLIC] Reset password: no valid OTP found for customer:", customerId);
       return res.status(400).json({ message: "Codice OTP scaduto o non valido. Richiedi un nuovo codice." });
     }
+    
+    console.log("[PUBLIC] Reset password: found OTP attempt, stored:", otpAttempt.otpCode, "provided:", otpCode);
 
     // Verify OTP
     if (otpAttempt.otpCode !== otpCode) {
+      console.log("[PUBLIC] Reset password: OTP mismatch");
       return res.status(400).json({ message: "Codice OTP non corretto" });
     }
 
@@ -2154,18 +2165,33 @@ router.post("/api/public/customers/reset-password-phone", async (req, res) => {
       .update(siaeOtpAttempts)
       .set({ status: "verified", verifiedAt: new Date() })
       .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+    
+    console.log("[PUBLIC] Reset password: OTP verified, updating password...");
 
     // Update password
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    console.log("[PUBLIC] Reset password: new hash generated, length:", passwordHash.length);
 
-    await db
+    const updateResult = await db
       .update(siaeCustomers)
       .set({
         passwordHash,
         phoneVerified: true,
         updatedAt: new Date(),
       })
+      .where(eq(siaeCustomers.id, customer.id))
+      .returning();
+    
+    console.log("[PUBLIC] Reset password: update result rows:", updateResult.length);
+    
+    // Verify the update worked
+    const [verifyCustomer] = await db
+      .select({ id: siaeCustomers.id, passwordHash: siaeCustomers.passwordHash })
+      .from(siaeCustomers)
       .where(eq(siaeCustomers.id, customer.id));
+    
+    console.log("[PUBLIC] Reset password: verification - new passwordHash exists:", !!verifyCustomer?.passwordHash, "hash starts with:", verifyCustomer?.passwordHash?.substring(0, 10));
 
     console.log("[PUBLIC] Password reset via phone successful for customer:", customer.id);
     res.json({ message: "Password reimpostata con successo! Ora puoi accedere." });
