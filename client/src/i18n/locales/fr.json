@@ -89,7 +89,7 @@
     "emailNotVerified": "Votre email n'a pas encore été vérifié.",
     "resendingEmail": "Envoi en cours...",
     "resendVerification": "Renvoyer l'Email de Vérification",
-    "staffAndPromoterAccess": "Pour l'accès Staff et Promoteur",
+    "staffAndPromoterAccess": "Connectez-vous avec votre numéro enregistré",
     "errorSendingEmail": "Impossible d'envoyer l'email. Veuillez réessayer plus tard.",
     "error": "Erreur",
     "loading": "Chargement...",

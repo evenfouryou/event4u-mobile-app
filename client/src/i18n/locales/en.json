@@ -83,7 +83,7 @@
     "emailNotVerified": "Your email has not been verified yet.",
     "resendingEmail": "Sending...",
     "resendVerification": "Resend Verification Email",
-    "staffAndPromoterAccess": "For Staff and Promoter access",
+    "staffAndPromoterAccess": "Login with your registered number",
     "errorSendingEmail": "Unable to send email. Please try again later.",
     "error": "Error",
     "loading": "Loading...",
