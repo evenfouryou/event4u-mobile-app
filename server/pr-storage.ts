@@ -9,6 +9,7 @@ import {
   listEntries,
   prOtpAttempts,
   users,
+  siaeCustomers,
   type EventStaffAssignment,
   type InsertEventStaffAssignment,
   type EventFloorplan,
@@ -26,6 +27,7 @@ import {
   type PrOtpAttempt,
   type InsertPrOtpAttempt,
 } from "@shared/schema";
+import { getPhoneVariants, normalizePhone } from "./phone-utils";
 
 // Type aliases for backward compatibility
 type GuestList = EventList;
@@ -608,8 +610,46 @@ export class PrStorage implements IPrStorage {
 
   async createGuestListEntry(entry: Omit<InsertGuestListEntry, 'qrCode'>): Promise<GuestListEntry> {
     const qrCode = generateQrCode('LST');
+    
+    // Try to match phone number with registered customers
+    let customerId: string | undefined = undefined;
+    if (entry.phone) {
+      const phoneVariants = getPhoneVariants(entry.phone);
+      console.log(`[PR-Storage] Matching phone variants for ${entry.phone}:`, phoneVariants);
+      
+      // Search for customer with matching phone
+      for (const variant of phoneVariants) {
+        const [customer] = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
+          .from(siaeCustomers)
+          .where(eq(siaeCustomers.phone, variant))
+          .limit(1);
+        
+        if (customer) {
+          customerId = customer.id;
+          console.log(`[PR-Storage] Matched customer ${customerId} with phone ${customer.phone}`);
+          break;
+        }
+      }
+      
+      // Also try normalized matching
+      if (!customerId) {
+        const normalizedInput = normalizePhone(entry.phone);
+        const allCustomers = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
+          .from(siaeCustomers)
+          .where(sql`${siaeCustomers.phone} IS NOT NULL`);
+        
+        for (const customer of allCustomers) {
+          if (customer.phone && normalizePhone(customer.phone) === normalizedInput) {
+            customerId = customer.id;
+            console.log(`[PR-Storage] Matched customer ${customerId} via normalized phone`);
+            break;
+          }
+        }
+      }
+    }
+    
     const [created] = await db.insert(listEntries)
-      .values({ ...entry, qrCode })
+      .values({ ...entry, qrCode, customerId })
       .returning();
     
     // Increment the guest list count
@@ -626,13 +666,41 @@ export class PrStorage implements IPrStorage {
   async createGuestListEntriesBatch(entries: Omit<InsertGuestListEntry, 'qrCode'>[]): Promise<GuestListEntry[]> {
     if (entries.length === 0) return [];
     
-    const withQr = entries.map(e => ({
-      ...e,
-      qrCode: generateQrCode('LST')
-    }));
+    // Preload all customers for phone matching (more efficient for batch)
+    const allCustomers = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
+      .from(siaeCustomers)
+      .where(sql`${siaeCustomers.phone} IS NOT NULL`);
+    
+    const withQrAndCustomer = entries.map(e => {
+      let customerId: string | undefined = undefined;
+      
+      if (e.phone) {
+        const phoneVariants = getPhoneVariants(e.phone);
+        const normalizedInput = normalizePhone(e.phone);
+        
+        // Try to match with registered customers
+        for (const customer of allCustomers) {
+          if (!customer.phone) continue;
+          
+          // Check if any variant matches
+          if (phoneVariants.includes(customer.phone) || 
+              normalizePhone(customer.phone) === normalizedInput) {
+            customerId = customer.id;
+            console.log(`[PR-Storage Batch] Matched ${e.firstName} ${e.lastName} phone ${e.phone} to customer ${customerId}`);
+            break;
+          }
+        }
+      }
+      
+      return {
+        ...e,
+        qrCode: generateQrCode('LST'),
+        customerId
+      };
+    });
     
     const created = await db.insert(listEntries)
-      .values(withQr)
+      .values(withQrAndCustomer)
       .returning();
     
     // Note: List count update should be handled by the caller 
