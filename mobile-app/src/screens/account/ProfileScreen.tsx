@@ -475,6 +475,60 @@ const styles = StyleSheet.create({
   saveButton: {
     flex: 1,
   },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  phoneEditButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
+  },
+  modalDescription: {
+    fontSize: typography.fontSize.base,
+    marginBottom: spacing.lg,
+  },
+  phonePrefixRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  prefixContainer: {
+    width: 100,
+  },
+  phoneNumberContainer: {
+    flex: 1,
+  },
+  modalButton: {
+    marginTop: spacing.md,
+  },
 });
 
 export default ProfileScreen;

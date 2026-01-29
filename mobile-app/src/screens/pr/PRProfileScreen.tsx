@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
+import { Input } from '@/components/Input';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -26,6 +27,14 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
+  
+  // Phone change states
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<'input' | 'otp'>('input');
+  const [newPhonePrefix, setNewPhonePrefix] = useState('+39');
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -68,6 +77,71 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openPhoneModal = () => {
+    setNewPhoneNumber(profile?.phone || '');
+    setNewPhonePrefix(profile?.phonePrefix || '+39');
+    setOtpCode('');
+    setPhoneStep('input');
+    setShowPhoneModal(true);
+    triggerHaptic('light');
+  };
+
+  const handleRequestPhoneOtp = async () => {
+    if (!newPhoneNumber || newPhoneNumber.length < 9) {
+      Alert.alert('Errore', 'Inserisci un numero di telefono valido');
+      return;
+    }
+    
+    setPhoneLoading(true);
+    try {
+      const result = await api.requestPrPhoneChange(newPhoneNumber, newPhonePrefix);
+      
+      if (result.samePhone) {
+        triggerHaptic('success');
+        Alert.alert('Confermato', 'Il numero di telefono è già corretto');
+        setShowPhoneModal(false);
+        return;
+      }
+      
+      triggerHaptic('success');
+      Alert.alert('OTP Inviato', 'Controlla il tuo nuovo numero per il codice');
+      setPhoneStep('otp');
+    } catch (error: any) {
+      triggerHaptic('error');
+      Alert.alert('Errore', error.message || 'Errore nell\'invio OTP');
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (!otpCode || otpCode.length < 4) {
+      Alert.alert('Errore', 'Inserisci il codice OTP');
+      return;
+    }
+    
+    setPhoneLoading(true);
+    try {
+      await api.verifyPrPhoneChange(otpCode);
+      triggerHaptic('success');
+      Alert.alert('Successo', 'Numero di telefono aggiornato');
+      await loadProfile();
+      setShowPhoneModal(false);
+      setPhoneStep('input');
+    } catch (error: any) {
+      triggerHaptic('error');
+      Alert.alert('Errore', error.message || 'Codice OTP non valido');
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const formatPhoneDisplay = (prefix?: string, phone?: string): string => {
+    if (!phone) return '-';
+    if (phone.startsWith('+')) return phone;
+    return `${prefix || '+39'}${phone}`;
   };
 
   if (showLoader) {
@@ -134,10 +208,17 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
             <View style={styles.infoIcon}>
               <Ionicons name="call-outline" size={20} color={staticColors.mutedForeground} />
             </View>
-            <View style={styles.infoContent}>
+            <View style={[styles.infoContent, { flex: 1 }]}>
               <Text style={styles.infoLabel}>Telefono</Text>
-              <Text style={styles.infoValue}>{profile?.phone || '-'}</Text>
+              <Text style={styles.infoValue}>{formatPhoneDisplay(profile?.phonePrefix, profile?.phone)}</Text>
             </View>
+            <Pressable
+              onPress={openPhoneModal}
+              style={[styles.phoneEditBtn, { backgroundColor: `${staticColors.primary}15` }]}
+              testID="button-change-phone"
+            >
+              <Ionicons name="create-outline" size={18} color={staticColors.primary} />
+            </Pressable>
           </View>
 
           <View style={styles.infoRow}>
@@ -261,6 +342,99 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+
+      <Modal
+        visible={showPhoneModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPhoneModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: staticColors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: staticColors.foreground }]}>
+                {phoneStep === 'input' ? 'Cambia Numero Telefono' : 'Verifica OTP'}
+              </Text>
+              <Pressable onPress={() => setShowPhoneModal(false)} testID="button-close-phone-modal">
+                <Ionicons name="close" size={24} color={staticColors.mutedForeground} />
+              </Pressable>
+            </View>
+
+            {phoneStep === 'input' ? (
+              <>
+                <Text style={[styles.modalDescription, { color: staticColors.mutedForeground }]}>
+                  Inserisci il nuovo numero di telefono. Riceverai un codice OTP per verificare.
+                </Text>
+                <View style={styles.phonePrefixRow}>
+                  <View style={styles.prefixContainer}>
+                    <Input
+                      label="Prefisso"
+                      value={newPhonePrefix}
+                      onChangeText={setNewPhonePrefix}
+                      keyboardType="phone-pad"
+                      testID="input-phone-prefix"
+                    />
+                  </View>
+                  <View style={styles.phoneNumberContainer}>
+                    <Input
+                      label="Numero"
+                      value={newPhoneNumber}
+                      onChangeText={setNewPhoneNumber}
+                      placeholder="333 1234567"
+                      keyboardType="phone-pad"
+                      testID="input-new-phone"
+                    />
+                  </View>
+                </View>
+                <Button
+                  variant="golden"
+                  size="lg"
+                  onPress={handleRequestPhoneOtp}
+                  loading={phoneLoading}
+                  style={styles.modalButton}
+                  testID="button-request-otp"
+                >
+                  Invia Codice OTP
+                </Button>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.modalDescription, { color: staticColors.mutedForeground }]}>
+                  Inserisci il codice OTP inviato a {newPhonePrefix} {newPhoneNumber}
+                </Text>
+                <Input
+                  label="Codice OTP"
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  placeholder="123456"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  testID="input-otp"
+                />
+                <Button
+                  variant="golden"
+                  size="lg"
+                  onPress={handleVerifyPhoneOtp}
+                  loading={phoneLoading}
+                  style={styles.modalButton}
+                  testID="button-verify-otp"
+                >
+                  Verifica e Salva
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onPress={() => setPhoneStep('input')}
+                  style={styles.modalButton}
+                  testID="button-back-to-input"
+                >
+                  Torna Indietro
+                </Button>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -401,5 +575,50 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: '600',
     color: staticColors.destructiveForeground,
+  },
+  phoneEditBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
+  },
+  modalDescription: {
+    fontSize: typography.fontSize.base,
+    marginBottom: spacing.lg,
+  },
+  phonePrefixRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  prefixContainer: {
+    width: 100,
+  },
+  phoneNumberContainer: {
+    flex: 1,
+  },
+  modalButton: {
+    marginTop: spacing.md,
   },
 });

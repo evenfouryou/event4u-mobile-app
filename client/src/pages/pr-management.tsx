@@ -134,6 +134,18 @@ const toNumber = (value: string | number | undefined | null): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
+const formatPhoneDisplay = (phonePrefix: string | undefined | null, phone: string | undefined | null): string => {
+  if (!phone) return '';
+  const prefix = phonePrefix || '+39';
+  if (phone.startsWith('+')) {
+    return phone;
+  }
+  if (phone.startsWith('39') && phone.length > 10) {
+    return prefix + phone.substring(2);
+  }
+  return prefix + phone;
+};
+
 // Common international phone prefixes
 const PHONE_PREFIXES = [
   { value: '+39', label: '+39 (Italia)' },
@@ -206,7 +218,7 @@ export default function PrManagement() {
     const query = searchQuery.toLowerCase().replace(/\s/g, '');
     return prProfiles.filter((pr) => {
       const fullName = `${pr.user?.firstName || pr.firstName || ''} ${pr.user?.lastName || pr.lastName || ''}`.toLowerCase();
-      const fullPhone = `${pr.phonePrefix || '+39'}${pr.phone}`.replace(/\s/g, '');
+      const fullPhone = formatPhoneDisplay(pr.phonePrefix, pr.phone).replace(/\s/g, '');
       return fullName.includes(query) ||
         fullPhone.includes(query) ||
         pr.phone.includes(query) ||
@@ -634,7 +646,7 @@ export default function PrManagement() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="flex items-center gap-1.5 text-muted-foreground">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{pr.phonePrefix || '+39'}{pr.phone}</span>
+                            <span className="truncate">{formatPhoneDisplay(pr.phonePrefix, pr.phone)}</span>
                           </div>
                           <Badge variant="outline" className="font-mono text-xs w-fit">
                             <Hash className="h-3 w-3 mr-1" />
@@ -745,7 +757,7 @@ export default function PrManagement() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          {pr.phonePrefix || '+39'}{pr.phone}
+                          {formatPhoneDisplay(pr.phonePrefix, pr.phone)}
                         </div>
                       </TableCell>
                       <TableCell>
