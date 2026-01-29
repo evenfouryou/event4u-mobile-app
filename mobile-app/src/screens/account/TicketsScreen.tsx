@@ -7,6 +7,7 @@ import { Badge } from '@/components/Badge';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
+import { QRCode } from '@/components/QRCode';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { Ticket as ApiTicket, TicketsResponse, MyReservation } from '@/lib/api';
 
@@ -213,15 +214,13 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
     const eventDate = item.eventDate ? new Date(item.eventDate) : null;
     const isValid = item.status === 'confirmed' || item.status === 'pending';
     const isExpanded = expandedQR === item.id;
-    const qrUrl = item.qrCode 
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(item.qrCode)}&bgcolor=FFFFFF&color=000000`
-      : null;
+    const hasQrCode = !!item.qrCode && item.qrCode !== 'N/A';
     
     return (
       <Pressable
         onPress={() => {
           triggerHaptic('light');
-          if (qrUrl) {
+          if (hasQrCode) {
             setExpandedQR(isExpanded ? null : item.id);
           }
         }}
@@ -277,13 +276,12 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
             </View>
           </View>
 
-          {isExpanded && qrUrl && (
+          {isExpanded && hasQrCode && (
             <View style={styles.qrSection}>
               <View style={styles.qrWrapper}>
-                <Image
-                  source={{ uri: qrUrl }}
-                  style={styles.qrImage}
-                  resizeMode="contain"
+                <QRCode
+                  value={item.qrCode}
+                  size={180}
                   testID="image-qr-code"
                 />
               </View>
@@ -292,14 +290,14 @@ export function TicketsScreen({ onBack, onTicketPress }: TicketsScreenProps) {
             </View>
           )}
 
-          {isValid && qrUrl && !isExpanded && (
+          {isValid && hasQrCode && !isExpanded && (
             <View style={styles.qrHint}>
               <Ionicons name="qr-code-outline" size={16} color={staticColors.teal} />
               <Text style={[styles.qrHintText, { color: staticColors.teal }]}>Tocca per vedere il QR Code</Text>
             </View>
           )}
 
-          {!qrUrl && isValid && (
+          {!hasQrCode && isValid && (
             <View style={styles.qrHint}>
               <Ionicons name="hourglass-outline" size={16} color={staticColors.mutedForeground} />
               <Text style={[styles.qrHintText, { color: staticColors.mutedForeground }]}>QR Code in elaborazione</Text>
