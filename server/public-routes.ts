@@ -4800,8 +4800,27 @@ router.get("/api/public/account/list-entries", async (req, res) => {
       userId: customer.userId
     });
 
-    // Normalize phone for matching
+    // Normalize phone for matching - get base phone without country code
     const normalizePhone = (p: string) => p.replace(/\D/g, '');
+    const getPhoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone);
+      let basePhone = digits;
+      // Remove Italian prefix if present
+      if (basePhone.startsWith('0039')) {
+        basePhone = basePhone.slice(4);
+      } else if (basePhone.startsWith('39') && basePhone.length > 10) {
+        basePhone = basePhone.slice(2);
+      }
+      // Return all possible formats
+      return [
+        phone,                    // Original as-is
+        digits,                   // Just digits
+        basePhone,                // Without country code
+        '+39' + basePhone,        // With +39 prefix
+        '39' + basePhone,         // With 39 prefix
+        '0039' + basePhone,       // With 0039 prefix
+      ];
+    };
     
     // Build conditions to find list entries
     const conditions: any[] = [];
@@ -4817,21 +4836,12 @@ router.get("/api/public/account/list-entries", async (req, res) => {
       conditions.push(eq(listEntries.email, customer.email.toLowerCase()));
     }
     
-    // Search by phone with multiple formats
+    // Search by phone with ALL possible formats
     if (customer.phone) {
-      const phoneDigits = normalizePhone(customer.phone);
-      conditions.push(eq(listEntries.phone, customer.phone));
-      conditions.push(eq(listEntries.phone, phoneDigits));
-      conditions.push(eq(listEntries.phone, '+39' + phoneDigits));
-      conditions.push(eq(listEntries.phone, '39' + phoneDigits));
-      // Handle case where entry has prefix but customer doesn't
-      if (phoneDigits.startsWith('39') && phoneDigits.length > 10) {
-        conditions.push(eq(listEntries.phone, phoneDigits.slice(2)));
-      }
-      // Handle case where customer has prefix starting with 39
-      if (!phoneDigits.startsWith('39') && phoneDigits.length >= 9) {
-        conditions.push(eq(listEntries.phone, '39' + phoneDigits));
-        conditions.push(eq(listEntries.phone, '+39' + phoneDigits));
+      const variants = getPhoneVariants(customer.phone);
+      console.log("[PUBLIC-LIST] Phone variants for", customer.phone, ":", variants);
+      for (const variant of variants) {
+        conditions.push(eq(listEntries.phone, variant));
       }
     }
 
