@@ -30,6 +30,12 @@ interface RegisterData {
   phone: string;
   birthDate: string;
   gender: 'M' | 'F';
+  street?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  addressLatitude?: string;
+  addressLongitude?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -277,6 +283,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone: data.phone,
         birthDate: data.birthDate,
         gender: data.gender,
+        street: data.street || undefined,
+        city: data.city || undefined,
+        province: data.province || undefined,
+        postalCode: data.postalCode || undefined,
+        addressLatitude: data.addressLatitude || undefined,
+        addressLongitude: data.addressLongitude || undefined,
       });
 
       return { customerId: response.customerId };

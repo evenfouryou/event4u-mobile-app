@@ -34,6 +34,10 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
     gender: '' as '' | 'M' | 'F',
     password: '',
     confirmPassword: '',
+    street: '',
+    city: '',
+    province: '',
+    postalCode: '',
   });
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -135,6 +139,10 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
         phone: formData.phone,
         birthDate: formData.birthDate,
         gender: formData.gender as 'M' | 'F',
+        street: formData.street || undefined,
+        city: formData.city || undefined,
+        province: formData.province || undefined,
+        postalCode: formData.postalCode || undefined,
       });
       setCustomerId(result.customerId);
       setStep(4);
@@ -404,6 +412,53 @@ export function RegisterScreen({ onNavigateLogin, onRegisterSuccess, onGoBack }:
                       </Text>
                     </Pressable>
                   </View>
+                </View>
+
+                <View style={styles.addressSection}>
+                  <Text style={styles.sectionTitle}>Indirizzo (opzionale)</Text>
+                  <Input
+                    label="Via/Indirizzo"
+                    value={formData.street}
+                    onChangeText={(v) => updateField('street', v)}
+                    placeholder="Via Roma, 1"
+                    autoCapitalize="words"
+                    leftIcon="location-outline"
+                    testID="input-street"
+                  />
+                  <View style={styles.addressRow}>
+                    <View style={styles.addressFieldHalf}>
+                      <Input
+                        label="Città"
+                        value={formData.city}
+                        onChangeText={(v) => updateField('city', v)}
+                        placeholder="Milano"
+                        autoCapitalize="words"
+                        leftIcon="business-outline"
+                        testID="input-city"
+                      />
+                    </View>
+                    <View style={styles.addressFieldSmall}>
+                      <Input
+                        label="Prov."
+                        value={formData.province}
+                        onChangeText={(v) => updateField('province', v.toUpperCase().slice(0, 2))}
+                        placeholder="MI"
+                        autoCapitalize="characters"
+                        maxLength={2}
+                        testID="input-province"
+                      />
+                    </View>
+                  </View>
+                  <Input
+                    label="CAP"
+                    value={formData.postalCode}
+                    onChangeText={(v) => updateField('postalCode', v)}
+                    placeholder="20100"
+                    keyboardType="number-pad"
+                    maxLength={5}
+                    leftIcon="mail-outline"
+                    testID="input-postalCode"
+                  />
                 </View>
               </>
             )}
@@ -710,6 +765,30 @@ const styles = StyleSheet.create({
   },
   genderTextActive: {
     color: staticColors.primary,
+  },
+  addressSection: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: staticColors.border,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+    color: staticColors.mutedForeground,
+    marginBottom: spacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  addressFieldHalf: {
+    flex: 2,
+  },
+  addressFieldSmall: {
+    flex: 1,
   },
   privacyRow: {
     flexDirection: 'row',
