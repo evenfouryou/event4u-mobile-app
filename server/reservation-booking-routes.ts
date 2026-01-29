@@ -203,8 +203,11 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
     const extractPhoneParts = (phone: string | null): { phonePrefix: string | null; phoneWithoutPrefix: string | null } => {
       if (!phone) return { phonePrefix: null, phoneWithoutPrefix: null };
       
+      // Clean phone first
+      const cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
+      
       // Match +XX or +XXX prefix
-      const match = phone.match(/^(\+\d{1,4})(.+)$/);
+      const match = cleanedPhone.match(/^(\+\d{1,4})(.+)$/);
       if (match) {
         return {
           phonePrefix: match[1],
@@ -213,25 +216,27 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
       }
       
       // Handle 0039 format
-      if (phone.startsWith('0039')) {
+      if (cleanedPhone.startsWith('0039')) {
         return {
           phonePrefix: '+39',
-          phoneWithoutPrefix: phone.slice(4).replace(/\D/g, ''),
+          phoneWithoutPrefix: cleanedPhone.slice(4).replace(/\D/g, ''),
         };
       }
       
-      // Handle 39xxx format
-      if (phone.startsWith('39') && phone.length > 10) {
+      // Handle 39xxx format (without + prefix)
+      if (cleanedPhone.startsWith('39') && cleanedPhone.length > 10) {
         return {
           phonePrefix: '+39',
-          phoneWithoutPrefix: phone.slice(2).replace(/\D/g, ''),
+          phoneWithoutPrefix: cleanedPhone.slice(2).replace(/\D/g, ''),
         };
       }
       
       // Default to +39
+      const digitsOnly = cleanedPhone.replace(/\D/g, '');
+      console.log(`[extractPhoneParts] phone: "${phone}" -> phoneWithoutPrefix: "${digitsOnly}"`);
       return {
         phonePrefix: '+39',
-        phoneWithoutPrefix: phone.replace(/\D/g, ''),
+        phoneWithoutPrefix: digitsOnly,
       };
     };
     

@@ -262,15 +262,27 @@ export default function PrManagement() {
     mutationFn: async (usersToPromote: SearchedUser[]) => {
       const results = await Promise.allSettled(
         usersToPromote.map(async (u) => {
-          // Extract phone number properly
+          // Extract phone number properly - handle all formats
           let phoneNumber = u.phoneWithoutPrefix;
           if (!phoneNumber && u.phone) {
-            // Remove prefix patterns: +39, +1, 0039, etc
-            phoneNumber = u.phone
-              .replace(/^(\+|00)?39\s*/, '')  // Italian prefix
-              .replace(/^\+\d{1,4}\s*/, '')    // Other international prefixes
-              .replace(/\D/g, '');              // Remove non-digits
+            // Clean phone and remove prefix patterns
+            let cleaned = u.phone.replace(/[\s\-\(\)]/g, '');
+            // Remove +XX, +XXX, +XXXX prefixes
+            if (cleaned.startsWith('+')) {
+              cleaned = cleaned.replace(/^\+\d{1,4}/, '');
+            }
+            // Remove 0039 prefix
+            else if (cleaned.startsWith('0039')) {
+              cleaned = cleaned.slice(4);
+            }
+            // Remove 39 prefix if phone is longer than 10 digits
+            else if (cleaned.startsWith('39') && cleaned.length > 10) {
+              cleaned = cleaned.slice(2);
+            }
+            phoneNumber = cleaned.replace(/\D/g, '');
           }
+          
+          console.log(`[PR Promote] User: ${u.firstName} ${u.lastName}, phone: ${u.phone}, phoneWithoutPrefix: ${u.phoneWithoutPrefix}, extracted: ${phoneNumber}, source: ${u.source}`);
           
           const response = await apiRequest("POST", "/api/reservations/pr-profiles", {
             firstName: u.firstName || '',
