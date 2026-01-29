@@ -199,6 +199,42 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
       )
       .limit(10);
     
+    // Helper to extract phone prefix and number
+    const extractPhoneParts = (phone: string | null): { phonePrefix: string | null; phoneWithoutPrefix: string | null } => {
+      if (!phone) return { phonePrefix: null, phoneWithoutPrefix: null };
+      
+      // Match +XX or +XXX prefix
+      const match = phone.match(/^(\+\d{1,4})(.+)$/);
+      if (match) {
+        return {
+          phonePrefix: match[1],
+          phoneWithoutPrefix: match[2].replace(/\D/g, ''),
+        };
+      }
+      
+      // Handle 0039 format
+      if (phone.startsWith('0039')) {
+        return {
+          phonePrefix: '+39',
+          phoneWithoutPrefix: phone.slice(4).replace(/\D/g, ''),
+        };
+      }
+      
+      // Handle 39xxx format
+      if (phone.startsWith('39') && phone.length > 10) {
+        return {
+          phonePrefix: '+39',
+          phoneWithoutPrefix: phone.slice(2).replace(/\D/g, ''),
+        };
+      }
+      
+      // Default to +39
+      return {
+        phonePrefix: '+39',
+        phoneWithoutPrefix: phone.replace(/\D/g, ''),
+      };
+    };
+    
     // Combine results, prioritizing users over customers
     const seenPhones = new Set<string>();
     const combinedResults: any[] = [];
@@ -206,12 +242,15 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
     // Add user results first
     for (const u of userResults) {
       if (u.phone) seenPhones.add(u.phone.replace(/\D/g, '').slice(-9));
+      const phoneParts = extractPhoneParts(u.phone);
       combinedResults.push({
         id: u.id,
         firstName: u.firstName,
         lastName: u.lastName,
         email: u.email,
         phone: u.phone,
+        phonePrefix: phoneParts.phonePrefix,
+        phoneWithoutPrefix: phoneParts.phoneWithoutPrefix,
         role: u.role,
         source: 'user',
       });
@@ -222,6 +261,7 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
       const phoneKey = c.phone?.replace(/\D/g, '').slice(-9) || '';
       if (phoneKey && !seenPhones.has(phoneKey)) {
         seenPhones.add(phoneKey);
+        const phoneParts = extractPhoneParts(c.phone);
         combinedResults.push({
           id: c.userId || c.id, // Use userId if available, otherwise customer id
           customerId: c.id,
@@ -229,6 +269,8 @@ router.get("/api/reservations/search-users", requireAuth, requireGestore, async 
           lastName: c.lastName,
           email: c.email,
           phone: c.phone,
+          phonePrefix: phoneParts.phonePrefix,
+          phoneWithoutPrefix: phoneParts.phoneWithoutPrefix,
           role: null,
           source: 'customer',
           identityId: c.identityId,

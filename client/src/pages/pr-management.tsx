@@ -89,6 +89,8 @@ interface SearchedUser {
   lastName: string | null;
   email: string | null;
   phone: string | null;
+  phonePrefix: string | null;
+  phoneWithoutPrefix: string | null;
   role: string | null;
   isAlreadyPr: boolean;
 }
@@ -170,6 +172,7 @@ export default function PrManagement() {
   const [selectedPr, setSelectedPr] = useState<PrProfile | null>(null);
   const [phoneSearchQuery, setPhoneSearchQuery] = useState("");
   const [selectedExistingUser, setSelectedExistingUser] = useState<SearchedUser | null>(null);
+  const [createMode, setCreateMode] = useState<'search' | 'manual'>('search');
 
   const canManagePr = user?.role === 'gestore' || user?.role === 'super_admin';
 
@@ -788,6 +791,7 @@ export default function PrManagement() {
         if (!open) {
           setSelectedExistingUser(null);
           setPhoneSearchQuery("");
+          setCreateMode('search');
           createForm.reset();
         }
       }}>
@@ -795,84 +799,105 @@ export default function PrManagement() {
           <DialogHeader>
             <DialogTitle>Nuovo PR</DialogTitle>
             <DialogDescription>
-              Cerca un cliente esistente o crea un nuovo profilo PR.
+              Scegli come aggiungere un nuovo PR.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Cerca cliente per telefono
-              </Label>
-              <Input
-                placeholder="Inserisci numero telefono (min 5 cifre)..."
-                value={phoneSearchQuery}
-                onChange={(e) => setPhoneSearchQuery(e.target.value)}
-                data-testid="input-search-customer-phone"
-              />
-              {isSearching && (
-                <p className="text-sm text-muted-foreground">Ricerca in corso...</p>
-              )}
-              {searchedUsers.length > 0 && !selectedExistingUser && (
-                <div className="border rounded-md max-h-40 overflow-y-auto">
-                  {searchedUsers.map((u) => (
-                    <div
-                      key={u.id}
-                      className={`p-2 hover-elevate cursor-pointer flex items-center justify-between ${
-                        u.isAlreadyPr ? 'opacity-50' : ''
-                      }`}
-                      onClick={() => {
-                        if (!u.isAlreadyPr) {
-                          setSelectedExistingUser(u);
-                          createForm.setValue('firstName', u.firstName || '');
-                          createForm.setValue('lastName', u.lastName || '');
-                          
-                          // Extract phone prefix and number - handle various formats
-                          if (u.phone) {
-                            // Match prefix (1-4 digits after +) and rest of number
-                            const phoneMatch = u.phone.match(/^(\+\d{1,4})(.+)$/);
-                            if (phoneMatch) {
-                              createForm.setValue('phonePrefix', phoneMatch[1]);
-                              // Remove any non-digit characters from phone number
-                              createForm.setValue('phone', phoneMatch[2].replace(/\D/g, ''));
-                            } else if (u.phone.startsWith('0039')) {
-                              // Handle 0039 prefix format
-                              createForm.setValue('phonePrefix', '+39');
-                              createForm.setValue('phone', u.phone.slice(4).replace(/\D/g, ''));
-                            } else if (u.phone.startsWith('39') && u.phone.length > 10) {
-                              // Handle 39xxx format without +
-                              createForm.setValue('phonePrefix', '+39');
-                              createForm.setValue('phone', u.phone.slice(2).replace(/\D/g, ''));
-                            } else {
-                              // Default to +39 and clean the number
-                              createForm.setValue('phonePrefix', '+39');
-                              createForm.setValue('phone', u.phone.replace(/\D/g, ''));
-                            }
-                          }
-                        }
-                      }}
-                      data-testid={`button-select-user-${u.id}`}
-                    >
-                      <div>
-                        <p className="font-medium">{u.firstName} {u.lastName}</p>
-                        <p className="text-sm text-muted-foreground">{u.phone}</p>
-                      </div>
-                      {u.isAlreadyPr ? (
-                        <Badge variant="secondary">Già PR</Badge>
-                      ) : (
-                        <Badge variant="outline">Seleziona</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {phoneSearchQuery.length >= 5 && searchedUsers.length === 0 && !isSearching && (
-                <p className="text-sm text-muted-foreground">Nessun cliente trovato. Compila i dati per creare un nuovo PR.</p>
-              )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={createMode === 'search' ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => {
+                  setCreateMode('search');
+                  setSelectedExistingUser(null);
+                  createForm.reset();
+                }}
+                data-testid="button-mode-search"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Cerca Cliente
+              </Button>
+              <Button
+                type="button"
+                variant={createMode === 'manual' ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => {
+                  setCreateMode('manual');
+                  setSelectedExistingUser(null);
+                  setPhoneSearchQuery("");
+                  createForm.reset();
+                }}
+                data-testid="button-mode-manual"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Inserimento Manuale
+              </Button>
             </div>
             
-            {selectedExistingUser && (
+            {createMode === 'search' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Cerca cliente per telefono
+                </Label>
+                <Input
+                  placeholder="Inserisci numero telefono (min 5 cifre)..."
+                  value={phoneSearchQuery}
+                  onChange={(e) => setPhoneSearchQuery(e.target.value)}
+                  data-testid="input-search-customer-phone"
+                />
+                {isSearching && (
+                  <p className="text-sm text-muted-foreground">Ricerca in corso...</p>
+                )}
+                {searchedUsers.length > 0 && !selectedExistingUser && (
+                  <div className="border rounded-md max-h-40 overflow-y-auto">
+                    {searchedUsers.map((u) => (
+                      <div
+                        key={u.id}
+                        className={`p-2 hover-elevate cursor-pointer flex items-center justify-between ${
+                          u.isAlreadyPr ? 'opacity-50' : ''
+                        }`}
+                        onClick={() => {
+                          if (!u.isAlreadyPr) {
+                            setSelectedExistingUser(u);
+                            createForm.setValue('firstName', u.firstName || '');
+                            createForm.setValue('lastName', u.lastName || '');
+                            // Use phone exactly as stored - user can edit in form if needed
+                            if (u.phonePrefix) {
+                              createForm.setValue('phonePrefix', u.phonePrefix);
+                            }
+                            if (u.phoneWithoutPrefix) {
+                              createForm.setValue('phone', u.phoneWithoutPrefix);
+                            } else if (u.phone) {
+                              // Fallback: show full phone in the phone field, user can adjust
+                              createForm.setValue('phone', u.phone.replace(/^\+\d{1,4}/, '').replace(/\D/g, ''));
+                            }
+                          }
+                        }}
+                        data-testid={`button-select-user-${u.id}`}
+                      >
+                        <div>
+                          <p className="font-medium">{u.firstName} {u.lastName}</p>
+                          <p className="text-sm text-muted-foreground">{u.phone}</p>
+                        </div>
+                        {u.isAlreadyPr ? (
+                          <Badge variant="secondary">Già PR</Badge>
+                        ) : (
+                          <Badge variant="outline">Seleziona</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {phoneSearchQuery.length >= 5 && searchedUsers.length === 0 && !isSearching && (
+                  <p className="text-sm text-muted-foreground">Nessun cliente trovato. Usa "Inserimento Manuale" per creare un nuovo PR.</p>
+                )}
+              </div>
+            )}
+            
+            {createMode === 'search' && selectedExistingUser && (
               <div className="p-3 bg-primary/10 rounded-md flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm">Cliente selezionato:</p>
