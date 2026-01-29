@@ -961,6 +961,10 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
     const prSession = (req.session as any).prProfile;
     const user = (req as any).user;
     
+    console.log("[PR-SWITCH] Request received");
+    console.log("[PR-SWITCH] prSession:", prSession ? { id: prSession.id } : null);
+    console.log("[PR-SWITCH] user:", user ? { id: user.id, email: user.email, role: user.role } : null);
+    
     let prProfile = null;
     
     if (prSession) {
@@ -969,12 +973,14 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
         .from(prProfiles)
         .where(eq(prProfiles.id, prSession.id));
       prProfile = profile;
+      console.log("[PR-SWITCH] Found profile by prSession:", profile?.id);
     } else if (user) {
       // Normal user auth - check if user has a PR profile linked
       const [profile] = await db.select()
         .from(prProfiles)
         .where(eq(prProfiles.userId, user.id));
       prProfile = profile;
+      console.log("[PR-SWITCH] Found profile by userId:", profile?.id);
       
       // If no PR profile by userId, try by email
       if (!prProfile && user.email) {
@@ -982,11 +988,13 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
           .from(prProfiles)
           .where(sql`lower(${prProfiles.email}) = lower(${user.email})`);
         prProfile = profileByEmail;
+        console.log("[PR-SWITCH] Found profile by email:", profileByEmail?.id);
       }
     }
     
     if (!prProfile) {
-      return res.status(401).json({ error: "Non sei un PR o non hai un profilo PR collegato" });
+      console.log("[PR-SWITCH] No PR profile found - returning 400 error");
+      return res.status(400).json({ error: "Non sei un PR o non hai un profilo PR collegato" });
     }
     
     // Normalize phone number: remove all non-digits except +, ensure +39 prefix
