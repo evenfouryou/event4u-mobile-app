@@ -827,12 +827,28 @@ export default function PrManagement() {
                           setSelectedExistingUser(u);
                           createForm.setValue('firstName', u.firstName || '');
                           createForm.setValue('lastName', u.lastName || '');
-                          const phoneMatch = u.phone?.match(/^(\+\d{1,4})(\d+)$/);
-                          if (phoneMatch) {
-                            createForm.setValue('phonePrefix', phoneMatch[1]);
-                            createForm.setValue('phone', phoneMatch[2]);
-                          } else if (u.phone) {
-                            createForm.setValue('phone', u.phone.replace(/^\+\d{1,4}/, ''));
+                          
+                          // Extract phone prefix and number - handle various formats
+                          if (u.phone) {
+                            // Match prefix (1-4 digits after +) and rest of number
+                            const phoneMatch = u.phone.match(/^(\+\d{1,4})(.+)$/);
+                            if (phoneMatch) {
+                              createForm.setValue('phonePrefix', phoneMatch[1]);
+                              // Remove any non-digit characters from phone number
+                              createForm.setValue('phone', phoneMatch[2].replace(/\D/g, ''));
+                            } else if (u.phone.startsWith('0039')) {
+                              // Handle 0039 prefix format
+                              createForm.setValue('phonePrefix', '+39');
+                              createForm.setValue('phone', u.phone.slice(4).replace(/\D/g, ''));
+                            } else if (u.phone.startsWith('39') && u.phone.length > 10) {
+                              // Handle 39xxx format without +
+                              createForm.setValue('phonePrefix', '+39');
+                              createForm.setValue('phone', u.phone.slice(2).replace(/\D/g, ''));
+                            } else {
+                              // Default to +39 and clean the number
+                              createForm.setValue('phonePrefix', '+39');
+                              createForm.setValue('phone', u.phone.replace(/\D/g, ''));
+                            }
                           }
                         }
                       }}
