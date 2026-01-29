@@ -69,8 +69,25 @@ const passwordFormSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const phoneChangeSchema = z.object({
+  newPhonePrefix: z.string().min(2, "Prefisso richiesto"),
+  newPhone: z.string().min(9, "Numero troppo corto (min 9 cifre)").regex(/^[0-9]+$/, "Solo numeri"),
+  otp: z.string().optional(),
+});
+
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
+type PhoneChangeValues = z.infer<typeof phoneChangeSchema>;
+
+const PHONE_PREFIXES = [
+  { value: '+39', label: '+39 (Italia)' },
+  { value: '+1', label: '+1 (USA/Canada)' },
+  { value: '+44', label: '+44 (UK)' },
+  { value: '+33', label: '+33 (Francia)' },
+  { value: '+49', label: '+49 (Germania)' },
+  { value: '+34', label: '+34 (Spagna)' },
+  { value: '+41', label: '+41 (Svizzera)' },
+];
 
 export default function PrProfile() {
   const [, navigate] = useLocation();
@@ -92,8 +109,21 @@ export default function PrProfile() {
   
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<'input' | 'otp'>('input');
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  
+  const phoneForm = useForm<PhoneChangeValues>({
+    resolver: zodResolver(phoneChangeSchema),
+    defaultValues: {
+      newPhonePrefix: '+39',
+      newPhone: '',
+      otp: '',
+    },
+  });
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -135,6 +165,73 @@ export default function PrProfile() {
       passwordForm.reset();
     } catch (error) {
       toast({ title: "Errore", description: "Password attuale non corretta.", variant: "destructive" });
+    }
+  };
+
+  const requestPhoneOtp = async () => {
+    const values = phoneForm.getValues();
+    if (!values.newPhone || values.newPhone.length < 9) {
+      toast({ title: "Errore", description: "Inserisci un numero valido (min 9 cifre)", variant: "destructive" });
+      return;
+    }
+    
+    setIsRequestingOtp(true);
+    try {
+      const res = await fetch("/api/pr/phone/request-change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          newPhone: values.newPhone,
+          newPhonePrefix: values.newPhonePrefix,
+        }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Errore nell'invio OTP");
+      }
+      
+      toast({ title: "OTP Inviato", description: "Controlla il tuo nuovo numero per il codice" });
+      setPhoneStep('otp');
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    } finally {
+      setIsRequestingOtp(false);
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    const values = phoneForm.getValues();
+    if (!values.otp || values.otp.length < 4) {
+      toast({ title: "Errore", description: "Inserisci il codice OTP", variant: "destructive" });
+      return;
+    }
+    
+    setIsVerifyingOtp(true);
+    try {
+      const res = await fetch("/api/pr/phone/verify-change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ otp: values.otp }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Codice OTP non valido");
+      }
+      
+      toast({ title: "Numero aggiornato!", description: "Il tuo numero di telefono è stato verificato" });
+      setShowPhoneDialog(false);
+      setPhoneStep('input');
+      phoneForm.reset();
+      // Refresh profile data
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    } finally {
+      setIsVerifyingOtp(false);
     }
   };
 
@@ -217,9 +314,17 @@ export default function PrProfile() {
                     <Phone className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Telefono</p>
-                      <p className="font-medium text-foreground">{prProfile?.phone || "Non impostato"}</p>
+                      <p className="font-medium text-foreground">{prProfile?.phonePrefix || '+39'}{prProfile?.phone || "Non impostato"}</p>
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPhoneDialog(true)}
+                    data-testid="button-edit-phone"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -472,6 +577,92 @@ export default function PrProfile() {
                 </div>
               </form>
             </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Change Phone Dialog */}
+        <Dialog open={showPhoneDialog} onOpenChange={(open) => {
+          setShowPhoneDialog(open);
+          if (!open) {
+            setPhoneStep('input');
+            phoneForm.reset();
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cambia Numero di Telefono</DialogTitle>
+              <DialogDescription>
+                {phoneStep === 'input' 
+                  ? "Inserisci il nuovo numero. Ti invieremo un codice OTP per verificarlo."
+                  : "Inserisci il codice OTP ricevuto sul nuovo numero"
+                }
+              </DialogDescription>
+            </DialogHeader>
+            
+            {phoneStep === 'input' ? (
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Select
+                    value={phoneForm.watch('newPhonePrefix')}
+                    onValueChange={(v) => phoneForm.setValue('newPhonePrefix', v)}
+                  >
+                    <SelectTrigger className="w-32" data-testid="select-phone-prefix">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PHONE_PREFIXES.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Numero (es. 3381234567)"
+                    value={phoneForm.watch('newPhone')}
+                    onChange={(e) => phoneForm.setValue('newPhone', e.target.value.replace(/\D/g, ''))}
+                    data-testid="input-new-phone"
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setShowPhoneDialog(false)}>
+                    Annulla
+                  </Button>
+                  <Button 
+                    onClick={requestPhoneOtp} 
+                    disabled={isRequestingOtp}
+                    data-testid="button-request-otp"
+                  >
+                    {isRequestingOtp ? "Invio..." : "Invia Codice OTP"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Codice inviato a:</p>
+                  <p className="font-medium">{phoneForm.watch('newPhonePrefix')}{phoneForm.watch('newPhone')}</p>
+                </div>
+                <Input
+                  placeholder="Inserisci codice OTP"
+                  value={phoneForm.watch('otp') || ''}
+                  onChange={(e) => phoneForm.setValue('otp', e.target.value.replace(/\D/g, ''))}
+                  maxLength={6}
+                  className="text-center text-2xl tracking-widest"
+                  data-testid="input-otp"
+                />
+                <div className="flex gap-3 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setPhoneStep('input')}>
+                    Indietro
+                  </Button>
+                  <Button 
+                    onClick={verifyPhoneOtp} 
+                    disabled={isVerifyingOtp}
+                    data-testid="button-verify-otp"
+                  >
+                    {isVerifyingOtp ? "Verifica..." : "Verifica e Salva"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
