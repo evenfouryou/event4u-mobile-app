@@ -2784,18 +2784,19 @@ router.post("/api/public/customers/phone/verify-change", async (req, res) => {
       .where(eq(siaeCustomers.id, customer.id))
       .returning();
     
-    // Also update identity if linked
+    // Also update identity if linked (for unified identity matching)
     if (customer.identityId) {
       const { identities } = await import("@shared/schema");
       await db.update(identities)
         .set({
           phone: pendingChange.newPhone,
+          phonePrefix: pendingChange.newPhonePrefix,
           phoneNormalized: fullPhone,
           phoneVerified: true,
           updatedAt: new Date()
         })
         .where(eq(identities.id, customer.identityId));
-      console.log(`[CUSTOMER-PHONE] Identity ${customer.identityId} updated with new phone`);
+      console.log(`[CUSTOMER-PHONE] Identity ${customer.identityId} updated with new phone ${fullPhone}`);
     }
     
     // Clean up

@@ -3319,7 +3319,7 @@ router.post("/api/pr/phone/verify-change", requireAuth, requirePr, async (req: R
       return res.status(400).json({ error: "Codice OTP non valido" });
     }
     
-    // Update phone number
+    // Update phone number in prProfiles
     await db.update(prProfiles)
       .set({
         phone: pendingChange.newPhone,
@@ -3328,6 +3328,24 @@ router.post("/api/pr/phone/verify-change", requireAuth, requirePr, async (req: R
         updatedAt: new Date()
       })
       .where(eq(prProfiles.id, prProfileId));
+    
+    // Also update in identities table for unified identity matching
+    const [prProfile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prProfileId));
+    
+    if (prProfile?.identityId) {
+      await db.update(identities)
+        .set({
+          phone: pendingChange.newPhone,
+          phonePrefix: pendingChange.newPhonePrefix,
+          phoneNormalized: fullPhone,
+          phoneVerified: true,
+          updatedAt: new Date()
+        })
+        .where(eq(identities.id, prProfile.identityId));
+      console.log(`[PR-PHONE] Identity ${prProfile.identityId} also updated with new phone ${fullPhone}`);
+    }
     
     // Clean up
     pendingPhoneChanges.delete(prProfileId);
