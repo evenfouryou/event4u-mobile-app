@@ -357,6 +357,162 @@ export async function runIdentityUnificationMigration(): Promise<void> {
         AND u.identity_id IS NOT NULL
     `);
     
+    // ============================================
+    // PHASE 2: Merge duplicate records physically
+    // ============================================
+    console.log('[IDENTITY-MIGRATION] Phase 2: Merging duplicate records...');
+    
+    // Merge duplicate siae_customers (same identity)
+    const duplicateCustomers = await db.execute(sql`
+      SELECT identity_id, array_agg(id ORDER BY created_at ASC) as customer_ids
+      FROM siae_customers 
+      WHERE identity_id IS NOT NULL
+      GROUP BY identity_id 
+      HAVING COUNT(*) > 1
+    `);
+    
+    let customersMerged = 0;
+    for (const row of duplicateCustomers.rows) {
+      const customerIds = row.customer_ids as string[];
+      const primaryId = customerIds[0]; // Keep the oldest
+      const duplicateIds = customerIds.slice(1);
+      
+      console.log(`[IDENTITY-MIGRATION] Merging customers: keeping ${primaryId}, removing ${duplicateIds.join(', ')}`);
+      
+      // Transfer all foreign key references to the primary record
+      for (const dupId of duplicateIds) {
+        // Transfer tickets
+        await db.execute(sql`UPDATE siae_tickets SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer subscriptions
+        await db.execute(sql`UPDATE siae_subscriptions SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer name changes
+        await db.execute(sql`UPDATE siae_name_changes SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer resales (seller)
+        await db.execute(sql`UPDATE siae_resales SET seller_id = ${primaryId} WHERE seller_id = ${dupId}`);
+        // Transfer resales (buyer)
+        await db.execute(sql`UPDATE siae_resales SET buyer_id = ${primaryId} WHERE buyer_id = ${dupId}`);
+        // Transfer checkout sessions
+        await db.execute(sql`UPDATE checkout_sessions SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer list entries
+        await db.execute(sql`UPDATE list_entries SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer guest_list_entries
+        await db.execute(sql`UPDATE guest_list_entries SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer event_reservations
+        await db.execute(sql`UPDATE event_reservations SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Transfer wallet
+        await db.execute(sql`UPDATE customer_wallets SET customer_id = ${primaryId} WHERE customer_id = ${dupId} ON CONFLICT DO NOTHING`);
+        // Transfer loyalty points
+        await db.execute(sql`UPDATE loyalty_points SET customer_id = ${primaryId} WHERE customer_id = ${dupId} ON CONFLICT DO NOTHING`);
+        // Transfer referrals
+        await db.execute(sql`UPDATE referrals SET referrer_id = ${primaryId} WHERE referrer_id = ${dupId}`);
+        await db.execute(sql`UPDATE referrals SET referred_customer_id = ${primaryId} WHERE referred_customer_id = ${dupId}`);
+        // Transfer activation cards
+        await db.execute(sql`UPDATE siae_activation_cards SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+        // Update users reference
+        await db.execute(sql`UPDATE users SET siae_customer_id = ${primaryId} WHERE siae_customer_id = ${dupId}`);
+        
+        // Delete the duplicate
+        await db.execute(sql`DELETE FROM siae_customers WHERE id = ${dupId}`);
+        customersMerged++;
+      }
+    }
+    console.log(`[IDENTITY-MIGRATION] Merged ${customersMerged} duplicate customer records`);
+    
+    // Merge duplicate pr_profiles (same identity AND same company)
+    const duplicatePRs = await db.execute(sql`
+      SELECT identity_id, company_id, array_agg(id ORDER BY created_at ASC) as pr_ids
+      FROM pr_profiles 
+      WHERE identity_id IS NOT NULL
+      GROUP BY identity_id, company_id
+      HAVING COUNT(*) > 1
+    `);
+    
+    let prsMerged = 0;
+    for (const row of duplicatePRs.rows) {
+      const prIds = row.pr_ids as string[];
+      const primaryId = prIds[0]; // Keep the oldest
+      const duplicateIds = prIds.slice(1);
+      
+      console.log(`[IDENTITY-MIGRATION] Merging PR profiles: keeping ${primaryId}, removing ${duplicateIds.join(', ')}`);
+      
+      for (const dupId of duplicateIds) {
+        // Transfer list entries (addedByPrProfileId)
+        await db.execute(sql`UPDATE list_entries SET added_by_pr_profile_id = ${primaryId} WHERE added_by_pr_profile_id = ${dupId}`);
+        await db.execute(sql`UPDATE guest_list_entries SET added_by_pr_profile_id = ${primaryId} WHERE added_by_pr_profile_id = ${dupId}`);
+        // Transfer payout requests
+        await db.execute(sql`UPDATE payout_requests SET requested_by_pr_profile_id = ${primaryId} WHERE requested_by_pr_profile_id = ${dupId}`);
+        // Transfer commissions
+        await db.execute(sql`UPDATE pr_commissions SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+        await db.execute(sql`UPDATE pr_event_commissions SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+        // Transfer event reservations
+        await db.execute(sql`UPDATE event_reservations SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+        // Transfer name changes
+        await db.execute(sql`UPDATE siae_name_changes SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+        // Transfer scanner event assignments
+        await db.execute(sql`UPDATE scanner_event_assignments SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId} ON CONFLICT DO NOTHING`);
+        // Update users.pr_profile_id if exists  
+        await db.execute(sql`UPDATE users SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+        
+        // Delete the duplicate
+        await db.execute(sql`DELETE FROM pr_profiles WHERE id = ${dupId}`);
+        prsMerged++;
+      }
+    }
+    console.log(`[IDENTITY-MIGRATION] Merged ${prsMerged} duplicate PR profile records`);
+    
+    // Merge duplicate users (same identity AND same company)
+    const duplicateUsers = await db.execute(sql`
+      SELECT identity_id, company_id, array_agg(id ORDER BY created_at ASC) as user_ids
+      FROM users 
+      WHERE identity_id IS NOT NULL
+      GROUP BY identity_id, company_id
+      HAVING COUNT(*) > 1
+    `);
+    
+    let usersMerged = 0;
+    for (const row of duplicateUsers.rows) {
+      const userIds = row.user_ids as string[];
+      const primaryId = userIds[0]; // Keep the oldest
+      const duplicateIds = userIds.slice(1);
+      
+      console.log(`[IDENTITY-MIGRATION] Merging users: keeping ${primaryId}, removing ${duplicateIds.join(', ')}`);
+      
+      for (const dupId of duplicateIds) {
+        // Transfer user_companies
+        await db.execute(sql`UPDATE user_companies SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
+        await db.execute(sql`DELETE FROM user_companies WHERE user_id = ${dupId}`);
+        // Transfer user_company_roles
+        await db.execute(sql`UPDATE user_company_roles SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
+        await db.execute(sql`DELETE FROM user_company_roles WHERE user_id = ${dupId}`);
+        // Transfer events created
+        await db.execute(sql`UPDATE events SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+        await db.execute(sql`UPDATE events SET updated_by = ${primaryId} WHERE updated_by = ${dupId}`);
+        // Transfer siae_customers.user_id
+        await db.execute(sql`UPDATE siae_customers SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+        // Transfer pr_profiles.user_id
+        await db.execute(sql`UPDATE pr_profiles SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+        // Transfer cashier_sessions
+        await db.execute(sql`UPDATE cashier_sessions SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+        // Transfer list_entries added_by
+        await db.execute(sql`UPDATE list_entries SET added_by_user_id = ${primaryId} WHERE added_by_user_id = ${dupId}`);
+        await db.execute(sql`UPDATE guest_list_entries SET added_by_user_id = ${primaryId} WHERE added_by_user_id = ${dupId}`);
+        // Transfer scanner assignments
+        await db.execute(sql`UPDATE scanner_event_assignments SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
+        await db.execute(sql`DELETE FROM scanner_event_assignments WHERE user_id = ${dupId}`);
+        // Transfer parent_user_id references
+        await db.execute(sql`UPDATE users SET parent_user_id = ${primaryId} WHERE parent_user_id = ${dupId}`);
+        await db.execute(sql`UPDATE user_company_roles SET parent_user_id = ${primaryId} WHERE parent_user_id = ${dupId}`);
+        
+        // Delete the duplicate user
+        await db.execute(sql`DELETE FROM users WHERE id = ${dupId}`);
+        usersMerged++;
+      }
+    }
+    console.log(`[IDENTITY-MIGRATION] Merged ${usersMerged} duplicate user records`);
+    
+    // ============================================
+    // Final statistics
+    // ============================================
     const finalStats = await db.execute(sql`
       SELECT 
         (SELECT COUNT(*) FROM identities) as total_identities,
@@ -374,6 +530,9 @@ export async function runIdentityUnificationMigration(): Promise<void> {
     console.log(`  - SIAE Customers linked: ${stats.customers_linked}`);
     console.log(`  - PR Profiles linked: ${stats.pr_linked}`);
     console.log(`  - Users with customer account: ${stats.users_with_customer}`);
+    console.log(`  - Customers merged: ${customersMerged}`);
+    console.log(`  - PR profiles merged: ${prsMerged}`);
+    console.log(`  - Users merged: ${usersMerged}`);
     
   } catch (error) {
     console.error('[IDENTITY-MIGRATION] Error during migration:', error);
