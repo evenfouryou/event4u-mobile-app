@@ -3510,27 +3510,42 @@ router.get("/api/my/guest-list-entries", requireAuth, async (req: Request, res: 
       conditions.push(eq(listEntriesTable.email, customerEmail.toLowerCase()));
     }
     
+    // Helper to get base phone (without country code) and all variants
+    const getPhoneVariants = (phone: string): string[] => {
+      const digits = normalizePhone(phone);
+      let basePhone = digits;
+      // Remove Italian prefix if present
+      if (basePhone.startsWith('0039')) {
+        basePhone = basePhone.slice(4);
+      } else if (basePhone.startsWith('39') && basePhone.length > 10) {
+        basePhone = basePhone.slice(2);
+      }
+      // Return all possible formats
+      return [
+        phone,                    // Original as-is
+        digits,                   // Just digits
+        basePhone,                // Without country code
+        '+39' + basePhone,        // With +39 prefix
+        '39' + basePhone,         // With 39 prefix
+        '0039' + basePhone,       // With 0039 prefix
+      ];
+    };
+    
     // Add user phone conditions
     if (user.phone) {
-      const userPhoneDigits = normalizePhone(user.phone);
-      conditions.push(eq(listEntriesTable.phone, user.phone));
-      conditions.push(eq(listEntriesTable.phone, userPhoneDigits));
-      conditions.push(eq(listEntriesTable.phone, '+39' + userPhoneDigits));
-      conditions.push(eq(listEntriesTable.phone, '39' + userPhoneDigits));
-      if (userPhoneDigits.startsWith('39') && userPhoneDigits.length > 10) {
-        conditions.push(eq(listEntriesTable.phone, userPhoneDigits.slice(2)));
+      const variants = getPhoneVariants(user.phone);
+      console.log("[DEBUG-QR] User phone variants:", variants);
+      for (const variant of variants) {
+        conditions.push(eq(listEntriesTable.phone, variant));
       }
     }
     
     // Add customer phone conditions (from siaeCustomers)
     if (customerPhone) {
-      const custPhoneDigits = normalizePhone(customerPhone);
-      conditions.push(eq(listEntriesTable.phone, customerPhone));
-      conditions.push(eq(listEntriesTable.phone, custPhoneDigits));
-      conditions.push(eq(listEntriesTable.phone, '+39' + custPhoneDigits));
-      conditions.push(eq(listEntriesTable.phone, '39' + custPhoneDigits));
-      if (custPhoneDigits.startsWith('39') && custPhoneDigits.length > 10) {
-        conditions.push(eq(listEntriesTable.phone, custPhoneDigits.slice(2)));
+      const variants = getPhoneVariants(customerPhone);
+      console.log("[DEBUG-QR] Customer phone variants:", variants);
+      for (const variant of variants) {
+        conditions.push(eq(listEntriesTable.phone, variant));
       }
     }
 
