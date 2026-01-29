@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
-import { User, Mail, Phone, Save, Loader2, LogOut, Edit2 } from "lucide-react";
+import { User, Mail, Phone, Save, Loader2, LogOut, Edit2, ArrowRightLeft } from "lucide-react";
 
 const PHONE_PREFIXES = [
   { value: "+39", label: "+39 IT" },
@@ -71,6 +71,8 @@ interface Customer {
   lastName: string;
   email: string;
   phone: string;
+  hasPrProfile?: boolean;
+  prCode?: string;
 }
 
 const springTransition = {
@@ -243,6 +245,41 @@ export default function AccountProfile() {
     localStorage.removeItem("customerData");
     queryClient.clear();
     window.location.href = "/acquista";
+  };
+
+  const handleSwitchToPr = async () => {
+    triggerHaptic('medium');
+    try {
+      const token = localStorage.getItem("customerToken");
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const res = await fetch('/api/customer/switch-to-pr', {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+      });
+      const data = await res.json();
+      if (data.success && data.redirectTo) {
+        queryClient.clear();
+        window.location.href = data.redirectTo;
+      } else if (data.error) {
+        toast({
+          title: "Errore",
+          description: data.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error switching to PR mode:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile passare alla modalità PR",
+        variant: "destructive",
+      });
+    }
   };
 
   const onSubmit = (data: ProfileFormData) => {
@@ -556,6 +593,32 @@ export default function AccountProfile() {
                 </div>
               </div>
             </motion.div>
+
+            {customer?.hasPrProfile && (
+              <motion.div 
+                className="bg-card rounded-3xl p-6"
+                variants={fadeInUp}
+              >
+                <div className="flex items-center gap-4 mb-5">
+                  <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
+                    <ArrowRightLeft className="w-6 h-6 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-foreground">Dashboard PR</h2>
+                </div>
+
+                <HapticButton
+                  type="button"
+                  variant="outline"
+                  className="w-full min-h-[52px] text-base font-medium text-primary border-primary/30 hover:bg-primary/10 rounded-xl"
+                  hapticType="medium"
+                  onClick={handleSwitchToPr}
+                  data-testid="button-switch-to-pr"
+                >
+                  <ArrowRightLeft className="w-5 h-5 mr-2" />
+                  Passa a Dashboard PR
+                </HapticButton>
+              </motion.div>
+            )}
 
             <motion.div 
               className="bg-card rounded-3xl p-6"
