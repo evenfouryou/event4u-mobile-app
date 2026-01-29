@@ -191,10 +191,6 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     // Generate unique PR code
     const prCode = generatePrCode();
     
-    // Generate password for the new PR
-    const password = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const passwordHash = await bcrypt.hash(password, 10);
-    
     // Create user account and link identity for the PR
     const fullPhone = `${validated.phonePrefix || '+39'}${validated.phone}`;
     const prEmail = validated.email || `pr-${validated.phone}@pr.event4u.local`;
@@ -208,6 +204,21 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
       .innerJoin(identities, eq(siaeCustomers.identityId, identities.id))
       .where(eq(identities.phoneNormalized, phoneNormalized));
     const existingCustomer = existingCustomerResult?.siae_customers;
+    
+    // IDENTITY UNIFICATION: Check if existing customer has password - reuse it instead of generating new one
+    let passwordHash: string;
+    let password: string | null = null;
+    
+    if (existingCustomer?.passwordHash) {
+      // Customer already has password credentials - REUSE them for PR login
+      passwordHash = existingCustomer.passwordHash;
+      console.log(`[Staff-PR] Reusing existing customer password for PR (customer ${existingCustomer.id})`);
+    } else {
+      // No existing credentials - generate new password
+      password = crypto.randomBytes(4).toString('hex').toUpperCase();
+      passwordHash = await bcrypt.hash(password, 10);
+      console.log(`[Staff-PR] Generated new password for PR`);
+    }
     
     // IDENTITY UNIFICATION: Use identity-utils to find or create identity
     const { identity, created: identityCreated } = await findOrCreateIdentity({

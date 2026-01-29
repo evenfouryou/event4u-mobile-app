@@ -1201,35 +1201,66 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       return normalized;
     };
     
-    // Look for a customer with the same phone number or email
-    let customer = null;
-    
     // Get user data from either prProfile or passport user
     const sourceEmail = prProfile?.email || user?.email;
     const sourcePhone = prProfile?.phone ? `${prProfile.phonePrefix || '+39'}${prProfile.phone}` : user?.phone;
     const sourceFirstName = prProfile?.firstName || user?.firstName || '';
     const sourceLastName = prProfile?.lastName || user?.lastName || '';
     const sourceId = prProfile?.id || user?.id;
+    const sourceIdentityId = prProfile?.identityId || user?.identityId;
     
-    console.log("[PR-SWITCH] Source data:", { sourceEmail, sourcePhone, sourceFirstName, sourceLastName, sourceId });
+    console.log("[PR-SWITCH] Source data:", { sourceEmail, sourcePhone, sourceFirstName, sourceLastName, sourceId, sourceIdentityId });
     
-    if (sourcePhone) {
+    // IDENTITY UNIFICATION: Look for customer using identityId FIRST (most reliable)
+    let customer = null;
+    
+    // Priority 1: Search by identityId
+    if (sourceIdentityId) {
+      const [customerByIdentity] = await db.select()
+        .from(siaeCustomers)
+        .where(eq(siaeCustomers.identityId, sourceIdentityId));
+      if (customerByIdentity) {
+        customer = customerByIdentity;
+        console.log("[PR-SWITCH] Found EXISTING customer by identityId:", customer.id);
+      }
+    }
+    
+    // Priority 2: Search by phone (fallback for older records)
+    if (!customer && sourcePhone) {
       const normalizedPhone = normalizePhone(sourcePhone);
       const customers = await db.select().from(siaeCustomers);
       customer = customers.find(c => c.phone && normalizePhone(c.phone) === normalizedPhone) || null;
-      console.log("[PR-SWITCH] Found customer by phone:", customer?.id);
+      if (customer) {
+        console.log("[PR-SWITCH] Found customer by phone:", customer.id);
+        // Link identityId if missing
+        if (sourceIdentityId && !customer.identityId) {
+          await db.update(siaeCustomers)
+            .set({ identityId: sourceIdentityId })
+            .where(eq(siaeCustomers.id, customer.id));
+          console.log("[PR-SWITCH] Linked identityId to existing customer");
+        }
+      }
     }
     
-    // If not found by phone, try email (case insensitive)
+    // Priority 3: Search by email (fallback)
     if (!customer && sourceEmail) {
       const [foundByEmail] = await db.select()
         .from(siaeCustomers)
         .where(sql`lower(${siaeCustomers.email}) = lower(${sourceEmail})`);
-      customer = foundByEmail;
-      console.log("[PR-SWITCH] Found customer by email:", customer?.id);
+      if (foundByEmail) {
+        customer = foundByEmail;
+        console.log("[PR-SWITCH] Found customer by email:", customer.id);
+        // Link identityId if missing
+        if (sourceIdentityId && !customer.identityId) {
+          await db.update(siaeCustomers)
+            .set({ identityId: sourceIdentityId })
+            .where(eq(siaeCustomers.id, customer.id));
+          console.log("[PR-SWITCH] Linked identityId to existing customer");
+        }
+      }
     }
     
-    // If customer not found, CREATE a new customer profile
+    // Only create new customer if none found by identity/phone/email
     if (!customer) {
       const fullPhone = sourcePhone ? normalizePhone(sourcePhone) : null;
       
@@ -1254,12 +1285,13 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
         email: sourceEmail || `pr-${sourceId}@temp.local`,
         phone: fullPhone || `+39000${Date.now().toString().slice(-7)}`,
         phoneVerified: prProfile?.phoneVerified || false,
-        emailVerified: !!user?.email, // If coming from passport, email was likely verified
+        emailVerified: !!user?.email,
         authenticationType: 'BO',
+        identityId: sourceIdentityId, // Link to identity from the start
       }).returning();
       
       customer = newCustomer;
-      console.log(`[PR-SWITCH] Created new customer ${customer.id} for source ${sourceId}`);
+      console.log(`[PR-SWITCH] Created new customer ${customer.id} for source ${sourceId} with identityId ${sourceIdentityId}`);
     }
     
     // Store original PR/user session for switching back later

@@ -1563,9 +1563,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (customer) {
           const { passwordHash, ...customerData } = customer;
           
-          // Check if customer has a linked PR profile (by phone or email)
+          // IDENTITY UNIFICATION: Check for linked PR profile using identityId FIRST
           let linkedPrProfile = null;
-          if (customer.phone) {
+          
+          // Priority 1: Search by identityId (most reliable)
+          if (customer.identityId) {
+            const [profileByIdentity] = await db.select().from(prProfiles)
+              .where(and(
+                eq(prProfiles.isActive, true),
+                eq(prProfiles.identityId, customer.identityId)
+              ));
+            if (profileByIdentity) {
+              linkedPrProfile = profileByIdentity;
+              console.log(`[USER-ME] Found PR profile by identityId: ${profileByIdentity.id}`);
+            }
+          }
+          
+          // Priority 2: Search by phone (fallback for older records without identityId)
+          if (!linkedPrProfile && customer.phone) {
             const normalizedPhone = customer.phone.replace(/\D/g, '');
             const phoneWithPrefix = '+39' + normalizedPhone.replace(/^39/, '');
             const phoneWithoutPrefix = normalizedPhone.replace(/^39/, '');
@@ -1582,6 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (profileByPhone) linkedPrProfile = profileByPhone;
           }
           
+          // Priority 3: Search by email (fallback)
           if (!linkedPrProfile && customer.email) {
             const [profileByEmail] = await db.select().from(prProfiles)
               .where(and(
