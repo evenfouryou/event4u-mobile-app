@@ -379,42 +379,48 @@ export async function runIdentityUnificationMigration(): Promise<void> {
       
       console.log(`[IDENTITY-MIGRATION] Merging customers: keeping ${primaryId}, removing ${duplicateIds.join(', ')}`);
       
-      // Transfer all foreign key references to the primary record
-      for (const dupId of duplicateIds) {
-        // Transfer tickets
-        await db.execute(sql`UPDATE siae_tickets SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer subscriptions
-        await db.execute(sql`UPDATE siae_subscriptions SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer name changes
-        await db.execute(sql`UPDATE siae_name_changes SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer resales (seller)
-        await db.execute(sql`UPDATE siae_resales SET seller_id = ${primaryId} WHERE seller_id = ${dupId}`);
-        // Transfer resales (buyer)
-        await db.execute(sql`UPDATE siae_resales SET buyer_id = ${primaryId} WHERE buyer_id = ${dupId}`);
-        // Transfer checkout sessions
-        await db.execute(sql`UPDATE checkout_sessions SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer list entries
-        await db.execute(sql`UPDATE list_entries SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer guest_list_entries
-        await db.execute(sql`UPDATE guest_list_entries SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer event_reservations
-        await db.execute(sql`UPDATE event_reservations SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Transfer wallet
-        await db.execute(sql`UPDATE customer_wallets SET customer_id = ${primaryId} WHERE customer_id = ${dupId} ON CONFLICT DO NOTHING`);
-        // Transfer loyalty points
-        await db.execute(sql`UPDATE loyalty_points SET customer_id = ${primaryId} WHERE customer_id = ${dupId} ON CONFLICT DO NOTHING`);
-        // Transfer referrals
-        await db.execute(sql`UPDATE referrals SET referrer_id = ${primaryId} WHERE referrer_id = ${dupId}`);
-        await db.execute(sql`UPDATE referrals SET referred_customer_id = ${primaryId} WHERE referred_customer_id = ${dupId}`);
-        // Transfer activation cards
-        await db.execute(sql`UPDATE siae_activation_cards SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
-        // Update users reference
-        await db.execute(sql`UPDATE users SET siae_customer_id = ${primaryId} WHERE siae_customer_id = ${dupId}`);
-        
-        // Delete the duplicate
-        await db.execute(sql`DELETE FROM siae_customers WHERE id = ${dupId}`);
-        customersMerged++;
-      }
+      // Wrap entire merge in transaction for safety
+      await db.transaction(async (tx) => {
+        for (const dupId of duplicateIds) {
+          // Transfer tickets
+          await tx.execute(sql`UPDATE siae_tickets SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer subscriptions
+          await tx.execute(sql`UPDATE siae_subscriptions SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer name changes
+          await tx.execute(sql`UPDATE siae_name_changes SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer resales (seller)
+          await tx.execute(sql`UPDATE siae_resales SET seller_id = ${primaryId} WHERE seller_id = ${dupId}`);
+          // Transfer resales (buyer)
+          await tx.execute(sql`UPDATE siae_resales SET buyer_id = ${primaryId} WHERE buyer_id = ${dupId}`);
+          // Transfer checkout sessions
+          await tx.execute(sql`UPDATE checkout_sessions SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer list entries
+          await tx.execute(sql`UPDATE list_entries SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer guest_list_entries
+          await tx.execute(sql`UPDATE guest_list_entries SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer event_reservations
+          await tx.execute(sql`UPDATE event_reservations SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer wallet
+          await tx.execute(sql`UPDATE customer_wallets SET customer_id = ${primaryId} WHERE customer_id = ${dupId} ON CONFLICT DO NOTHING`);
+          // Transfer loyalty points
+          await tx.execute(sql`UPDATE loyalty_points SET customer_id = ${primaryId} WHERE customer_id = ${dupId} ON CONFLICT DO NOTHING`);
+          // Transfer referrals
+          await tx.execute(sql`UPDATE referrals SET referrer_id = ${primaryId} WHERE referrer_id = ${dupId}`);
+          await tx.execute(sql`UPDATE referrals SET referred_customer_id = ${primaryId} WHERE referred_customer_id = ${dupId}`);
+          // Transfer activation cards
+          await tx.execute(sql`UPDATE siae_activation_cards SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer seat_holds
+          await tx.execute(sql`UPDATE seat_holds SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Transfer table_bookings
+          await tx.execute(sql`UPDATE table_bookings SET customer_id = ${primaryId} WHERE customer_id = ${dupId}`);
+          // Update users reference
+          await tx.execute(sql`UPDATE users SET siae_customer_id = ${primaryId} WHERE siae_customer_id = ${dupId}`);
+          
+          // Delete the duplicate
+          await tx.execute(sql`DELETE FROM siae_customers WHERE id = ${dupId}`);
+          customersMerged++;
+        }
+      });
     }
     console.log(`[IDENTITY-MIGRATION] Merged ${customersMerged} duplicate customer records`);
     
@@ -435,28 +441,35 @@ export async function runIdentityUnificationMigration(): Promise<void> {
       
       console.log(`[IDENTITY-MIGRATION] Merging PR profiles: keeping ${primaryId}, removing ${duplicateIds.join(', ')}`);
       
-      for (const dupId of duplicateIds) {
-        // Transfer list entries (addedByPrProfileId)
-        await db.execute(sql`UPDATE list_entries SET added_by_pr_profile_id = ${primaryId} WHERE added_by_pr_profile_id = ${dupId}`);
-        await db.execute(sql`UPDATE guest_list_entries SET added_by_pr_profile_id = ${primaryId} WHERE added_by_pr_profile_id = ${dupId}`);
-        // Transfer payout requests
-        await db.execute(sql`UPDATE payout_requests SET requested_by_pr_profile_id = ${primaryId} WHERE requested_by_pr_profile_id = ${dupId}`);
-        // Transfer commissions
-        await db.execute(sql`UPDATE pr_commissions SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
-        await db.execute(sql`UPDATE pr_event_commissions SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
-        // Transfer event reservations
-        await db.execute(sql`UPDATE event_reservations SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
-        // Transfer name changes
-        await db.execute(sql`UPDATE siae_name_changes SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
-        // Transfer scanner event assignments
-        await db.execute(sql`UPDATE scanner_event_assignments SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId} ON CONFLICT DO NOTHING`);
-        // Update users.pr_profile_id if exists  
-        await db.execute(sql`UPDATE users SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
-        
-        // Delete the duplicate
-        await db.execute(sql`DELETE FROM pr_profiles WHERE id = ${dupId}`);
-        prsMerged++;
-      }
+      // Wrap entire merge in transaction for safety
+      await db.transaction(async (tx) => {
+        for (const dupId of duplicateIds) {
+          // Transfer list entries (addedByPrProfileId)
+          await tx.execute(sql`UPDATE list_entries SET added_by_pr_profile_id = ${primaryId} WHERE added_by_pr_profile_id = ${dupId}`);
+          await tx.execute(sql`UPDATE guest_list_entries SET added_by_pr_profile_id = ${primaryId} WHERE added_by_pr_profile_id = ${dupId}`);
+          // Transfer payout requests
+          await tx.execute(sql`UPDATE payout_requests SET requested_by_pr_profile_id = ${primaryId} WHERE requested_by_pr_profile_id = ${dupId}`);
+          // Transfer commissions
+          await tx.execute(sql`UPDATE pr_commissions SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          await tx.execute(sql`UPDATE pr_event_commissions SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          // Transfer event reservations
+          await tx.execute(sql`UPDATE event_reservations SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          // Transfer name changes
+          await tx.execute(sql`UPDATE siae_name_changes SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          // Transfer scanner event assignments
+          await tx.execute(sql`UPDATE scanner_event_assignments SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId} ON CONFLICT DO NOTHING`);
+          // Transfer event PR assignments
+          await tx.execute(sql`UPDATE event_pr_assignments SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          // Transfer reservation payments
+          await tx.execute(sql`UPDATE reservation_payments SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          // Update users.pr_profile_id if exists  
+          await tx.execute(sql`UPDATE users SET pr_profile_id = ${primaryId} WHERE pr_profile_id = ${dupId}`);
+          
+          // Delete the duplicate
+          await tx.execute(sql`DELETE FROM pr_profiles WHERE id = ${dupId}`);
+          prsMerged++;
+        }
+      });
     }
     console.log(`[IDENTITY-MIGRATION] Merged ${prsMerged} duplicate PR profile records`);
     
@@ -477,36 +490,106 @@ export async function runIdentityUnificationMigration(): Promise<void> {
       
       console.log(`[IDENTITY-MIGRATION] Merging users: keeping ${primaryId}, removing ${duplicateIds.join(', ')}`);
       
-      for (const dupId of duplicateIds) {
-        // Transfer user_companies
-        await db.execute(sql`UPDATE user_companies SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
-        await db.execute(sql`DELETE FROM user_companies WHERE user_id = ${dupId}`);
-        // Transfer user_company_roles
-        await db.execute(sql`UPDATE user_company_roles SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
-        await db.execute(sql`DELETE FROM user_company_roles WHERE user_id = ${dupId}`);
-        // Transfer events created
-        await db.execute(sql`UPDATE events SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
-        await db.execute(sql`UPDATE events SET updated_by = ${primaryId} WHERE updated_by = ${dupId}`);
-        // Transfer siae_customers.user_id
-        await db.execute(sql`UPDATE siae_customers SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
-        // Transfer pr_profiles.user_id
-        await db.execute(sql`UPDATE pr_profiles SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
-        // Transfer cashier_sessions
-        await db.execute(sql`UPDATE cashier_sessions SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
-        // Transfer list_entries added_by
-        await db.execute(sql`UPDATE list_entries SET added_by_user_id = ${primaryId} WHERE added_by_user_id = ${dupId}`);
-        await db.execute(sql`UPDATE guest_list_entries SET added_by_user_id = ${primaryId} WHERE added_by_user_id = ${dupId}`);
-        // Transfer scanner assignments
-        await db.execute(sql`UPDATE scanner_event_assignments SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
-        await db.execute(sql`DELETE FROM scanner_event_assignments WHERE user_id = ${dupId}`);
-        // Transfer parent_user_id references
-        await db.execute(sql`UPDATE users SET parent_user_id = ${primaryId} WHERE parent_user_id = ${dupId}`);
-        await db.execute(sql`UPDATE user_company_roles SET parent_user_id = ${primaryId} WHERE parent_user_id = ${dupId}`);
-        
-        // Delete the duplicate user
-        await db.execute(sql`DELETE FROM users WHERE id = ${dupId}`);
-        usersMerged++;
-      }
+      // Wrap entire merge in transaction for safety
+      await db.transaction(async (tx) => {
+        for (const dupId of duplicateIds) {
+          // Transfer user_companies
+          await tx.execute(sql`UPDATE user_companies SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
+          await tx.execute(sql`DELETE FROM user_companies WHERE user_id = ${dupId}`);
+          // Transfer user_company_roles
+          await tx.execute(sql`UPDATE user_company_roles SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
+          await tx.execute(sql`DELETE FROM user_company_roles WHERE user_id = ${dupId}`);
+          // Transfer events created/updated
+          await tx.execute(sql`UPDATE events SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          await tx.execute(sql`UPDATE events SET updated_by = ${primaryId} WHERE updated_by = ${dupId}`);
+          // Transfer siae_customers.user_id
+          await tx.execute(sql`UPDATE siae_customers SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer pr_profiles.user_id
+          await tx.execute(sql`UPDATE pr_profiles SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer cashier_sessions
+          await tx.execute(sql`UPDATE cashier_sessions SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer list_entries (multiple FK columns)
+          await tx.execute(sql`UPDATE list_entries SET added_by_user_id = ${primaryId} WHERE added_by_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE list_entries SET client_user_id = ${primaryId} WHERE client_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE list_entries SET qr_scanned_by_user_id = ${primaryId} WHERE qr_scanned_by_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE list_entries SET checked_in_by = ${primaryId} WHERE checked_in_by = ${dupId}`);
+          await tx.execute(sql`UPDATE list_entries SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          await tx.execute(sql`UPDATE list_entries SET created_by_user_id = ${primaryId} WHERE created_by_user_id = ${dupId}`);
+          // Transfer guest_list_entries (multiple FK columns)
+          await tx.execute(sql`UPDATE guest_list_entries SET added_by_user_id = ${primaryId} WHERE added_by_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE guest_list_entries SET created_by_user_id = ${primaryId} WHERE created_by_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE guest_list_entries SET qr_scanned_by_user_id = ${primaryId} WHERE qr_scanned_by_user_id = ${dupId}`);
+          // Transfer scanner assignments
+          await tx.execute(sql`UPDATE scanner_event_assignments SET user_id = ${primaryId} WHERE user_id = ${dupId} ON CONFLICT DO NOTHING`);
+          await tx.execute(sql`DELETE FROM scanner_event_assignments WHERE user_id = ${dupId}`);
+          // Transfer parent_user_id references
+          await tx.execute(sql`UPDATE users SET parent_user_id = ${primaryId} WHERE parent_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE user_company_roles SET parent_user_id = ${primaryId} WHERE parent_user_id = ${dupId}`);
+          // Transfer siae_audit_logs.user_id (not a FK constraint, but tracks user reference)
+          await tx.execute(sql`UPDATE siae_audit_logs SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer stock_movements.performed_by
+          await tx.execute(sql`UPDATE stock_movements SET performed_by = ${primaryId} WHERE performed_by = ${dupId}`);
+          // Transfer purchase_orders.created_by
+          await tx.execute(sql`UPDATE purchase_orders SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          // Transfer siae_access_requests.approved_by
+          await tx.execute(sql`UPDATE siae_access_requests SET approved_by = ${primaryId} WHERE approved_by = ${dupId}`);
+          // Transfer siae_transmissions.approved_by
+          await tx.execute(sql`UPDATE siae_transmissions SET approved_by = ${primaryId} WHERE approved_by = ${dupId}`);
+          // Transfer siae_name_changes.approved_by
+          await tx.execute(sql`UPDATE siae_name_changes SET approved_by = ${primaryId} WHERE approved_by = ${dupId}`);
+          // Transfer siae_tickets.processed_by_user_id
+          await tx.execute(sql`UPDATE siae_tickets SET processed_by_user_id = ${primaryId} WHERE processed_by_user_id = ${dupId}`);
+          // Transfer table_bookings (multiple FK columns)
+          await tx.execute(sql`UPDATE table_bookings SET booked_by_user_id = ${primaryId} WHERE booked_by_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE table_bookings SET qr_scanned_by_user_id = ${primaryId} WHERE qr_scanned_by_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE table_bookings SET approved_by_user_id = ${primaryId} WHERE approved_by_user_id = ${dupId}`);
+          // Transfer table_booking_participants.qr_scanned_by_user_id
+          await tx.execute(sql`UPDATE table_booking_participants SET qr_scanned_by_user_id = ${primaryId} WHERE qr_scanned_by_user_id = ${dupId}`);
+          // Transfer event_lists.created_by_user_id
+          await tx.execute(sql`UPDATE event_lists SET created_by_user_id = ${primaryId} WHERE created_by_user_id = ${dupId}`);
+          // Transfer table_reservations (multiple FK columns)
+          await tx.execute(sql`UPDATE table_reservations SET approved_by = ${primaryId} WHERE approved_by = ${dupId}`);
+          await tx.execute(sql`UPDATE table_reservations SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          // Transfer table_guests (multiple FK columns)
+          await tx.execute(sql`UPDATE table_guests SET client_user_id = ${primaryId} WHERE client_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE table_guests SET checked_in_by = ${primaryId} WHERE checked_in_by = ${dupId}`);
+          // Transfer event_reservations (multiple FK columns)
+          await tx.execute(sql`UPDATE event_reservations SET client_user_id = ${primaryId} WHERE client_user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE event_reservations SET checked_in_by = ${primaryId} WHERE checked_in_by = ${dupId}`);
+          // Transfer payout_requests.processed_by_user_id
+          await tx.execute(sql`UPDATE payout_requests SET processed_by_user_id = ${primaryId} WHERE processed_by_user_id = ${dupId}`);
+          // Transfer event_ticket_pages (floor_plans equivalent - created_by, published_by)
+          await tx.execute(sql`UPDATE event_ticket_pages SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          await tx.execute(sql`UPDATE event_ticket_pages SET published_by = ${primaryId} WHERE published_by = ${dupId}`);
+          // Transfer event_ticket_page_media.uploaded_by (floor_plan_media equivalent)
+          await tx.execute(sql`UPDATE event_ticket_page_media SET uploaded_by = ${primaryId} WHERE uploaded_by = ${dupId}`);
+          // Transfer event_page_configs.created_by
+          await tx.execute(sql`UPDATE event_page_configs SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          // Transfer reservation_payments.paid_by
+          await tx.execute(sql`UPDATE reservation_payments SET paid_by = ${primaryId} WHERE paid_by = ${dupId}`);
+          // Transfer print_jobs.created_by
+          await tx.execute(sql`UPDATE print_jobs SET created_by = ${primaryId} WHERE created_by = ${dupId}`);
+          // Transfer printer_agents.user_id
+          await tx.execute(sql`UPDATE printer_agents SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer siae_smart_card_sessions.user_id
+          await tx.execute(sql`UPDATE siae_smart_card_sessions SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer seat_holds.user_id
+          await tx.execute(sql`UPDATE seat_holds SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer e4u_staff_assignments.user_id
+          await tx.execute(sql`UPDATE e4u_staff_assignments SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer event_pr_assignments.user_id and staff_user_id
+          await tx.execute(sql`UPDATE event_pr_assignments SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          await tx.execute(sql`UPDATE event_pr_assignments SET staff_user_id = ${primaryId} WHERE staff_user_id = ${dupId}`);
+          // Transfer event_scanners.user_id
+          await tx.execute(sql`UPDATE event_scanners SET user_id = ${primaryId} WHERE user_id = ${dupId}`);
+          // Transfer system_settings.updated_by
+          await tx.execute(sql`UPDATE system_settings SET updated_by = ${primaryId} WHERE updated_by = ${dupId}`);
+          
+          // Delete the duplicate user
+          await tx.execute(sql`DELETE FROM users WHERE id = ${dupId}`);
+          usersMerged++;
+        }
+      });
     }
     console.log(`[IDENTITY-MIGRATION] Merged ${usersMerged} duplicate user records`);
     
