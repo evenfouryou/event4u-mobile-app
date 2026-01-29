@@ -2672,6 +2672,123 @@ router.patch("/api/public/customers/me", async (req, res) => {
   }
 });
 
+// Store pending customer phone changes (in-memory)
+const pendingCustomerPhoneChanges = new Map<string, { newPhone: string; expiresAt: Date }>();
+
+// Request phone number change - sends OTP to new number
+router.post("/api/public/customers/phone/request-change", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+    
+    const { newPhone } = req.body;
+    
+    if (!newPhone || newPhone.length < 9) {
+      return res.status(400).json({ message: "Numero di telefono non valido (minimo 9 cifre)" });
+    }
+    
+    // Check if MSG91 is configured
+    if (!isMSG91Configured()) {
+      return res.status(503).json({ message: "Servizio OTP non configurato" });
+    }
+    
+    // Format phone - add +39 if not present
+    let fullPhone = newPhone.replace(/\s/g, '');
+    if (!fullPhone.startsWith('+')) {
+      fullPhone = '+39' + fullPhone;
+    }
+    
+    // Check if this phone is already used by another customer
+    const existingCustomers = await db.select()
+      .from(siaeCustomers)
+      .where(sql`${siaeCustomers.phone} LIKE ${'%' + newPhone.slice(-9)}`);
+    
+    const otherCustomer = existingCustomers.find(c => c.id !== customer.id);
+    if (otherCustomer) {
+      return res.status(400).json({ message: "Questo numero è già utilizzato da un altro account" });
+    }
+    
+    // Send OTP to new phone
+    const otpResult = await sendMSG91OTP(fullPhone);
+    
+    if (!otpResult.success) {
+      console.error(`[CUSTOMER-PHONE] Failed to send OTP to ${fullPhone}:`, otpResult.message);
+      return res.status(500).json({ message: "Errore nell'invio del codice OTP" });
+    }
+    
+    // Store pending change
+    pendingCustomerPhoneChanges.set(customer.id, {
+      newPhone: fullPhone,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+    
+    console.log(`[CUSTOMER-PHONE] OTP sent to ${fullPhone} for customer ${customer.id}`);
+    res.json({ success: true, message: "Codice OTP inviato al nuovo numero" });
+  } catch (error: any) {
+    console.error("[CUSTOMER-PHONE] Error requesting phone change:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Verify OTP and complete phone change
+router.post("/api/public/customers/phone/verify-change", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+    
+    const { otp } = req.body;
+    
+    if (!otp || otp.length < 4) {
+      return res.status(400).json({ message: "Codice OTP non valido" });
+    }
+    
+    // Get pending change
+    const pendingChange = pendingCustomerPhoneChanges.get(customer.id);
+    if (!pendingChange) {
+      return res.status(400).json({ message: "Nessuna richiesta di cambio numero in corso. Richiedi prima l'OTP." });
+    }
+    
+    if (pendingChange.expiresAt < new Date()) {
+      pendingCustomerPhoneChanges.delete(customer.id);
+      return res.status(400).json({ message: "Codice OTP scaduto. Richiedi un nuovo codice." });
+    }
+    
+    // Verify OTP
+    const verifyResult = await verifyMSG91OTP(pendingChange.newPhone, otp);
+    
+    if (!verifyResult.success) {
+      return res.status(400).json({ message: "Codice OTP non valido" });
+    }
+    
+    // Update phone number
+    const [updated] = await db.update(siaeCustomers)
+      .set({
+        phone: pendingChange.newPhone,
+        phoneVerified: true,
+        updatedAt: new Date()
+      })
+      .where(eq(siaeCustomers.id, customer.id))
+      .returning();
+    
+    // Clean up
+    pendingCustomerPhoneChanges.delete(customer.id);
+    
+    console.log(`[CUSTOMER-PHONE] Phone updated for customer ${customer.id} to ${pendingChange.newPhone}`);
+    res.json({ 
+      success: true, 
+      message: "Numero di telefono aggiornato con successo",
+      phone: updated.phone
+    });
+  } catch (error: any) {
+    console.error("[CUSTOMER-PHONE] Error verifying phone change:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ==================== CARRELLO ====================
 
 // Ottieni carrello

@@ -3,6 +3,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { prStorage } from "./pr-storage";
 import { storage } from "./storage";
 import { db } from "./db";
+import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, isMSG91Configured } from "./msg91-service";
 import {
   insertEventStaffAssignmentSchema,
   insertEventFloorplanSchema,
@@ -3210,6 +3211,126 @@ router.patch("/api/pr/profile", requireAuth, requirePr, async (req: Request, res
     });
   } catch (error: any) {
     console.error("Error updating PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Store pending phone changes (in-memory, could use Redis for production)
+const pendingPhoneChanges = new Map<string, { newPhone: string; newPhonePrefix: string; expiresAt: Date }>();
+
+// Request phone number change - sends OTP to new number
+router.post("/api/pr/phone/request-change", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { prProfileId } = await resolvePrIdentity(req);
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const { newPhone, newPhonePrefix = '+39' } = req.body;
+    
+    if (!newPhone || newPhone.length < 9) {
+      return res.status(400).json({ error: "Numero di telefono non valido (minimo 9 cifre)" });
+    }
+    
+    // Check if MSG91 is configured
+    if (!isMSG91Configured()) {
+      return res.status(503).json({ error: "Servizio OTP non configurato" });
+    }
+    
+    // Format phone for OTP
+    const fullPhone = `${newPhonePrefix}${newPhone}`;
+    
+    // Check if this phone is already used by another PR in same company
+    const [existingPr] = await db.select()
+      .from(prProfiles)
+      .where(and(
+        eq(prProfiles.phone, newPhone),
+        eq(prProfiles.phonePrefix, newPhonePrefix),
+        sql`${prProfiles.id} != ${prProfileId}`
+      ));
+    
+    if (existingPr) {
+      return res.status(400).json({ error: "Questo numero è già utilizzato da un altro PR" });
+    }
+    
+    // Send OTP to new phone
+    const otpResult = await sendMSG91OTP(fullPhone);
+    
+    if (!otpResult.success) {
+      console.error(`[PR-PHONE] Failed to send OTP to ${fullPhone}:`, otpResult.message);
+      return res.status(500).json({ error: "Errore nell'invio del codice OTP" });
+    }
+    
+    // Store pending change
+    pendingPhoneChanges.set(prProfileId, {
+      newPhone,
+      newPhonePrefix,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+    
+    console.log(`[PR-PHONE] OTP sent to ${fullPhone} for PR ${prProfileId}`);
+    res.json({ success: true, message: "Codice OTP inviato al nuovo numero" });
+  } catch (error: any) {
+    console.error("Error requesting phone change:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Verify OTP and complete phone change
+router.post("/api/pr/phone/verify-change", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { prProfileId } = await resolvePrIdentity(req);
+    if (!prProfileId) {
+      return res.status(403).json({ error: "Profilo PR non trovato" });
+    }
+    
+    const { otp } = req.body;
+    
+    if (!otp || otp.length < 4) {
+      return res.status(400).json({ error: "Codice OTP non valido" });
+    }
+    
+    // Get pending change
+    const pendingChange = pendingPhoneChanges.get(prProfileId);
+    if (!pendingChange) {
+      return res.status(400).json({ error: "Nessuna richiesta di cambio numero in corso. Richiedi prima l'OTP." });
+    }
+    
+    if (pendingChange.expiresAt < new Date()) {
+      pendingPhoneChanges.delete(prProfileId);
+      return res.status(400).json({ error: "Codice OTP scaduto. Richiedi un nuovo codice." });
+    }
+    
+    // Verify OTP
+    const fullPhone = `${pendingChange.newPhonePrefix}${pendingChange.newPhone}`;
+    const verifyResult = await verifyMSG91OTP(fullPhone, otp);
+    
+    if (!verifyResult.success) {
+      return res.status(400).json({ error: "Codice OTP non valido" });
+    }
+    
+    // Update phone number
+    await db.update(prProfiles)
+      .set({
+        phone: pendingChange.newPhone,
+        phonePrefix: pendingChange.newPhonePrefix,
+        phoneVerified: true,
+        updatedAt: new Date()
+      })
+      .where(eq(prProfiles.id, prProfileId));
+    
+    // Clean up
+    pendingPhoneChanges.delete(prProfileId);
+    
+    console.log(`[PR-PHONE] Phone updated for PR ${prProfileId} to ${fullPhone}`);
+    res.json({ 
+      success: true, 
+      message: "Numero di telefono aggiornato con successo",
+      phone: pendingChange.newPhone,
+      phonePrefix: pendingChange.newPhonePrefix
+    });
+  } catch (error: any) {
+    console.error("Error verifying phone change:", error);
     res.status(500).json({ error: error.message });
   }
 });
