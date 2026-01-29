@@ -966,6 +966,7 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
     console.log("[PR-SWITCH] user:", user ? { id: user.id, email: user.email, role: user.role } : null);
     
     let prProfile = null;
+    let passportUserAsPr = false; // Flag for passport users with 'pr' role but no pr_profiles entry
     
     if (prSession) {
       // PR session auth - get profile by session ID
@@ -990,10 +991,17 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
         prProfile = profileByEmail;
         console.log("[PR-SWITCH] Found profile by email:", profileByEmail?.id);
       }
+      
+      // If still no PR profile but user has 'pr' role, they can still switch to customer
+      // This handles passport users assigned 'pr' role without a pr_profiles entry
+      if (!prProfile && user.role === 'pr') {
+        console.log("[PR-SWITCH] User has 'pr' role but no pr_profiles entry - allowing switch");
+        passportUserAsPr = true;
+      }
     }
     
-    if (!prProfile) {
-      console.log("[PR-SWITCH] No PR profile found - returning 400 error");
+    if (!prProfile && !passportUserAsPr) {
+      console.log("[PR-SWITCH] No PR profile found and not a PR user - returning 400 error");
       return res.status(400).json({ error: "Non sei un PR o non hai un profilo PR collegato" });
     }
     
@@ -1018,55 +1026,65 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
     // Look for a customer with the same phone number or email
     let customer = null;
     
-    if (prProfile.phone) {
-      const prFullPhone = normalizePhone(`${prProfile.phonePrefix || '+39'}${prProfile.phone}`);
+    // Get user data from either prProfile or passport user
+    const sourceEmail = prProfile?.email || user?.email;
+    const sourcePhone = prProfile?.phone ? `${prProfile.phonePrefix || '+39'}${prProfile.phone}` : user?.phone;
+    const sourceFirstName = prProfile?.firstName || user?.firstName || '';
+    const sourceLastName = prProfile?.lastName || user?.lastName || '';
+    const sourceId = prProfile?.id || user?.id;
+    
+    console.log("[PR-SWITCH] Source data:", { sourceEmail, sourcePhone, sourceFirstName, sourceLastName, sourceId });
+    
+    if (sourcePhone) {
+      const normalizedPhone = normalizePhone(sourcePhone);
       const customers = await db.select().from(siaeCustomers);
-      customer = customers.find(c => c.phone && normalizePhone(c.phone) === prFullPhone) || null;
+      customer = customers.find(c => c.phone && normalizePhone(c.phone) === normalizedPhone) || null;
+      console.log("[PR-SWITCH] Found customer by phone:", customer?.id);
     }
     
     // If not found by phone, try email (case insensitive)
-    if (!customer && prProfile.email) {
+    if (!customer && sourceEmail) {
       const [foundByEmail] = await db.select()
         .from(siaeCustomers)
-        .where(sql`lower(${siaeCustomers.email}) = lower(${prProfile.email})`);
+        .where(sql`lower(${siaeCustomers.email}) = lower(${sourceEmail})`);
       customer = foundByEmail;
+      console.log("[PR-SWITCH] Found customer by email:", customer?.id);
     }
     
     // If customer not found, CREATE a new customer profile
     if (!customer) {
-      const fullPhone = prProfile.phone 
-        ? normalizePhone(`${prProfile.phonePrefix || '+39'}${prProfile.phone}`)
-        : null;
+      const fullPhone = sourcePhone ? normalizePhone(sourcePhone) : null;
       
-      // Extract first/last name from displayName or firstName/lastName fields
-      let firstName = prProfile.firstName || '';
-      let lastName = prProfile.lastName || '';
+      // Extract first/last name
+      let firstName = sourceFirstName;
+      let lastName = sourceLastName;
       
-      if (!firstName && !lastName && prProfile.displayName) {
-        const nameParts = prProfile.displayName.trim().split(' ');
+      // Try to extract from name field if available
+      if (!firstName && !lastName && user?.name) {
+        const nameParts = user.name.trim().split(' ');
         firstName = nameParts[0] || '';
         lastName = nameParts.slice(1).join(' ') || '';
       }
       
       // Generate unique code for the customer
-      const uniqueCode = `PR-${prProfile.id.slice(0, 8)}-${Date.now().toString(36).toUpperCase()}`;
+      const uniqueCode = `PR-${sourceId.slice(0, 8)}-${Date.now().toString(36).toUpperCase()}`;
       
       const [newCustomer] = await db.insert(siaeCustomers).values({
         uniqueCode,
         firstName: firstName || 'PR',
-        lastName: lastName || prProfile.displayName || 'User',
-        email: prProfile.email || `pr-${prProfile.id}@temp.local`,
+        lastName: lastName || 'User',
+        email: sourceEmail || `pr-${sourceId}@temp.local`,
         phone: fullPhone || `+39000${Date.now().toString().slice(-7)}`,
-        phoneVerified: prProfile.phoneVerified || false,
-        emailVerified: false,
+        phoneVerified: prProfile?.phoneVerified || false,
+        emailVerified: !!user?.email, // If coming from passport, email was likely verified
         authenticationType: 'BO',
       }).returning();
       
       customer = newCustomer;
-      console.log(`[PR-SWITCH] Created new customer ${customer.id} for PR ${prProfile.id}`);
+      console.log(`[PR-SWITCH] Created new customer ${customer.id} for source ${sourceId}`);
     }
     
-    // Store original PR session for switching back later
+    // Store original PR/user session for switching back later
     if ((req.session as any).prProfile) {
       (req.session as any).originalPrSession = {
         prProfileId: (req.session as any).prProfile.id,
@@ -1075,6 +1093,13 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       };
       // Remove active PR profile from session
       delete (req.session as any).prProfile;
+    } else if (passportUserAsPr && user) {
+      // Store passport user info for switching back
+      (req.session as any).originalPassportPrUser = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      };
     }
     
     // Set up customer session
@@ -1094,7 +1119,7 @@ router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) =>
       phone: customer.phone,
     };
     
-    console.log(`[PR-SWITCH] PR ${prProfile!.id} switched to customer ${customer.id}, stored original PR session`);
+    console.log(`[PR-SWITCH] Source ${sourceId} switched to customer ${customer.id}, stored original session`);
     
     // Save the session with customer mode activated
     req.session.save((err) => {
