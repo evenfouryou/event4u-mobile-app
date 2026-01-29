@@ -5,6 +5,7 @@ import { type Server } from "node:http";
 import express, { type Express } from "express";
 import runApp from "./app";
 import { initSiaeScheduler } from "./siae-scheduler";
+import { runIdentityUnificationMigration } from "./migrations/identity-unification";
 
 export async function serveStatic(app: Express, _server: Server) {
   const distPath = path.resolve(import.meta.dirname, "public");
@@ -26,6 +27,12 @@ export async function serveStatic(app: Express, _server: Server) {
 (async () => {
   try {
     console.log('[startup] Starting production server...');
+    
+    // Run identity unification migration (idempotent - safe to run multiple times)
+    console.log('[startup] Running identity unification migration...');
+    await runIdentityUnificationMigration();
+    console.log('[startup] Identity migration completed');
+    
     await runApp(serveStatic);
     console.log('[startup] Server started successfully');
     initSiaeScheduler();
