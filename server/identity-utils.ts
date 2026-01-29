@@ -121,3 +121,69 @@ export async function getIdentityRoles(identityId: string): Promise<{
     customer: customers[0] || null,
   };
 }
+
+// Sync personal data to identity when PR or customer is updated
+export async function syncToIdentity(identityId: string, data: {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  phonePrefix?: string;
+  gender?: string;
+  birthDate?: Date | null;
+  birthPlace?: string;
+  street?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
+  fiscalCode?: string;
+}): Promise<void> {
+  const updates: Record<string, any> = {};
+  
+  if (data.firstName) updates.firstName = data.firstName;
+  if (data.lastName) updates.lastName = data.lastName;
+  if (data.email) updates.email = data.email;
+  if (data.phone) {
+    updates.phone = data.phone;
+    updates.phoneNormalized = normalizePhone(data.phone, data.phonePrefix);
+  }
+  if (data.gender) updates.gender = data.gender;
+  if (data.birthDate !== undefined) updates.birthDate = data.birthDate;
+  if (data.birthPlace) updates.birthPlace = data.birthPlace;
+  if (data.street) updates.street = data.street;
+  if (data.city) updates.city = data.city;
+  if (data.province) updates.province = data.province;
+  if (data.postalCode) updates.postalCode = data.postalCode;
+  if (data.country) updates.country = data.country;
+  if (data.fiscalCode) updates.fiscalCode = data.fiscalCode;
+  
+  if (Object.keys(updates).length > 0) {
+    updates.updatedAt = new Date();
+    await db.update(identities)
+      .set(updates)
+      .where(eq(identities.id, identityId));
+  }
+}
+
+// Get full identity with all roles (PR profiles and customer account)
+export async function getFullIdentity(identityId: string): Promise<{
+  identity: typeof identities.$inferSelect | null;
+  prProfiles: Array<typeof prProfiles.$inferSelect>;
+  customer: typeof siaeCustomers.$inferSelect | null;
+}> {
+  const [identity] = await db.select()
+    .from(identities)
+    .where(eq(identities.id, identityId))
+    .limit(1);
+  
+  if (!identity) {
+    return { identity: null, prProfiles: [], customer: null };
+  }
+  
+  const roles = await getIdentityRoles(identityId);
+  return {
+    identity,
+    ...roles,
+  };
+}
