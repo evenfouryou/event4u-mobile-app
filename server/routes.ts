@@ -1312,12 +1312,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customer = null;
       
       if (isPhone) {
-        // Search by phone number
-        const [phoneCustomer] = await db
-          .select()
-          .from(siaeCustomers)
-          .where(eq(siaeCustomers.phone, cleanPhone));
-        customer = phoneCustomer;
+        // Search by phone number with normalization
+        // Normalize input phone: remove +, 00, leading 39
+        let normalizedPhone = cleanPhone;
+        if (normalizedPhone.startsWith('+')) {
+          normalizedPhone = normalizedPhone.substring(1);
+        }
+        if (normalizedPhone.startsWith('00')) {
+          normalizedPhone = normalizedPhone.substring(2);
+        }
+        if (normalizedPhone.startsWith('39') && normalizedPhone.length > 10) {
+          normalizedPhone = normalizedPhone.substring(2);
+        }
+        
+        console.log('[Login] Searching customer by phone, input:', cleanPhone, 'normalized:', normalizedPhone);
+        
+        // Search all customers and match with normalized phone
+        const allCustomers = await db.select().from(siaeCustomers);
+        const phoneCustomer = allCustomers.find(c => {
+          if (!c.phone) return false;
+          let dbPhone = c.phone.replace(/[\s\-()]/g, '');
+          if (dbPhone.startsWith('+')) {
+            dbPhone = dbPhone.substring(1);
+          }
+          if (dbPhone.startsWith('00')) {
+            dbPhone = dbPhone.substring(2);
+          }
+          if (dbPhone.startsWith('39') && dbPhone.length > 10) {
+            dbPhone = dbPhone.substring(2);
+          }
+          return dbPhone === normalizedPhone || dbPhone === cleanPhone || c.phone === cleanPhone;
+        });
+        customer = phoneCustomer || null;
         console.log('[Login] Customer by Phone Found:', !!customer);
       } else if (normalizedInput.includes('@')) {
         // Search by email
