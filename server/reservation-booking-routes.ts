@@ -3271,7 +3271,7 @@ router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) =>
     
     // Store original customer session for switching back
     (req.session as any).originalCustomerSession = {
-      customerId: customerSession.id,
+      customerId: customer.id,
     };
     
     // Clear customer session to prevent conflicts
@@ -3292,7 +3292,7 @@ router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) =>
         return res.status(500).json({ error: "Errore nel cambio ruolo" });
       }
       
-      console.log(`[CUSTOMER-TO-PR] Customer ${customerSession.id} switched to PR mode (PR: ${prProfile.id})`);
+      console.log(`[CUSTOMER-TO-PR] Customer ${customer.id} switched to PR mode (PR: ${prProfile.id})`);
       res.json({ 
         success: true, 
         message: "Passato a modalità PR",
