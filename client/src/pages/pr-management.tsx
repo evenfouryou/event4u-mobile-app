@@ -917,113 +917,118 @@ export default function PrManagement() {
               </div>
             )}
             
-            <Separator />
           </div>
           
-          <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit((data) => 
-              createPrMutation.mutate({
-                ...data,
-                existingUserId: selectedExistingUser?.id,
-              })
-            )} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={createForm.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Mario" {...field} data-testid="input-pr-firstname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cognome</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Rossi" {...field} data-testid="input-pr-lastname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <FormField
-                  control={createForm.control}
-                  name="phonePrefix"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prefisso</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-pr-phone-prefix">
-                            <SelectValue placeholder="+39" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {PHONE_PREFIXES.map((prefix) => (
-                            <SelectItem key={prefix.value} value={prefix.value}>
-                              {prefix.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Numero</FormLabel>
-                      <FormControl>
-                        <Input placeholder="3381234567" {...field} data-testid="input-pr-phone" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {selectedExistingUser 
-                  ? "Il cliente verrà promosso a PR con le credenziali esistenti."
-                  : "Le credenziali saranno inviate automaticamente via SMS."
-                }
-              </p>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                >
-                  Annulla
-                </Button>
-                <Button type="submit" disabled={createPrMutation.isPending} data-testid="button-submit-create-pr">
-                  {createPrMutation.isPending ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      {selectedExistingUser ? "Promuovendo..." : "Creando..."}
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      {selectedExistingUser ? "Promuovi a PR" : "Crea PR"}
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+          {/* Show form fields only in manual mode OR when a customer is selected */}
+          {(createMode === 'manual' || selectedExistingUser) && (
+            <>
+              <Separator />
+              <Form {...createForm}>
+                <form onSubmit={createForm.handleSubmit((data) => 
+                  createPrMutation.mutate({
+                    ...data,
+                    existingUserId: selectedExistingUser?.id,
+                  })
+                )} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={createForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Mario" {...field} data-testid="input-pr-firstname" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cognome</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rossi" {...field} data-testid="input-pr-lastname" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <FormField
+                      control={createForm.control}
+                      name="phonePrefix"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prefisso</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-pr-phone-prefix">
+                                <SelectValue placeholder="+39" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {PHONE_PREFIXES.map((prefix) => (
+                                <SelectItem key={prefix.value} value={prefix.value}>
+                                  {prefix.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Numero</FormLabel>
+                          <FormControl>
+                            <Input placeholder="3381234567" {...field} data-testid="input-pr-phone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedExistingUser 
+                      ? "Il cliente verrà promosso a PR con le credenziali esistenti."
+                      : "Le credenziali saranno inviate automaticamente via SMS."
+                    }
+                  </p>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      Annulla
+                    </Button>
+                    <Button type="submit" disabled={createPrMutation.isPending} data-testid="button-submit-create-pr">
+                      {createPrMutation.isPending ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                          {selectedExistingUser ? "Promuovendo..." : "Creando..."}
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          {selectedExistingUser ? "Promuovi a PR" : "Crea PR"}
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
