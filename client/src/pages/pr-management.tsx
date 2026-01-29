@@ -79,6 +79,7 @@ import {
   Trash2,
   LogIn,
   RotateCcw,
+  Check,
 } from "lucide-react";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import { Separator } from "@/components/ui/separator";
@@ -171,7 +172,7 @@ export default function PrManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPr, setSelectedPr] = useState<PrProfile | null>(null);
   const [phoneSearchQuery, setPhoneSearchQuery] = useState("");
-  const [selectedExistingUser, setSelectedExistingUser] = useState<SearchedUser | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<SearchedUser[]>([]);
   const [createMode, setCreateMode] = useState<'search' | 'manual'>('search');
 
   const canManagePr = user?.role === 'gestore' || user?.role === 'super_admin';
@@ -237,19 +238,57 @@ export default function PrManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/reservations/pr-profiles"] });
       setIsCreateDialogOpen(false);
       createForm.reset();
-      setSelectedExistingUser(null);
+      setSelectedUsers([]);
       setPhoneSearchQuery("");
       toast({
         title: "PR Creato",
-        description: selectedExistingUser 
-          ? "Il cliente è stato promosso a PR"
-          : "Il profilo PR è stato creato e le credenziali inviate via SMS",
+        description: "Il profilo PR è stato creato",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Errore",
         description: error.message || "Errore durante la creazione del PR",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for promoting multiple users to PR
+  const promoteMultipleMutation = useMutation({
+    mutationFn: async (users: SearchedUser[]) => {
+      const results = await Promise.allSettled(
+        users.map(async (u) => {
+          const response = await apiRequest("POST", "/api/reservations/pr-profiles", {
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
+            phonePrefix: u.phonePrefix || '+39',
+            phone: u.phoneWithoutPrefix || u.phone?.replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || '',
+            existingUserId: u.id,
+          });
+          return response.json();
+        })
+      );
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      return { succeeded, failed };
+    },
+    onSuccess: ({ succeeded, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations/pr-profiles"] });
+      setIsCreateDialogOpen(false);
+      setSelectedUsers([]);
+      setPhoneSearchQuery("");
+      toast({
+        title: "PR Creati",
+        description: failed > 0 
+          ? `${succeeded} PR creati, ${failed} errori`
+          : `${succeeded} clienti promossi a PR`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la promozione",
         variant: "destructive",
       });
     },
@@ -789,7 +828,7 @@ export default function PrManagement() {
       <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
         setIsCreateDialogOpen(open);
         if (!open) {
-          setSelectedExistingUser(null);
+          setSelectedUsers([]);
           setPhoneSearchQuery("");
           setCreateMode('search');
           createForm.reset();
@@ -799,7 +838,7 @@ export default function PrManagement() {
           <DialogHeader>
             <DialogTitle>Nuovo PR</DialogTitle>
             <DialogDescription>
-              Scegli come aggiungere un nuovo PR.
+              Scegli come aggiungere nuovi PR.
             </DialogDescription>
           </DialogHeader>
           
@@ -811,13 +850,13 @@ export default function PrManagement() {
                 className="flex-1"
                 onClick={() => {
                   setCreateMode('search');
-                  setSelectedExistingUser(null);
+                  setSelectedUsers([]);
                   createForm.reset();
                 }}
                 data-testid="button-mode-search"
               >
                 <Search className="h-4 w-4 mr-2" />
-                Cerca Cliente
+                Cerca Clienti
               </Button>
               <Button
                 type="button"
@@ -825,7 +864,7 @@ export default function PrManagement() {
                 className="flex-1"
                 onClick={() => {
                   setCreateMode('manual');
-                  setSelectedExistingUser(null);
+                  setSelectedUsers([]);
                   setPhoneSearchQuery("");
                   createForm.reset();
                 }}
@@ -840,7 +879,7 @@ export default function PrManagement() {
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <Search className="h-4 w-4" />
-                  Cerca cliente per telefono
+                  Cerca clienti per telefono (selezione multipla)
                 </Label>
                 <Input
                   placeholder="Inserisci numero telefono (min 5 cifre)..."
@@ -851,44 +890,42 @@ export default function PrManagement() {
                 {isSearching && (
                   <p className="text-sm text-muted-foreground">Ricerca in corso...</p>
                 )}
-                {searchedUsers.length > 0 && !selectedExistingUser && (
+                {searchedUsers.length > 0 && (
                   <div className="border rounded-md max-h-40 overflow-y-auto">
-                    {searchedUsers.map((u) => (
-                      <div
-                        key={u.id}
-                        className={`p-2 hover-elevate cursor-pointer flex items-center justify-between ${
-                          u.isAlreadyPr ? 'opacity-50' : ''
-                        }`}
-                        onClick={() => {
-                          if (!u.isAlreadyPr) {
-                            setSelectedExistingUser(u);
-                            createForm.setValue('firstName', u.firstName || '');
-                            createForm.setValue('lastName', u.lastName || '');
-                            // Use phone exactly as stored - user can edit in form if needed
-                            if (u.phonePrefix) {
-                              createForm.setValue('phonePrefix', u.phonePrefix);
+                    {searchedUsers.map((u) => {
+                      const isSelected = selectedUsers.some(s => s.id === u.id);
+                      return (
+                        <div
+                          key={u.id}
+                          className={`p-2 hover-elevate cursor-pointer flex items-center justify-between ${
+                            u.isAlreadyPr ? 'opacity-50' : ''
+                          } ${isSelected ? 'bg-primary/10' : ''}`}
+                          onClick={() => {
+                            if (!u.isAlreadyPr) {
+                              if (isSelected) {
+                                setSelectedUsers(prev => prev.filter(s => s.id !== u.id));
+                              } else {
+                                setSelectedUsers(prev => [...prev, u]);
+                              }
                             }
-                            if (u.phoneWithoutPrefix) {
-                              createForm.setValue('phone', u.phoneWithoutPrefix);
-                            } else if (u.phone) {
-                              // Fallback: show full phone in the phone field, user can adjust
-                              createForm.setValue('phone', u.phone.replace(/^\+\d{1,4}/, '').replace(/\D/g, ''));
-                            }
-                          }
-                        }}
-                        data-testid={`button-select-user-${u.id}`}
-                      >
-                        <div>
-                          <p className="font-medium">{u.firstName} {u.lastName}</p>
-                          <p className="text-sm text-muted-foreground">{u.phone}</p>
+                          }}
+                          data-testid={`button-select-user-${u.id}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                              {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                            </div>
+                            <div>
+                              <p className="font-medium">{u.firstName} {u.lastName}</p>
+                              <p className="text-sm text-muted-foreground">{u.phone}</p>
+                            </div>
+                          </div>
+                          {u.isAlreadyPr && (
+                            <Badge variant="secondary">Già PR</Badge>
+                          )}
                         </div>
-                        {u.isAlreadyPr ? (
-                          <Badge variant="secondary">Già PR</Badge>
-                        ) : (
-                          <Badge variant="outline">Seleziona</Badge>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 {phoneSearchQuery.length >= 5 && searchedUsers.length === 0 && !isSearching && (
@@ -897,30 +934,41 @@ export default function PrManagement() {
               </div>
             )}
             
-            {createMode === 'search' && selectedExistingUser && (
-              <div className="p-3 bg-primary/10 rounded-md flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">Cliente selezionato:</p>
-                  <p className="text-sm">{selectedExistingUser.firstName} {selectedExistingUser.lastName} - {selectedExistingUser.phone}</p>
+            {createMode === 'search' && selectedUsers.length > 0 && (
+              <div className="p-3 bg-primary/10 rounded-md space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-sm">Clienti selezionati: {selectedUsers.length}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedUsers([])}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Deseleziona tutti
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedExistingUser(null);
-                    createForm.reset();
-                  }}
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
+                <div className="flex flex-wrap gap-1">
+                  {selectedUsers.map(u => (
+                    <Badge key={u.id} variant="secondary" className="gap-1">
+                      {u.firstName} {u.lastName}
+                      <XCircle 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedUsers(prev => prev.filter(s => s.id !== u.id));
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
             
           </div>
           
-          {/* When customer selected from search - just show confirm button */}
-          {createMode === 'search' && selectedExistingUser && (
+          {/* When customers selected from search - show confirm button */}
+          {createMode === 'search' && selectedUsers.length > 0 && (
             <DialogFooter>
               <Button
                 type="button"
@@ -930,17 +978,11 @@ export default function PrManagement() {
                 Annulla
               </Button>
               <Button 
-                onClick={() => createPrMutation.mutate({
-                  firstName: selectedExistingUser.firstName || '',
-                  lastName: selectedExistingUser.lastName || '',
-                  phonePrefix: selectedExistingUser.phonePrefix || '+39',
-                  phone: selectedExistingUser.phoneWithoutPrefix || selectedExistingUser.phone?.replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || '',
-                  existingUserId: selectedExistingUser.id,
-                })}
-                disabled={createPrMutation.isPending} 
+                onClick={() => promoteMultipleMutation.mutate(selectedUsers)}
+                disabled={promoteMultipleMutation.isPending} 
                 data-testid="button-submit-create-pr"
               >
-                {createPrMutation.isPending ? (
+                {promoteMultipleMutation.isPending ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                     Promuovendo...
@@ -948,7 +990,7 @@ export default function PrManagement() {
                 ) : (
                   <>
                     <Plus className="h-4 w-4 mr-2" />
-                    Promuovi a PR
+                    Promuovi {selectedUsers.length} a PR
                   </>
                 )}
               </Button>
