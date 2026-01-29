@@ -176,6 +176,28 @@ export const identities = pgTable("identities", {
   province: varchar("province", { length: 5 }),
   postalCode: varchar("postal_code", { length: 10 }),
   country: varchar("country", { length: 2 }).default('IT'),
+  addressLatitude: varchar("address_latitude", { length: 20 }),
+  addressLongitude: varchar("address_longitude", { length: 20 }),
+  
+  // Fiscal data (from siae_customers)
+  fiscalCode: varchar("fiscal_code", { length: 20 }),
+  
+  // SPID authentication (from siae_customers)
+  spidCode: varchar("spid_code", { length: 100 }),
+  spidProvider: varchar("spid_provider", { length: 50 }),
+  
+  // Unified authentication
+  passwordHash: varchar("password_hash", { length: 255 }),
+  registrationIp: varchar("registration_ip", { length: 45 }),
+  
+  // Account status
+  isActive: boolean("is_active").default(true),
+  blockedUntil: timestamp("blocked_until"),
+  blockReason: text("block_reason"),
+  
+  // Password reset
+  resetPasswordToken: varchar("reset_password_token", { length: 255 }),
+  resetPasswordExpires: timestamp("reset_password_expires"),
   
   // Audit trail for merged duplicates
   mergedFromIds: text("merged_from_ids"), // JSON array of merged identity IDs
@@ -1400,7 +1422,7 @@ export const siaeSystemConfigRelations = relations(siaeSystemConfig, ({ one }) =
 // Clienti Biglietteria (Ticket Customers) - Allegato A 3.3
 export const siaeCustomers = pgTable("siae_customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  identityId: varchar("identity_id").references(() => identities.id), // Link to unified identity
+  identityId: varchar("identity_id").notNull().references(() => identities.id), // Link to unified identity (REQUIRED)
   userId: varchar("user_id").references(() => users.id), // Collegamento all'utente unificato (legacy, use identityId)
   uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(), // Codice univoco per log (NO dati anagrafici)
   email: varchar("email", { length: 255 }).notNull().unique(),
@@ -5868,7 +5890,7 @@ export type InsertRecommendationLog = z.infer<typeof insertRecommendationLogSche
 // Può aggiungere email successivamente al login
 export const prProfiles = pgTable("pr_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  identityId: varchar("identity_id").references(() => identities.id), // Link to unified identity
+  identityId: varchar("identity_id").notNull().references(() => identities.id), // Link to unified identity (REQUIRED)
   userId: varchar("user_id").references(() => users.id).unique(), // Opzionale - collegato dopo se necessario
   companyId: varchar("company_id").notNull().references(() => companies.id),
   
