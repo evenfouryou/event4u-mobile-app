@@ -71,6 +71,7 @@ interface Customer {
   lastName: string;
   email: string;
   phone: string;
+  phonePrefix?: string;
   hasPrProfile?: boolean;
   prCode?: string;
 }
@@ -490,6 +491,20 @@ export default function AccountProfile() {
               {customer?.firstName} {customer?.lastName}
             </h1>
             <p className="text-muted-foreground text-lg mt-2">{t("account.profilePage.title")}</p>
+            
+            {customer?.hasPrProfile && (
+              <HapticButton
+                type="button"
+                variant="default"
+                className="mt-4 min-h-[48px] text-base font-medium rounded-xl"
+                hapticType="medium"
+                onClick={handleSwitchToPr}
+                data-testid="button-switch-to-pr-top"
+              >
+                <ArrowRightLeft className="w-5 h-5 mr-2" />
+                Passa a Dashboard PR
+              </HapticButton>
+            )}
           </div>
         </motion.div>
 
@@ -578,7 +593,7 @@ export default function AccountProfile() {
                       <Phone className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <p className="text-lg text-foreground" data-testid="text-phone-mobile">
-                      {customer?.phone || "Non impostato"}
+                      {customer?.phone ? `${customer?.phonePrefix || '+39'} ${customer.phone}` : "Non impostato"}
                     </p>
                   </div>
                   <Button
@@ -593,32 +608,6 @@ export default function AccountProfile() {
                 </div>
               </div>
             </motion.div>
-
-            {customer?.hasPrProfile && (
-              <motion.div 
-                className="bg-card rounded-3xl p-6"
-                variants={fadeInUp}
-              >
-                <div className="flex items-center gap-4 mb-5">
-                  <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
-                    <ArrowRightLeft className="w-6 h-6 text-primary" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-foreground">Dashboard PR</h2>
-                </div>
-
-                <HapticButton
-                  type="button"
-                  variant="outline"
-                  className="w-full min-h-[52px] text-base font-medium text-primary border-primary/30 hover:bg-primary/10 rounded-xl"
-                  hapticType="medium"
-                  onClick={handleSwitchToPr}
-                  data-testid="button-switch-to-pr"
-                >
-                  <ArrowRightLeft className="w-5 h-5 mr-2" />
-                  Passa a Dashboard PR
-                </HapticButton>
-              </motion.div>
-            )}
 
             <motion.div 
               className="bg-card rounded-3xl p-6"
