@@ -69,14 +69,15 @@ export function AccountDashboard({
   const loadData = async () => {
     try {
       // Don't set loading=true initially - allows cache data to show immediately
-      const [walletData, ticketsData, prProfile] = await Promise.all([
+      const [walletData, ticketsData, prProfileCheck] = await Promise.all([
         api.getWallet().catch(() => null),
         api.getMyTickets().catch(() => ({ upcoming: [], past: [], total: 0 })),
-        api.getPrProfile().catch(() => null),
+        api.checkHasPrProfile().catch(() => ({ hasPrProfile: false, prCode: null })),
       ]);
       setWallet(walletData);
       setUpcomingTickets(ticketsData.upcoming?.slice(0, 3) || []);
-      setHasPrAccount(!!prProfile);
+      setHasPrAccount(prProfileCheck.hasPrProfile);
+      console.log('[AccountDashboard] PR profile check:', prProfileCheck);
       setShowSkeleton(false);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -212,7 +213,7 @@ export function AccountDashboard({
               testID="avatar-header"
             />
           </Pressable>
-          {onNavigatePrDashboard && (
+          {hasPrAccount && onNavigatePrDashboard && (
             <Pressable
               onPress={() => {
                 triggerHaptic('light');

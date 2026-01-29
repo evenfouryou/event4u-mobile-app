@@ -470,6 +470,18 @@ class ApiClient {
     return this.get<Wallet>('/api/public/account/wallet');
   }
 
+  async checkHasPrProfile(): Promise<{ hasPrProfile: boolean; prCode: string | null }> {
+    try {
+      return await this.get<{ hasPrProfile: boolean; prCode: string | null }>('/api/customer/has-pr-profile');
+    } catch {
+      return { hasPrProfile: false, prCode: null };
+    }
+  }
+
+  async switchToPrMode(): Promise<{ success: boolean; prCode?: string; error?: string }> {
+    return this.post('/api/customer/switch-to-pr', {});
+  }
+
   async getWalletTransactions(limit?: number): Promise<{ transactions: WalletTransaction[] }> {
     const query = limit ? `?limit=${limit}` : '';
     return this.get<{ transactions: WalletTransaction[] }>(`/api/public/account/wallet/transactions${query}`);
