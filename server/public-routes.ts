@@ -2009,6 +2009,8 @@ router.post("/api/public/customers/reset-password", async (req, res) => {
 router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
   try {
     const { phone } = req.body;
+    
+    console.log("[PUBLIC] Forgot password phone - input:", phone);
 
     if (!phone) {
       return res.status(400).json({ message: "Numero di telefono richiesto" });
@@ -2023,9 +2025,13 @@ router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
     } else if (normalizedPhone.startsWith('39') && normalizedPhone.length > 10) {
       normalizedPhone = normalizedPhone.substring(2);
     }
+    
+    console.log("[PUBLIC] Forgot password phone - normalized:", normalizedPhone);
 
     // Find customer by exact phone match (normalized)
     const customers = await db.select().from(siaeCustomers);
+    console.log("[PUBLIC] Forgot password phone - total customers:", customers.length);
+    
     const customer = customers.find(c => {
       if (!c.phone) return false;
       let cleanPhone = c.phone.replace(/\D/g, '');
@@ -2035,16 +2041,25 @@ router.post("/api/public/customers/forgot-password-phone", async (req, res) => {
       } else if (cleanPhone.startsWith('39') && cleanPhone.length > 10) {
         cleanPhone = cleanPhone.substring(2);
       }
-      return cleanPhone === normalizedPhone;
+      const isMatch = cleanPhone === normalizedPhone;
+      if (isMatch) {
+        console.log("[PUBLIC] Forgot password phone - MATCH found:", c.id, c.phone, "->", cleanPhone);
+      }
+      return isMatch;
     });
 
     // Always return success message to prevent enumeration
     const successMessage = "Se il numero è registrato, riceverai un codice OTP per reimpostare la password.";
 
     if (!customer) {
-      console.log("[PUBLIC] Phone not found for password reset:", phone);
+      console.log("[PUBLIC] Phone NOT found for password reset:", phone, "normalized:", normalizedPhone);
+      // Log some sample phones from DB for debugging (first 5 digits only)
+      const samplePhones = customers.slice(0, 5).map(c => c.phone ? c.phone.substring(0, 8) + '...' : 'null');
+      console.log("[PUBLIC] Sample phones in DB:", samplePhones);
       return res.json({ message: successMessage });
     }
+    
+    console.log("[PUBLIC] Customer found for password reset:", customer.id, "phone:", customer.phone);
 
     // Generate OTP and store it
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
