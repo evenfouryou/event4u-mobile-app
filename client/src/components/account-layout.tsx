@@ -22,7 +22,6 @@ import {
   ArrowRightLeft,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
-import { usePrAuth } from "@/hooks/usePrAuth";
 
 interface Customer {
   id: string;
@@ -174,9 +173,13 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     retry: false,
   });
 
-  // Check if user has a PR profile
-  const { prProfile } = usePrAuth();
-  const hasPrProfile = !!prProfile;
+  // Check if customer has a linked PR profile (doesn't require PR session)
+  const { data: prProfileCheck } = useQuery<{ hasPrProfile: boolean; prCode: string | null }>({
+    queryKey: ["/api/customer/has-pr-profile"],
+    retry: false,
+    enabled: !!customer,
+  });
+  const hasPrProfile = prProfileCheck?.hasPrProfile ?? false;
 
   // Check if user has an original PR session (switched from PR to customer)
   const { data: sessionInfo } = useQuery<{ hasOriginalPrSession: boolean }>({

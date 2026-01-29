@@ -2872,6 +2872,70 @@ router.get("/api/switch-role/current", requireAuth, async (req: Request, res: Re
   }
 });
 
+// Check if customer has a linked PR profile
+router.get("/api/customer/has-pr-profile", async (req: Request, res: Response) => {
+  try {
+    const customerSession = (req.session as any).customer;
+    
+    if (!customerSession?.id) {
+      return res.json({ hasPrProfile: false });
+    }
+    
+    // Get customer data
+    const [customer] = await db.select().from(siaeCustomers)
+      .where(eq(siaeCustomers.id, customerSession.id));
+    
+    if (!customer) {
+      return res.json({ hasPrProfile: false });
+    }
+    
+    // Find linked PR profile by identity_id, phone or email
+    let prProfile = null;
+    
+    // Method 0 (PRIORITY): Check by identity_id
+    if (customer.identityId) {
+      const [profileByIdentity] = await db.select().from(prProfiles)
+        .where(and(
+          eq(prProfiles.isActive, true),
+          eq(prProfiles.identityId, customer.identityId)
+        ));
+      if (profileByIdentity) prProfile = profileByIdentity;
+    }
+    
+    // Method 1: Check by phone
+    if (!prProfile && customer.phone) {
+      const [profileByPhone] = await db.select().from(prProfiles)
+        .where(and(
+          eq(prProfiles.isActive, true),
+          or(
+            eq(prProfiles.phone, customer.phone),
+            eq(prProfiles.phone, customer.phone.replace(/^\+39/, '')),
+            eq(prProfiles.phone, '+39' + customer.phone.replace(/^\+39/, ''))
+          )
+        ));
+      if (profileByPhone) prProfile = profileByPhone;
+    }
+    
+    // Method 2: Check by email
+    if (!prProfile && customer.email) {
+      const [profileByEmail] = await db.select().from(prProfiles)
+        .where(and(
+          eq(prProfiles.isActive, true),
+          eq(prProfiles.email, customer.email)
+        ));
+      if (profileByEmail) prProfile = profileByEmail;
+    }
+    
+    res.json({ 
+      hasPrProfile: !!prProfile,
+      prCode: prProfile?.prCode || null,
+    });
+  } catch (error: any) {
+    console.error("Error checking PR profile:", error);
+    res.json({ hasPrProfile: false });
+  }
+});
+
 // Switch from Customer to PR mode - for customers with linked PR profiles
 router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) => {
   try {
