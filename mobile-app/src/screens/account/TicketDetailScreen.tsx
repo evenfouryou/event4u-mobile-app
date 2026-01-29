@@ -7,6 +7,7 @@ import { colors as staticColors, spacing, typography, borderRadius } from '@/lib
 import { Button } from '@/components/Button';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
+import { QRCode } from '@/components/QRCode';
 import { triggerHaptic } from '@/lib/haptics';
 import api, { Ticket as ApiTicket } from '@/lib/api';
 
@@ -67,6 +68,7 @@ export function TicketDetailScreen({
   const ticket = ticketData ? {
     id: ticketData.id,
     ticketCode: ticketData.ticketCode || 'N/A',
+    qrCode: ticketData.qrCode || ticketData.ticketCode || null,
     eventName: ticketData.eventName || 'Evento',
     eventDate: ticketData.eventStart ? new Date(ticketData.eventStart) : new Date(),
     eventEnd: ticketData.eventEnd ? new Date(ticketData.eventEnd) : new Date(),
@@ -255,10 +257,9 @@ export function TicketDetailScreen({
                 <View style={styles.flipContainer}>
                   {!isFlipped ? (
                     <View style={styles.qrWrapper}>
-                      <Image
-                        source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.ticketCode)}&bgcolor=FFFFFF&color=000000` }}
-                        style={styles.qrImage}
-                        resizeMode="contain"
+                      <QRCode
+                        value={ticket.qrCode}
+                        size={180}
                         testID="image-qr-code"
                       />
                     </View>
