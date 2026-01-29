@@ -96,6 +96,7 @@ import {
   type InsertSiaeCustomerWallet,
   type SiaeWalletTransaction,
   type InsertSiaeWalletTransaction,
+  identities,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, lt, gt, isNull, count, inArray } from "drizzle-orm";
@@ -659,7 +660,80 @@ export class SiaeStorage implements ISiaeStorage {
   }
   
   async createSiaeCustomer(customer: InsertSiaeCustomer): Promise<SiaeCustomer> {
-    const [created] = await db.insert(siaeCustomers).values(customer).returning();
+    // Helper function to normalize phone numbers
+    const normalizePhone = (phone: string | null | undefined): string | null => {
+      if (!phone) return null;
+      let p = phone.replace(/[^0-9+]/g, '');
+      p = p.replace(/^00/, '+');
+      if (p.startsWith('39') && !p.startsWith('+')) p = '+' + p;
+      if (!p.startsWith('+') && p.length >= 9 && p.length <= 10) p = '+39' + p;
+      return p.length >= 10 ? p : null;
+    };
+
+    const normalizedPhone = normalizePhone(customer.phone);
+
+    // Step 1: Check for existing identity by normalized phone
+    if (normalizedPhone) {
+      const [existingIdentity] = await db.select()
+        .from(identities)
+        .where(eq(identities.phoneNormalized, normalizedPhone))
+        .limit(1);
+
+      if (existingIdentity) {
+        // Step 2: Check for existing customer with this identity_id
+        const [existingCustomer] = await db.select()
+          .from(siaeCustomers)
+          .where(eq(siaeCustomers.identityId, existingIdentity.id))
+          .limit(1);
+
+        if (existingCustomer) {
+          console.log(`[SIAE-CUSTOMER] Reusing existing customer ${existingCustomer.id} linked to identity ${existingIdentity.id} (phone: ${normalizedPhone})`);
+          return existingCustomer;
+        }
+
+        // Step 3: Identity exists but no customer - create customer linked to identity
+        console.log(`[SIAE-CUSTOMER] Creating new customer linked to existing identity ${existingIdentity.id} (phone: ${normalizedPhone})`);
+        const [created] = await db.insert(siaeCustomers).values({
+          ...customer,
+          identityId: existingIdentity.id,
+        }).returning();
+        return created;
+      }
+    }
+
+    // Step 4: No identity exists - create both identity and customer
+    let identityId: string | undefined;
+    if (normalizedPhone && customer.firstName && customer.lastName) {
+      try {
+        const [newIdentity] = await db.insert(identities).values({
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          phoneNormalized: normalizedPhone,
+          phoneVerified: customer.phoneVerified || false,
+          emailVerified: customer.emailVerified || false,
+          gender: customer.gender,
+          birthDate: customer.birthDate,
+          birthPlace: customer.birthPlace,
+          street: customer.street,
+          city: customer.city,
+          province: customer.province,
+          postalCode: customer.postalCode,
+          country: customer.country || 'IT',
+        }).returning();
+        identityId = newIdentity.id;
+        console.log(`[SIAE-CUSTOMER] Created new identity ${identityId} for phone ${normalizedPhone}`);
+      } catch (err) {
+        console.log(`[SIAE-CUSTOMER] Could not create identity (may already exist): ${err}`);
+      }
+    }
+
+    const [created] = await db.insert(siaeCustomers).values({
+      ...customer,
+      ...(identityId && { identityId }),
+    }).returning();
+    console.log(`[SIAE-CUSTOMER] Created new customer ${created.id}${identityId ? ` linked to identity ${identityId}` : ''}`);
     return created;
   }
   
