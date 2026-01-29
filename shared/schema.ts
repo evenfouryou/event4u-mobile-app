@@ -280,7 +280,8 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   identityId: varchar("identity_id").references(() => identities.id), // Link to unified identity
   email: varchar("email").unique(),
-  phone: varchar("phone", { length: 20 }), // For PR OTP login
+  phonePrefix: varchar("phone_prefix", { length: 6 }).default('+39'), // Prefisso internazionale
+  phone: varchar("phone", { length: 20 }), // Numero senza prefisso (For PR OTP login)
   passwordHash: varchar("password_hash"), // For classic email/password registration (optional - null for Replit Auth users)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -1481,7 +1482,8 @@ export const siaeCustomers = pgTable("siae_customers", {
   userId: varchar("user_id").references(() => users.id), // Collegamento all'utente unificato (legacy, use identityId)
   uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(), // Codice univoco per log (NO dati anagrafici)
   email: varchar("email", { length: 255 }).notNull().unique(),
-  phone: varchar("phone", { length: 20 }).notNull().unique(), // Con prefisso internazionale
+  phonePrefix: varchar("phone_prefix", { length: 6 }).notNull().default('+39'), // Prefisso internazionale
+  phone: varchar("phone", { length: 20 }).notNull().unique(), // Numero senza prefisso
   passwordHash: varchar("password_hash", { length: 255 }),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
