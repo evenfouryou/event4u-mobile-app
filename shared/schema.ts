@@ -146,10 +146,62 @@ export type InsertRegion = z.infer<typeof insertRegionSchema>;
 export type InsertProvince = z.infer<typeof insertProvinceSchema>;
 export type InsertCity = z.infer<typeof insertCitySchema>;
 
+// ============================================
+// IDENTITIES TABLE - Central unified identity
+// ============================================
+// This table serves as the canonical source of person data.
+// Users, PR profiles, and SIAE customers all link to this table.
+export const identities = pgTable("identities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Core identity data
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  
+  // Contact - used for matching/deduplication
+  email: varchar("email", { length: 255 }),
+  emailVerified: boolean("email_verified").default(false),
+  phone: varchar("phone", { length: 30 }), // Original format
+  phoneNormalized: varchar("phone_normalized", { length: 20 }), // E.164 format (+39XXXXXXXXXX)
+  phoneVerified: boolean("phone_verified").default(false),
+  
+  // Personal data (for SIAE compliance)
+  gender: varchar("gender", { length: 1 }), // 'M' or 'F'
+  birthDate: timestamp("birth_date"),
+  birthPlace: varchar("birth_place", { length: 255 }),
+  
+  // Address
+  street: varchar("street", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  province: varchar("province", { length: 5 }),
+  postalCode: varchar("postal_code", { length: 10 }),
+  country: varchar("country", { length: 2 }).default('IT'),
+  
+  // Audit trail for merged duplicates
+  mergedFromIds: text("merged_from_ids"), // JSON array of merged identity IDs
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_identities_phone_normalized").on(table.phoneNormalized),
+  index("idx_identities_email").on(table.email),
+]);
+
+export const insertIdentitySchema = createInsertSchema(identities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIdentity = z.infer<typeof insertIdentitySchema>;
+export type Identity = typeof identities.$inferSelect;
+
 // Users table - Required for Replit Auth + Extended for Event4U roles
 // Roles: super_admin, gestore, gestore_covisione, capo_staff, pr, warehouse, bartender, cassiere, cliente
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  identityId: varchar("identity_id").references(() => identities.id), // Link to unified identity
   email: varchar("email").unique(),
   phone: varchar("phone", { length: 20 }), // For PR OTP login
   passwordHash: varchar("password_hash"), // For classic email/password registration (optional - null for Replit Auth users)
@@ -1348,7 +1400,8 @@ export const siaeSystemConfigRelations = relations(siaeSystemConfig, ({ one }) =
 // Clienti Biglietteria (Ticket Customers) - Allegato A 3.3
 export const siaeCustomers = pgTable("siae_customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id), // Collegamento all'utente unificato
+  identityId: varchar("identity_id").references(() => identities.id), // Link to unified identity
+  userId: varchar("user_id").references(() => users.id), // Collegamento all'utente unificato (legacy, use identityId)
   uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(), // Codice univoco per log (NO dati anagrafici)
   email: varchar("email", { length: 255 }).notNull().unique(),
   phone: varchar("phone", { length: 20 }).notNull().unique(), // Con prefisso internazionale
@@ -5815,6 +5868,7 @@ export type InsertRecommendationLog = z.infer<typeof insertRecommendationLogSche
 // Può aggiungere email successivamente al login
 export const prProfiles = pgTable("pr_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  identityId: varchar("identity_id").references(() => identities.id), // Link to unified identity
   userId: varchar("user_id").references(() => users.id).unique(), // Opzionale - collegato dopo se necessario
   companyId: varchar("company_id").notNull().references(() => companies.id),
   
