@@ -10,6 +10,7 @@ import {
   prOtpAttempts,
   users,
   siaeCustomers,
+  identities,
   type EventStaffAssignment,
   type InsertEventStaffAssignment,
   type EventFloorplan,
@@ -611,37 +612,48 @@ export class PrStorage implements IPrStorage {
   async createGuestListEntry(entry: Omit<InsertGuestListEntry, 'qrCode'>): Promise<GuestListEntry> {
     const qrCode = generateQrCode('LST');
     
-    // Try to match phone number with registered customers
+    // Try to match phone number with registered customers via identities table
     let customerId: string | undefined = undefined;
     if (entry.phone) {
-      const phoneVariants = getPhoneVariants(entry.phone);
-      console.log(`[PR-Storage] Matching phone variants for ${entry.phone}:`, phoneVariants);
+      const normalizedInput = normalizePhone(entry.phone);
+      console.log(`[PR-Storage] Searching for identity with normalized phone: ${normalizedInput}`);
       
-      // Search for customer with matching phone
-      for (const variant of phoneVariants) {
-        const [customer] = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
+      // Search identities table by phoneNormalized (E.164 format)
+      const [identity] = await db.select({ id: identities.id, phoneNormalized: identities.phoneNormalized })
+        .from(identities)
+        .where(eq(identities.phoneNormalized, normalizedInput))
+        .limit(1);
+      
+      if (identity) {
+        console.log(`[PR-Storage] Found identity ${identity.id} with phone ${identity.phoneNormalized}`);
+        
+        // Now search for siaeCustomer linked to this identity
+        const [customer] = await db.select({ id: siaeCustomers.id })
           .from(siaeCustomers)
-          .where(eq(siaeCustomers.phone, variant))
+          .where(eq(siaeCustomers.identityId, identity.id))
           .limit(1);
         
         if (customer) {
           customerId = customer.id;
-          console.log(`[PR-Storage] Matched customer ${customerId} with phone ${customer.phone}`);
-          break;
+          console.log(`[PR-Storage] Matched siaeCustomer ${customerId} via identity ${identity.id}`);
         }
-      }
-      
-      // Also try normalized matching
-      if (!customerId) {
-        const normalizedInput = normalizePhone(entry.phone);
-        const allCustomers = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
-          .from(siaeCustomers)
-          .where(sql`${siaeCustomers.phone} IS NOT NULL`);
+      } else {
+        console.log(`[PR-Storage] No identity found for phone ${normalizedInput}`);
         
-        for (const customer of allCustomers) {
-          if (customer.phone && normalizePhone(customer.phone) === normalizedInput) {
+        // Fallback: Try to match phone number directly with customers (for backward compatibility)
+        const phoneVariants = getPhoneVariants(entry.phone);
+        console.log(`[PR-Storage] Trying fallback matching with phone variants:`, phoneVariants);
+        
+        // Search for customer with matching phone
+        for (const variant of phoneVariants) {
+          const [customer] = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
+            .from(siaeCustomers)
+            .where(eq(siaeCustomers.phone, variant))
+            .limit(1);
+          
+          if (customer) {
             customerId = customer.id;
-            console.log(`[PR-Storage] Matched customer ${customerId} via normalized phone`);
+            console.log(`[PR-Storage] Matched customer ${customerId} via fallback with phone ${customer.phone}`);
             break;
           }
         }
@@ -666,28 +678,69 @@ export class PrStorage implements IPrStorage {
   async createGuestListEntriesBatch(entries: Omit<InsertGuestListEntry, 'qrCode'>[]): Promise<GuestListEntry[]> {
     if (entries.length === 0) return [];
     
-    // Preload all customers for phone matching (more efficient for batch)
-    const allCustomers = await db.select({ id: siaeCustomers.id, phone: siaeCustomers.phone })
+    // Preload all identities and siaeCustomers for efficient batch processing
+    const allIdentities = await db.select({ 
+      id: identities.id, 
+      phoneNormalized: identities.phoneNormalized 
+    })
+      .from(identities)
+      .where(sql`${identities.phoneNormalized} IS NOT NULL`);
+    
+    const allCustomers = await db.select({ 
+      id: siaeCustomers.id, 
+      identityId: siaeCustomers.identityId, 
+      phone: siaeCustomers.phone 
+    })
       .from(siaeCustomers)
       .where(sql`${siaeCustomers.phone} IS NOT NULL`);
+    
+    // Create map for faster lookups: identityId -> customerId
+    const identityToCustomer = new Map<string, string>();
+    for (const customer of allCustomers) {
+      if (customer.identityId) {
+        identityToCustomer.set(customer.identityId, customer.id);
+      }
+    }
+    
+    // Create map for identities by normalized phone
+    const phoneToIdentity = new Map<string, string>();
+    for (const identity of allIdentities) {
+      if (identity.phoneNormalized) {
+        phoneToIdentity.set(identity.phoneNormalized, identity.id);
+      }
+    }
     
     const withQrAndCustomer = entries.map(e => {
       let customerId: string | undefined = undefined;
       
       if (e.phone) {
-        const phoneVariants = getPhoneVariants(e.phone);
         const normalizedInput = normalizePhone(e.phone);
+        console.log(`[PR-Storage Batch] Searching for ${e.firstName} ${e.lastName} with normalized phone: ${normalizedInput}`);
         
-        // Try to match with registered customers
-        for (const customer of allCustomers) {
-          if (!customer.phone) continue;
+        // First try: search via identities table using normalized phone
+        const identityId = phoneToIdentity.get(normalizedInput);
+        if (identityId) {
+          const customerIdFromIdentity = identityToCustomer.get(identityId);
+          if (customerIdFromIdentity) {
+            customerId = customerIdFromIdentity;
+            console.log(`[PR-Storage Batch] Matched ${e.firstName} ${e.lastName} via identity ${identityId} to customer ${customerId}`);
+          }
+        } else {
+          console.log(`[PR-Storage Batch] No identity found for ${e.firstName} ${e.lastName} with phone ${normalizedInput}`);
           
-          // Check if any variant matches
-          if (phoneVariants.includes(customer.phone) || 
-              normalizePhone(customer.phone) === normalizedInput) {
-            customerId = customer.id;
-            console.log(`[PR-Storage Batch] Matched ${e.firstName} ${e.lastName} phone ${e.phone} to customer ${customerId}`);
-            break;
+          // Fallback: Try to match with customers directly (for backward compatibility)
+          const phoneVariants = getPhoneVariants(e.phone);
+          
+          for (const customer of allCustomers) {
+            if (!customer.phone) continue;
+            
+            // Check if any variant matches
+            if (phoneVariants.includes(customer.phone) || 
+                normalizePhone(customer.phone) === normalizedInput) {
+              customerId = customer.id;
+              console.log(`[PR-Storage Batch] Matched ${e.firstName} ${e.lastName} via fallback to customer ${customerId}`);
+              break;
+            }
           }
         }
       }

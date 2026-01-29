@@ -49,6 +49,7 @@ import {
   seatHolds,
   eventSeatStatus,
   eventCategories,
+  identities,
 } from "@shared/schema";
 import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull, not } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -82,6 +83,17 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // ==================== HELPER FUNCTIONS ====================
+
+// Normalizza numero di telefono in formato E.164 (+39XXXXXXXXXX)
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let normalized = phone.replace(/[^\d+]/g, '');
+  if (normalized.startsWith('0039')) normalized = '+39' + normalized.slice(4);
+  if (normalized.startsWith('39') && !normalized.startsWith('+')) normalized = '+' + normalized;
+  if (!normalized.startsWith('+')) normalized = '+39' + normalized;
+  if (normalized.startsWith('+390')) normalized = '+39' + normalized.slice(4);
+  return normalized.length >= 10 ? normalized : null;
+}
 
 // Genera session ID per carrello (cookie-based)
 function generateSessionId(): string {
@@ -1594,38 +1606,107 @@ router.post("/api/public/customers/register", async (req, res) => {
   try {
     const data = customerRegisterSchema.parse(req.body);
     
-    // Normalizza email (minuscole e trim)
+    // Normalizza email e telefono
     const normalizedEmail = data.email.toLowerCase().trim();
+    const normalizedPhoneInput = data.phone;
+    const phoneNormalized = normalizePhone(normalizedPhoneInput);
 
-    // Controlla se email o telefono già esistono
-    const [existing] = await db
-      .select()
-      .from(siaeCustomers)
-      .where(eq(siaeCustomers.email, normalizedEmail));
-
-    if (existing) {
-      return res.status(400).json({ message: "Email già registrata" });
+    if (!phoneNormalized) {
+      return res.status(400).json({ message: "Numero di telefono non valido" });
     }
 
-    const [existingPhone] = await db
+    // Cerca o crea identity
+    // Cerca prima per email, poi per telefono normalizzato
+    const existingByEmail = await db
+      .select()
+      .from(identities)
+      .where(eq(identities.email, normalizedEmail))
+      .limit(1);
+
+    const existingByPhone = await db
+      .select()
+      .from(identities)
+      .where(eq(identities.phoneNormalized, phoneNormalized))
+      .limit(1);
+
+    let identity;
+    if (existingByEmail.length > 0) {
+      // Usa l'identity esistente trovata per email
+      identity = existingByEmail[0];
+      
+      // Se il nuovo telefono è diverso e già registrato, rifiuta
+      if (existingByPhone.length > 0 && existingByPhone[0].id !== identity.id) {
+        return res.status(400).json({ message: "Telefono già registrato con un'altra identità" });
+      }
+      
+      // Aggiorna il telefono nell'identity se diverso
+      if (identity.phoneNormalized !== phoneNormalized) {
+        const [updated] = await db
+          .update(identities)
+          .set({ phoneNormalized })
+          .where(eq(identities.id, identity.id))
+          .returning();
+        identity = updated;
+      }
+    } else if (existingByPhone.length > 0) {
+      // Usa l'identity esistente trovata per telefono
+      identity = existingByPhone[0];
+      
+      // Aggiorna l'email nell'identity se diverso
+      if (identity.email !== normalizedEmail) {
+        const [updated] = await db
+          .update(identities)
+          .set({ email: normalizedEmail })
+          .where(eq(identities.id, identity.id))
+          .returning();
+        identity = updated;
+      }
+    } else {
+      // Crea una nuova identity
+      const [newIdentity] = await db
+        .insert(identities)
+        .values({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: normalizedEmail,
+          emailVerified: false,
+          phone: normalizedPhoneInput,
+          phoneNormalized: phoneNormalized,
+          phoneVerified: false,
+          gender: data.gender || null,
+          birthDate: data.birthDate && data.birthDate.length > 0 ? new Date(data.birthDate) : null,
+          birthPlace: null,
+          street: data.street?.trim() || null,
+          city: data.city?.trim() || null,
+          province: data.province?.trim().toUpperCase() || null,
+          postalCode: data.postalCode?.trim() || null,
+          country: 'IT',
+        })
+        .returning();
+      identity = newIdentity;
+    }
+
+    // Controlla se cliente con questa identity già esiste
+    const [existingCustomer] = await db
       .select()
       .from(siaeCustomers)
-      .where(eq(siaeCustomers.phone, data.phone));
+      .where(eq(siaeCustomers.email, normalizedEmail))
+      .limit(1);
 
-    if (existingPhone) {
-      return res.status(400).json({ message: "Telefono già registrato" });
+    if (existingCustomer) {
+      return res.status(400).json({ message: "Email già registrata come cliente" });
     }
 
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    // Crea cliente
+    // Crea cliente collegato all'identity
     const [customer] = await db
       .insert(siaeCustomers)
       .values({
         uniqueCode: generateCustomerCode(),
         email: normalizedEmail,
-        phone: data.phone.startsWith("+") ? data.phone : `+39${data.phone}`,
+        phone: phoneNormalized,
         firstName: data.firstName,
         lastName: data.lastName,
         passwordHash,
@@ -1671,6 +1752,7 @@ router.post("/api/public/customers/register", async (req, res) => {
       
       res.json({
         customerId: customer.id,
+        identityId: identity.id,
         message: "Registrazione avviata. Inserisci il codice OTP ricevuto via SMS.",
         provider: "msg91"
       });
@@ -1691,6 +1773,7 @@ router.post("/api/public/customers/register", async (req, res) => {
 
       res.json({
         customerId: customer.id,
+        identityId: identity.id,
         message: "Registrazione avviata. Inserisci il codice OTP ricevuto via SMS.",
         provider: "local"
       });

@@ -9,6 +9,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import viteConfig from "../vite.config";
 import runApp from "./app";
 import { initSiaeScheduler } from "./siae-scheduler";
+import { runIdentityUnificationMigration } from "./migrations/identity-unification";
 
 export async function setupVite(app: Express, server: Server) {
   const viteLogger = createLogger();
@@ -61,5 +62,13 @@ export async function setupVite(app: Express, server: Server) {
 
 (async () => {
   await runApp(setupVite);
+  
+  // Run identity unification migration (idempotent - safe to run multiple times)
+  try {
+    await runIdentityUnificationMigration();
+  } catch (err) {
+    console.error('[STARTUP] Identity migration failed (non-fatal):', err);
+  }
+  
   initSiaeScheduler();
 })();
