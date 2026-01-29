@@ -3080,21 +3080,38 @@ router.get("/api/customer/has-pr-profile", async (req: Request, res: Response) =
           eq(prProfiles.isActive, true),
           eq(prProfiles.identityId, customer.identityId)
         ));
-      if (profileByIdentity) prProfile = profileByIdentity;
+      if (profileByIdentity) {
+        prProfile = profileByIdentity;
+        console.log(`[HAS-PR-PROFILE] Found PR by identity_id: ${customer.identityId}`);
+      }
     }
     
-    // Method 1: Check by phone
+    // Method 1: Check by phone (with robust normalization)
     if (!prProfile && customer.phone) {
+      // Normalize phone: extract only digits, remove leading 39 if present
+      const customerPhoneDigits = customer.phone.replace(/\D/g, '');
+      const customerPhoneBase = customerPhoneDigits.startsWith('39') && customerPhoneDigits.length > 10 
+        ? customerPhoneDigits.slice(2) 
+        : customerPhoneDigits;
+      
+      // Also include prefix+phone combination
+      const fullPhone = (customer.phonePrefix || '+39') + customer.phone;
+      
       const [profileByPhone] = await db.select().from(prProfiles)
         .where(and(
           eq(prProfiles.isActive, true),
           or(
             eq(prProfiles.phone, customer.phone),
-            eq(prProfiles.phone, customer.phone.replace(/^\+39/, '')),
-            eq(prProfiles.phone, '+39' + customer.phone.replace(/^\+39/, ''))
+            eq(prProfiles.phone, customerPhoneBase),
+            eq(prProfiles.phone, fullPhone),
+            // Compare normalized: extract last 9-10 digits
+            sql`REPLACE(REPLACE(REPLACE(${prProfiles.phone}, '+', ''), ' ', ''), '-', '') LIKE ${'%' + customerPhoneBase.slice(-9)}`
           )
         ));
-      if (profileByPhone) prProfile = profileByPhone;
+      if (profileByPhone) {
+        prProfile = profileByPhone;
+        console.log(`[HAS-PR-PROFILE] Found PR by phone: customer=${customer.phone}, pr=${profileByPhone.phone}`);
+      }
     }
     
     // Method 2: Check by email
@@ -3102,9 +3119,12 @@ router.get("/api/customer/has-pr-profile", async (req: Request, res: Response) =
       const [profileByEmail] = await db.select().from(prProfiles)
         .where(and(
           eq(prProfiles.isActive, true),
-          eq(prProfiles.email, customer.email)
+          sql`LOWER(${prProfiles.email}) = LOWER(${customer.email})`
         ));
-      if (profileByEmail) prProfile = profileByEmail;
+      if (profileByEmail) {
+        prProfile = profileByEmail;
+        console.log(`[HAS-PR-PROFILE] Found PR by email: ${customer.email}`);
+      }
     }
     
     res.json({ 
@@ -3150,31 +3170,45 @@ router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) =>
       }
     }
     
-    // Method 1: Check by phone
+    // Method 1: Check by phone (with robust normalization)
     if (!prProfile && customer.phone) {
+      const customerPhoneDigits = customer.phone.replace(/\D/g, '');
+      const customerPhoneBase = customerPhoneDigits.startsWith('39') && customerPhoneDigits.length > 10 
+        ? customerPhoneDigits.slice(2) 
+        : customerPhoneDigits;
+      const fullPhone = (customer.phonePrefix || '+39') + customer.phone;
+      
       const [profileByPhone] = await db.select().from(prProfiles)
         .where(and(
           eq(prProfiles.isActive, true),
           or(
             eq(prProfiles.phone, customer.phone),
-            eq(prProfiles.phone, customer.phone.replace(/^\+39/, '')),
-            eq(prProfiles.phone, '+39' + customer.phone.replace(/^\+39/, ''))
+            eq(prProfiles.phone, customerPhoneBase),
+            eq(prProfiles.phone, fullPhone),
+            sql`REPLACE(REPLACE(REPLACE(${prProfiles.phone}, '+', ''), ' ', ''), '-', '') LIKE ${'%' + customerPhoneBase.slice(-9)}`
           )
         ));
-      if (profileByPhone) prProfile = profileByPhone;
+      if (profileByPhone) {
+        prProfile = profileByPhone;
+        console.log(`[CUSTOMER-TO-PR] Found PR by phone: customer=${customer.phone}, pr=${profileByPhone.phone}`);
+      }
     }
     
-    // Method 2: Check by email
+    // Method 2: Check by email (case-insensitive)
     if (!prProfile && customer.email) {
       const [profileByEmail] = await db.select().from(prProfiles)
         .where(and(
           eq(prProfiles.isActive, true),
-          eq(prProfiles.email, customer.email)
+          sql`LOWER(${prProfiles.email}) = LOWER(${customer.email})`
         ));
-      if (profileByEmail) prProfile = profileByEmail;
+      if (profileByEmail) {
+        prProfile = profileByEmail;
+        console.log(`[CUSTOMER-TO-PR] Found PR by email: ${customer.email}`);
+      }
     }
     
     if (!prProfile) {
+      console.log(`[CUSTOMER-TO-PR] No PR profile found for customer ${customer.id} (phone=${customer.phone}, email=${customer.email}, identityId=${customer.identityId})`);
       return res.status(404).json({ error: "Nessun profilo PR collegato trovato" });
     }
     
