@@ -2,7 +2,7 @@
 // NOTA LEGALE: Questo è un "servizio di prenotazione", NON biglietteria SIAE
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, lte, sum, or } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, sum, or, gt } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import QRCode from "qrcode";
@@ -23,6 +23,7 @@ import {
   userCompanyRoles,
   siaeCustomers,
   identities,
+  publicCustomerSessions,
   insertPrProfileSchema,
   updatePrProfileSchema,
   createPrByGestoreSchema,
@@ -3056,15 +3057,43 @@ router.get("/api/switch-role/current", requireAuth, async (req: Request, res: Re
 // Check if customer has a linked PR profile
 router.get("/api/customer/has-pr-profile", async (req: Request, res: Response) => {
   try {
-    const customerSession = (req.session as any).customer;
+    let customer = null;
     
-    if (!customerSession?.id) {
-      return res.json({ hasPrProfile: false });
+    // Method 1: Check Express session (for PR-to-customer switch)
+    const customerSession = (req.session as any).customer;
+    if (customerSession?.id) {
+      const [c] = await db.select().from(siaeCustomers)
+        .where(eq(siaeCustomers.id, customerSession.id));
+      customer = c;
     }
     
-    // Get customer data
-    const [customer] = await db.select().from(siaeCustomers)
-      .where(eq(siaeCustomers.id, customerSession.id));
+    // Method 2: Check Bearer token (for web login via OTP)
+    if (!customer) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.substring(7);
+        const [session] = await db.select().from(publicCustomerSessions)
+          .where(and(
+            eq(publicCustomerSessions.sessionToken, token),
+            gt(publicCustomerSessions.expiresAt, new Date())
+          ));
+        if (session) {
+          const [c] = await db.select().from(siaeCustomers)
+            .where(eq(siaeCustomers.id, session.customerId));
+          customer = c;
+        }
+      }
+    }
+    
+    // Method 3: Check Passport session (for unified login)
+    if (!customer && (req as any).user && (req as any).isAuthenticated?.()) {
+      const user = (req as any).user;
+      if (user.accountType === 'customer' && user.customerId) {
+        const [c] = await db.select().from(siaeCustomers)
+          .where(eq(siaeCustomers.id, user.customerId));
+        customer = c;
+      }
+    }
     
     if (!customer) {
       return res.json({ hasPrProfile: false });
@@ -3140,18 +3169,46 @@ router.get("/api/customer/has-pr-profile", async (req: Request, res: Response) =
 // Switch from Customer to PR mode - for customers with linked PR profiles
 router.post("/api/customer/switch-to-pr", async (req: Request, res: Response) => {
   try {
-    const customerSession = (req.session as any).customer;
+    let customer = null;
     
-    if (!customerSession?.id) {
-      return res.status(401).json({ error: "Non autenticato come cliente" });
+    // Method 1: Check Express session (for PR-to-customer switch)
+    const customerSession = (req.session as any).customer;
+    if (customerSession?.id) {
+      const [c] = await db.select().from(siaeCustomers)
+        .where(eq(siaeCustomers.id, customerSession.id));
+      customer = c;
     }
     
-    // Get customer data
-    const [customer] = await db.select().from(siaeCustomers)
-      .where(eq(siaeCustomers.id, customerSession.id));
+    // Method 2: Check Bearer token (for web login via OTP)
+    if (!customer) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.substring(7);
+        const [session] = await db.select().from(publicCustomerSessions)
+          .where(and(
+            eq(publicCustomerSessions.sessionToken, token),
+            gt(publicCustomerSessions.expiresAt, new Date())
+          ));
+        if (session) {
+          const [c] = await db.select().from(siaeCustomers)
+            .where(eq(siaeCustomers.id, session.customerId));
+          customer = c;
+        }
+      }
+    }
+    
+    // Method 3: Check Passport session (for unified login)
+    if (!customer && (req as any).user && (req as any).isAuthenticated?.()) {
+      const user = (req as any).user;
+      if (user.accountType === 'customer' && user.customerId) {
+        const [c] = await db.select().from(siaeCustomers)
+          .where(eq(siaeCustomers.id, user.customerId));
+        customer = c;
+      }
+    }
     
     if (!customer) {
-      return res.status(404).json({ error: "Cliente non trovato" });
+      return res.status(401).json({ error: "Non autenticato come cliente" });
     }
     
     // Find linked PR profile by identity_id, phone or email
