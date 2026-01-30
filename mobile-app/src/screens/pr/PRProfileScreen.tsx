@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
@@ -349,7 +349,10 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
         animationType="slide"
         onRequestClose={() => setShowPhoneModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={[styles.modalContent, { backgroundColor: staticColors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: staticColors.foreground }]}>
@@ -433,7 +436,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
               </>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
