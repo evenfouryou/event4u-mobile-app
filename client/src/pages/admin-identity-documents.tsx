@@ -101,6 +101,8 @@ interface Settings {
   acceptedDocumentTypes: string;
   blockOnExpiredDocument: boolean;
   expiryWarningDays: number;
+  verificationDeadlineDays: number;
+  blockOnVerificationDeadline: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -201,6 +203,31 @@ export default function AdminIdentityDocuments() {
     onSuccess: () => {
       refetchSettings();
       toast({ title: "Impostazioni salvate" });
+    },
+  });
+
+  const verifySelfiemutatation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/identity-documents/${id}/verify-selfie`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/identity-documents"] });
+      if (data.result?.match) {
+        toast({ 
+          title: "Verifica selfie completata", 
+          description: `Match: ${data.result.match ? "Sì" : "No"} - Confidenza: ${Math.round(data.result.confidence * 100)}%` 
+        });
+      } else {
+        toast({ 
+          title: "Verifica selfie completata", 
+          description: `Nessuna corrispondenza trovata`, 
+          variant: "destructive" 
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore verifica selfie", description: error.message, variant: "destructive" });
     },
   });
 
@@ -541,6 +568,45 @@ export default function AdminIdentityDocuments() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Scadenza Verifica
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Blocca profilo dopo scadenza</p>
+                  <p className="text-sm text-muted-foreground">
+                    Blocca automaticamente l'account se la verifica non viene completata entro la scadenza
+                  </p>
+                </div>
+                <Switch
+                  checked={settings?.blockOnVerificationDeadline ?? true}
+                  onCheckedChange={(checked) => updateSettingsMutation.mutate({ blockOnVerificationDeadline: checked })}
+                  data-testid="switch-block-on-deadline"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Giorni per completare la verifica</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={settings?.verificationDeadlineDays ?? 15}
+                  onChange={(e) => updateSettingsMutation.mutate({ verificationDeadlineDays: parseInt(e.target.value) })}
+                  data-testid="input-verification-deadline-days"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Numero di giorni dalla registrazione entro cui l'utente deve completare la verifica (default: 15 giorni)
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -673,6 +739,17 @@ export default function AdminIdentityDocuments() {
 
               {selectedDoc.verificationStatus === "pending" || selectedDoc.verificationStatus === "under_review" ? (
                 <DialogFooter className="gap-2">
+                  {selectedDoc.selfieImageUrl && (
+                    <Button
+                      variant="outline"
+                      onClick={() => verifySelfiemutatation.mutate(selectedDoc.id)}
+                      disabled={verifySelfiemutatation.isPending}
+                      data-testid="btn-dialog-verify-selfie"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      {verifySelfiemutatation.isPending ? "Verifica in corso..." : "Verifica Selfie AI"}
+                    </Button>
+                  )}
                   {!selectedDoc.ocrEnabled && (
                     <Button
                       variant="outline"

@@ -36,7 +36,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
-import { User, Mail, Phone, Save, Loader2, LogOut, Edit2, ArrowRightLeft } from "lucide-react";
+import { User, Mail, Phone, Save, Loader2, LogOut, Edit2, ArrowRightLeft, FileCheck, AlertTriangle } from "lucide-react";
+import IdentityDocumentUpload from "@/components/identity-document-upload";
 
 const PHONE_PREFIXES = [
   { value: "+39", label: "+39 IT" },
@@ -434,6 +435,20 @@ export default function AccountProfile() {
                 </CardContent>
               </Card>
 
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                      <FileCheck className="w-5 h-5 text-primary" />
+                    </div>
+                    Verifica Identità
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <IdentityDocumentUpload />
+                </CardContent>
+              </Card>
+
               <div className="flex items-center justify-between gap-4">
                 <Button
                   type="button"
@@ -607,6 +622,19 @@ export default function AccountProfile() {
                   </Button>
                 </div>
               </div>
+            </motion.div>
+
+            <motion.div 
+              className="bg-card rounded-3xl p-6"
+              variants={fadeInUp}
+            >
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
+                  <FileCheck className="w-6 h-6 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold text-foreground">Verifica Identità</h2>
+              </div>
+              <IdentityDocumentUpload />
             </motion.div>
 
             <motion.div 

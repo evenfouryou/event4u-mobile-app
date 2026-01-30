@@ -215,6 +215,11 @@ export const identities = pgTable("identities", {
   blockedUntil: timestamp("blocked_until"),
   blockReason: text("block_reason"),
   
+  // Identity verification deadline (15 days after registration by default)
+  identityVerificationDeadline: timestamp("identity_verification_deadline"),
+  identityVerified: boolean("identity_verified").default(false),
+  identityBlockedForVerification: boolean("identity_blocked_for_verification").default(false),
+  
   // Password reset
   resetPasswordToken: varchar("reset_password_token", { length: 255 }),
   resetPasswordExpires: timestamp("reset_password_expires"),
@@ -322,6 +327,10 @@ export const identityVerificationSettings = pgTable("identity_verification_setti
   // Expiry handling
   blockOnExpiredDocument: boolean("block_on_expired_document").default(true),
   expiryWarningDays: integer("expiry_warning_days").default(30),
+  
+  // Verification deadline settings
+  verificationDeadlineDays: integer("verification_deadline_days").default(15),
+  blockOnVerificationDeadline: boolean("block_on_verification_deadline").default(true),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

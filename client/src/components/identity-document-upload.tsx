@@ -78,6 +78,15 @@ export default function IdentityDocumentUpload() {
     queryKey: ["/api/identity-documents/my"],
   });
 
+  const { data: verificationStatus } = useQuery<{
+    verified: boolean;
+    deadline: string | null;
+    daysRemaining: number | null;
+    blocked: boolean;
+  }>({
+    queryKey: ["/api/identity-documents/verification-status"],
+  });
+
   const getUploadUrlsMutation = useMutation({
     mutationFn: async () => {
       const params = new URLSearchParams();
@@ -210,6 +219,58 @@ export default function IdentityDocumentUpload() {
   const hasApprovedDocument = myDocs?.documents?.some(d => d.verificationStatus === "approved" && !d.isExpired);
   const hasPendingDocument = myDocs?.documents?.some(d => d.verificationStatus === "pending" || d.verificationStatus === "under_review");
 
+  const renderDeadlineWarning = () => {
+    if (!verificationStatus || verificationStatus.verified) return null;
+    
+    const { daysRemaining, deadline, blocked } = verificationStatus;
+    
+    if (blocked) {
+      return (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+          <div className="flex items-center gap-2 text-red-400 font-medium mb-1">
+            <AlertCircle className="w-5 h-5" />
+            Account Bloccato
+          </div>
+          <p className="text-sm text-red-300">
+            Il tuo account è stato bloccato perché non hai completato la verifica dell'identità entro la scadenza.
+            Carica un documento per sbloccare il tuo account.
+          </p>
+        </div>
+      );
+    }
+    
+    if (daysRemaining !== null && daysRemaining <= 5 && daysRemaining > 0) {
+      return (
+        <div className="mb-4 p-4 bg-yellow-500/20 border border-yellow-500/40 rounded-lg">
+          <div className="flex items-center gap-2 text-yellow-400 font-medium mb-1">
+            <Clock className="w-5 h-5" />
+            Scadenza Verifica Imminente
+          </div>
+          <p className="text-sm text-yellow-300">
+            Hai ancora {daysRemaining} giorn{daysRemaining === 1 ? 'o' : 'i'} per completare la verifica dell'identità.
+            {deadline && ` Scadenza: ${format(new Date(deadline), "dd/MM/yyyy")}`}
+          </p>
+        </div>
+      );
+    }
+    
+    if (daysRemaining !== null && daysRemaining <= 0) {
+      return (
+        <div className="mb-4 p-4 bg-orange-500/20 border border-orange-500/40 rounded-lg">
+          <div className="flex items-center gap-2 text-orange-400 font-medium mb-1">
+            <AlertCircle className="w-5 h-5" />
+            Scadenza Verifica Superata
+          </div>
+          <p className="text-sm text-orange-300">
+            La scadenza per la verifica dell'identità è stata superata. Completa la verifica al più presto per evitare il blocco dell'account.
+          </p>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   if (docsLoading) {
     return (
       <Card>
@@ -282,15 +343,17 @@ export default function IdentityDocumentUpload() {
   const rejectedDoc = myDocs?.documents?.find(d => d.verificationStatus === "rejected");
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Carica Documento d'Identità</CardTitle>
-        <CardDescription>
-          Carica un documento d'identità valido per completare la verifica del tuo account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {rejectedDoc && (
+    <>
+      {renderDeadlineWarning()}
+      <Card>
+        <CardHeader>
+          <CardTitle>Carica Documento d'Identità</CardTitle>
+          <CardDescription>
+            Carica un documento d'identità valido per completare la verifica del tuo account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {rejectedDoc && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <div className="flex items-center gap-2 text-red-400 mb-1">
               <AlertCircle className="w-4 h-4" />
@@ -429,5 +492,6 @@ export default function IdentityDocumentUpload() {
         )}
       </CardContent>
     </Card>
+    </>
   );
 }

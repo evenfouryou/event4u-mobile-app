@@ -154,6 +154,17 @@ export class ObjectStorageService {
     return objectFile;
   }
 
+  async getObjectAsBase64(objectPath: string): Promise<string | null> {
+    try {
+      const file = await this.getObjectEntityFile(objectPath);
+      const [buffer] = await file.download();
+      return buffer.toString('base64');
+    } catch (error) {
+      console.error(`[ObjectStorage] Failed to get object as base64: ${objectPath}`, error);
+      return null;
+    }
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;

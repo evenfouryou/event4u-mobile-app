@@ -69,6 +69,16 @@ All screens follow consistent patterns: useTheme hook, Italian labels, testID at
 - Access translations via `const { t } = useLanguage()` hook, then use `t('common.loading')` syntax
 - Use SecureStore for language persistence (not AsyncStorage)
 
+### Identity Verification Module
+A comprehensive identity document verification system with AI-powered OCR and face matching:
+-   **Document Upload**: Users can upload identity documents (carta d'identità, patente, passaporto, permesso di soggiorno) with front, back, and optional selfie images
+-   **AI-Powered OCR**: OpenAI Vision extracts document data (name, document number, expiry date, fiscal code) with confidence scoring
+-   **Selfie Face Matching**: AI compares selfie photos with document photos to verify identity, analyzing facial features with confidence scores
+-   **Verification Deadline**: Configurable deadline (default 15 days) after registration for identity verification completion
+-   **Profile Blocking**: Automatic account blocking if verification deadline is exceeded (configurable in admin settings)
+-   **Admin Review Panel**: Admin dashboard for manual document review, OCR reprocessing, and selfie verification triggers
+-   **Deadline Warnings**: User-facing warnings when verification deadline approaches (5 days or less)
+
 ### Additional Modules
 -   **Italian Fiscal Validation**: Server-side validation for Italian fiscal identifiers.
 -   **Name Change Management (Cambio Nominativo)**: SIAE-compliant ticket holder name change workflow.

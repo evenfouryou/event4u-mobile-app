@@ -87,6 +87,7 @@ import {
   companies,
   products,
   identities,
+  identityVerificationSettings,
   siaeEventGenres,
   siaeSectorCodes,
   siaeTicketTypes,
@@ -467,12 +468,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create new identity if not found
       if (!identityId) {
+        // Get verification settings to set deadline
+        const [verificationSettings] = await db.select()
+          .from(identityVerificationSettings)
+          .where(isNull(identityVerificationSettings.companyId))
+          .limit(1);
+        
+        const deadlineDays = verificationSettings?.verificationDeadlineDays ?? 15;
+        const verificationDeadline = new Date();
+        verificationDeadline.setDate(verificationDeadline.getDate() + deadlineDays);
+
         const [newIdentity] = await db.insert(identities).values({
           firstName: validated.firstName,
           lastName: validated.lastName,
           email: normalizedEmail,
           phone: validated.phone || null,
           phoneNormalized,
+          identityVerificationDeadline: verificationDeadline,
         }).returning();
         identityId = newIdentity.id;
       }

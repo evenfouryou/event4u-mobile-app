@@ -14,19 +14,27 @@ const openai = new OpenAI({
 
 const DOCUMENT_TYPES = ['carta_identita', 'patente', 'passaporto', 'permesso_soggiorno'] as const;
 
+interface AppSession {
+  userId?: string;
+  role?: string;
+  impersonatorId?: string;
+}
+
 function requireAuth(req: Request, res: Response, next: Function) {
-  if (!req.session?.userId) {
+  const session = req.session as AppSession;
+  if (!session?.userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
 }
 
 function requireAdmin(req: Request, res: Response, next: Function) {
-  if (!req.session?.userId) {
+  const session = req.session as AppSession;
+  if (!session?.userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const adminRoles = ['super_admin', 'gestore', 'gestore_covisione'];
-  if (!adminRoles.includes(req.session.role || '')) {
+  if (!adminRoles.includes(session.role || '')) {
     return res.status(403).json({ error: "Forbidden" });
   }
   next();
@@ -68,7 +76,8 @@ router.get("/api/identity-documents/upload-urls", requireAuth, async (req: Reque
 
 router.post("/api/identity-documents", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const session = req.session as AppSession;
+    const userId = session.userId!;
     const {
       documentType,
       documentNumber,
@@ -164,7 +173,8 @@ router.post("/api/identity-documents", requireAuth, async (req: Request, res: Re
 
 router.get("/api/identity-documents/my", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const session = req.session as AppSession;
+    const userId = session.userId!;
     const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 
     if (!user[0]?.identityId) {
@@ -316,7 +326,8 @@ router.patch("/api/admin/identity-documents/:id/verify", requireAdmin, async (re
   try {
     const { id } = req.params;
     const { action, rejectionReason, documentNumber, expiryDate } = req.body;
-    const adminId = req.session!.userId;
+    const session = req.session as AppSession;
+    const adminId = session.userId!;
 
     if (!['approve', 'reject', 'mark_under_review'].includes(action)) {
       return res.status(400).json({ error: "Invalid action" });
@@ -596,5 +607,189 @@ Only return the JSON object, nothing else.`
       .where(eq(identityDocuments.id, documentId));
   }
 }
+
+async function processSelfieMatchingAsync(documentId: string, documentImageUrl: string, selfieImageUrl: string) {
+  console.log(`[Identity Documents] Starting selfie face matching for document ${documentId}`);
+
+  try {
+    const documentImageBase64 = await objectStorageService.getObjectAsBase64(documentImageUrl);
+    const selfieImageBase64 = await objectStorageService.getObjectAsBase64(selfieImageUrl);
+
+    if (!documentImageBase64 || !selfieImageBase64) {
+      console.error(`[Identity Documents] Failed to load images for face matching`);
+      return { match: false, confidence: 0, error: "Failed to load images" };
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert identity verification AI. Your task is to compare a selfie photo with a document photo to verify if they show the same person.
+
+Analyze both images carefully, considering:
+1. Facial structure and proportions
+2. Eye shape and distance
+3. Nose shape and size
+4. Mouth and lip shape
+5. Jawline and chin
+6. Ear shape (if visible)
+7. Any distinctive features (moles, scars, etc.)
+
+Account for:
+- Different lighting conditions
+- Different angles (document photo is typically straight-on, selfie may vary)
+- Aging differences (document may be several years old)
+- Different image quality
+- Glasses or facial hair changes
+
+Respond ONLY with a JSON object in this exact format:
+{
+  "match": true/false,
+  "confidence": 0.0-1.0,
+  "reasoning": "Brief explanation of your decision",
+  "matchingFeatures": ["list of matching features"],
+  "discrepancies": ["list of any notable differences"]
+}`
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Compare the following two images. The first is from an identity document, the second is a selfie. Determine if they show the same person."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${documentImageBase64}`,
+                detail: "high"
+              }
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${selfieImageBase64}`,
+                detail: "high"
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.1,
+    });
+
+    const content = response.choices[0]?.message?.content || "";
+    
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error(`[Identity Documents] Invalid JSON response from face matching AI`);
+      return { match: false, confidence: 0, error: "Invalid AI response" };
+    }
+
+    const result = JSON.parse(jsonMatch[0]);
+    
+    console.log(`[Identity Documents] Face matching result for ${documentId}: match=${result.match}, confidence=${result.confidence}`);
+    
+    return {
+      match: result.match,
+      confidence: result.confidence,
+      reasoning: result.reasoning,
+      matchingFeatures: result.matchingFeatures,
+      discrepancies: result.discrepancies,
+    };
+  } catch (error) {
+    console.error(`[Identity Documents] Face matching error for ${documentId}:`, error);
+    return { match: false, confidence: 0, error: String(error) };
+  }
+}
+
+router.post("/api/identity-documents/:id/verify-selfie", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const [doc] = await db.select()
+      .from(identityDocuments)
+      .where(eq(identityDocuments.id, id));
+
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    if (!doc.selfieImageUrl) {
+      return res.status(400).json({ error: "No selfie image available for this document" });
+    }
+
+    const result = await processSelfieMatchingAsync(id, doc.frontImageUrl, doc.selfieImageUrl);
+
+    const existingData = doc.ocrExtractedData ? JSON.parse(doc.ocrExtractedData) : {};
+    const updatedData = {
+      ...existingData,
+      selfieVerification: result,
+    };
+
+    await db.update(identityDocuments)
+      .set({
+        ocrExtractedData: JSON.stringify(updatedData),
+        updatedAt: new Date(),
+      })
+      .where(eq(identityDocuments.id, id));
+
+    res.json({
+      ok: true,
+      result,
+    });
+  } catch (error) {
+    console.error("[Identity Documents] Error verifying selfie:", error);
+    res.status(500).json({ error: "Failed to verify selfie" });
+  }
+});
+
+router.get("/api/identity-documents/verification-status", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const session = req.session as AppSession;
+    const userId = session.userId!;
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user?.identityId) {
+      return res.json({
+        verified: false,
+        deadline: null,
+        daysRemaining: null,
+        blocked: false,
+      });
+    }
+
+    const [identity] = await db.select().from(identities).where(eq(identities.id, user.identityId));
+    if (!identity) {
+      return res.json({
+        verified: false,
+        deadline: null,
+        daysRemaining: null,
+        blocked: false,
+      });
+    }
+
+    const deadline = identity.identityVerificationDeadline;
+    let daysRemaining = null;
+    
+    if (deadline) {
+      const now = new Date();
+      const diff = deadline.getTime() - now.getTime();
+      daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    res.json({
+      verified: identity.identityVerified ?? false,
+      deadline: identity.identityVerificationDeadline,
+      daysRemaining,
+      blocked: identity.identityBlockedForVerification ?? false,
+    });
+  } catch (error) {
+    console.error("[Identity Documents] Error fetching verification status:", error);
+    res.status(500).json({ error: "Failed to fetch verification status" });
+  }
+});
 
 export default router;
