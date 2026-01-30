@@ -299,7 +299,10 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
         animationType="slide"
         onRequestClose={() => setShowPhoneModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={[styles.modalContent, { backgroundColor: staticColors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: staticColors.foreground }]}>
@@ -383,7 +386,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               </>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeArea>
   );
