@@ -184,7 +184,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
             </Text>
           </View>
           <Text style={styles.profileName}>
-            {profile?.displayName || `${profile?.firstName} ${profile?.lastName}`}
+            {profile?.displayName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || '-'}
           </Text>
           <Badge variant="golden">
             <Text style={styles.prCodeBadge}>PR: {profile?.prCode}</Text>
@@ -200,7 +200,7 @@ export function PRProfileScreen({ onGoBack, onLogout }: PRProfileScreenProps) {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Nome Completo</Text>
-              <Text style={styles.infoValue}>{profile?.firstName} {profile?.lastName}</Text>
+              <Text style={styles.infoValue}>{`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || '-'}</Text>
             </View>
           </View>
 
