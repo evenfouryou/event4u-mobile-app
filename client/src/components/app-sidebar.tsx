@@ -42,6 +42,7 @@ import {
   PackageOpen,
   ArrowLeftRight,
   User,
+  Globe,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -115,6 +116,12 @@ export function AppSidebar() {
         title: t('nav.settings'),
         icon: Settings,
         url: "/admin/site-settings",
+        group: t('nav.groups.system'),
+      },
+      {
+        title: "Landing Pages",
+        icon: Globe,
+        url: "/admin/landing-pages",
         group: t('nav.groups.system'),
       },
       {

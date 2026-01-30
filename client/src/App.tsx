@@ -99,6 +99,7 @@ import PrRewards from "@/pages/pr-rewards";
 import StaffApp from "@/pages/staff-app";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import UsaLanding from "@/pages/usa-landing";
+import AdminLandingPages from "@/pages/admin-landing-pages";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
 import SchoolBadgeLanding from "@/pages/school-badge-landing";
 import SchoolBadgeVerify from "@/pages/school-badge-verify";
@@ -423,6 +424,7 @@ function Router() {
               <Route path="/admin/gestori/:gestoreId/events/:eventId" component={AdminEventDetail} />
               <Route path="/admin/events/:eventId" component={AdminEventDetail} />
               <Route path="/admin/name-changes" component={AdminNameChanges} />
+              <Route path="/admin/landing-pages" component={AdminLandingPages} />
               <Route path="/siae/ticketing-console" component={SiaeTicketingConsole} />
               <Route path="/organizer/billing" component={OrganizerBilling} />
               <Route path="/billing" component={OrganizerBilling} />
