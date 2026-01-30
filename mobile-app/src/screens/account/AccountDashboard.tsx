@@ -140,7 +140,7 @@ export function AccountDashboard({
     );
   };
 
-  const walletBalance = wallet?.balance || 0;
+  const walletBalance = Number(wallet?.balance) || 0;
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
