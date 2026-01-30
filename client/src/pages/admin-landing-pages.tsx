@@ -164,6 +164,20 @@ export default function AdminLandingPages() {
     queryKey: ["/api/admin/landing-stats"],
   });
 
+  const seedMiamiMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/landing-pages/seed-miami");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/landing-pages"] });
+      toast({ title: "Success", description: data.message || "Miami template created" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const createPageMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/admin/landing-pages", data);
@@ -295,13 +309,23 @@ export default function AdminLandingPages() {
           <h1 className="text-2xl font-bold">Landing Pages</h1>
           <p className="text-muted-foreground">Manage market landing pages and leads</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-page">
-              <Plus className="w-4 h-4 mr-2" />
-              New Landing Page
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => seedMiamiMutation.mutate()}
+            disabled={seedMiamiMutation.isPending}
+            data-testid="button-seed-miami"
+          >
+            {seedMiamiMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Seed Miami Template
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-page">
+                <Plus className="w-4 h-4 mr-2" />
+                New Landing Page
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Landing Page</DialogTitle>
@@ -375,6 +399,7 @@ export default function AdminLandingPages() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

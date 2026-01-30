@@ -184,6 +184,63 @@ router.get("/api/admin/landing-pages/:id", async (req: Request, res: Response) =
   }
 });
 
+// Seed Miami template (can be called to initialize default landing page)
+router.post("/api/admin/landing-pages/seed-miami", async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user || user.role !== 'super_admin') {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    
+    // Check if already exists
+    const existing = await db.select({ id: landingPages.id })
+      .from(landingPages)
+      .where(eq(landingPages.slug, 'usa'))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      return res.json({ message: "Miami template already exists", id: existing[0].id });
+    }
+    
+    const miamiTemplate = {
+      slug: 'usa',
+      title: 'The door runs on chaos. We run it on numbers.',
+      subtitle: 'Tables, tickets, promoters — tracked in real time. If you don\'t control the numbers, you don\'t control the deal.',
+      heroText: 'If you can\'t prove your numbers, you can\'t negotiate your money.',
+      accentColor: '#77f2b4',
+      painPoints: JSON.stringify([
+        { icon: '❌', text: 'Guestlists aren\'t tracked → you can\'t prove performance' },
+        { icon: '❌', text: 'Tables cancel last minute → no deposits, no penalties' },
+        { icon: '❌', text: 'Promoters get paid "by feel" → no leverage, no accountability' }
+      ]),
+      valueProps: JSON.stringify([
+        { title: 'Venue Control', description: 'Deposits, table inventory, live revenue, promoter performance' },
+        { title: 'Promoter Proof', description: 'Scanned guests verification, real stats, commission leverage' },
+        { title: 'Real-Time Ops', description: 'Fast check-in, dashboards, reports in minutes' }
+      ]),
+      faqs: JSON.stringify([
+        { question: 'Is it live?', answer: 'We\'re in pilot mode. We\'re selecting a small group of venues and promoters in Miami to test and refine the system before launch.' },
+        { question: 'Pricing?', answer: 'Pilot partners get preferred pricing locked in before public launch. Apply now to secure your spot.' },
+        { question: 'Is it a marketplace?', answer: 'No. This is an operating system for your nightlife business — not a marketplace. You control your data, your promoters, your revenue.' }
+      ]),
+      venueSpots: 2,
+      promoterSpots: 10,
+      targetCity: 'Miami',
+      isActive: true,
+    };
+    
+    const [page] = await db.insert(landingPages)
+      .values(miamiTemplate)
+      .returning();
+    
+    console.log("[Landing] Miami template seeded successfully");
+    res.json({ message: "Miami template created", page });
+  } catch (error: any) {
+    console.error("[Landing Admin] Error seeding Miami template:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create landing page (admin)
 router.post("/api/admin/landing-pages", async (req: Request, res: Response) => {
   try {
