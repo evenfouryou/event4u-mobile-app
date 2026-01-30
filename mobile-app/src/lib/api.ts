@@ -55,19 +55,28 @@ export interface Ticket {
   id: string;
   ticketCode: string;
   ticketType: string;
+  ticketTypeCode?: string;
   ticketPrice: number;
+  grossAmount?: number;
   participantFirstName: string | null;
   participantLastName: string | null;
   status: string;
   emissionDate: string | null;
   emittedAt: string | null;
+  emissionDateTime?: string | null;
   qrCode: string | null;
+  fiscalSealCode?: string | null;
   sectorName: string | null;
   eventName: string | null;
   eventStart: string | null;
   eventEnd: string | null;
   locationName: string | null;
+  locationAddress?: string | null;
   ticketedEventId: string;
+  organizerCompany?: string | null;
+  ticketingManager?: string | null;
+  progressiveNumber?: number | null;
+  customText?: string | null;
 }
 
 export interface TicketsResponse {
