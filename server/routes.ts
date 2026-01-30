@@ -1294,10 +1294,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(eq(prProfiles.phone, cleanDigits));
         }
         
-        console.log('[Login] PR by Phone Found:', !!prProfile);
+        console.log('[Login] PR by Phone Found:', !!prProfile, 'HasPassword:', !!prProfile?.passwordHash, 'IsActive:', prProfile?.isActive);
         
-        if (prProfile && prProfile.passwordHash && prProfile.isActive) {
-          const isValidPassword = await bcrypt.compare(password, prProfile.passwordHash);
+        if (prProfile && prProfile.isActive) {
+          let isValidPassword = false;
+          
+          // First try PR's own password
+          if (prProfile.passwordHash) {
+            isValidPassword = await bcrypt.compare(password, prProfile.passwordHash);
+          }
+          
+          // If PR has no password or password didn't match, try linked customer's password
+          if (!isValidPassword && prProfile.identityId) {
+            const [linkedCustomer] = await db.select().from(siaeCustomers)
+              .where(eq(siaeCustomers.identityId, prProfile.identityId));
+            
+            if (linkedCustomer?.passwordHash) {
+              console.log('[Login] Trying linked customer password for PR');
+              isValidPassword = await bcrypt.compare(password, linkedCustomer.passwordHash);
+            }
+          }
+          
+          // Also try by phone match if identityId didn't work
+          if (!isValidPassword && prProfile.phone) {
+            const phoneToSearch = prProfile.phonePrefix ? 
+              (prProfile.phonePrefix + prProfile.phone).replace(/\D/g, '') : 
+              prProfile.phone.replace(/\D/g, '');
+            
+            const allCustomers = await db.select().from(siaeCustomers);
+            const linkedByPhone = allCustomers.find(c => {
+              if (!c.phone) return false;
+              const custPhone = c.phone.replace(/\D/g, '');
+              return custPhone === phoneToSearch || 
+                     custPhone.endsWith(prProfile.phone) || 
+                     phoneToSearch.endsWith(custPhone);
+            });
+            
+            if (linkedByPhone?.passwordHash) {
+              console.log('[Login] Trying customer password by phone match for PR');
+              isValidPassword = await bcrypt.compare(password, linkedByPhone.passwordHash);
+            }
+          }
+          
           if (!isValidPassword) {
             return res.status(401).json({ message: "Credenziali non valide" });
           }
