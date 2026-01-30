@@ -1,0 +1,208 @@
+Capito: visivo = cosa deve VEDERE uno che arriva dalla bio, anche se il prodotto non è live.
+Qui la regola è: sembrare reale + esclusivo + “pericoloso” (provocatorio) + semplice.
+
+Ti do tutto: layout, testi esatti, tipografia, colori, hero, sezioni, CTA, e anche come deve apparire su mobile.
+
+⸻
+
+Obiettivo visivo della landing (pre-launch)
+
+Quando uno apre la pagina deve pensare:
+	1.	“Ok, questa roba è seria”
+	2.	“È per Miami, non è generica”
+	3.	“È accesso limitato, devo muovermi”
+	4.	“In 10 secondi capisco cosa devo fare: Venue o PR”
+
+⸻
+
+1) Look & Feel (stile provocatorio premium)
+
+Palette (scura “nightlife”)
+	•	Sfondo: quasi nero (tipo #070a0f)
+	•	Pannelli: blu petrolio scuro (tipo #0c121b)
+	•	Testo: bianco sporco (tipo #eaf0f7)
+	•	Secondario: grigio freddo (tipo #9bb0c6)
+	•	Accento: verde menta neon (tipo #77f2b4)
+	•	Accento “danger”: rosa/rosso neon (tipo #ff4d6d) solo in micro dettagli
+
+Tipografia (deve sembrare US tech)
+	•	Font: Inter (o system font se vuoi ultra rapido)
+	•	Headline: bold, grande
+	•	Testo: pulito, non “startup italiana”
+	•	Tutto sans serif.
+
+Background (fa subito premium)
+
+Un background con 2 “glow” soft:
+	•	glow verde in alto a sinistra
+	•	glow rosa in alto a destra
+Niente immagini stock visibili (sembrano cheap), meglio un gradient.
+
+⸻
+
+2) Struttura VISIVA della pagina (scroll 1 minuto)
+
+A) Top bar (molto minimale)
+
+In alto:
+	•	a sinistra: MIAMI NIGHTLIFE SYSTEM (tutto caps, letter spacing)
+	•	a destra: link “Pilot Access”
+
+Percezione: brand serio.
+
+⸻
+
+B) HERO (la parte più importante)
+
+Quello che vedi senza scrollare (mobile soprattutto).
+
+Headline (2 righe, super forte)
+
+The door runs on chaos.
+We run it on numbers.
+
+Sembra “calling out” il sistema attuale.
+
+Subheadline
+
+Tables, tickets, promoters — tracked in real time.
+If you don’t control the numbers, you don’t control the deal.
+
+CTA (2 bottoni grandi)
+	•	✅ Apply as Venue (verde pieno)
+	•	✅ Apply as Promoter (trasparente bordo)
+
+Sotto ai bottoni: 3 pillole “credibilità”
+	•	No launch dates. Pilot only.
+	•	Limited spots: 2 venues • 10 promoters
+	•	Miami-first. Not a generic ticket app.
+
+Queste pillole fanno “scarcity + esclusività”.
+
+⸻
+
+C) Sezione “pain” (provocatoria)
+
+Titolo:
+What’s costing you money — every weekend
+
+Sotto 3 bullet (visivamente molto leggibili):
+	•	Guestlists aren’t tracked → you can’t prove performance
+	•	Tables cancel last minute → no deposits, no penalties
+	•	Promoters get paid “by feel” → no leverage, no accountability
+
+Questa sezione deve essere tipo “pugno”.
+
+⸻
+
+D) Sezione “what you get” (3 card)
+
+3 card in griglia (su mobile vanno in colonna):
+	1.	Venue Control
+Deposits, table inventory, live revenue, promoter performance
+	2.	Promoter Proof
+Scanned guests verification, real stats, commission leverage
+	3.	Real-Time Ops
+Fast check-in, dashboards, reports in minutes
+
+Deve sembrare prodotto già pronto, anche se non è live.
+
+⸻
+
+E) “Apply” (form) — deve sembrare selezione
+
+Titolo:
+Request pilot access
+
+Sottotitolo:
+We’re selecting a small group. If you’re serious, apply.
+
+Poi:
+	•	toggle Venue / Promoter (visivamente “segmented control”)
+	•	form pulito, pochi campi
+
+Il bottone deve essere enorme:
+✅ Request Access
+
+E micro-testo:
+“No spam. If approved, you’ll get a short fit-call link.”
+
+⸻
+
+F) FAQ (3 dropdown)
+
+Per togliere dubbi subito:
+	•	Is it live? → pilot
+	•	Pricing? → preferred pricing
+	•	Is it a marketplace? → no, OS
+
+⸻
+
+G) Thank you page (visivo)
+
+Dopo submit:
+	•	titolo: You’re in the pilot queue.
+	•	pillole: “Next step: fit call”
+	•	card con keyword:
+	•	Venue: DM “VENUE”
+	•	PR: DM “PR”
+
+Sembra un funnel studiato.
+
+⸻
+
+3) Come deve apparire su MOBILE (importante)
+
+Su mobile, l’ordine deve essere perfetto:
+	1.	Headline (grande)
+	2.	Sub (2 righe max)
+	3.	Bottoni
+	4.	Pillole scarcity
+	5.	Pain bullets
+	6.	Apply form
+
+Se l’utente deve scrollare troppo per capire → perdi conversion.
+
+⸻
+
+4) Elementi visivi da evitare (ti fanno perdere credibilità)
+
+❌ screenshot di app “finti” troppo grossi
+❌ video stock tipo “party generico” (sembra dropshipping)
+❌ loghi partner inventati
+❌ “coming soon” con data
+❌ emoji ovunque
+
+⸻
+
+5) Contenuti VISIVI pronti (copy esatto)
+
+Te li riscrivo compatti così li incolli ovunque:
+
+Brand: MIAMI NIGHTLIFE SYSTEM
+Hero: The door runs on chaos. We run it on numbers.
+Sub: Tables, tickets, promoters — tracked in real time.
+If you don’t control the numbers, you don’t control the deal.
+CTA: Apply as Venue | Apply as Promoter
+Pills: No launch dates. Pilot only. | Limited spots: 2 venues • 10 promoters | Miami-first. Not a generic ticket app.
+Pain Title: What’s costing you money — every weekend
+Apply Title: Request pilot access
+Apply Sub: We’re selecting a small group. If you’re serious, apply.
+Button: Request Access
+Thank you: You’re in the pilot queue. DM “VENUE” / “PR”
+
+⸻
+
+6) Se vuoi “ancora più provocatoria” VISIVAMENTE
+
+Aggiungi una micro riga rossa (accent danger) sotto la hero, tipo “alert”:
+
+If you can’t prove your numbers, you can’t negotiate your money.
+
+È una frase che aumenta conversion su PR.
+
+⸻
+
+Se vuoi, dimmi solo questo (senza perdere tempo):
+Vuoi che la landing sia più dark-luxury (LIV vibe) oppure più street-real (promoter vibe)?
+Io ti adatto font-size, spacing e copy micro per farla convertire di più.
