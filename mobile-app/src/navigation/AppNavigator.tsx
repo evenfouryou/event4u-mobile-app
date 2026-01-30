@@ -15,6 +15,7 @@ import { TicketDetailScreen } from '@/screens/account/TicketDetailScreen';
 import { WalletScreen } from '@/screens/account/WalletScreen';
 import { WalletTopUpScreen } from '@/screens/account/WalletTopUpScreen';
 import { NameChangeScreen } from '@/screens/account/NameChangeScreen';
+import { TicketResaleScreen } from '@/screens/account/TicketResaleScreen';
 import { SubscriptionsScreen } from '@/screens/account/SubscriptionsScreen';
 import { SettingsScreen } from '@/screens/account/SettingsScreen';
 import { ProfileScreen } from '@/screens/account/ProfileScreen';
@@ -152,6 +153,7 @@ type Screen =
   | { name: 'wallet' }
   | { name: 'walletTopUp' }
   | { name: 'nameChange'; params: { ticketId: string } }
+  | { name: 'ticketResale'; params: { ticketId: string } }
   | { name: 'subscriptions' }
   | { name: 'settings' }
   | { name: 'profile' }
@@ -538,7 +540,7 @@ export function AppNavigator() {
           <TicketDetailScreen
             ticketId={currentScreen.params.ticketId}
             onBack={goBack}
-            onResell={() => navigate({ name: 'resales' })}
+            onResell={() => navigate({ name: 'ticketResale', params: { ticketId: currentScreen.params.ticketId } })}
             onNameChange={() => navigate({ name: 'nameChange', params: { ticketId: currentScreen.params.ticketId } })}
           />
         );
@@ -562,6 +564,15 @@ export function AppNavigator() {
       case 'nameChange':
         return (
           <NameChangeScreen
+            ticketId={currentScreen.params.ticketId}
+            onBack={goBack}
+            onSuccess={() => resetTo({ name: 'tickets' })}
+          />
+        );
+
+      case 'ticketResale':
+        return (
+          <TicketResaleScreen
             ticketId={currentScreen.params.ticketId}
             onBack={goBack}
             onSuccess={() => resetTo({ name: 'tickets' })}

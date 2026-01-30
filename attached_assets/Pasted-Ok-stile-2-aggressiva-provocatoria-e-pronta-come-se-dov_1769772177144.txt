@@ -1,0 +1,698 @@
+Ok: stile 2 (aggressiva/provocatoria) e pronta “come se dovesse farla Replit”.
+Ti lascio un progetto Node + Express + pagina HTML/CSS/JS (zero complicazioni), con:
+	•	Landing 1 pagina, aggressiva
+	•	2 CTA: VENUE / PROMOTER
+	•	Form dinamico (campi diversi)
+	•	Salvataggio lead in SQLite (Replit-friendly)
+	•	Redirect a “thank you” + CTA DM
+
+⸻
+
+1) Come la fai su Replit (passo-passo)
+	1.	Vai su Replit → Create Repl
+	2.	Scegli Node.js
+	3.	Crea questi file:
+	•	server.js
+	•	db.js
+	•	package.json (Replit lo crea, ma lo modifichi)
+	•	cartella public/ con:
+	•	index.html
+	•	style.css
+	•	app.js
+	•	thanks.html
+	4.	Apri “Shell” e installa dipendenze:
+
+npm i express better-sqlite3 helmet
+
+	5.	Premi Run.
+	6.	Test: apri la URL pubblica → compila form → controlla che salva nel DB.
+
+⸻
+
+2) Codice pronto (copiaincolla)
+
+package.json
+
+{
+  "name": "miami-landing",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0"
+  }
+}
+
+db.js
+
+const Database = require("better-sqlite3");
+
+const db = new Database("leads.sqlite");
+
+// Create table if not exists
+db.exec(`
+  CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    role TEXT NOT NULL,                 -- venue | promoter
+    full_name TEXT NOT NULL,
+    instagram TEXT NOT NULL,
+    phone_or_email TEXT NOT NULL,
+    venue_name TEXT,
+    venue_role TEXT,                    -- owner/manager/ops
+    avg_tables TEXT,                    -- 0-5 / 5-15 / 15+
+    avg_guests TEXT,                    -- 0-20 / 20-50 / 50+
+    city TEXT,
+    note TEXT
+  )
+`);
+
+function insertLead(lead) {
+  const stmt = db.prepare(`
+    INSERT INTO leads (
+      created_at, role, full_name, instagram, phone_or_email,
+      venue_name, venue_role, avg_tables, avg_guests, city, note
+    ) VALUES (
+      @created_at, @role, @full_name, @instagram, @phone_or_email,
+      @venue_name, @venue_role, @avg_tables, @avg_guests, @city, @note
+    )
+  `);
+  return stmt.run(lead);
+}
+
+function listLeads(limit = 50) {
+  const stmt = db.prepare(`SELECT * FROM leads ORDER BY id DESC LIMIT ?`);
+  return stmt.all(limit);
+}
+
+module.exports = { insertLead, listLeads };
+
+server.js
+
+const express = require("express");
+const helmet = require("helmet");
+const path = require("path");
+const { insertLead, listLeads } = require("./db");
+
+const app = express();
+
+app.use(helmet());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
+
+// Health
+app.get("/health", (req, res) => res.json({ ok: true }));
+
+// Submit lead
+app.post("/api/leads", (req, res) => {
+  const {
+    role,
+    full_name,
+    instagram,
+    phone_or_email,
+    venue_name,
+    venue_role,
+    avg_tables,
+    avg_guests,
+    city,
+    note
+  } = req.body;
+
+  // Minimal validation
+  if (!role || !full_name || !instagram || !phone_or_email) {
+    return res.status(400).json({ ok: false, error: "Missing required fields." });
+  }
+  if (!["venue", "promoter"].includes(role)) {
+    return res.status(400).json({ ok: false, error: "Invalid role." });
+  }
+
+  const lead = {
+    created_at: new Date().toISOString(),
+    role,
+    full_name: String(full_name).trim(),
+    instagram: String(instagram).trim(),
+    phone_or_email: String(phone_or_email).trim(),
+    venue_name: venue_name ? String(venue_name).trim() : null,
+    venue_role: venue_role ? String(venue_role).trim() : null,
+    avg_tables: avg_tables ? String(avg_tables).trim() : null,
+    avg_guests: avg_guests ? String(avg_guests).trim() : null,
+    city: city ? String(city).trim() : "Miami",
+    note: note ? String(note).trim() : null
+  };
+
+  try {
+    insertLead(lead);
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: "DB error." });
+  }
+});
+
+// Basic admin view (protect with a simple key)
+const ADMIN_KEY = process.env.ADMIN_KEY || "change-me";
+
+app.get("/admin", (req, res) => {
+  const key = req.query.key;
+  if (key !== ADMIN_KEY) return res.status(401).send("Unauthorized");
+
+  const leads = listLeads(200);
+  const rows = leads.map(l => `
+    <tr>
+      <td>${l.id}</td>
+      <td>${l.created_at}</td>
+      <td>${l.role}</td>
+      <td>${escapeHtml(l.full_name)}</td>
+      <td>${escapeHtml(l.instagram)}</td>
+      <td>${escapeHtml(l.phone_or_email)}</td>
+      <td>${escapeHtml(l.venue_name || "")}</td>
+      <td>${escapeHtml(l.venue_role || "")}</td>
+      <td>${escapeHtml(l.avg_tables || "")}</td>
+      <td>${escapeHtml(l.avg_guests || "")}</td>
+      <td>${escapeHtml(l.city || "")}</td>
+      <td>${escapeHtml(l.note || "")}</td>
+    </tr>
+  `).join("");
+
+  res.send(`
+    <html>
+      <head>
+        <meta charset="utf-8"/>
+        <title>Leads Admin</title>
+        <style>
+          body{font-family:Arial; padding:20px; background:#0b0f14; color:#e9eef5;}
+          table{width:100%; border-collapse:collapse; font-size:12px;}
+          th,td{border:1px solid #1b2430; padding:8px; vertical-align:top;}
+          th{background:#111a24;}
+          a{color:#77f2b4;}
+        </style>
+      </head>
+      <body>
+        <h2>Leads (latest 200)</h2>
+        <p>Tip: set ADMIN_KEY in Replit Secrets.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Date</th><th>Role</th><th>Name</th><th>IG</th><th>Contact</th>
+              <th>Venue</th><th>Venue Role</th><th>Tables</th><th>Guests</th><th>City</th><th>Note</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>
+  `);
+});
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log("Server running on port", port));
+
+
+⸻
+
+3) Landing aggressiva (copy + UI)
+
+public/index.html
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Miami Nightlife System — Pilot Access</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <main class="wrap">
+    <header class="top">
+      <div class="brand">MIAMI NIGHTLIFE SYSTEM</div>
+      <a class="tiny" href="#apply">Pilot Access</a>
+    </header>
+
+    <section class="hero">
+      <h1>The door runs on chaos.<br/>We run it on numbers.</h1>
+      <p class="sub">
+        Tables, tickets, promoters — tracked in real time.
+        If you don’t control the numbers, you don’t control the deal.
+      </p>
+
+      <div class="cta">
+        <button class="btn primary" data-role="venue">Apply as Venue</button>
+        <button class="btn ghost" data-role="promoter">Apply as Promoter</button>
+      </div>
+
+      <div class="proof">
+        <div class="pill">No launch dates. Pilot only.</div>
+        <div class="pill">Limited spots: 2 venues • 10 promoters</div>
+        <div class="pill">Miami-first. Not a generic ticket app.</div>
+      </div>
+    </section>
+
+    <section class="pain">
+      <h2>What’s costing you money — every weekend</h2>
+      <ul>
+        <li><b>Guestlists aren’t tracked</b> → you can’t prove performance.</li>
+        <li><b>Tables cancel last minute</b> → no deposits, no penalties, no control.</li>
+        <li><b>Promoters get paid “by feel”</b> → no leverage, no real accountability.</li>
+      </ul>
+    </section>
+
+    <section class="value">
+      <h2>What the pilot gives you</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Venue Control</h3>
+          <p>Deposits secured, table inventory, live revenue view, promoter performance.</p>
+        </div>
+        <div class="card">
+          <h3>Promoter Proof</h3>
+          <p>Scanned guest verification, real stats, real leverage for commissions.</p>
+        </div>
+        <div class="card">
+          <h3>Real-Time Ops</h3>
+          <p>Fast check-in flow, clean dashboards, end-of-night report in minutes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="apply" class="apply">
+      <h2>Request pilot access</h2>
+      <p class="sub2">
+        We’re selecting a small group. If you’re serious, apply.
+      </p>
+
+      <div class="roleSwitch">
+        <button class="seg active" id="segVenue">Venue</button>
+        <button class="seg" id="segPromoter">Promoter</button>
+      </div>
+
+      <form id="leadForm" class="form">
+        <input type="hidden" name="role" id="role" value="venue"/>
+
+        <div class="row">
+          <label>Full name</label>
+          <input name="full_name" placeholder="John Smith" required/>
+        </div>
+
+        <div class="row">
+          <label>Instagram</label>
+          <input name="instagram" placeholder="@yourhandle" required/>
+        </div>
+
+        <div class="row">
+          <label>Phone or Email</label>
+          <input name="phone_or_email" placeholder="+1 ... / email@..." required/>
+        </div>
+
+        <!-- Venue fields -->
+        <div class="venueOnly">
+          <div class="row">
+            <label>Venue name</label>
+            <input name="venue_name" placeholder="Club / Rooftop / Hotel venue"/>
+          </div>
+
+          <div class="row">
+            <label>Your role</label>
+            <select name="venue_role">
+              <option value="">Select</option>
+              <option>Owner</option>
+              <option>Manager</option>
+              <option>Operations</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label>Avg VIP tables per weekend</label>
+            <select name="avg_tables">
+              <option value="">Select</option>
+              <option>0–5</option>
+              <option>5–15</option>
+              <option>15+</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Promoter fields -->
+        <div class="promoterOnly hidden">
+          <div class="row">
+            <label>Avg guests per weekend</label>
+            <select name="avg_guests">
+              <option value="">Select</option>
+              <option>0–20</option>
+              <option>20–50</option>
+              <option>50+</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label>City</label>
+            <input name="city" placeholder="Miami" value="Miami"/>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Note (optional)</label>
+          <textarea name="note" placeholder="What venue? What nights? What are you trying to fix?"></textarea>
+        </div>
+
+        <button class="btn primary full" type="submit" id="submitBtn">
+          Request Access
+        </button>
+
+        <p class="fine">
+          No spam. If approved, you’ll get a short fit-call link.
+        </p>
+      </form>
+    </section>
+
+    <section class="faq">
+      <h2>FAQ</h2>
+      <details>
+        <summary>Is the product live?</summary>
+        <p>Not publicly. This is a Miami pilot. We onboard a small group first.</p>
+      </details>
+      <details>
+        <summary>How much does it cost?</summary>
+        <p>Pilot partners get preferred pricing. Details after approval.</p>
+      </details>
+      <details>
+        <summary>Is this a marketplace?</summary>
+        <p>No. It’s an operating system: control + tracking + deposits + performance.</p>
+      </details>
+    </section>
+
+    <footer class="foot">
+      <div>© Miami Nightlife System</div>
+      <div class="tiny">Pilot Access • Limited Spots</div>
+    </footer>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
+
+public/style.css
+
+:root{
+  --bg:#070a0f;
+  --panel:#0c121b;
+  --border:#182233;
+  --text:#eaf0f7;
+  --muted:#9bb0c6;
+  --accent:#77f2b4;
+  --danger:#ff4d6d;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color:var(--text); background:var(--bg);
+}
+
+.bg{
+  position:fixed; inset:0;
+  background:
+    radial-gradient(900px 500px at 20% 10%, rgba(119,242,180,0.08), transparent 60%),
+    radial-gradient(700px 400px at 85% 30%, rgba(255,77,109,0.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), transparent 50%);
+  pointer-events:none;
+}
+
+.wrap{max-width:980px; margin:0 auto; padding:22px 18px 60px;}
+.top{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
+.brand{letter-spacing:.14em; font-weight:700; font-size:12px; color:var(--muted);}
+.tiny{color:var(--muted); text-decoration:none; font-size:12px;}
+.tiny:hover{color:var(--accent);}
+
+.hero{padding:26px 0 16px;}
+h1{font-size:44px; line-height:1.02; margin:0 0 12px;}
+.sub{color:var(--muted); font-size:16px; line-height:1.45; max-width:760px;}
+.cta{display:flex; gap:12px; margin:16px 0;}
+.btn{
+  border:1px solid var(--border);
+  background:transparent; color:var(--text);
+  padding:12px 16px; border-radius:12px;
+  font-weight:700; cursor:pointer;
+}
+.btn.primary{background:var(--accent); color:#061017; border-color:transparent;}
+.btn.ghost:hover{border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(0.95);}
+.btn.full{width:100%}
+
+.proof{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+.pill{
+  border:1px solid var(--border); background:rgba(12,18,27,0.7);
+  padding:8px 10px; border-radius:999px; font-size:12px; color:var(--muted);
+}
+
+section{margin-top:26px; padding:18px; border:1px solid var(--border); border-radius:16px; background:rgba(12,18,27,0.55);}
+h2{margin:0 0 10px; font-size:20px;}
+ul{margin:10px 0 0; padding-left:18px; color:var(--muted);}
+li{margin:8px 0;}
+b{color:var(--text);}
+
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+.card{border:1px solid var(--border); border-radius:14px; padding:14px; background:rgba(7,10,15,0.5);}
+.card h3{margin:0 0 6px; font-size:14px;}
+.card p{margin:0; color:var(--muted); font-size:13px; line-height:1.35;}
+
+.apply .sub2{color:var(--muted); margin:0 0 14px;}
+.roleSwitch{display:flex; gap:10px; margin:10px 0 14px;}
+.seg{
+  flex:0 0 auto;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--muted);
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:800;
+}
+.seg.active{background:rgba(119,242,180,0.12); border-color:rgba(119,242,180,0.35); color:var(--text);}
+
+.form{display:flex; flex-direction:column; gap:12px;}
+.row label{display:block; font-size:12px; letter-spacing:.04em; color:var(--muted); margin-bottom:6px;}
+input, select, textarea{
+  width:100%;
+  padding:12px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:rgba(7,10,15,0.5);
+  color:var(--text);
+  outline:none;
+}
+textarea{min-height:90px; resize:vertical;}
+.hidden{display:none;}
+.fine{margin:6px 0 0; color:var(--muted); font-size:12px;}
+
+.faq details{border:1px solid var(--border); background:rgba(7,10,15,0.45); padding:12px; border-radius:12px; margin-top:10px;}
+.faq summary{cursor:pointer; font-weight:800;}
+.faq p{margin:10px 0 0; color:var(--muted);}
+
+.foot{margin-top:20px; display:flex; justify-content:space-between; color:var(--muted); font-size:12px; padding:0 2px;}
+
+@media (max-width: 860px){
+  h1{font-size:34px;}
+  .grid{grid-template-columns:1fr;}
+  .cta{flex-direction:column;}
+}
+
+public/app.js
+
+const btnVenue = document.querySelector('[data-role="venue"]');
+const btnPromoter = document.querySelector('[data-role="promoter"]');
+
+const segVenue = document.getElementById("segVenue");
+const segPromoter = document.getElementById("segPromoter");
+
+const roleInput = document.getElementById("role");
+const venueOnly = document.querySelector(".venueOnly");
+const promoterOnly = document.querySelector(".promoterOnly");
+
+function setRole(role){
+  roleInput.value = role;
+
+  if(role === "venue"){
+    segVenue.classList.add("active");
+    segPromoter.classList.remove("active");
+    venueOnly.classList.remove("hidden");
+    promoterOnly.classList.add("hidden");
+  } else {
+    segPromoter.classList.add("active");
+    segVenue.classList.remove("active");
+    promoterOnly.classList.remove("hidden");
+    venueOnly.classList.add("hidden");
+  }
+}
+
+btnVenue?.addEventListener("click", () => {
+  setRole("venue");
+  document.getElementById("apply").scrollIntoView({ behavior: "smooth" });
+});
+
+btnPromoter?.addEventListener("click", () => {
+  setRole("promoter");
+  document.getElementById("apply").scrollIntoView({ behavior: "smooth" });
+});
+
+segVenue?.addEventListener("click", () => setRole("venue"));
+segPromoter?.addEventListener("click", () => setRole("promoter"));
+
+const form = document.getElementById("leadForm");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(form);
+  const payload = Object.fromEntries(formData.entries());
+
+  // Clean instagram
+  if(payload.instagram && !payload.instagram.startsWith("@")){
+    payload.instagram = "@" + payload.instagram;
+  }
+
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Sending...";
+
+  try{
+    const res = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if(!res.ok){
+      const err = await res.json().catch(()=>({error:"Error"}));
+      alert(err.error || "Submission failed.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Request Access";
+      return;
+    }
+
+    // redirect thank you
+    window.location.href = "/thanks.html?role=" + encodeURIComponent(payload.role);
+  }catch(err){
+    alert("Network error.");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Request Access";
+  }
+});
+
+// default
+setRole("venue");
+
+public/thanks.html
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Request received</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <main class="wrap">
+    <header class="top">
+      <div class="brand">REQUEST RECEIVED</div>
+      <a class="tiny" href="/">Back</a>
+    </header>
+
+    <section>
+      <h2>You’re in the pilot queue.</h2>
+      <p class="sub2" id="msg">
+        We’ll contact you if you’re a fit.
+      </p>
+
+      <div class="proof">
+        <div class="pill">Next step: short fit call</div>
+        <div class="pill">Pilot only • limited spots</div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <p class="sub2"><b>Fast track:</b> DM us the keyword below on Instagram.</p>
+        <div class="grid">
+          <div class="card">
+            <h3 id="kw">DM: “VENUE”</h3>
+            <p>Include your IG handle + venue name.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <div>© Miami Nightlife System</div>
+      <div class="tiny">Pilot Access</div>
+    </footer>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const role = params.get("role") || "venue";
+    const kw = document.getElementById("kw");
+    const msg = document.getElementById("msg");
+    if(role === "promoter"){
+      kw.textContent = 'DM: “PR”';
+      msg.textContent = "If approved, you’ll get access instructions for the promoter pilot.";
+    } else {
+      kw.textContent = 'DM: “VENUE”';
+      msg.textContent = "If approved, you’ll get a short fit-call link to onboard the venue pilot.";
+    }
+  </script>
+</body>
+</html>
+
+
+⸻
+
+3) Impostazioni importanti su Replit (Secrets)
+
+Vai su Tools → Secrets e aggiungi:
+	•	ADMIN_KEY = una chiave lunga (es. miami_2026_supersecret_...)
+
+Così vedi i lead qui:
+/admin?key=LA_TUA_CHIAVE
+
+⸻
+
+4) Perché questa landing funziona anche se non lanci
+	•	Non promette date (eviti figuracce)
+	•	È “apply” (selezione) → sembra esclusiva
+	•	È provocatoria → coerente con i reel
+	•	Ti crea pipeline (leads) subito
+
+⸻
+
+5) Bonus: link in bio “furbo”
+
+Usa un path dedicato:
+	•	tuodominio.com/miami
+	•	oppure la URL Replit finché testate
+
+CTA nei reel:
+“Pilot access in bio. DM ‘PR’ / ‘VENUE’ to fast track.”
+
+⸻
+
+Se vuoi, nel prossimo messaggio ti preparo anche:
+	•	versione “ancora più aggressiva” del copy (meno SaaS, più “exposing”)
+	•	variante con pixel di Meta (per retargeting IG ads)
+	•	variante con auto-email (quando uno compila, riceve mail immediata)

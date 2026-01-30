@@ -475,8 +475,41 @@ class ApiClient {
     return this.get<Ticket>(`/api/public/account/tickets/${id}`);
   }
 
+  async requestNameChange(ticketId: string, data: {
+    newFirstName: string;
+    newLastName: string;
+    newEmail: string;
+    newFiscalCode: string;
+    newDocumentType: string;
+    newDocumentNumber: string;
+    newDateOfBirth: string;
+  }): Promise<{
+    message: string;
+    nameChangeId: string;
+    fee: string;
+    paymentStatus: string;
+    requiresPayment: boolean;
+  }> {
+    return this.post('/api/public/account/name-change', {
+      ticketId,
+      ...data,
+    });
+  }
+
   async getWallet(): Promise<Wallet> {
     return this.get<Wallet>('/api/public/account/wallet');
+  }
+
+  async createResaleListing(ticketId: string, resalePrice: number): Promise<{ success: boolean; resaleId: string }> {
+    return this.post('/api/public/account/resale', { ticketId, resalePrice });
+  }
+
+  async cancelResaleListing(resaleId: string): Promise<{ success: boolean }> {
+    return this.delete(`/api/public/account/resale/${resaleId}`);
+  }
+
+  async getMyResales(): Promise<{ resales: any[] }> {
+    return this.get('/api/public/account/resales');
   }
 
   async checkHasPrProfile(): Promise<{ hasPrProfile: boolean; prCode: string | null }> {

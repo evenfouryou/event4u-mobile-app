@@ -1,15 +1,16 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
-// Note: uses staticColors for StyleSheet
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { SafeArea } from '@/components/SafeArea';
 import { Header } from '@/components/Header';
+import { Loading } from '@/components/Loading';
 import { triggerHaptic } from '@/lib/haptics';
+import api from '@/lib/api';
 
 interface NameChangeScreenProps {
   ticketId: string;
@@ -17,37 +18,127 @@ interface NameChangeScreenProps {
   onSuccess: () => void;
 }
 
+interface TicketData {
+  id: string;
+  ticketCode: string;
+  ticketType: string;
+  ticketPrice: number;
+  participantFirstName: string | null;
+  participantLastName: string | null;
+  eventName: string | null;
+  eventStart: string | null;
+  locationName: string | null;
+  locationAddress: string | null;
+  sectorName: string | null;
+  canNameChange: boolean;
+  nameChangeFee: string;
+  hoursToEvent: number;
+}
+
+type DocumentType = 'carta_identita' | 'passaporto' | 'patente';
+
 export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScreenProps) {
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'form' | 'confirm' | 'success'>('form');
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [step, setStep] = useState<'form' | 'confirm' | 'success' | 'error'>('form');
+  const [ticket, setTicket] = useState<TicketData | null>(null);
   const [formData, setFormData] = useState({
     newFirstName: '',
     newLastName: '',
     newEmail: '',
-    newPhone: '',
-    reason: '',
+    newFiscalCode: '',
+    newDocumentType: 'carta_identita' as DocumentType,
+    newDocumentNumber: '',
+    newDateOfBirth: '',
   });
   const [error, setError] = useState('');
+  const [showDocumentPicker, setShowDocumentPicker] = useState(false);
 
-  const ticket = {
-    id: ticketId,
-    eventName: 'Saturday Night Fever',
-    eventDate: new Date('2026-02-01T23:00:00'),
-    ticketType: 'VIP',
-    currentHolder: 'Mario Rossi',
-    changeFee: 5.0,
+  useEffect(() => {
+    loadTicketData();
+  }, [ticketId]);
+
+  const loadTicketData = async () => {
+    try {
+      setInitialLoading(true);
+      const data = await api.getTicketById(ticketId) as any;
+      setTicket({
+        id: data.id,
+        ticketCode: data.ticketCode,
+        ticketType: data.ticketType,
+        ticketPrice: Number(data.ticketPrice) || 0,
+        participantFirstName: data.participantFirstName,
+        participantLastName: data.participantLastName,
+        eventName: data.eventName,
+        eventStart: data.eventStart,
+        locationName: data.locationName,
+        locationAddress: data.locationAddress,
+        sectorName: data.sectorName,
+        canNameChange: data.canNameChange,
+        nameChangeFee: data.nameChangeFee || '0',
+        hoursToEvent: data.hoursToEvent || 0,
+      });
+    } catch (err) {
+      console.error('Error loading ticket:', err);
+      setError('Impossibile caricare i dati del biglietto');
+      setStep('error');
+    } finally {
+      setInitialLoading(false);
+    }
   };
 
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const validateDateOfBirth = (dateStr: string): boolean => {
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dateStr.match(dateRegex);
+    if (!match) return false;
+    
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (year < 1900 || year > new Date().getFullYear()) return false;
+    
+    const date = new Date(year, month - 1, day);
+    return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
+  };
+
+  const formatDateInput = (text: string): string => {
+    const cleaned = text.replace(/\D/g, '');
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+    return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
+  };
+
   const validateForm = () => {
-    if (!formData.newFirstName || !formData.newLastName) {
-      return 'Inserisci nome e cognome del nuovo intestatario';
+    if (!formData.newFirstName || formData.newFirstName.length < 2) {
+      return 'Il nome deve avere almeno 2 caratteri';
+    }
+    if (!formData.newLastName || formData.newLastName.length < 2) {
+      return 'Il cognome deve avere almeno 2 caratteri';
     }
     if (!formData.newEmail || !formData.newEmail.includes('@')) {
       return 'Inserisci una email valida';
+    }
+    if (!formData.newFiscalCode || formData.newFiscalCode.length !== 16) {
+      return 'Il codice fiscale deve essere di 16 caratteri';
+    }
+    if (!formData.newDocumentType) {
+      return 'Seleziona un tipo di documento';
+    }
+    if (!formData.newDocumentNumber || formData.newDocumentNumber.length < 5) {
+      return 'Inserisci un numero documento valido';
+    }
+    if (!formData.newDateOfBirth) {
+      return 'Inserisci la data di nascita';
+    }
+    if (!validateDateOfBirth(formData.newDateOfBirth)) {
+      return 'Formato data non valido. Usa GG/MM/AAAA (es. 01/01/1990)';
     }
     return null;
   };
@@ -65,23 +156,105 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
   };
 
   const handleConfirm = async () => {
+    if (!ticket) return;
+    
     setLoading(true);
     triggerHaptic('medium');
 
-    setTimeout(() => {
-      triggerHaptic('success');
-      setStep('success');
+    try {
+      const response = await api.requestNameChange(ticketId, {
+        newFirstName: formData.newFirstName,
+        newLastName: formData.newLastName,
+        newEmail: formData.newEmail,
+        newFiscalCode: formData.newFiscalCode.toUpperCase(),
+        newDocumentType: formData.newDocumentType,
+        newDocumentNumber: formData.newDocumentNumber,
+        newDateOfBirth: formData.newDateOfBirth,
+      });
+
+      if (response.requiresPayment) {
+        // For now, show message that payment needs to be done on web
+        Alert.alert(
+          'Pagamento Richiesto',
+          `Il cambio nominativo richiede un pagamento di €${Number(ticket.nameChangeFee).toFixed(2)}. Completa il pagamento dal sito web.`,
+          [{ text: 'OK', onPress: onSuccess }]
+        );
+      } else {
+        triggerHaptic('success');
+        setStep('success');
+      }
+    } catch (err: any) {
+      console.error('Error requesting name change:', err);
+      setError(err.message || 'Impossibile completare la richiesta');
+      triggerHaptic('error');
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Data non disponibile';
+    const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
+      year: 'numeric',
     });
   };
+
+  const getDocumentTypeLabel = (type: DocumentType) => {
+    switch (type) {
+      case 'carta_identita': return 'Carta d\'Identità';
+      case 'passaporto': return 'Passaporto';
+      case 'patente': return 'Patente';
+      default: return 'Seleziona documento';
+    }
+  };
+
+  const documentTypes: DocumentType[] = ['carta_identita', 'passaporto', 'patente'];
+
+  if (initialLoading) {
+    return <Loading text="Caricamento biglietto..." />;
+  }
+
+  if (step === 'error' || !ticket) {
+    return (
+      <SafeArea edges={['bottom']} style={styles.container}>
+        <Header showLogo showBack onBack={onBack} />
+        <View style={styles.errorStateContainer}>
+          <Ionicons name="alert-circle" size={64} color={staticColors.destructive} />
+          <Text style={styles.errorStateTitle}>Errore</Text>
+          <Text style={styles.errorStateText}>{error || 'Impossibile caricare il biglietto'}</Text>
+          <Button variant="outline" onPress={onBack} style={{ marginTop: spacing.lg }}>
+            Torna Indietro
+          </Button>
+        </View>
+      </SafeArea>
+    );
+  }
+
+  if (!ticket.canNameChange) {
+    return (
+      <SafeArea edges={['bottom']} style={styles.container}>
+        <Header showLogo showBack onBack={onBack} />
+        <View style={styles.errorStateContainer}>
+          <Ionicons name="close-circle" size={64} color={staticColors.warning} />
+          <Text style={styles.errorStateTitle}>Non Disponibile</Text>
+          <Text style={styles.errorStateText}>
+            Il cambio nominativo non è disponibile per questo biglietto.
+            {ticket.hoursToEvent < 24 && '\n\nIl cambio nominativo è disponibile fino a 24 ore prima dell\'evento.'}
+          </Text>
+          <Button variant="outline" onPress={onBack} style={{ marginTop: spacing.lg }}>
+            Torna Indietro
+          </Button>
+        </View>
+      </SafeArea>
+    );
+  }
+
+  const currentHolder = `${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}`.trim() || 'N/A';
+  const changeFee = Number(ticket.nameChangeFee) || 0;
 
   if (step === 'success') {
     return (
@@ -127,15 +300,18 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
               <View style={styles.ticketHeader}>
                 <Ionicons name="ticket" size={24} color={staticColors.primary} />
                 <View style={styles.ticketInfo}>
-                  <Text style={styles.ticketEventName}>{ticket.eventName}</Text>
-                  <Text style={styles.ticketDate}>{formatDate(ticket.eventDate)}</Text>
+                  <Text style={styles.ticketEventName}>{ticket.eventName || 'Evento'}</Text>
+                  <Text style={styles.ticketDate}>{formatDate(ticket.eventStart)}</Text>
+                  {ticket.locationName && (
+                    <Text style={styles.ticketLocation}>{ticket.locationName}</Text>
+                  )}
                 </View>
                 <Badge variant="default">{ticket.ticketType}</Badge>
               </View>
               <View style={styles.ticketDivider} />
               <View style={styles.currentHolder}>
                 <Text style={styles.currentHolderLabel}>Attuale intestatario</Text>
-                <Text style={styles.currentHolderName}>{ticket.currentHolder}</Text>
+                <Text style={styles.currentHolderName}>{currentHolder}</Text>
               </View>
             </Card>
           </View>
@@ -154,7 +330,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                 <View style={styles.formRow}>
                   <View style={styles.formHalf}>
                     <Input
-                      label="Nome"
+                      label="Nome *"
                       value={formData.newFirstName}
                       onChangeText={(v) => updateField('newFirstName', v)}
                       placeholder="Nome"
@@ -164,7 +340,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                   </View>
                   <View style={styles.formHalf}>
                     <Input
-                      label="Cognome"
+                      label="Cognome *"
                       value={formData.newLastName}
                       onChangeText={(v) => updateField('newLastName', v)}
                       placeholder="Cognome"
@@ -175,7 +351,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                 </View>
 
                 <Input
-                  label="Email"
+                  label="Email *"
                   value={formData.newEmail}
                   onChangeText={(v) => updateField('newEmail', v)}
                   placeholder="email@example.com"
@@ -186,22 +362,78 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                 />
 
                 <Input
-                  label="Telefono (opzionale)"
-                  value={formData.newPhone}
-                  onChangeText={(v) => updateField('newPhone', v)}
-                  placeholder="+39 333 1234567"
-                  keyboardType="phone-pad"
-                  leftIcon="call-outline"
-                  testID="input-newPhone"
+                  label="Codice Fiscale *"
+                  value={formData.newFiscalCode}
+                  onChangeText={(v) => updateField('newFiscalCode', v.toUpperCase())}
+                  placeholder="RSSMRA85M01H501Z"
+                  autoCapitalize="characters"
+                  maxLength={16}
+                  leftIcon="card-outline"
+                  testID="input-newFiscalCode"
+                />
+
+                <Input
+                  label="Data di Nascita *"
+                  value={formData.newDateOfBirth}
+                  onChangeText={(v) => updateField('newDateOfBirth', formatDateInput(v))}
+                  placeholder="GG/MM/AAAA"
+                  keyboardType="numeric"
+                  maxLength={10}
+                  leftIcon="calendar-outline"
+                  testID="input-newDateOfBirth"
+                />
+
+                <Text style={styles.inputLabel}>Tipo Documento *</Text>
+                <Pressable
+                  style={styles.documentPicker}
+                  onPress={() => setShowDocumentPicker(!showDocumentPicker)}
+                  testID="select-documentType"
+                >
+                  <Ionicons name="document-text-outline" size={20} color={staticColors.mutedForeground} />
+                  <Text style={styles.documentPickerText}>{getDocumentTypeLabel(formData.newDocumentType)}</Text>
+                  <Ionicons name={showDocumentPicker ? 'chevron-up' : 'chevron-down'} size={20} color={staticColors.mutedForeground} />
+                </Pressable>
+                {showDocumentPicker && (
+                  <View style={styles.documentOptions}>
+                    {documentTypes.map((type) => (
+                      <Pressable
+                        key={type}
+                        style={[styles.documentOption, formData.newDocumentType === type && styles.documentOptionSelected]}
+                        onPress={() => {
+                          updateField('newDocumentType', type);
+                          setShowDocumentPicker(false);
+                        }}
+                      >
+                        <Text style={[styles.documentOptionText, formData.newDocumentType === type && styles.documentOptionTextSelected]}>
+                          {getDocumentTypeLabel(type)}
+                        </Text>
+                        {formData.newDocumentType === type && (
+                          <Ionicons name="checkmark" size={18} color={staticColors.primary} />
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+
+                <Input
+                  label="Numero Documento *"
+                  value={formData.newDocumentNumber}
+                  onChangeText={(v) => updateField('newDocumentNumber', v.toUpperCase())}
+                  placeholder="CA12345AB"
+                  autoCapitalize="characters"
+                  leftIcon="id-card-outline"
+                  testID="input-newDocumentNumber"
                 />
               </Card>
 
-              <View style={styles.feeInfo}>
-                <Ionicons name="information-circle" size={20} color={staticColors.mutedForeground} />
-                <Text style={styles.feeText}>
-                  Commissione cambio nominativo: <Text style={styles.feeAmount}>€{ticket.changeFee.toFixed(2)}</Text>
-                </Text>
-              </View>
+              {changeFee > 0 && (
+                <View style={styles.feeInfo}>
+                  <Ionicons name="information-circle" size={20} color={staticColors.mutedForeground} />
+                  <Text style={styles.feeText}>
+                    Commissione cambio nominativo: <Text style={styles.feeAmount}>€{changeFee.toFixed(2)}</Text>
+                  </Text>
+                </View>
+              )}
 
               <Button
                 variant="golden"
@@ -222,7 +454,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
               <Card style={styles.confirmCard}>
                 <View style={styles.confirmRow}>
                   <Text style={styles.confirmLabel}>Da</Text>
-                  <Text style={styles.confirmValue}>{ticket.currentHolder}</Text>
+                  <Text style={styles.confirmValue}>{currentHolder}</Text>
                 </View>
                 <View style={styles.confirmArrow}>
                   <Ionicons name="arrow-down" size={24} color={staticColors.primary} />
@@ -238,20 +470,32 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                   <Text style={styles.confirmLabel}>Email</Text>
                   <Text style={styles.confirmValue}>{formData.newEmail}</Text>
                 </View>
-                {formData.newPhone && (
-                  <View style={styles.confirmRow}>
-                    <Text style={styles.confirmLabel}>Telefono</Text>
-                    <Text style={styles.confirmValue}>{formData.newPhone}</Text>
-                  </View>
-                )}
-              </Card>
-
-              <Card style={styles.totalCard}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Commissione</Text>
-                  <Text style={styles.totalValue}>€{ticket.changeFee.toFixed(2)}</Text>
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>Codice Fiscale</Text>
+                  <Text style={styles.confirmValue}>{formData.newFiscalCode}</Text>
+                </View>
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>Documento</Text>
+                  <Text style={styles.confirmValue}>{getDocumentTypeLabel(formData.newDocumentType)}</Text>
+                </View>
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>N. Documento</Text>
+                  <Text style={styles.confirmValue}>{formData.newDocumentNumber}</Text>
+                </View>
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>Data Nascita</Text>
+                  <Text style={styles.confirmValue}>{formData.newDateOfBirth}</Text>
                 </View>
               </Card>
+
+              {changeFee > 0 && (
+                <Card style={styles.totalCard}>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Commissione</Text>
+                    <Text style={styles.totalValue}>€{changeFee.toFixed(2)}</Text>
+                  </View>
+                </Card>
+              )}
 
               <View style={styles.warningBox}>
                 <Ionicons name="warning" size={20} color={staticColors.warning} />
@@ -260,11 +504,20 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                 </Text>
               </View>
 
+              {error ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
               <View style={styles.confirmActions}>
                 <Button
                   variant="outline"
                   size="lg"
-                  onPress={() => setStep('form')}
+                  onPress={() => {
+                    setError('');
+                    setStep('form');
+                  }}
                   style={styles.backButton}
                   testID="button-back-form"
                 >
@@ -278,7 +531,7 @@ export function NameChangeScreen({ ticketId, onBack, onSuccess }: NameChangeScre
                   style={styles.confirmButton}
                   testID="button-confirm"
                 >
-                  Conferma
+                  {changeFee > 0 ? `Paga €${changeFee.toFixed(2)}` : 'Conferma'}
                 </Button>
               </View>
             </View>
@@ -324,6 +577,11 @@ const styles = StyleSheet.create({
   ticketDate: {
     fontSize: typography.fontSize.sm,
     color: staticColors.mutedForeground,
+  },
+  ticketLocation: {
+    fontSize: typography.fontSize.xs,
+    color: staticColors.mutedForeground,
+    marginTop: 2,
   },
   ticketDivider: {
     height: 1,
@@ -373,6 +631,55 @@ const styles = StyleSheet.create({
   formHalf: {
     flex: 1,
   },
+  inputLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+    color: staticColors.foreground,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
+  },
+  documentPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: staticColors.card,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  documentPickerText: {
+    flex: 1,
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+  },
+  documentOptions: {
+    backgroundColor: staticColors.card,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  documentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  documentOptionSelected: {
+    backgroundColor: `${staticColors.primary}15`,
+  },
+  documentOptionText: {
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+  },
+  documentOptionTextSelected: {
+    color: staticColors.primary,
+    fontWeight: '600',
+  },
   feeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -408,6 +715,9 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: '500',
     color: staticColors.foreground,
+    textAlign: 'right',
+    flex: 1,
+    marginLeft: spacing.md,
   },
   confirmArrow: {
     alignItems: 'center',
@@ -488,6 +798,25 @@ const styles = StyleSheet.create({
   successActions: {
     marginTop: spacing.xxl,
     width: '100%',
+  },
+  errorStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  errorStateTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
+    color: staticColors.foreground,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  errorStateText: {
+    fontSize: typography.fontSize.base,
+    color: staticColors.mutedForeground,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
 
