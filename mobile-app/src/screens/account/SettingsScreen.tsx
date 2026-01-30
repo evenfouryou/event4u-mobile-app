@@ -14,6 +14,7 @@ import { useState } from 'react';
 interface SettingsScreenProps {
   onBack: () => void;
   onNavigateProfile: () => void;
+  onNavigateIdentityDocument: () => void;
   onNavigateNameChange: () => void;
   onLogout: () => void;
 }
@@ -66,6 +67,7 @@ function SettingItem({ icon, label, sublabel, onPress, rightElement, destructive
 export function SettingsScreen({ 
   onBack, 
   onNavigateProfile, 
+  onNavigateIdentityDocument,
   onNavigateNameChange,
   onLogout 
 }: SettingsScreenProps) {
@@ -166,6 +168,15 @@ export function SettingsScreen({
               sublabel={user?.email || 'Modifica i tuoi dati personali'}
               onPress={onNavigateProfile}
               testID="setting-profile"
+              colors={colors}
+            />
+            <View style={[styles.divider, { backgroundColor: staticColors.border }]} />
+            <SettingItem
+              icon="shield-checkmark-outline"
+              label="Verifica Documento"
+              sublabel="Carica documento d'identità"
+              onPress={onNavigateIdentityDocument}
+              testID="setting-identity-document"
               colors={colors}
             />
             <View style={[styles.divider, { backgroundColor: staticColors.border }]} />

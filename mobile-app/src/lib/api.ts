@@ -561,6 +561,27 @@ class ApiClient {
     return this.post<{ success: boolean; profileImageUrl: string }>('/api/public/account/profile/image', { objectPath });
   }
 
+  async getMyIdentityDocuments(): Promise<{ documents: IdentityDocument[] }> {
+    return this.get<{ documents: IdentityDocument[] }>('/api/identity-documents/my');
+  }
+
+  async getIdentityDocumentUploadUrls(documentType: string, includeSelfie?: boolean): Promise<IdentityDocumentUploadUrls> {
+    const params = new URLSearchParams();
+    params.set('documentType', documentType);
+    if (includeSelfie) params.set('selfie', 'true');
+    return this.get<IdentityDocumentUploadUrls>(`/api/identity-documents/upload-urls?${params}`);
+  }
+
+  async submitIdentityDocument(data: {
+    documentType: string;
+    frontImageUrl: string;
+    backImageUrl?: string;
+    selfieImageUrl?: string;
+    enableOcr?: boolean;
+  }): Promise<{ success: boolean; document: IdentityDocument }> {
+    return this.post<{ success: boolean; document: IdentityDocument }>('/api/identity-documents', data);
+  }
+
   async createWalletTopUpCheckout(amount: number): Promise<{ checkoutUrl: string; sessionId: string; amount: number }> {
     return this.post<{ checkoutUrl: string; sessionId: string; amount: number }>('/api/public/account/wallet/topup-checkout', { 
       amount,
@@ -4114,6 +4135,28 @@ export interface MarketingDashboardStats {
   emailOpenRate: number;
   loyaltyMembers: number;
   referralCount: number;
+}
+
+export interface IdentityDocument {
+  id: string;
+  documentType: string;
+  documentNumber: string | null;
+  verificationStatus: 'pending' | 'under_review' | 'approved' | 'rejected' | 'expired';
+  verificationMethod: string | null;
+  verifiedAt: string | null;
+  rejectionReason: string | null;
+  ocrEnabled: boolean;
+  ocrStatus: string | null;
+  ocrConfidenceScore: string | null;
+  isExpired: boolean;
+  expiryDate: string | null;
+  createdAt: string;
+}
+
+export interface IdentityDocumentUploadUrls {
+  front: { uploadUrl: string; objectPath: string };
+  back?: { uploadUrl: string; objectPath: string };
+  selfie?: { uploadUrl: string; objectPath: string };
 }
 
 export const api = new ApiClient(API_BASE_URL);

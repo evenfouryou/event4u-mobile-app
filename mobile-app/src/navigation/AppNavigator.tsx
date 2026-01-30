@@ -19,6 +19,7 @@ import { TicketResaleScreen } from '@/screens/account/TicketResaleScreen';
 import { SubscriptionsScreen } from '@/screens/account/SubscriptionsScreen';
 import { SettingsScreen } from '@/screens/account/SettingsScreen';
 import { ProfileScreen } from '@/screens/account/ProfileScreen';
+import { IdentityDocumentScreen } from '@/screens/account/IdentityDocumentScreen';
 
 import { LandingScreen } from '@/screens/public/LandingScreen';
 import { EventsListScreen } from '@/screens/public/EventsListScreen';
@@ -157,6 +158,7 @@ type Screen =
   | { name: 'subscriptions' }
   | { name: 'settings' }
   | { name: 'profile' }
+  | { name: 'identityDocument' }
   | { name: 'prDashboard' }
   | { name: 'prEvents' }
   | { name: 'prEventDetail'; params: { eventId: string } }
@@ -592,6 +594,7 @@ export function AppNavigator() {
           <SettingsScreen
             onBack={goBack}
             onNavigateProfile={() => navigate({ name: 'profile' })}
+            onNavigateIdentityDocument={() => navigate({ name: 'identityDocument' })}
             onNavigateNameChange={() => navigate({ name: 'tickets' })}
             onLogout={() => resetTo({ name: 'landing' })}
           />
@@ -600,6 +603,13 @@ export function AppNavigator() {
       case 'profile':
         return (
           <ProfileScreen
+            onBack={goBack}
+          />
+        );
+
+      case 'identityDocument':
+        return (
+          <IdentityDocumentScreen
             onBack={goBack}
           />
         );

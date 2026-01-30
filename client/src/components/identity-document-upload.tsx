@@ -116,13 +116,19 @@ export default function IdentityDocumentUpload() {
   });
 
   const uploadFileToSignedUrl = async (file: File, signedUrl: string): Promise<void> => {
-    await fetch(signedUrl, {
+    const response = await fetch(signedUrl, {
       method: "PUT",
       body: file,
       headers: {
         "Content-Type": file.type,
       },
     });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      console.error('Upload failed:', response.status, errorText);
+      throw new Error(`Upload fallito (${response.status})`);
+    }
   };
 
   const handleImageSelect = (
