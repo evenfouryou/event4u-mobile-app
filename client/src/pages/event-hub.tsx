@@ -727,6 +727,9 @@ export default function EventHub() {
   const [showCreateListDialog, setShowCreateListDialog] = useState(false);
   const [showCreateTableTypeDialog, setShowCreateTableTypeDialog] = useState(false);
   const [newListData, setNewListData] = useState({ name: '', maxCapacity: '', price: '' });
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
+  const [newGuestData, setNewGuestData] = useState({ fullName: '', phone: '', email: '', notes: '', plusOne: false });
   const [newTableTypeData, setNewTableTypeData] = useState({ name: '', price: '', maxGuests: '', totalQuantity: '' });
   
   // E4U Scanner Dialog State
@@ -1350,6 +1353,12 @@ export default function EventHub() {
     staleTime: 0, // Always refetch to ensure fresh data
   });
 
+  // Selected List Entries (for inline detail view)
+  const { data: selectedListEntries = [], isLoading: isLoadingListEntries } = useQuery<any[]>({
+    queryKey: ['/api/e4u/lists', selectedListId, 'entries'],
+    enabled: !!selectedListId,
+  });
+
   // E4U Table Types
   const { data: e4uTableTypes = [] } = useQuery<any[]>({
     queryKey: ['/api/e4u/events', id, 'table-types'],
@@ -1705,6 +1714,54 @@ export default function EventHub() {
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error?.message || "Impossibile creare la lista", variant: "destructive" });
+    },
+  });
+
+  // Add guest to list mutation
+  const addGuestMutation = useMutation({
+    mutationFn: async (data: { listId: string; fullName: string; phone?: string; email?: string; notes?: string; plusOne?: boolean }) => {
+      const { listId, ...guestData } = data;
+      return apiRequest('POST', `/api/e4u/lists/${listId}/entries`, guestData);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/e4u/lists', selectedListId, 'entries'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'lists'] });
+      setShowAddGuestDialog(false);
+      setNewGuestData({ fullName: '', phone: '', email: '', notes: '', plusOne: false });
+      toast({ title: "Ospite aggiunto alla lista" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Impossibile aggiungere l'ospite", variant: "destructive" });
+    },
+  });
+
+  // Remove guest from list mutation
+  const removeGuestMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      return apiRequest('DELETE', `/api/e4u/entries/${entryId}`);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/e4u/lists', selectedListId, 'entries'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'lists'] });
+      toast({ title: "Ospite rimosso dalla lista" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Impossibile rimuovere l'ospite", variant: "destructive" });
+    },
+  });
+
+  // Check-in guest mutation
+  const checkInGuestMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      return apiRequest('POST', `/api/e4u/entries/${entryId}/check-in`);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/e4u/lists', selectedListId, 'entries'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'lists'] });
+      toast({ title: "Check-in effettuato" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Impossibile effettuare il check-in", variant: "destructive" });
     },
   });
 
@@ -10161,10 +10218,10 @@ export default function EventHub() {
                             </div>
                             <div className="flex items-center gap-1 sm:gap-2">
                               <Button 
-                                variant="ghost" 
+                                variant={selectedListId === list.id ? "default" : "ghost"}
                                 size="icon"
                                 className="h-7 w-7 sm:h-8 sm:w-8"
-                                onClick={() => navigate(`/pr/guest-lists?eventId=${id}&listId=${list.id}`)}
+                                onClick={() => setSelectedListId(selectedListId === list.id ? null : list.id)}
                                 data-testid={`btn-view-list-${list.id}`}
                               >
                                 <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -10173,7 +10230,10 @@ export default function EventHub() {
                                 variant="ghost" 
                                 size="icon"
                                 className="h-7 w-7 sm:h-8 sm:w-8"
-                                onClick={() => navigate(`/pr/guest-lists?eventId=${id}&listId=${list.id}&add=true`)}
+                                onClick={() => {
+                                  setSelectedListId(list.id);
+                                  setShowAddGuestDialog(true);
+                                }}
                                 data-testid={`btn-add-to-list-${list.id}`}
                               >
                                 <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -10183,6 +10243,123 @@ export default function EventHub() {
                         );
                       })}
                     </div>
+
+                    {/* Inline List Detail View */}
+                    {selectedListId && (
+                      <div className="mt-4 p-4 rounded-lg bg-cyan-500/5 border border-cyan-500/30">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-lg">
+                              {(e4uLists.find((l: any) => l.id === selectedListId) || guestLists.find((l: any) => l.id === selectedListId))?.name || 'Lista'}
+                            </h4>
+                            <Badge variant="secondary">
+                              {selectedListEntries.length} ospiti
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => setShowAddGuestDialog(true)}
+                              data-testid="btn-add-guest-inline"
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Aggiungi
+                            </Button>
+                            <Button 
+                              size="icon" 
+                              variant="ghost"
+                              onClick={() => setSelectedListId(null)}
+                              data-testid="btn-close-list-detail"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {isLoadingListEntries ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+                          </div>
+                        ) : selectedListEntries.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>Nessun ospite in questa lista</p>
+                            <Button 
+                              className="mt-3" 
+                              size="sm" 
+                              onClick={() => setShowAddGuestDialog(true)}
+                              data-testid="btn-add-first-guest"
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Aggiungi il primo ospite
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                            {selectedListEntries.map((entry: any) => (
+                              <div 
+                                key={entry.id} 
+                                className={`flex items-center justify-between p-3 rounded-lg border ${entry.status === 'checked_in' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-background/50'}`}
+                                data-testid={`guest-entry-${entry.id}`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium">{entry.fullName || `${entry.firstName || ''} ${entry.lastName || ''}`.trim() || 'Nome non disponibile'}</span>
+                                    {entry.plusOne && (
+                                      <Badge variant="outline" className="text-xs">+1</Badge>
+                                    )}
+                                    {entry.status === 'checked_in' && (
+                                      <Badge className="bg-emerald-500 text-xs">Check-in</Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                    {entry.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="h-3 w-3" />
+                                        {entry.phone}
+                                      </span>
+                                    )}
+                                    {entry.email && (
+                                      <span className="flex items-center gap-1">
+                                        <Mail className="h-3 w-3" />
+                                        {entry.email}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {entry.notes && (
+                                    <p className="text-xs text-muted-foreground mt-1 italic">"{entry.notes}"</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {entry.status !== 'checked_in' && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className="h-8 w-8 text-emerald-400 hover:text-emerald-300"
+                                      onClick={() => checkInGuestMutation.mutate(entry.id)}
+                                      disabled={checkInGuestMutation.isPending}
+                                      data-testid={`btn-checkin-${entry.id}`}
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="h-8 w-8 text-red-400 hover:text-red-300"
+                                    onClick={() => removeGuestMutation.mutate(entry.id)}
+                                    disabled={removeGuestMutation.isPending}
+                                    data-testid={`btn-remove-${entry.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   ) : (
                     <div className="text-center py-12">
                       <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -11158,6 +11335,121 @@ export default function EventHub() {
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creazione...</>
               ) : (
                 'Crea Lista'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Guest Dialog */}
+      <Dialog open={showAddGuestDialog} onOpenChange={setShowAddGuestDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-xl p-4 sm:p-6">
+          <DialogHeader className="pb-3 sm:pb-4">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
+              Aggiungi Ospite
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Aggiungi una persona alla lista "{e4uLists.find((l: any) => l.id === selectedListId)?.name || 'selezionata'}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-name" className="text-xs sm:text-sm">Nome Completo *</Label>
+              <Input
+                id="guest-name"
+                placeholder="es. Mario Rossi"
+                value={newGuestData.fullName}
+                onChange={(e) => setNewGuestData(prev => ({ ...prev, fullName: e.target.value }))}
+                data-testid="input-guest-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="guest-phone" className="text-xs sm:text-sm">Telefono</Label>
+                <Input
+                  id="guest-phone"
+                  placeholder="es. 3331234567"
+                  value={newGuestData.phone}
+                  onChange={(e) => setNewGuestData(prev => ({ ...prev, phone: e.target.value }))}
+                  data-testid="input-guest-phone"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="guest-email" className="text-xs sm:text-sm">Email</Label>
+                <Input
+                  id="guest-email"
+                  type="email"
+                  placeholder="es. mario@email.it"
+                  value={newGuestData.email}
+                  onChange={(e) => setNewGuestData(prev => ({ ...prev, email: e.target.value }))}
+                  data-testid="input-guest-email"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-notes" className="text-xs sm:text-sm">Note</Label>
+              <Input
+                id="guest-notes"
+                placeholder="es. VIP, compleanno..."
+                value={newGuestData.notes}
+                onChange={(e) => setNewGuestData(prev => ({ ...prev, notes: e.target.value }))}
+                data-testid="input-guest-notes"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="guest-plusone"
+                checked={newGuestData.plusOne}
+                onChange={(e) => setNewGuestData(prev => ({ ...prev, plusOne: e.target.checked }))}
+                className="rounded"
+                data-testid="checkbox-guest-plusone"
+              />
+              <Label htmlFor="guest-plusone" className="text-xs sm:text-sm cursor-pointer">
+                Include +1 (accompagnatore)
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowAddGuestDialog(false);
+                setNewGuestData({ fullName: '', phone: '', email: '', notes: '', plusOne: false });
+              }}
+              data-testid="btn-cancel-add-guest"
+              className="w-full sm:w-auto"
+            >
+              Annulla
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!newGuestData.fullName.trim()) {
+                  toast({ title: "Errore", description: "Il nome è obbligatorio", variant: "destructive" });
+                  return;
+                }
+                if (!selectedListId) {
+                  toast({ title: "Errore", description: "Nessuna lista selezionata", variant: "destructive" });
+                  return;
+                }
+                addGuestMutation.mutate({
+                  listId: selectedListId,
+                  fullName: newGuestData.fullName,
+                  phone: newGuestData.phone || undefined,
+                  email: newGuestData.email || undefined,
+                  notes: newGuestData.notes || undefined,
+                  plusOne: newGuestData.plusOne,
+                });
+              }}
+              disabled={addGuestMutation.isPending}
+              data-testid="btn-confirm-add-guest"
+              className="w-full sm:w-auto"
+            >
+              {addGuestMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Aggiunta...</>
+              ) : (
+                'Aggiungi Ospite'
               )}
             </Button>
           </DialogFooter>
