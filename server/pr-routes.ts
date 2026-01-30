@@ -3027,39 +3027,35 @@ router.get("/api/pr/my-events", requireAuth, requirePr, async (req: Request, res
   try {
     const { userId, prProfileId } = await resolvePrIdentity(req);
     
-    if (!prProfileId) {
+    // Must have at least one of prProfileId or userId
+    if (!prProfileId && !userId) {
       return res.status(403).json({ error: "Profilo PR non trovato" });
     }
     
     const { locations, eventPrAssignments } = await import("@shared/schema");
     
-    // Get PR profile to get companyId
-    const prProfile = await db.select()
-      .from(prProfiles)
-      .where(eq(prProfiles.id, prProfileId))
-      .limit(1);
-    
-    if (prProfile.length === 0) {
-      return res.status(404).json({ error: "Profilo PR non trovato" });
+    // Build conditions for finding assignments
+    const assignmentConditions = [];
+    if (prProfileId) {
+      assignmentConditions.push(eq(eventPrAssignments.prProfileId, prProfileId));
+    }
+    if (userId) {
+      assignmentConditions.push(eq(eventPrAssignments.userId, userId));
     }
     
-    const companyId = prProfile[0].companyId;
-    
     // Get events assigned to this PR via eventPrAssignments
+    // FIX: Don't filter by companyId - find all assignments for this user/prProfile
     const assignments = await db.select({
       id: eventPrAssignments.id,
       eventId: eventPrAssignments.eventId,
+      companyId: eventPrAssignments.companyId,
       canAddToLists: eventPrAssignments.canAddToLists,
       canProposeTables: eventPrAssignments.canProposeTables,
     })
       .from(eventPrAssignments)
       .where(and(
-        eq(eventPrAssignments.companyId, companyId),
         eq(eventPrAssignments.isActive, true),
-        or(
-          eq(eventPrAssignments.prProfileId, prProfileId),
-          userId ? eq(eventPrAssignments.userId, userId) : sql`false`
-        )
+        or(...assignmentConditions)
       ));
     
     if (assignments.length === 0) {
