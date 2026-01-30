@@ -89,7 +89,7 @@ export function CustomizeActionsModal({
         }
         return prev.filter(id => id !== actionId);
       } else {
-        if (prev.length >= 4) {
+        if (prev.length >= 6) {
           return prev;
         }
         return [...prev, actionId];
@@ -147,11 +147,11 @@ export function CustomizeActionsModal({
           </View>
 
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Seleziona da 2 a 4 azioni da mostrare nella home. Usa le frecce per riordinare.
+            Seleziona da 2 a 6 azioni da mostrare nella home. Usa le frecce per riordinare.
           </Text>
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Azioni Selezionate ({selectedActions.length}/4)</Text>
+            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Azioni Selezionate ({selectedActions.length}/6)</Text>
             {selectedActions.map((actionId, index) => {
               const action = actionOptions.find(a => a.id === actionId);
               if (!action) return null;
@@ -207,7 +207,7 @@ export function CustomizeActionsModal({
                   <Ionicons 
                     name="add-circle" 
                     size={24} 
-                    color={selectedActions.length >= 4 ? colors.muted : colors.teal} 
+                    color={selectedActions.length >= 6 ? colors.muted : colors.teal} 
                   />
                 </Pressable>
               ))}
