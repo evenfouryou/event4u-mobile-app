@@ -7052,3 +7052,101 @@ export type InsertPrRewardProgress = z.infer<typeof insertPrRewardProgressSchema
 
 export type PrActivityLog = typeof prActivityLogs.$inferSelect;
 export type InsertPrActivityLog = z.infer<typeof insertPrActivityLogSchema>;
+
+// ========== LANDING PAGES ==========
+
+export const landingPages = pgTable("landing_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 50 }).notNull().unique(), // "usa", "miami", "nyc"
+  title: varchar("title", { length: 200 }).notNull(),
+  subtitle: varchar("subtitle", { length: 500 }),
+  heroText: text("hero_text"),
+  accentColor: varchar("accent_color", { length: 20 }).default("#77f2b4"),
+  isActive: boolean("is_active").default(true),
+  
+  // Customizable content
+  painPoints: text("pain_points"), // JSON array of pain points
+  valueProps: text("value_props"), // JSON array of value propositions
+  faqs: text("faqs"), // JSON array of FAQs
+  
+  // Settings
+  venueSpots: integer("venue_spots").default(2),
+  promoterSpots: integer("promoter_spots").default(10),
+  targetCity: varchar("target_city", { length: 100 }).default("Miami"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_landing_pages_slug").on(table.slug),
+  index("idx_landing_pages_active").on(table.isActive),
+]);
+
+export const landingLeads = pgTable("landing_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  landingPageId: varchar("landing_page_id").references(() => landingPages.id),
+  
+  role: varchar("role", { length: 20 }).notNull(), // "venue" | "promoter"
+  fullName: varchar("full_name", { length: 200 }).notNull(),
+  instagram: varchar("instagram", { length: 100 }).notNull(),
+  phoneOrEmail: varchar("phone_or_email", { length: 200 }).notNull(),
+  
+  // Venue-specific fields
+  venueName: varchar("venue_name", { length: 200 }),
+  venueRole: varchar("venue_role", { length: 50 }), // owner/manager/ops
+  avgTables: varchar("avg_tables", { length: 20 }), // 0-5, 5-15, 15+
+  
+  // Promoter-specific fields
+  avgGuests: varchar("avg_guests", { length: 20 }), // 0-20, 20-50, 50+
+  city: varchar("city", { length: 100 }),
+  
+  note: text("note"),
+  
+  // Lead management
+  status: varchar("status", { length: 20 }).default("new"), // new/contacted/qualified/converted/rejected
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  lastContactedAt: timestamp("last_contacted_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_landing_leads_page").on(table.landingPageId),
+  index("idx_landing_leads_status").on(table.status),
+  index("idx_landing_leads_role").on(table.role),
+]);
+
+export const landingPagesRelations = relations(landingPages, ({ many }) => ({
+  leads: many(landingLeads),
+}));
+
+export const landingLeadsRelations = relations(landingLeads, ({ one }) => ({
+  landingPage: one(landingPages, {
+    fields: [landingLeads.landingPageId],
+    references: [landingPages.id],
+  }),
+  assignedUser: one(users, {
+    fields: [landingLeads.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+// ========== INSERT SCHEMAS - LANDING PAGES ==========
+
+export const insertLandingPageSchema = createInsertSchema(landingPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLandingLeadSchema = createInsertSchema(landingLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========== TYPES - LANDING PAGES ==========
+
+export type LandingPage = typeof landingPages.$inferSelect;
+export type InsertLandingPage = z.infer<typeof insertLandingPageSchema>;
+
+export type LandingLead = typeof landingLeads.$inferSelect;
+export type InsertLandingLead = z.infer<typeof insertLandingLeadSchema>;
