@@ -10179,6 +10179,7 @@ export default function EventHub() {
                 </CardHeader>
                 <CardContent className="px-3 sm:px-4 md:px-6">
                   {(e4uLists.length > 0 || guestLists.length > 0) ? (
+                    <>
                     <div className="space-y-2 sm:space-y-3 md:space-y-4">
                       {(e4uLists.length > 0 ? e4uLists : guestLists).map((list: any) => {
                         const entryCount = list.entryCount || list.currentCount || 0;
@@ -10360,6 +10361,7 @@ export default function EventHub() {
                         )}
                       </div>
                     )}
+                    </>
                   ) : (
                     <div className="text-center py-12">
                       <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
