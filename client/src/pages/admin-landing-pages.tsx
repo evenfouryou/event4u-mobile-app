@@ -135,6 +135,21 @@ export default function AdminLandingPages() {
     },
   });
 
+  const deletePageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/landing-pages/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/landing-pages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/landing-stats"] });
+      toast({ title: "Landing page deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const updateLeadStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await apiRequest("PATCH", `/api/admin/landing-leads/${id}`, { status });
@@ -354,6 +369,19 @@ export default function AdminLandingPages() {
                           data-testid={`button-export-${page.slug}`}
                         >
                           <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (confirm(`Delete "${page.title}" and all its leads? This cannot be undone.`)) {
+                              deletePageMutation.mutate(page.id);
+                            }
+                          }}
+                          data-testid={`button-delete-${page.slug}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
