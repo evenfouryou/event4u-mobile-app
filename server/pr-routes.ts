@@ -3131,14 +3131,54 @@ router.get("/api/pr/profile", requireAuth, requirePr, async (req: Request, res: 
     
     const profile = prProfile[0];
     
+    // Try to get firstName/lastName/email from linked customer if not present in PR profile
+    let firstName = profile.firstName;
+    let lastName = profile.lastName;
+    let email = profile.email;
+    
+    if ((!firstName || !lastName || !email) && profile.identityId) {
+      const [linkedCustomer] = await db.select()
+        .from(siaeCustomers)
+        .where(eq(siaeCustomers.identityId, profile.identityId));
+      
+      if (linkedCustomer) {
+        firstName = firstName || linkedCustomer.firstName;
+        lastName = lastName || linkedCustomer.lastName;
+        email = email || linkedCustomer.email;
+      }
+    }
+    
+    // Also try by phone match if identity didn't work
+    if ((!firstName || !lastName) && profile.phone) {
+      const phoneToSearch = profile.phonePrefix ? 
+        (profile.phonePrefix + profile.phone).replace(/\D/g, '') : 
+        profile.phone.replace(/\D/g, '');
+      
+      const allCustomers = await db.select().from(siaeCustomers);
+      const linkedByPhone = allCustomers.find(c => {
+        if (!c.phone) return false;
+        const custPhone = c.phone.replace(/\D/g, '');
+        return custPhone === phoneToSearch || 
+               custPhone.endsWith(profile.phone) || 
+               phoneToSearch.endsWith(custPhone);
+      });
+      
+      if (linkedByPhone) {
+        firstName = firstName || linkedByPhone.firstName;
+        lastName = lastName || linkedByPhone.lastName;
+        email = email || linkedByPhone.email;
+      }
+    }
+    
     res.json({
       id: profile.id,
       companyId: profile.companyId,
       userId: profile.userId,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
+      firstName: firstName,
+      lastName: lastName,
       phone: profile.phone,
-      email: profile.email,
+      phonePrefix: profile.phonePrefix || '+39',
+      email: email,
       displayName: profile.displayName,
       prCode: profile.prCode,
       commissionType: Number(profile.commissionFixedPerPerson || 0) > 0 ? 'fixed' : 'percentage',
