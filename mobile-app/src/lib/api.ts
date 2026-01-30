@@ -553,6 +553,14 @@ class ApiClient {
     return this.post<WalletTopUpConfirmResponse>('/api/public/account/wallet/topup/confirm', { paymentIntentId });
   }
 
+  async uploadPresignedUrl(objectPath: string): Promise<{ signedUrl: string; objectPath: string }> {
+    return this.post<{ signedUrl: string; objectPath: string }>('/api/storage/upload-url', { objectPath });
+  }
+
+  async updateProfileImage(objectPath: string): Promise<{ success: boolean; profileImageUrl: string }> {
+    return this.post<{ success: boolean; profileImageUrl: string }>('/api/public/account/profile/image', { objectPath });
+  }
+
   async createWalletTopUpCheckout(amount: number): Promise<{ checkoutUrl: string; sessionId: string; amount: number }> {
     return this.post<{ checkoutUrl: string; sessionId: string; amount: number }>('/api/public/account/wallet/topup-checkout', { 
       amount,

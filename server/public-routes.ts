@@ -4787,6 +4787,38 @@ router.patch("/api/public/account/profile", async (req, res) => {
   }
 });
 
+// Aggiorna immagine profilo cliente
+router.post("/api/public/account/profile/image", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { objectPath } = req.body;
+    if (!objectPath) {
+      return res.status(400).json({ message: "objectPath richiesto" });
+    }
+
+    const [updated] = await db
+      .update(siaeCustomers)
+      .set({
+        profileImageUrl: objectPath,
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeCustomers.id, customer.id))
+      .returning();
+
+    res.json({
+      success: true,
+      profileImageUrl: updated.profileImageUrl,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Update profile image error:", error);
+    res.status(500).json({ message: "Errore nell'aggiornamento immagine" });
+  }
+});
+
 // Ottieni biglietti del cliente
 router.get("/api/public/account/tickets", async (req, res) => {
   try {

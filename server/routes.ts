@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import sharp from "sharp";
 import { ObjectStorageService } from "./objectStorage";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 // Replit Auth enabled for testing
 import { setupAuth, getSession } from "./replitAuth";
 import passport from "passport";
@@ -181,6 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register marketing routes (email campaigns, templates)
   app.use(marketingRoutes);
+  
+  // Register object storage routes (file uploads)
+  registerObjectStorageRoutes(app);
   
   // Loyalty routes
   app.use(loyaltyRoutes);

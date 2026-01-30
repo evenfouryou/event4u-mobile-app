@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Modal, Pressable, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors as staticColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
@@ -36,6 +37,82 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [phoneLoading, setPhoneLoading] = useState(false);
+  
+  // Profile image states
+  const getProfileImageUrl = (path: string | undefined | null): string | null => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.replace('.private/', '');
+    return `https://manage.eventfouryou.com/objects/${cleanPath}`;
+  };
+  const [profileImage, setProfileImage] = useState<string | null>(getProfileImageUrl(user?.profileImageUrl));
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permesso negato', 'Per caricare una foto è necessario il permesso alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
+
+  const uploadProfileImage = async (uri: string) => {
+    setImageUploading(true);
+    triggerHaptic('medium');
+
+    try {
+      const filename = `profile_${user?.id}_${Date.now()}.jpg`;
+      const objectPath = `.private/profiles/${filename}`;
+
+      const presignedResponse = await api.uploadPresignedUrl(objectPath);
+      if (!presignedResponse.signedUrl) {
+        throw new Error('Impossibile ottenere URL di upload');
+      }
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const uploadResponse = await fetch(presignedResponse.signedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'image/jpeg',
+        },
+        body: blob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload fallito');
+      }
+
+      const result = await api.updateProfileImage(objectPath);
+      
+      setProfileImage(getProfileImageUrl(result.profileImageUrl) || uri);
+      triggerHaptic('success');
+      Alert.alert('Successo', 'Immagine profilo aggiornata');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      triggerHaptic('error');
+      Alert.alert('Errore', error.message || 'Impossibile caricare l\'immagine');
+    } finally {
+      setImageUploading(false);
+    }
+  };
 
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -157,11 +234,33 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.avatarSection}>
-            <Avatar
-              name={`${formData.firstName} ${formData.lastName}`}
-              size="xl"
-              testID="avatar-profile"
-            />
+            <Pressable 
+              onPress={handlePickImage} 
+              style={styles.avatarContainer}
+              disabled={imageUploading}
+              testID="button-change-avatar"
+            >
+              {profileImage ? (
+                <Image 
+                  source={{ uri: profileImage }} 
+                  style={styles.profileImage}
+                  testID="image-profile"
+                />
+              ) : (
+                <Avatar
+                  name={`${formData.firstName} ${formData.lastName}`}
+                  size="xl"
+                  testID="avatar-profile"
+                />
+              )}
+              <View style={[styles.cameraButton, { backgroundColor: staticColors.primary }]}>
+                {imageUploading ? (
+                  <ActivityIndicator size="small" color={staticColors.primaryForeground} />
+                ) : (
+                  <Ionicons name="camera" size={16} color={staticColors.primaryForeground} />
+                )}
+              </View>
+            </Pressable>
             <Text style={[styles.userName, { color: staticColors.foreground }]}>
               {formData.firstName} {formData.lastName}
             </Text>
@@ -531,6 +630,26 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     marginTop: spacing.md,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: staticColors.background,
   },
 });
 
