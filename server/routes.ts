@@ -27,6 +27,7 @@ import bundleRoutes from "./bundle-routes";
 import staffRoutes from "./staff-routes";
 import geoRoutes from "./geo-routes";
 import landingRoutes from "./landing-routes";
+import identityDocumentRoutes from "./identity-document-routes";
 import { startMarketingScheduler } from "./marketing-scheduler";
 import { setupTicketingWebSocket } from "./ticketing-websocket";
 import { startHoldCleanupJob } from "./hold-service";
@@ -202,6 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Landing pages routes (USA market, etc.)
   app.use(landingRoutes);
+  app.use(identityDocumentRoutes);
   
   // Start marketing email scheduler
   startMarketingScheduler();
