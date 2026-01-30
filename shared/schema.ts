@@ -239,6 +239,103 @@ export const insertIdentitySchema = createInsertSchema(identities).omit({
 export type InsertIdentity = z.infer<typeof insertIdentitySchema>;
 export type Identity = typeof identities.$inferSelect;
 
+// Identity Documents - Document verification for identity verification
+// Supports both manual admin verification (Option A) and automated OCR (Option B)
+export const identityDocuments = pgTable("identity_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  identityId: varchar("identity_id").notNull().references(() => identities.id),
+  
+  // Document type: carta_identita, patente, passaporto, permesso_soggiorno
+  documentType: varchar("document_type", { length: 30 }).notNull(),
+  documentNumber: varchar("document_number", { length: 50 }),
+  
+  // Document images stored in object storage (private directory)
+  frontImageUrl: text("front_image_url").notNull(),
+  backImageUrl: text("back_image_url"),
+  selfieImageUrl: text("selfie_image_url"), // Optional selfie with document
+  
+  // Document details (can be manually entered or extracted via OCR)
+  issuingCountry: varchar("issuing_country", { length: 2 }).default('IT'),
+  issuingAuthority: varchar("issuing_authority", { length: 100 }),
+  issueDate: timestamp("issue_date"),
+  expiryDate: timestamp("expiry_date"),
+  
+  // OCR extraction results (Option B)
+  ocrEnabled: boolean("ocr_enabled").default(false),
+  ocrStatus: varchar("ocr_status", { length: 20 }).default('pending'), // pending, processing, completed, failed
+  ocrExtractedData: text("ocr_extracted_data"), // JSON with extracted fields
+  ocrConfidenceScore: decimal("ocr_confidence_score", { precision: 5, scale: 2 }),
+  ocrProcessedAt: timestamp("ocr_processed_at"),
+  ocrProvider: varchar("ocr_provider", { length: 30 }), // e.g., 'openai_vision', 'google_vision'
+  
+  // Verification status (Option A - manual or Option B - automated)
+  verificationStatus: varchar("verification_status", { length: 20 }).default('pending').notNull(),
+    // pending, under_review, approved, rejected, expired
+  verificationMethod: varchar("verification_method", { length: 20 }), // 'manual', 'ocr_auto', 'ocr_manual'
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by"), // Admin user ID for manual verification
+  rejectionReason: text("rejection_reason"),
+  
+  // Document validity tracking
+  isExpired: boolean("is_expired").default(false),
+  expiryNotificationSent: boolean("expiry_notification_sent").default(false),
+  
+  // Audit trail
+  uploadedFromPlatform: varchar("uploaded_from_platform", { length: 20 }), // 'web', 'mobile_ios', 'mobile_android'
+  uploadedIp: varchar("uploaded_ip", { length: 45 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_identity_docs_identity").on(table.identityId),
+  index("idx_identity_docs_status").on(table.verificationStatus),
+  index("idx_identity_docs_expiry").on(table.expiryDate),
+]);
+
+export const insertIdentityDocumentSchema = createInsertSchema(identityDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIdentityDocument = z.infer<typeof insertIdentityDocumentSchema>;
+export type IdentityDocument = typeof identityDocuments.$inferSelect;
+
+// Identity verification settings per company (admin can enable/disable OCR)
+export const identityVerificationSettings = pgTable("identity_verification_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id"), // null = global/default settings
+  
+  // Verification mode: 'manual_only', 'ocr_auto_approve', 'ocr_with_manual_review'
+  verificationMode: varchar("verification_mode", { length: 30 }).default('manual_only').notNull(),
+  
+  // OCR settings
+  ocrEnabled: boolean("ocr_enabled").default(false),
+  ocrProvider: varchar("ocr_provider", { length: 30 }).default('openai_vision'),
+  ocrAutoApproveThreshold: decimal("ocr_auto_approve_threshold", { precision: 5, scale: 2 }).default("0.95"),
+  
+  // Required documents
+  requireDocument: boolean("require_document").default(false),
+  requireSelfie: boolean("require_selfie").default(false),
+  acceptedDocumentTypes: text("accepted_document_types").default('["carta_identita","patente","passaporto"]'),
+  
+  // Expiry handling
+  blockOnExpiredDocument: boolean("block_on_expired_document").default(true),
+  expiryWarningDays: integer("expiry_warning_days").default(30),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIdentityVerificationSettingsSchema = createInsertSchema(identityVerificationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIdentityVerificationSettings = z.infer<typeof insertIdentityVerificationSettingsSchema>;
+export type IdentityVerificationSettings = typeof identityVerificationSettings.$inferSelect;
+
 // PR Company Assignments - links identities (as PR) to companies with commission settings
 export const prCompanyAssignments = pgTable("pr_company_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
