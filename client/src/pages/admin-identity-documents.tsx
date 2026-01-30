@@ -157,7 +157,7 @@ export default function AdminIdentityDocuments() {
     },
   });
 
-  const { data: settings, refetch: refetchSettings } = useQuery<Settings>({
+  const { data: settings, refetch: refetchSettings, isLoading: settingsLoading, error: settingsError } = useQuery<Settings>({
     queryKey: ["/api/admin/identity-verification-settings"],
   });
 
@@ -203,6 +203,10 @@ export default function AdminIdentityDocuments() {
     onSuccess: () => {
       refetchSettings();
       toast({ title: "Impostazioni salvate" });
+    },
+    onError: (error: any) => {
+      console.error("[Admin Identity] Settings update error:", error);
+      toast({ title: "Errore", description: error.message || "Impossibile salvare le impostazioni", variant: "destructive" });
     },
   });
 
@@ -469,6 +473,21 @@ export default function AdminIdentityDocuments() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          {settingsLoading ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="ml-2">Caricamento impostazioni...</span>
+              </CardContent>
+            </Card>
+          ) : settingsError ? (
+            <Card>
+              <CardContent className="py-8 text-center text-red-500">
+                Errore nel caricamento delle impostazioni. Ricarica la pagina.
+              </CardContent>
+            </Card>
+          ) : (
+          <>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -486,6 +505,7 @@ export default function AdminIdentityDocuments() {
                   <Switch
                     checked={settings?.ocrEnabled || false}
                     onCheckedChange={(checked) => updateSettingsMutation.mutate({ ocrEnabled: checked })}
+                    disabled={updateSettingsMutation.isPending}
                     data-testid="switch-ocr"
                   />
                 </div>
@@ -498,6 +518,7 @@ export default function AdminIdentityDocuments() {
                   <Switch
                     checked={settings?.requireDocument || false}
                     onCheckedChange={(checked) => updateSettingsMutation.mutate({ requireDocument: checked })}
+                    disabled={updateSettingsMutation.isPending}
                     data-testid="switch-require-doc"
                   />
                 </div>
@@ -510,6 +531,7 @@ export default function AdminIdentityDocuments() {
                   <Switch
                     checked={settings?.requireSelfie || false}
                     onCheckedChange={(checked) => updateSettingsMutation.mutate({ requireSelfie: checked })}
+                    disabled={updateSettingsMutation.isPending}
                     data-testid="switch-require-selfie"
                   />
                 </div>
@@ -522,6 +544,7 @@ export default function AdminIdentityDocuments() {
                   <Switch
                     checked={settings?.blockOnExpiredDocument || false}
                     onCheckedChange={(checked) => updateSettingsMutation.mutate({ blockOnExpiredDocument: checked })}
+                    disabled={updateSettingsMutation.isPending}
                     data-testid="switch-block-expired"
                   />
                 </div>
@@ -532,6 +555,7 @@ export default function AdminIdentityDocuments() {
                 <Select
                   value={settings?.verificationMode || "manual_only"}
                   onValueChange={(v) => updateSettingsMutation.mutate({ verificationMode: v })}
+                  disabled={updateSettingsMutation.isPending}
                 >
                   <SelectTrigger data-testid="select-verification-mode">
                     <SelectValue />
@@ -587,6 +611,7 @@ export default function AdminIdentityDocuments() {
                 <Switch
                   checked={settings?.blockOnVerificationDeadline ?? true}
                   onCheckedChange={(checked) => updateSettingsMutation.mutate({ blockOnVerificationDeadline: checked })}
+                  disabled={updateSettingsMutation.isPending}
                   data-testid="switch-block-on-deadline"
                 />
               </div>
@@ -599,6 +624,7 @@ export default function AdminIdentityDocuments() {
                   max="90"
                   value={settings?.verificationDeadlineDays ?? 15}
                   onChange={(e) => updateSettingsMutation.mutate({ verificationDeadlineDays: parseInt(e.target.value) })}
+                  disabled={updateSettingsMutation.isPending}
                   data-testid="input-verification-deadline-days"
                 />
                 <p className="text-sm text-muted-foreground">
@@ -607,6 +633,8 @@ export default function AdminIdentityDocuments() {
               </div>
             </CardContent>
           </Card>
+          </>
+          )}
         </TabsContent>
       </Tabs>
 
