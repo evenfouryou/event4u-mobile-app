@@ -339,7 +339,7 @@ export function TicketDetailScreen({
                   </View>
                   <View style={styles.footerPrice}>
                     <Text style={styles.footerLabel}>Prezzo</Text>
-                    <Text style={styles.priceValue}>€{ticket.price.toFixed(2)}</Text>
+                    <Text style={styles.priceValue}>€{(Number(ticket.price) || 0).toFixed(2)}</Text>
                   </View>
                 </View>
 
