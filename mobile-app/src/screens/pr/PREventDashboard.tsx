@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Alert, Image, Share, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Alert, Image, Share, Linking, Modal, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,6 +75,10 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
   const [batchSearchQuery, setBatchSearchQuery] = useState('');
   const [batchSearchResults, setBatchSearchResults] = useState<SearchResult[]>([]);
   const [batchSearching, setBatchSearching] = useState(false);
+  
+  // Guest list filter search
+  const [guestFilterQuery, setGuestFilterQuery] = useState('');
+  const [selectedGuestDetail, setSelectedGuestDetail] = useState<PrGuestListEntry | null>(null);
   
   // Prizes and Links states
   const [prizes, setPrizes] = useState<Prize[]>([]);
@@ -294,6 +298,14 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
           onPress: async () => {
             try {
               triggerHaptic('medium');
+              
+              // Optimistic update - immediately move to pending_cancellation status
+              if (type === 'guest') {
+                setGuests(prev => prev.map(g => 
+                  g.id === id ? { ...g, status: 'pending_cancellation' } : g
+                ));
+              }
+              
               let result;
               if (type === 'guest') {
                 result = await api.requestGuestCancellation(id);
@@ -303,12 +315,17 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
               if (result.success) {
                 triggerHaptic('success');
                 Alert.alert('Successo', result.message || 'Richiesta inviata');
+                // Reload to get the actual server state
                 await loadData();
               } else {
+                // Revert optimistic update on error
+                await loadData();
                 Alert.alert('Errore', result.message || 'Impossibile inviare la richiesta');
               }
             } catch (error: any) {
               console.error('Error requesting cancellation:', error);
+              // Revert optimistic update on error
+              await loadData();
               Alert.alert('Errore', error.message || 'Impossibile inviare la richiesta');
             }
           }
@@ -447,10 +464,24 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
         return <Badge variant="golden" size="sm"><Text style={styles.statusText}>Confermato</Text></Badge>;
       case 'cancelled':
         return <Badge variant="destructive" size="sm"><Text style={styles.statusText}>Annullato</Text></Badge>;
+      case 'pending_cancellation':
+        return <Badge variant="outline" size="sm"><Text style={[styles.statusText, { color: staticColors.warning }]}>In attesa cancellazione</Text></Badge>;
       default:
         return <Badge variant="secondary" size="sm"><Text style={styles.statusText}>In attesa</Text></Badge>;
     }
   };
+  
+  // Filter guests by search query
+  const filteredGuests = guests.filter(g => {
+    if (!guestFilterQuery.trim()) return true;
+    const query = guestFilterQuery.toLowerCase();
+    return (
+      g.firstName?.toLowerCase().includes(query) ||
+      g.lastName?.toLowerCase().includes(query) ||
+      g.phone?.toLowerCase().includes(query) ||
+      `${g.firstName} ${g.lastName}`.toLowerCase().includes(query)
+    );
+  });
 
   const arrivedCount = guests.filter(g => g.status === 'arrived').length;
 
@@ -1069,70 +1100,142 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
             {/* Guest List - only show in list mode */}
             {listViewMode === 'list' && (
-              guests.filter(g => g.status !== 'cancelled').length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="people-outline" size={48} color={staticColors.mutedForeground} />
-                  <Text style={styles.emptyText}>Nessun ospite nella lista</Text>
-                  <Text style={styles.emptySubtext}>Aggiungi ospiti per iniziare</Text>
+              <>
+                {/* Search bar for guest list */}
+                <View style={styles.guestFilterContainer}>
+                  <Ionicons name="search" size={18} color={staticColors.mutedForeground} />
+                  <TextInput
+                    style={styles.guestFilterInput}
+                    placeholder="Cerca ospite per nome o telefono..."
+                    placeholderTextColor={staticColors.mutedForeground}
+                    value={guestFilterQuery}
+                    onChangeText={setGuestFilterQuery}
+                    testID="input-filter-guests"
+                  />
+                  {guestFilterQuery.length > 0 && (
+                    <Pressable onPress={() => setGuestFilterQuery('')}>
+                      <Ionicons name="close-circle" size={18} color={staticColors.mutedForeground} />
+                    </Pressable>
+                  )}
                 </View>
-              ) : (
-                guests.filter(g => g.status !== 'cancelled').map((guest) => (
-                  <Card key={guest.id} style={styles.guestCard}>
-                    <View style={styles.guestInfo}>
-                      <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
-                      {guest.phone && (
+                
+                {filteredGuests.filter(g => g.status !== 'cancelled' && g.status !== 'pending_cancellation').length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="people-outline" size={48} color={staticColors.mutedForeground} />
+                    <Text style={styles.emptyText}>{guestFilterQuery ? 'Nessun risultato' : 'Nessun ospite nella lista'}</Text>
+                    <Text style={styles.emptySubtext}>{guestFilterQuery ? 'Prova con un altro termine' : 'Aggiungi ospiti per iniziare'}</Text>
+                  </View>
+                ) : (
+                  filteredGuests.filter(g => g.status !== 'cancelled' && g.status !== 'pending_cancellation').map((guest) => (
+                    <Card key={guest.id} style={styles.guestCard}>
+                      <Pressable 
+                        style={styles.guestInfo}
+                        onPress={() => setSelectedGuestDetail(guest)}
+                        testID={`guest-detail-${guest.id}`}
+                      >
+                        <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
+                        {guest.phone && (
+                          <View style={styles.guestPhoneRow}>
+                            <Ionicons name="call-outline" size={14} color={staticColors.primary} />
+                            <Text style={styles.guestPhone}>{guest.phone}</Text>
+                          </View>
+                        )}
+                      </Pressable>
+                      <View style={styles.guestActions}>
+                        {getStatusBadge(guest.status)}
+                        {guest.status !== 'cancelled' && guest.status !== 'checked_in' && guest.status !== 'arrived' && guest.status !== 'pending_cancellation' && (
+                          <Pressable
+                            onPress={() => handleRequestCancellation(guest.id, 'guest')}
+                            style={styles.cancelButton}
+                            testID={`button-cancel-guest-${guest.id}`}
+                          >
+                            <Ionicons name="close-circle-outline" size={20} color={staticColors.destructive} />
+                          </Pressable>
+                        )}
+                      </View>
+                    </Card>
+                  ))
+                )}
+                
+                {/* Show pending cancellation guests separately */}
+                {filteredGuests.filter(g => g.status === 'pending_cancellation').length > 0 && (
+                  <>
+                    <Text style={styles.sectionLabel}>In attesa di cancellazione</Text>
+                    {filteredGuests.filter(g => g.status === 'pending_cancellation').map((guest) => (
+                      <Card key={guest.id} style={[styles.guestCard, { borderLeftWidth: 3, borderLeftColor: staticColors.warning }]}>
                         <Pressable 
-                          onPress={() => Linking.openURL(`tel:${guest.phone}`)}
-                          style={styles.guestPhoneRow}
+                          style={styles.guestInfo}
+                          onPress={() => setSelectedGuestDetail(guest)}
+                          testID={`guest-detail-pending-${guest.id}`}
                         >
-                          <Ionicons name="call-outline" size={14} color={staticColors.primary} />
-                          <Text style={styles.guestPhone}>{guest.phone}</Text>
+                          <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
+                          {guest.phone && (
+                            <View style={styles.guestPhoneRow}>
+                              <Ionicons name="call-outline" size={14} color={staticColors.mutedForeground} />
+                              <Text style={[styles.guestPhone, { color: staticColors.mutedForeground }]}>{guest.phone}</Text>
+                            </View>
+                          )}
                         </Pressable>
-                      )}
-                    </View>
-                    <View style={styles.guestActions}>
-                      {getStatusBadge(guest.status)}
-                      {guest.status !== 'cancelled' && guest.status !== 'checked_in' && guest.status !== 'arrived' && (
-                        <Pressable
-                          onPress={() => handleRequestCancellation(guest.id, 'guest')}
-                          style={styles.cancelButton}
-                          testID={`button-cancel-guest-${guest.id}`}
-                        >
-                          <Ionicons name="close-circle-outline" size={20} color={staticColors.destructive} />
-                        </Pressable>
-                      )}
-                    </View>
-                  </Card>
-                ))
-              )
+                        <View style={styles.guestActions}>
+                          {getStatusBadge(guest.status)}
+                        </View>
+                      </Card>
+                    ))}
+                  </>
+                )}
+              </>
             )}
 
             {/* Cancelled View Mode */}
             {listViewMode === 'cancelled' && (
-              guests.filter(g => g.status === 'cancelled').length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="close-circle-outline" size={48} color={staticColors.mutedForeground} />
-                  <Text style={styles.emptyText}>Nessuna cancellazione</Text>
-                  <Text style={styles.emptySubtext}>Le prenotazioni cancellate appariranno qui</Text>
+              <>
+                {/* Search bar for cancelled list */}
+                <View style={styles.guestFilterContainer}>
+                  <Ionicons name="search" size={18} color={staticColors.mutedForeground} />
+                  <TextInput
+                    style={styles.guestFilterInput}
+                    placeholder="Cerca nelle cancellazioni..."
+                    placeholderTextColor={staticColors.mutedForeground}
+                    value={guestFilterQuery}
+                    onChangeText={setGuestFilterQuery}
+                    testID="input-filter-cancelled"
+                  />
+                  {guestFilterQuery.length > 0 && (
+                    <Pressable onPress={() => setGuestFilterQuery('')}>
+                      <Ionicons name="close-circle" size={18} color={staticColors.mutedForeground} />
+                    </Pressable>
+                  )}
                 </View>
-              ) : (
-                guests.filter(g => g.status === 'cancelled').map((guest) => (
-                  <Card key={guest.id} style={[styles.guestCard, { borderLeftWidth: 3, borderLeftColor: staticColors.destructive }]}>
-                    <View style={styles.guestInfo}>
-                      <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
-                      {guest.phone && (
-                        <View style={styles.guestPhoneRow}>
-                          <Ionicons name="call-outline" size={14} color={staticColors.mutedForeground} />
-                          <Text style={[styles.guestPhone, { color: staticColors.mutedForeground }]}>{guest.phone}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.guestActions}>
-                      <Badge variant="destructive">Cancellato</Badge>
-                    </View>
-                  </Card>
-                ))
-              )
+                
+                {filteredGuests.filter(g => g.status === 'cancelled').length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="close-circle-outline" size={48} color={staticColors.mutedForeground} />
+                    <Text style={styles.emptyText}>{guestFilterQuery ? 'Nessun risultato' : 'Nessuna cancellazione'}</Text>
+                    <Text style={styles.emptySubtext}>{guestFilterQuery ? 'Prova con un altro termine' : 'Le prenotazioni cancellate appariranno qui'}</Text>
+                  </View>
+                ) : (
+                  filteredGuests.filter(g => g.status === 'cancelled').map((guest) => (
+                    <Card key={guest.id} style={[styles.guestCard, { borderLeftWidth: 3, borderLeftColor: staticColors.destructive }]}>
+                      <Pressable 
+                        style={styles.guestInfo}
+                        onPress={() => setSelectedGuestDetail(guest)}
+                        testID={`guest-detail-cancelled-${guest.id}`}
+                      >
+                        <Text style={styles.guestName}>{guest.firstName} {guest.lastName}</Text>
+                        {guest.phone && (
+                          <View style={styles.guestPhoneRow}>
+                            <Ionicons name="call-outline" size={14} color={staticColors.mutedForeground} />
+                            <Text style={[styles.guestPhone, { color: staticColors.mutedForeground }]}>{guest.phone}</Text>
+                          </View>
+                        )}
+                      </Pressable>
+                      <View style={styles.guestActions}>
+                        <Badge variant="destructive">Cancellato</Badge>
+                      </View>
+                    </Card>
+                  ))
+                )}
+              </>
             )}
           </>
         )}
@@ -1499,6 +1602,113 @@ export function PREventDashboard({ eventId, onGoBack }: PREventDashboardProps) {
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+      
+      {/* Guest Detail Modal */}
+      <Modal
+        visible={selectedGuestDetail !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedGuestDetail(null)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setSelectedGuestDetail(null)}
+        >
+          <Pressable style={styles.guestDetailModal} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.guestDetailHeader}>
+              <Text style={styles.guestDetailTitle}>Dettagli Ospite</Text>
+              <TouchableOpacity onPress={() => setSelectedGuestDetail(null)}>
+                <Ionicons name="close" size={24} color={staticColors.foreground} />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedGuestDetail && (
+              <View style={styles.guestDetailContent}>
+                <View style={styles.guestDetailRow}>
+                  <Ionicons name="person" size={20} color={staticColors.primary} />
+                  <View style={styles.guestDetailInfo}>
+                    <Text style={styles.guestDetailLabel}>Nome</Text>
+                    <Text style={styles.guestDetailValue}>{selectedGuestDetail.firstName} {selectedGuestDetail.lastName}</Text>
+                  </View>
+                </View>
+                
+                {selectedGuestDetail.phone && (
+                  <Pressable 
+                    style={styles.guestDetailRow}
+                    onPress={() => Linking.openURL(`tel:${selectedGuestDetail.phone}`)}
+                  >
+                    <Ionicons name="call" size={20} color={staticColors.primary} />
+                    <View style={styles.guestDetailInfo}>
+                      <Text style={styles.guestDetailLabel}>Telefono</Text>
+                      <Text style={[styles.guestDetailValue, { color: staticColors.primary }]}>{selectedGuestDetail.phone}</Text>
+                    </View>
+                  </Pressable>
+                )}
+                
+                <View style={styles.guestDetailRow}>
+                  <Ionicons name="flag" size={20} color={staticColors.primary} />
+                  <View style={styles.guestDetailInfo}>
+                    <Text style={styles.guestDetailLabel}>Stato</Text>
+                    <View style={{ marginTop: 4 }}>{getStatusBadge(selectedGuestDetail.status)}</View>
+                  </View>
+                </View>
+                
+                {selectedGuestDetail.listName && (
+                  <View style={styles.guestDetailRow}>
+                    <Ionicons name="list" size={20} color={staticColors.primary} />
+                    <View style={styles.guestDetailInfo}>
+                      <Text style={styles.guestDetailLabel}>Lista</Text>
+                      <Text style={styles.guestDetailValue}>{selectedGuestDetail.listName}</Text>
+                    </View>
+                  </View>
+                )}
+                
+                {selectedGuestDetail.gender && (
+                  <View style={styles.guestDetailRow}>
+                    <Ionicons name={selectedGuestDetail.gender === 'M' ? 'male' : 'female'} size={20} color={staticColors.primary} />
+                    <View style={styles.guestDetailInfo}>
+                      <Text style={styles.guestDetailLabel}>Genere</Text>
+                      <Text style={styles.guestDetailValue}>{selectedGuestDetail.gender === 'M' ? 'Maschile' : 'Femminile'}</Text>
+                    </View>
+                  </View>
+                )}
+                
+                {selectedGuestDetail.notes && (
+                  <View style={styles.guestDetailRow}>
+                    <Ionicons name="document-text" size={20} color={staticColors.primary} />
+                    <View style={styles.guestDetailInfo}>
+                      <Text style={styles.guestDetailLabel}>Note</Text>
+                      <Text style={styles.guestDetailValue}>{selectedGuestDetail.notes}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+            
+            <View style={styles.guestDetailActions}>
+              {selectedGuestDetail?.phone && (
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    Linking.openURL(`tel:${selectedGuestDetail.phone}`);
+                  }}
+                  style={{ flex: 1, marginRight: spacing.sm }}
+                >
+                  <Ionicons name="call" size={16} color={staticColors.primary} />
+                  <Text style={{ marginLeft: spacing.xs, color: staticColors.primary }}>Chiama</Text>
+                </Button>
+              )}
+              <Button
+                variant="default"
+                onPress={() => setSelectedGuestDetail(null)}
+                style={{ flex: 1 }}
+              >
+                <Text style={{ color: staticColors.primaryForeground }}>Chiudi</Text>
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -2280,5 +2490,90 @@ const styles = StyleSheet.create({
   },
   modeButtonTextActiveCancelled: {
     color: staticColors.destructive,
+  },
+  // Guest filter search bar
+  guestFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: staticColors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  guestFilterInput: {
+    flex: 1,
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+    padding: 0,
+  },
+  sectionLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+    color: staticColors.mutedForeground,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  guestDetailModal: {
+    backgroundColor: staticColors.card,
+    borderRadius: borderRadius.lg,
+    width: '100%',
+    maxWidth: 400,
+    ...shadows.lg,
+  },
+  guestDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  guestDetailTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: '600',
+    color: staticColors.foreground,
+  },
+  guestDetailContent: {
+    padding: spacing.md,
+  },
+  guestDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
+  },
+  guestDetailInfo: {
+    flex: 1,
+  },
+  guestDetailLabel: {
+    fontSize: typography.fontSize.xs,
+    color: staticColors.mutedForeground,
+    marginBottom: 2,
+  },
+  guestDetailValue: {
+    fontSize: typography.fontSize.base,
+    color: staticColors.foreground,
+    fontWeight: '500',
+  },
+  guestDetailActions: {
+    flexDirection: 'row',
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: staticColors.border,
+    gap: spacing.sm,
   },
 });
