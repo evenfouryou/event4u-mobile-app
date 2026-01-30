@@ -2,7 +2,7 @@
   "expo": {
     "name": "Event Four You",
     "slug": "event-four-you",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "scheme": "event4u",
     "userInterfaceStyle": "dark",
