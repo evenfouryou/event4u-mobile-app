@@ -6006,6 +6006,32 @@ export const prProfilesRelations = relations(prProfiles, ({ one, many }) => ({
   reservations: many(reservationPayments),
 }));
 
+// Push Notification Tokens - Token per notifiche push Expo
+export const pushTokens = pgTable("push_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: text("token").notNull().unique(),
+  platform: varchar("platform", { length: 20 }).notNull(), // 'ios' | 'android' | 'web'
+  
+  // Collegamento utente (può essere PR, customer, o user interno)
+  prProfileId: varchar("pr_profile_id").references(() => prProfiles.id),
+  customerId: varchar("customer_id").references(() => siaeCustomers.id),
+  userId: varchar("user_id").references(() => users.id),
+  
+  deviceId: varchar("device_id", { length: 100 }),
+  isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_push_tokens_pr").on(table.prProfileId),
+  index("idx_push_tokens_customer").on(table.customerId),
+  index("idx_push_tokens_user").on(table.userId),
+]);
+
+export const insertPushTokenSchema = createInsertSchema(pushTokens).omit({ id: true, createdAt: true, updatedAt: true, lastUsedAt: true });
+export type InsertPushToken = z.infer<typeof insertPushTokenSchema>;
+export type PushToken = typeof pushTokens.$inferSelect;
+
 // Reservation Payments - Pagamenti prenotazioni (liste e tavoli)
 // NOTA: Questo NON è un biglietto, è un servizio di prenotazione
 export const reservationPayments = pgTable("reservation_payments", {
