@@ -4,6 +4,7 @@ import { prStorage } from "./pr-storage";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, isMSG91Configured } from "./msg91-service";
+import { sendNotificationToPrProfile, registerPushToken, deactivatePushToken } from "./push-notification-service";
 import {
   insertEventStaffAssignmentSchema,
   insertEventFloorplanSchema,
@@ -2380,6 +2381,22 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       }
     }
     
+    // Send push notification to PR about the new event assignment
+    try {
+      await sendNotificationToPrProfile(prUserId, {
+        title: "Nuovo Evento Assegnato!",
+        body: `Sei stato assegnato all'evento "${event[0].name}"`,
+        data: {
+          type: "event_assignment",
+          eventId: eventId,
+          eventName: event[0].name,
+        },
+      });
+    } catch (notifError) {
+      console.error("[PR Assignment] Error sending push notification:", notifError);
+      // Don't fail the request if notification fails
+    }
+    
     res.status(201).json(assignment);
   } catch (error: any) {
     console.error("Error creating PR assignment:", error);
@@ -4216,6 +4233,68 @@ router.patch("/api/gestore/lists/:listId/auto-approve-cancellations", requireAut
     res.json({ success: true, message: enabled ? 'Approvazione automatica attivata' : 'Approvazione automatica disattivata' });
   } catch (error: any) {
     console.error("Error updating auto-approve setting:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Push Token Management ====================
+
+// Register/Update push notification token for PR
+router.post("/api/pr/push-token", async (req: Request, res: Response) => {
+  try {
+    const { token, platform, deviceId } = req.body;
+    const prSession = (req.session as any)?.prProfile;
+    const user = req.user as any;
+    
+    if (!token || !platform) {
+      return res.status(400).json({ error: "Token e platform sono obbligatori" });
+    }
+    
+    // Get prProfileId from session or user
+    let prProfileId: string | null = prSession?.id || null;
+    let userId: string | null = user?.id || null;
+    
+    if (userId && !prProfileId) {
+      const prProfile = await db.select().from(prProfiles).where(eq(prProfiles.userId, userId)).limit(1);
+      if (prProfile.length > 0) {
+        prProfileId = prProfile[0].id;
+      }
+    }
+    
+    if (!prProfileId) {
+      return res.status(401).json({ error: "Sessione PR non valida" });
+    }
+    
+    const result = await registerPushToken(token, platform, {
+      prProfileId,
+      userId: userId || undefined,
+      deviceId,
+    });
+    
+    if (result.success) {
+      res.json({ success: true, id: result.id });
+    } else {
+      res.status(400).json({ error: "Token non valido" });
+    }
+  } catch (error: any) {
+    console.error("Error registering push token:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deactivate push token (logout)
+router.delete("/api/pr/push-token", async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ error: "Token è obbligatorio" });
+    }
+    
+    const success = await deactivatePushToken(token);
+    res.json({ success });
+  } catch (error: any) {
+    console.error("Error deactivating push token:", error);
     res.status(500).json({ error: error.message });
   }
 });
