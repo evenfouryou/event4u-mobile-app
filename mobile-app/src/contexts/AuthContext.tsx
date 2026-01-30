@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import api from '@/lib/api';
+import { setupPushNotifications } from '@/lib/pushNotifications';
 
 interface User {
   id: string;
@@ -91,6 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         console.log('[Auth] Re-authenticated successfully');
+        
+        // Also register push token on re-auth for PR users
+        if (response.user.role === 'pr') {
+          setupPushNotifications().catch(err => 
+            console.error('[Auth] Push notification setup failed during re-auth:', err)
+          );
+        }
+        
         return true;
       }
       return false;
@@ -154,6 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userData && userData.user) {
           setUser(userData.user);
           await saveUser(userData.user);
+          
+          // Register push token on app startup for PR users with valid session
+          if (userData.user.role === 'pr') {
+            setupPushNotifications().catch(err => 
+              console.error('[Auth] Push notification setup failed on checkAuth:', err)
+            );
+          }
           return;
         }
       } catch (sessionError) {
@@ -258,6 +274,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const role = response.user.role;
         if (role === 'pr') {
           api.prefetchPrDashboard();
+          // Register push notifications for PR users
+          setupPushNotifications().catch(err => 
+            console.error('[Auth] Push notification setup failed:', err)
+          );
         } else if (role === 'scanner') {
           api.prefetchScannerDashboard();
         } else {

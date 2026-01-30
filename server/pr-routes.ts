@@ -4240,7 +4240,7 @@ router.patch("/api/gestore/lists/:listId/auto-approve-cancellations", requireAut
 // ==================== Push Token Management ====================
 
 // Register/Update push notification token for PR
-router.post("/api/pr/push-token", async (req: Request, res: Response) => {
+router.post("/api/pr/push-token", requireAuth, async (req: Request, res: Response) => {
   try {
     const { token, platform, deviceId } = req.body;
     const prSession = (req.session as any)?.prProfile;
@@ -4250,8 +4250,8 @@ router.post("/api/pr/push-token", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Token e platform sono obbligatori" });
     }
     
-    // Get prProfileId from session or user
-    let prProfileId: string | null = prSession?.id || null;
+    // Get prProfileId from session, user, or Bearer token (set by requireAuth)
+    let prProfileId: string | null = (req as any).prProfileId || prSession?.id || null;
     let userId: string | null = user?.id || null;
     
     if (userId && !prProfileId) {
@@ -4283,7 +4283,7 @@ router.post("/api/pr/push-token", async (req: Request, res: Response) => {
 });
 
 // Deactivate push token (logout)
-router.delete("/api/pr/push-token", async (req: Request, res: Response) => {
+router.post("/api/pr/push-token/deactivate", async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
     
