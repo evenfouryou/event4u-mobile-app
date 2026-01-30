@@ -11,7 +11,7 @@ import { Header } from '@/components/Header';
 import { Loading } from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
 import { triggerHaptic } from '@/lib/haptics';
-import api, { IdentityDocument } from '@/lib/api';
+import api, { IdentityDocument, IdentityVerificationStatus } from '@/lib/api';
 
 interface IdentityDocumentScreenProps {
   onBack: () => void;
@@ -43,6 +43,7 @@ export function IdentityDocumentScreen({ onBack }: IdentityDocumentScreenProps) 
   const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<IdentityDocument[]>([]);
+  const [verificationStatus, setVerificationStatus] = useState<IdentityVerificationStatus | null>(null);
   const [step, setStep] = useState<'view' | 'select' | 'upload'>('view');
   const [selectedType, setSelectedType] = useState('carta_identita');
   const [frontImage, setFrontImage] = useState<{ uri: string } | null>(null);
@@ -52,6 +53,7 @@ export function IdentityDocumentScreen({ onBack }: IdentityDocumentScreenProps) 
 
   useEffect(() => {
     loadDocuments();
+    loadVerificationStatus();
   }, []);
 
   const loadDocuments = async () => {
@@ -63,6 +65,15 @@ export function IdentityDocumentScreen({ onBack }: IdentityDocumentScreenProps) 
       console.error('Error loading documents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadVerificationStatus = async () => {
+    try {
+      const status = await api.getIdentityVerificationStatus();
+      setVerificationStatus(status);
+    } catch (error) {
+      console.error('Error loading verification status:', error);
     }
   };
 
@@ -365,6 +376,53 @@ export function IdentityDocumentScreen({ onBack }: IdentityDocumentScreenProps) 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {step === 'view' && (
           <>
+            {/* Deadline warning banner */}
+            {verificationStatus && !verificationStatus.verified && verificationStatus.daysRemaining !== null && (
+              <View style={[
+                styles.card,
+                { 
+                  backgroundColor: verificationStatus.blocked 
+                    ? 'rgba(239, 68, 68, 0.15)' 
+                    : verificationStatus.daysRemaining <= 5 
+                      ? 'rgba(245, 158, 11, 0.15)' 
+                      : 'rgba(59, 130, 246, 0.15)',
+                  marginBottom: spacing.md,
+                }
+              ]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons 
+                    name={verificationStatus.blocked ? "lock-closed" : "time-outline"} 
+                    size={24} 
+                    color={verificationStatus.blocked ? '#ef4444' : verificationStatus.daysRemaining <= 5 ? '#f59e0b' : '#3b82f6'} 
+                    style={{ marginRight: spacing.sm }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    {verificationStatus.blocked ? (
+                      <>
+                        <Text style={[styles.statusLabel, { color: '#ef4444' }]}>Account Bloccato</Text>
+                        <Text style={styles.statusDescription}>
+                          Il termine per la verifica identità è scaduto. Carica un documento per sbloccare il tuo account.
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[styles.statusLabel, { color: verificationStatus.daysRemaining <= 5 ? '#f59e0b' : '#3b82f6' }]}>
+                          {verificationStatus.daysRemaining <= 1 
+                            ? 'Ultimo giorno!' 
+                            : `${verificationStatus.daysRemaining} giorni rimanenti`}
+                        </Text>
+                        <Text style={styles.statusDescription}>
+                          {verificationStatus.daysRemaining <= 5 
+                            ? 'Completa la verifica prima della scadenza per evitare il blocco del tuo account.'
+                            : 'Verifica la tua identità per accedere a tutte le funzionalità.'}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+
             {hasApprovedDocument ? (
               <View style={styles.card}>
                 <View style={[styles.statusCard, { backgroundColor: statusConfig.approved.bgColor }]}>

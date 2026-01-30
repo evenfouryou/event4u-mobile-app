@@ -565,6 +565,10 @@ class ApiClient {
     return this.get<{ documents: IdentityDocument[] }>('/api/identity-documents/my');
   }
 
+  async getIdentityVerificationStatus(): Promise<IdentityVerificationStatus> {
+    return this.get<IdentityVerificationStatus>('/api/identity-documents/verification-status');
+  }
+
   async getIdentityDocumentUploadUrls(documentType: string, includeSelfie?: boolean): Promise<IdentityDocumentUploadUrls> {
     const params = new URLSearchParams();
     params.set('documentType', documentType);
@@ -4157,6 +4161,13 @@ export interface IdentityDocumentUploadUrls {
   front: { uploadUrl: string; objectPath: string };
   back?: { uploadUrl: string; objectPath: string };
   selfie?: { uploadUrl: string; objectPath: string };
+}
+
+export interface IdentityVerificationStatus {
+  verified: boolean;
+  deadline: string | null;
+  daysRemaining: number | null;
+  blocked: boolean;
 }
 
 export const api = new ApiClient(API_BASE_URL);
