@@ -43,6 +43,7 @@ import {
   ArrowLeftRight,
   User,
   Globe,
+  FileCheck,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -122,6 +123,12 @@ export function AppSidebar() {
         title: "Landing Pages",
         icon: Globe,
         url: "/admin/landing-pages",
+        group: t('nav.groups.system'),
+      },
+      {
+        title: "Verifica Documenti",
+        icon: FileCheck,
+        url: "/admin/identity-documents",
         group: t('nav.groups.system'),
       },
       {
