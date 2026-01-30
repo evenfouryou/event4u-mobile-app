@@ -3148,44 +3148,47 @@ router.get("/api/pr/profile", requireAuth, requirePr, async (req: Request, res: 
     
     const profile = prProfile[0];
     
-    // Try to get firstName/lastName/email from linked customer if not present in PR profile
-    let firstName = profile.firstName;
-    let lastName = profile.lastName;
-    let email = profile.email;
+    // Try to get data from linked customer (via identityId or phone match)
+    let linkedCustomer: any = null;
     
-    if ((!firstName || !lastName || !email) && profile.identityId) {
-      const [linkedCustomer] = await db.select()
+    // Strategy 1: Look up by identityId
+    if (profile.identityId) {
+      const [customer] = await db.select()
         .from(siaeCustomers)
         .where(eq(siaeCustomers.identityId, profile.identityId));
-      
-      if (linkedCustomer) {
-        firstName = firstName || linkedCustomer.firstName;
-        lastName = lastName || linkedCustomer.lastName;
-        email = email || linkedCustomer.email;
+      if (customer) {
+        linkedCustomer = customer;
       }
     }
     
-    // Also try by phone match if identity didn't work
-    if ((!firstName || !lastName) && profile.phone) {
+    // Strategy 2: Look up by phone match if identity didn't work
+    if (!linkedCustomer && profile.phone) {
       const phoneToSearch = profile.phonePrefix ? 
         (profile.phonePrefix + profile.phone).replace(/\D/g, '') : 
         profile.phone.replace(/\D/g, '');
       
       const allCustomers = await db.select().from(siaeCustomers);
-      const linkedByPhone = allCustomers.find(c => {
+      linkedCustomer = allCustomers.find(c => {
         if (!c.phone) return false;
         const custPhone = c.phone.replace(/\D/g, '');
         return custPhone === phoneToSearch || 
                custPhone.endsWith(profile.phone) || 
                phoneToSearch.endsWith(custPhone);
       });
-      
-      if (linkedByPhone) {
-        firstName = firstName || linkedByPhone.firstName;
-        lastName = lastName || linkedByPhone.lastName;
-        email = email || linkedByPhone.email;
-      }
     }
+    
+    // Merge data: PR profile takes precedence, fallback to customer data
+    const firstName = profile.firstName || linkedCustomer?.firstName || null;
+    const lastName = profile.lastName || linkedCustomer?.lastName || null;
+    const email = profile.email || linkedCustomer?.email || null;
+    const birthDate = linkedCustomer?.birthDate || null;
+    const gender = linkedCustomer?.gender || null;
+    const fiscalCode = linkedCustomer?.fiscalCode || null;
+    const street = linkedCustomer?.street || null;
+    const city = linkedCustomer?.city || null;
+    const province = linkedCustomer?.province || null;
+    const postalCode = linkedCustomer?.postalCode || null;
+    const profileImageUrl = profile.profileImageUrl || linkedCustomer?.profileImageUrl || null;
     
     res.json({
       id: profile.id,
@@ -3204,6 +3207,17 @@ router.get("/api/pr/profile", requireAuth, requirePr, async (req: Request, res: 
         : String(profile.commissionPercentage),
       status: profile.isActive ? 'active' : 'inactive',
       createdAt: profile.createdAt,
+      // Additional customer data when PR is also a customer
+      birthDate: birthDate,
+      gender: gender,
+      fiscalCode: fiscalCode,
+      street: street,
+      city: city,
+      province: province,
+      postalCode: postalCode,
+      profileImageUrl: profileImageUrl,
+      isAlsoCustomer: !!linkedCustomer,
+      customerId: linkedCustomer?.id || null,
     });
   } catch (error: any) {
     console.error("Error getting PR profile:", error);
