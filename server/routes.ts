@@ -1391,39 +1391,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customer = null;
       
       if (isPhone) {
-        // Search by phone number with normalization
-        // Normalize input phone: remove +, 00, leading 39
-        let normalizedPhone = cleanPhone;
-        if (normalizedPhone.startsWith('+')) {
-          normalizedPhone = normalizedPhone.substring(1);
+        // Normalize input phone and detect prefix (same logic as PR login)
+        const cleanDigits = cleanPhone.replace(/\D/g, '');
+        let numberPart = cleanDigits;
+        let detectedPrefix = '';
+        
+        // Remove Italian prefix
+        if (cleanDigits.startsWith('39') && cleanDigits.length >= 12) {
+          numberPart = cleanDigits.substring(2);
+          detectedPrefix = '+39';
+        } 
+        // Remove US/Canada prefix  
+        else if (cleanDigits.startsWith('1') && cleanDigits.length >= 11) {
+          numberPart = cleanDigits.substring(1);
+          detectedPrefix = '+1';
         }
-        if (normalizedPhone.startsWith('00')) {
-          normalizedPhone = normalizedPhone.substring(2);
-        }
-        if (normalizedPhone.startsWith('39') && normalizedPhone.length > 10) {
-          normalizedPhone = normalizedPhone.substring(2);
+        // Remove other common European prefixes
+        else if (['44', '33', '49', '34', '41', '43', '32', '31'].some(c => 
+          cleanDigits.startsWith(c) && cleanDigits.length >= 10 + c.length
+        )) {
+          const prefix = ['44', '33', '49', '34', '41', '43', '32', '31'].find(c => 
+            cleanDigits.startsWith(c)
+          );
+          if (prefix) {
+            numberPart = cleanDigits.substring(prefix.length);
+            detectedPrefix = '+' + prefix;
+          }
         }
         
-        console.log('[Login] Searching customer by phone, input:', cleanPhone, 'normalized:', normalizedPhone);
+        console.log('[Login] Searching customer by phone, input:', cleanPhone, 'numberPart:', numberPart, 'detectedPrefix:', detectedPrefix);
         
-        // Search all customers and match with normalized phone
+        // Search customers - first try exact match with prefix + number
         const allCustomers = await db.select().from(siaeCustomers);
-        const phoneCustomer = allCustomers.find(c => {
-          if (!c.phone) return false;
-          let dbPhone = c.phone.replace(/[\s\-()]/g, '');
-          if (dbPhone.startsWith('+')) {
-            dbPhone = dbPhone.substring(1);
-          }
-          if (dbPhone.startsWith('00')) {
-            dbPhone = dbPhone.substring(2);
-          }
-          if (dbPhone.startsWith('39') && dbPhone.length > 10) {
-            dbPhone = dbPhone.substring(2);
-          }
-          return dbPhone === normalizedPhone || dbPhone === cleanPhone || c.phone === cleanPhone;
-        });
+        let phoneCustomer = null;
+        
+        // Method 1: Match by phone_prefix + phone columns (structured format)
+        if (detectedPrefix) {
+          phoneCustomer = allCustomers.find(c => {
+            if (!c.phone) return false;
+            return c.phonePrefix === detectedPrefix && c.phone === numberPart;
+          });
+        }
+        
+        // Method 2: Match by just the number (ignoring prefix)
+        if (!phoneCustomer) {
+          phoneCustomer = allCustomers.find(c => {
+            if (!c.phone) return false;
+            const dbPhone = c.phone.replace(/\D/g, '');
+            return dbPhone === numberPart;
+          });
+        }
+        
+        // Method 3: Match full phone including prefix (legacy data where phone contains full number)
+        if (!phoneCustomer) {
+          phoneCustomer = allCustomers.find(c => {
+            if (!c.phone) return false;
+            const dbPhone = c.phone.replace(/\D/g, '');
+            const dbFullPhone = c.phonePrefix ? (c.phonePrefix + c.phone).replace(/\D/g, '') : dbPhone;
+            return dbFullPhone === cleanDigits || dbPhone === cleanDigits;
+          });
+        }
+        
         customer = phoneCustomer || null;
-        console.log('[Login] Customer by Phone Found:', !!customer);
+        console.log('[Login] Customer by Phone Found:', !!customer, customer ? `(${customer.phone})` : '');
       } else if (normalizedInput.includes('@')) {
         // Search by email
         const [emailCustomer] = await db
