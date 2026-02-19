@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Event Four You",
+    "slug": "event-four-you",
+    "version": "1.0.4",
+    "orientation": "portrait",
+    "scheme": "event4u",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/logo-white.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0e17"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.event4u.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.event4u.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0e17"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4a53c6c2-4e69-4232-9b3d-dc002dd6c6c2"
+      }
+    }
+  }
+}
